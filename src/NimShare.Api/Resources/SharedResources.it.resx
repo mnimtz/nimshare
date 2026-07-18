@@ -373,4 +373,5 @@
   <data name="links.email.ai_disabled"><value>AI-drafted emails are disabled by the administrator.</value></data>
   <data name="links.email.placeholder"><value>Add a short note or click 'Draft with AI' to auto-generate one.</value></data>
   <data name="browse.tree.folders"><value>Cartelle</value></data>
+  <data name="browse.libraries.title"><value>Librerie</value></data>
 </root>

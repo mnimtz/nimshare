@@ -1,5 +1,6 @@
 @using NimShare.Core.Entities
 @using NimShare.Api.Services
+@using NimShare.Api.Controllers
 @{
     var scope = (FileScope)ViewData["Scope"]!;
     var groupId = ViewData["GroupId"] as Guid?;
@@ -12,7 +13,7 @@
     var canManage = (bool)(ViewData["CanManage"] ?? false);
     var urlBase = (string)ViewData["UrlBase"]!;
     var currentUrl = Context.Request.Path.Value ?? urlBase;
-    var myGroups = (List<GroupSummary>)(ViewData["MyGroups"] ?? new List<GroupSummary>());
+    var libraryTree = (List<BrowseController.TreeNode>)ViewData["LibraryTree"]!;
 
     string scopeTitle = scope switch
     {
@@ -63,179 +64,195 @@
         return basePart + Uri.EscapeDataString(sub.Name);
     }
 }
-<div class="page-header">
-    <div>
-        <div class="breadcrumb">
-            <a href="/browse">@T["browse.root.title"]</a>
-            <span class="sep">/</span>
-            @for (var i = 0; i < ancestry.Count; i++)
-            {
-                var isLast = i == ancestry.Count - 1;
-                var name = i == 0 ? scopeTitle : ancestry[i].Name;
-                var url = i == 0 ? urlBase : (urlBase + "/" + SegPath(i));
-                if (isLast) { <span class="current">@name</span> }
-                else { <a href="@url">@name</a> <span class="sep">/</span> }
-            }
-        </div>
-        <h1>@(current.ParentFolderId is null ? scopeTitle : current.Name)</h1>
-    </div>
-</div>
 
-@if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div> }
-@if (TempData["Error"] is string err) { <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div> }
-
-<div class="search-bar">
-    <span class="icon">🔍</span>
-    <input type="text" id="searchQ" placeholder="@T["browse.search.placeholder"]" onkeydown="if(event.key==='Enter')doSearch()"/>
-    <button onclick="doSearch()">@T["browse.search.button"]</button>
-</div>
-<div class="search-results" id="searchResults" style="display:none"></div>
-
-<div class="browse-layout">
-<aside class="tree-panel" id="treePanel">
-    <div class="lib-section">
-        <div class="lib-heading">@T["browse.libraries.mine"]</div>
-        <a class="lib-item @(scope == FileScope.Personal ? "active" : "")" href="/browse/personal">
-            <span class="lib-icon" style="background:linear-gradient(135deg,#0f5db5,#0a3e7c)">👤</span>
-            <span class="lib-name">@T["browse.tile.personal"]</span>
-        </a>
-    </div>
-    <div class="lib-section">
-        <div class="lib-heading">@T["browse.libraries.shared"]</div>
-        <a class="lib-item @(scope == FileScope.Public ? "active" : "")" href="/browse/public">
-            <span class="lib-icon" style="background:linear-gradient(135deg,#22c3a6,#0aa07f)">🌐</span>
-            <span class="lib-name">@T["browse.tile.public"]</span>
-        </a>
-    </div>
-    @if (myGroups.Any())
+@functions {
+    // Recursive tree rendering with <details>/<summary> so expand/collapse
+    // works without any JS. Server-side ancestry drives the "open" attribute.
+    void RenderTreeNode(BrowseController.TreeNode n, int depth)
     {
-        <div class="lib-section">
-            <div class="lib-heading">@T["browse.libraries.groups"]</div>
-            @foreach (var g in myGroups)
-            {
-                var isActive = scope == FileScope.Group && groupId == g.Id;
-                <a class="lib-item @(isActive ? "active" : "")" href="/browse/group/@g.Id">
-                    <span class="lib-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">
-                        @(g.Name.Length > 0 ? g.Name[0].ToString().ToUpper() : "G")
-                    </span>
-                    <span class="lib-name">@g.Name</span>
+        var isLibrary = n.Kind == "library";
+        var openAttr = n.IsExpanded ? "open" : "";
+        var activeClass = n.IsActive ? "fm-tree-active" : "";
+        <text>
+        @if (n.Children.Count == 0)
+        {
+            <div class="fm-tree-leaf @(isLibrary ? "fm-tree-lib" : "") @activeClass" style="--depth:@depth">
+                <a href="@n.Href">
+                    <span class="fm-tree-icon">@n.Icon</span>
+                    <span class="fm-tree-label">@n.Label</span>
                 </a>
+            </div>
+        }
+        else
+        {
+            <details class="fm-tree-branch @(isLibrary ? "fm-tree-lib" : "")" style="--depth:@depth" @openAttr>
+                <summary class="@activeClass">
+                    <span class="fm-tree-caret">▸</span>
+                    <a href="@n.Href" class="fm-tree-linkinline">
+                        <span class="fm-tree-icon">@n.Icon</span>
+                        <span class="fm-tree-label">@n.Label</span>
+                    </a>
+                </summary>
+                <div class="fm-tree-children">
+                    @foreach (var child in n.Children)
+                    {
+                        RenderTreeNode(child, depth + 1);
+                    }
+                </div>
+            </details>
+        }
+        </text>
+    }
+}
+
+<div class="fm">
+    <aside class="fm-sidebar">
+        <div class="fm-sidebar-head">@T["browse.libraries.title"]</div>
+        <div class="fm-tree">
+            @foreach (var node in libraryTree)
+            {
+                RenderTreeNode(node, 0);
             }
         </div>
-    }
-    <div class="lib-section">
-        <div class="lib-heading">@T["browse.tree.folders"]</div>
-        <div id="folderTree"><div class="muted" style="padding:4px 8px;font-size:.85rem">@T["browse.tree.loading"]</div></div>
-    </div>
-</aside>
-<div>
+    </aside>
 
-<div class="browse-toolbar">
-    @if (canWrite)
-    {
-        <button class="btn btn-primary" onclick="openNewFolderModal()">+ @T["browse.new_folder"]</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('quickPick').click()">↑ @T["browse.upload"]</button>
-        <input type="file" id="quickPick" multiple style="display:none"/>
-    }
-    <button class="btn btn-ghost" onclick="openShareFolderModal('@current.Id')">🔗 @T["browse.share_this"]</button>
-    <button class="btn btn-ghost" onclick="openUploadRequestModal('@current.Id')">📥 @T["browse.request_upload"]</button>
-</div>
-
-<div class="bulk-toolbar" id="bulkBar">
-    <span class="count" id="bulkCount">0 @T["bulk.selected"]</span>
-    @if (canWrite) { <button onclick="openMoveModal()">↦ @T["bulk.move"]</button> }
-    <button onclick="bulkDelete()">🗑 @T["bulk.delete"]</button>
-    <button onclick="clearSelection()" style="margin-left:auto">✕ @T["bulk.clear"]</button>
-</div>
-
-<div class="dropzone" id="dropzone" data-drop-label="@T["browse.drop_hint"]">
-    @if (!subs.Any() && !files.Any())
-    {
-        <div class="card"><p class="muted">@T["browse.empty"]</p></div>
-    }
-    else
-    {
-        <table class="seafile-table">
-            <thead>
-                <tr>
-                    <th style="width:36px"><input type="checkbox" id="selectAll" style="opacity:.5"/></th>
-                    <th>@T["file.name"]</th>
-                    <th style="width:100px">@T["file.size"]</th>
-                    <th style="width:180px">@T["file.uploaded"]</th>
-                    @if (scope != FileScope.Personal) { <th style="width:160px">@T["groups.uploaded_by"]</th> }
-                    <th style="width:140px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var sub in subs)
+    <section class="fm-main" id="dropzone" data-drop-label="@T["browse.drop_hint"]">
+        <header class="fm-header">
+            <div class="fm-breadcrumb">
+                @for (var i = 0; i < ancestry.Count; i++)
                 {
-                    <tr class="ctx" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name">
-                        <td></td>
-                        <td>
-                            <a class="seafile-name" href="@FolderUrl(sub)">
-                                <div class="file-icon folder">📁</div>
-                                <span class="name-text">@sub.Name</span>
-                            </a>
-                        </td>
-                        <td class="muted">—</td>
-                        <td class="muted">@sub.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                        @if (scope != FileScope.Personal) { <td></td> }
-                        <td>
-                            <div class="row-actions">
-                                <button title="@T["actions.share_link"]" onclick="openShareFolderModal('@sub.Id')">🔗</button>
-                                <button title="@T["actions.request_upload"]" onclick="openUploadRequestModal('@sub.Id')">📥</button>
-                                @if (canManage)
-                                {
-                                    <button title="@T["actions.rename"]" onclick="openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
-                                    <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline" onsubmit="return confirm('@T["actions.confirm_delete"]')">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="returnUrl" value="@currentUrl"/>
-                                        <button title="@T["actions.delete"]" type="submit">🗑</button>
-                                    </form>
-                                }
-                            </div>
-                        </td>
-                    </tr>
+                    var isLast = i == ancestry.Count - 1;
+                    var name = i == 0 ? scopeTitle : ancestry[i].Name;
+                    var url = i == 0 ? urlBase : (urlBase + "/" + SegPath(i));
+                    if (isLast) { <span class="fm-crumb-current">@name</span> }
+                    else { <a href="@url">@name</a> <span class="fm-crumb-sep">›</span> }
                 }
-                @foreach (var f in files)
+            </div>
+            <div class="fm-toolbar">
+                @if (canWrite)
                 {
-                    <tr class="ctx" data-kind="file" data-id="@f.Id" data-name="@f.Name">
-                        <td><input type="checkbox" class="row-check" value="@f.Id"/></td>
-                        <td>
-                            <div class="seafile-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
-                                <div class="file-icon @TypeClass(f.Name)">@TypeLabel(f.Name)</div>
-                                <span class="name-text">@f.Name</span>
-                                @if (!string.IsNullOrEmpty(f.AiRiskFlag) && f.AiRiskFlag != "clean" && f.AiRiskFlag != "unknown")
-                                {
-                                    <span class="ai-risk" title="AI-detected risk">⚠ @f.AiRiskFlag</span>
-                                }
-                                @if (!string.IsNullOrEmpty(f.AiTags))
-                                {
-                                    foreach (var tag in f.AiTags.Split(',').Take(3))
+                    <button class="fm-btn" title="@T["browse.new_folder"]" onclick="openNewFolderModal()">
+                        <span>📁+</span>
+                    </button>
+                    <button class="fm-btn fm-btn-primary" title="@T["browse.upload"]" onclick="document.getElementById('quickPick').click()">
+                        <span>↑ @T["browse.upload"]</span>
+                    </button>
+                    <input type="file" id="quickPick" multiple style="display:none"/>
+                }
+                <button class="fm-btn" title="@T["browse.share_this"]" onclick="openShareFolderModal('@current.Id')">🔗</button>
+                <button class="fm-btn" title="@T["browse.request_upload"]" onclick="openUploadRequestModal('@current.Id')">📥</button>
+            </div>
+        </header>
+
+        <div class="fm-searchbar">
+            <span class="fm-search-icon">🔍</span>
+            <input type="text" id="searchQ" placeholder="@T["browse.search.placeholder"]" onkeydown="if(event.key==='Enter')doSearch()"/>
+        </div>
+        <div class="fm-search-results" id="searchResults" style="display:none"></div>
+
+        @if (TempData["Notice"] is string n) { <div class="fm-flash fm-flash-ok">@n</div> }
+        @if (TempData["Error"] is string err) { <div class="fm-flash fm-flash-err">@err</div> }
+
+        <div class="fm-bulkbar" id="bulkBar">
+            <span class="count" id="bulkCount">0 @T["bulk.selected"]</span>
+            @if (canWrite) { <button onclick="openMoveModal()">↦ @T["bulk.move"]</button> }
+            <button onclick="bulkDelete()">🗑 @T["bulk.delete"]</button>
+            <button onclick="clearSelection()" style="margin-left:auto">✕ @T["bulk.clear"]</button>
+        </div>
+
+        @if (!subs.Any() && !files.Any())
+        {
+            <div class="fm-empty">
+                <div class="fm-empty-art">📂</div>
+                <div class="fm-empty-title">@T["browse.empty"]</div>
+                @if (canWrite)
+                {
+                    <div class="fm-empty-hint">@T["browse.drop_hint"]</div>
+                }
+            </div>
+        }
+        else
+        {
+            <table class="fm-list">
+                <thead>
+                    <tr>
+                        <th class="col-check"><input type="checkbox" id="selectAll"/></th>
+                        <th class="col-name">@T["file.name"]</th>
+                        <th class="col-size">@T["file.size"]</th>
+                        <th class="col-date">@T["file.uploaded"]</th>
+                        @if (scope != FileScope.Personal) { <th class="col-owner">@T["groups.uploaded_by"]</th> }
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sub in subs)
+                    {
+                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" ondblclick="location.href='@FolderUrl(sub)'">
+                            <td class="col-check"></td>
+                            <td class="col-name">
+                                <a class="fm-name" href="@FolderUrl(sub)">
+                                    <span class="fm-icon fm-icon-folder">📁</span>
+                                    <span class="fm-name-text">@sub.Name</span>
+                                </a>
+                            </td>
+                            <td class="col-size muted">—</td>
+                            <td class="col-date muted">@sub.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            @if (scope != FileScope.Personal) { <td class="col-owner"></td> }
+                            <td class="col-actions">
+                                <div class="fm-row-actions">
+                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFolderModal('@sub.Id')">🔗</button>
+                                    <button title="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
+                                    @if (canManage)
                                     {
-                                        <span class="ai-tag">@tag.Trim()</span>
+                                        <button title="@T["actions.rename"]" onclick="event.stopPropagation();openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
+                                        <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline" onsubmit="return confirm('@T["actions.confirm_delete"]')" onclick="event.stopPropagation()">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="returnUrl" value="@currentUrl"/>
+                                            <button title="@T["actions.delete"]" type="submit">🗑</button>
+                                        </form>
                                     }
-                                }
-                            </div>
-                        </td>
-                        <td>@Bytes(f.SizeBytes)</td>
-                        <td class="muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                        @if (scope != FileScope.Personal) { <td class="muted">@f.Owner.DisplayName</td> }
-                        <td>
-                            <div class="row-actions">
-                                <button title="@T["actions.share_link"]" onclick="openShareFileModal('@f.Id')">🔗</button>
-                                @if (canWrite) { <button title="@T["actions.move"]" onclick="openMoveSingle('@f.Id')">↦</button> }
-                                <button title="@T["actions.delete"]" onclick="deleteFile('@f.Id')">🗑</button>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var f in files)
+                    {
+                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" ondblclick="openPreview('@f.Id')">
+                            <td class="col-check"><input type="checkbox" class="row-check" value="@f.Id" onclick="event.stopPropagation()"/></td>
+                            <td class="col-name">
+                                <div class="fm-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
+                                    <span class="fm-icon fm-icon-file @TypeClass(f.Name)">@TypeLabel(f.Name)</span>
+                                    <span class="fm-name-text">@f.Name</span>
+                                    @if (!string.IsNullOrEmpty(f.AiRiskFlag) && f.AiRiskFlag != "clean" && f.AiRiskFlag != "unknown")
+                                    {
+                                        <span class="ai-risk" title="AI-detected risk">⚠ @f.AiRiskFlag</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(f.AiTags))
+                                    {
+                                        foreach (var tag in f.AiTags.Split(',').Take(3))
+                                        {
+                                            <span class="ai-tag">@tag.Trim()</span>
+                                        }
+                                    }
+                                </div>
+                            </td>
+                            <td class="col-size">@Bytes(f.SizeBytes)</td>
+                            <td class="col-date muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            @if (scope != FileScope.Personal) { <td class="col-owner muted">@f.Owner.DisplayName</td> }
+                            <td class="col-actions">
+                                <div class="fm-row-actions">
+                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
+                                    @if (canWrite) { <button title="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
+                                    <button title="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
 </div>
-
-</div></div>
 
 <!-- Preview modal -->
 <div class="modal-backdrop" id="modalPreview" onclick="if(event.target===this)closeModal('modalPreview')">
@@ -295,10 +312,7 @@ function updateSelection() {
     bulkBar.classList.toggle('on', selected > 0);
     document.querySelectorAll('tr.ctx[data-kind="file"]').forEach(tr => {
         const cb = tr.querySelector('.row-check');
-        if (cb) {
-            tr.classList.toggle('selected', cb.checked);
-            cb.classList.toggle('persistent', cb.checked);
-        }
+        if (cb) tr.classList.toggle('selected', cb.checked);
     });
 }
 document.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', updateSelection));
@@ -340,7 +354,6 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
     tr.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name };
-        // Toggle actions based on kind + rights
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
         showFor('open',      ctxTarget.kind === 'folder');
         showFor('uploadReq', ctxTarget.kind === 'folder');
@@ -348,7 +361,6 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('move',      ctxTarget.kind === 'file'   && CAN_WRITE);
         showFor('share',     true);
         showFor('delete',    (ctxTarget.kind === 'file') || (ctxTarget.kind === 'folder' && CAN_MANAGE));
-        // Position within viewport
         const vw = window.innerWidth, vh = window.innerHeight;
         const w = 220, h = ctxMenu.offsetHeight || 200;
         const x = Math.min(e.clientX, vw - w - 10);
@@ -365,7 +377,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         const act = b.dataset.act;
         if (!ctxTarget) return;
         if (act === 'open' && ctxTarget.kind === 'folder') {
-            const url = document.querySelector(`tr.ctx[data-id="${ctxTarget.id}"] a.seafile-name`);
+            const url = document.querySelector(`tr.ctx[data-id="${ctxTarget.id}"] a.fm-name`);
             if (url) location.href = url.getAttribute('href');
         }
         if (act === 'share') {
@@ -383,9 +395,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
                     f.method = 'post';
                     f.action = '/browse/folders/' + ctxTarget.id + '/delete';
                     const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (csrf) {
-                        const tf = csrf.cloneNode(true); f.appendChild(tf);
-                    }
+                    if (csrf) f.appendChild(csrf.cloneNode(true));
                     const rt = document.createElement('input'); rt.name='returnUrl'; rt.value = RETURN_URL; f.appendChild(rt);
                     document.body.appendChild(f);
                     f.submit();
@@ -434,65 +444,7 @@ async function performMove() {
     if (fail) alert(ok + ' moved, ' + fail + ' failed'); else location.reload();
 }
 
-// ── Folder tree panel (loaded lazily on first paint) ──────────
-(async () => {
-    const treeMount = document.getElementById('folderTree');
-    if (!treeMount) return;
-    try {
-        const params = new URLSearchParams({ scope: SCOPE });
-        if (SCOPE === 'Group') params.set('groupId', @Json.Serialize(groupId?.ToString() ?? ""));
-        const r = await fetch('/api/v1/folders/tree?' + params.toString(), { credentials: 'same-origin' });
-        if (!r.ok) { treeMount.innerHTML = ''; return; }
-        const tree = await r.json();
-        treeMount.innerHTML = '';
-        tree.forEach(n => treeMount.appendChild(renderNode(n, 0)));
-    } catch { treeMount.innerHTML = ''; }
-    function renderNode(n, depth, parent) {
-        // Track parent for path-walk on click.
-        const parentMap = window.__treeParents || (window.__treeParents = new Map());
-        if (parent) parentMap.set(n.id, parent);
-        const wrap = document.createElement('div');
-        const row = document.createElement('div');
-        row.className = 'tree-node';
-        const hasKids = n.children && n.children.length;
-        const t = document.createElement('span');
-        t.className = 'toggle';
-        t.textContent = hasKids ? '▸' : '·';
-        row.appendChild(t);
-        const nm = document.createElement('span');
-        nm.textContent = (depth === 0 ? '📁 ' : '') + n.name;
-        row.appendChild(nm);
-        row.addEventListener('click', () => {
-            if (n.id === FOLDER_ID) return;
-            // Walk up the tree to build the correct path within the current scope.
-            const segs = [];
-            let cur = n;
-            const parentMap = window.__treeParents || (window.__treeParents = new Map());
-            while (cur && parentMap.get(cur.id)) {
-                segs.unshift(encodeURIComponent(cur.name));
-                cur = parentMap.get(cur.id);
-            }
-            const url = segs.length
-                ? @Json.Serialize(urlBase) + '/' + segs.join('/')
-                : @Json.Serialize(urlBase);
-            location.href = url;
-        });
-        if (n.id === FOLDER_ID) row.classList.add('active');
-        wrap.appendChild(row);
-        if (hasKids) {
-            const kids = document.createElement('div');
-            kids.className = 'tree-children';
-            n.children.forEach(c => kids.appendChild(renderNode(c, depth + 1, n)));
-            wrap.appendChild(kids);
-            t.style.cursor = 'pointer';
-            t.addEventListener('click', (e) => { e.stopPropagation(); kids.classList.toggle('collapsed'); t.textContent = kids.classList.contains('collapsed') ? '▸' : '▾'; });
-            t.textContent = '▾';
-        }
-        return wrap;
-    }
-})();
-
-// ── Semantic search ────────────────────────────────────────────
+// ── Semantic search ───────────────────────────────────────────
 async function doSearch() {
     const q = document.getElementById('searchQ').value.trim();
     const out = document.getElementById('searchResults');
@@ -511,7 +463,7 @@ async function doSearch() {
     hits.forEach(h => {
         const row = document.createElement('div');
         row.className = 'hit';
-        row.innerHTML = `<div class="file-icon">📄</div><div style="flex:1"><div><strong>${escapeHtml(h.name)}</strong> <span class="score">${(h.score*100).toFixed(0)}%</span></div>${h.snippet ? '<div class="muted" style="font-size:.8rem">'+escapeHtml(h.snippet)+'</div>' : ''}</div>`;
+        row.innerHTML = `<div class="fm-icon fm-icon-file">📄</div><div style="flex:1"><div><strong>${escapeHtml(h.name)}</strong> <span class="score">${(h.score*100).toFixed(0)}%</span></div>${h.snippet ? '<div class="muted" style="font-size:.8rem">'+escapeHtml(h.snippet)+'</div>' : ''}</div>`;
         row.onclick = () => openPreview(h.id);
         out.appendChild(row);
     });
@@ -538,36 +490,38 @@ async function openPreview(fileId) {
 
 // ── Drag-drop + quick upload ──────────────────────────────────
 const dropzone = document.getElementById('dropzone');
-const quickPick = document.getElementById('quickPick');
-if (dropzone) {
-    ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag-over'); }));
-    ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag-over'); }));
-    dropzone.addEventListener('drop', async (e) => {
-        const files = Array.from(e.dataTransfer?.files || []);
-        if (files.length) await uploadFiles(files);
-    });
+if (dropzone && CAN_WRITE) {
+    ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag');
+    }));
+    ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation(); if (ev === 'dragleave' && e.target !== dropzone) return; dropzone.classList.remove('drag');
+    }));
+    dropzone.addEventListener('drop', e => uploadFiles(e.dataTransfer.files));
+    const quickPick = document.getElementById('quickPick');
+    if (quickPick) quickPick.addEventListener('change', () => uploadFiles(quickPick.files));
 }
-if (quickPick) quickPick.addEventListener('change', async () => { if (quickPick.files.length) await uploadFiles(Array.from(quickPick.files)); });
-
-async function uploadFiles(files) {
-    const total = files.length;
-    let done = 0;
-    const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--tw-primary);color:var(--tw-white);padding:10px 16px;border-radius:8px;box-shadow:var(--shadow-lg);z-index:100';
-    document.body.appendChild(toast);
-    for (const f of files) {
-        toast.textContent = `Uploading ${++done} / ${total}: ${f.name}…`;
-        const init = await fetch('/api/v1/files', {
-            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-            body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: f.type, folderId: FOLDER_ID }),
-        });
-        if (!init.ok) continue;
-        const { fileId, uploadUrl } = await init.json();
-        const put = await fetch(uploadUrl, { method: 'PUT', headers: {'x-ms-blob-type':'BlockBlob','x-ms-blob-content-type':f.type||'application/octet-stream'}, body: f });
-        if (!put.ok) continue;
-        await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
+async function uploadFiles(fileList) {
+    if (!fileList || !fileList.length) return;
+    for (const file of fileList) {
+        try {
+            const initR = await fetch('/api/v1/files/init', {
+                method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+                body: JSON.stringify({ folderId: FOLDER_ID, name: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size }),
+            });
+            if (!initR.ok) { alert('Init failed for ' + file.name); continue; }
+            const { fileId, uploadUrl } = await initR.json();
+            const putR = await fetch(uploadUrl, {
+                method: 'PUT', headers: {'x-ms-blob-type':'BlockBlob','Content-Type': file.type || 'application/octet-stream'},
+                body: file,
+            });
+            if (!putR.ok) { alert('Upload failed for ' + file.name); continue; }
+            await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
+        } catch (e) { alert('Error uploading ' + file.name + ': ' + e); }
     }
-    toast.textContent = 'Done ✓ — reloading…';
-    setTimeout(() => location.reload(), 400);
+    location.reload();
 }
+
+// Modal helpers used from generated onclicks.
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 </script>
