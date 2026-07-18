@@ -16,6 +16,12 @@ public interface IAiProvider
     Task<string?> SummarizeAsync(string text, string language, CancellationToken ct = default);
     Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default);
     Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default);
+    /// <summary>Embed short text (name + first 2 KB) to a fixed-length float vector for semantic search. Returns null if the provider doesn't support embeddings.</summary>
+    Task<float[]?> EmbedAsync(string text, CancellationToken ct = default);
+    /// <summary>Answer a question grounded in the caller's file corpus. Text passages are the retrieved chunks.</summary>
+    Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default);
+    /// <summary>Personalise an upload-request cover email for a specific recipient.</summary>
+    Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default);
 }
 
 public class NullAiProvider : IAiProvider
@@ -23,6 +29,9 @@ public class NullAiProvider : IAiProvider
     public Task<string?> SummarizeAsync(string text, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default) => Task.FromResult<AiClassification?>(null);
     public Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null);
+    public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
 }
 
 /// <summary>
@@ -85,6 +94,44 @@ public class OpenAiProvider : IAiProvider
             user: $"Sender: {senderName}\nFile: {fileName}\nContext: {context ?? "—"}",
             temperature: 0.6,
             ct);
+
+    public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) =>
+        ChatAsync(
+            system: $"You are drafting a short cover email asking the recipient to upload a file. Match the tone/register to the recipient's email domain (formal for corporate, warmer for @gmail/@outlook). Write in the language whose ISO code is '{language}'. Under 5 sentences. End with the sender's name. No markdown.",
+            user: $"Sender: {senderName}\nRecipient: {recipientEmail}\nContext: {context ?? "—"}",
+            temperature: 0.6,
+            ct);
+
+    public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default)
+    {
+        var joined = string.Join("\n---\n", passages.Take(6));
+        return ChatAsync(
+            system: $"Answer the user's question using ONLY the provided passages. If the answer isn't in them, say so. Reply in the language whose ISO code is '{language}'. Cite passage numbers like [1] where helpful.",
+            user: $"Passages:\n{joined}\n\nQuestion: {question}",
+            temperature: 0.2,
+            ct);
+    }
+
+    public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
+    {
+        var url = _isAzure
+            ? _endpoint.Replace("chat/completions", "embeddings")
+            : "https://api.openai.com/v1/embeddings";
+        var payload = new { model = _isAzure ? (object?)null : "text-embedding-3-small", input = text.Length > 8000 ? text[..8000] : text };
+        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        try
+        {
+            var resp = await _http.PostAsync(url, body, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var s = await resp.Content.ReadAsStringAsync(ct);
+            var doc = JsonDocument.Parse(s);
+            var arr = doc.RootElement.GetProperty("data")[0].GetProperty("embedding");
+            var vec = new float[arr.GetArrayLength()];
+            for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
+            return vec;
+        }
+        catch { return null; }
+    }
 
     private async Task<string?> ChatAsync(string system, string user, double temperature, CancellationToken ct)
     {
@@ -157,6 +204,38 @@ public class GeminiProvider : IAiProvider
             $"Draft a short, warm cover email (max 6 sentences, no markdown) in the language whose ISO code is '{language}' from {senderName} accompanying the file '{fileName}'.{(string.IsNullOrEmpty(context) ? "" : $" Context: {context}.")} End with a signature that uses the sender's name.",
             0.6, ct);
 
+    public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) =>
+        GenerateAsync(
+            $"Draft a short cover email in the language whose ISO code is '{language}' from {senderName} asking {recipientEmail} to upload a file. Adapt tone to the recipient's email domain.{(string.IsNullOrEmpty(context) ? "" : $" Context: {context}.")} Under 5 sentences, no markdown.",
+            0.6, ct);
+
+    public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default)
+    {
+        var joined = string.Join("\n---\n", passages.Take(6));
+        return GenerateAsync(
+            $"Answer using ONLY these passages. Reply in ISO '{language}'. Cite passage numbers like [1] where helpful.\n\nPassages:\n{joined}\n\nQuestion: {question}",
+            0.2, ct);
+    }
+
+    public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
+    {
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={_apiKey}";
+        var payload = new { content = new { parts = new[] { new { text = text.Length > 8000 ? text[..8000] : text } } } };
+        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        try
+        {
+            var resp = await _http.PostAsync(url, body, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var s = await resp.Content.ReadAsStringAsync(ct);
+            var doc = JsonDocument.Parse(s);
+            var arr = doc.RootElement.GetProperty("embedding").GetProperty("values");
+            var vec = new float[arr.GetArrayLength()];
+            for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
+            return vec;
+        }
+        catch { return null; }
+    }
+
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)
     {
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
@@ -225,6 +304,21 @@ public class AnthropicProvider : IAiProvider
         MessagesAsync(
             $"You are drafting a short, warm cover email in the language whose ISO code is '{language}'. Max 6 sentences, no markdown, end with a signature.",
             $"Sender: {senderName}\nFile: {fileName}\nContext: {context ?? "—"}", 0.6, ct);
+
+    public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) =>
+        MessagesAsync(
+            $"Short cover email asking recipient to upload a file. ISO '{language}'. Adapt tone to email domain. Under 5 sentences, no markdown.",
+            $"Sender: {senderName}\nRecipient: {recipientEmail}\nContext: {context ?? "—"}", 0.6, ct);
+
+    public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default)
+    {
+        var joined = string.Join("\n---\n", passages.Take(6));
+        return MessagesAsync(
+            $"Answer using ONLY these passages. Reply in ISO '{language}'. Cite [1] where helpful.",
+            $"Passages:\n{joined}\n\nQuestion: {question}", 0.2, ct);
+    }
+
+    public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null); // Anthropic doesn't ship embeddings — semantic search falls back to null
 
     private async Task<string?> MessagesAsync(string system, string user, double temperature, CancellationToken ct)
     {

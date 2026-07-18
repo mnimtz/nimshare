@@ -180,4 +180,46 @@ public class BrowseController : Controller
         var items = all.Where(f => f.Id != exclude).Select(f => new { id = f.Id, path = PathOf(f) }).ToList();
         return Ok(items);
     }
+
+    /// <summary>Full folder tree for the current scope — used by the left tree panel.</summary>
+    [HttpGet("/api/v1/folders/tree")]
+    public async Task<IActionResult> Tree(string scope, Guid? groupId, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (!Enum.TryParse<FileScope>(scope, true, out var s)) return BadRequest();
+
+        IQueryable<Folder> q = _db.Folders.Where(f => f.Scope == s);
+        q = s switch
+        {
+            FileScope.Personal => q.Where(f => f.OwnerUserId == me.Id),
+            FileScope.Group => groupId is Guid g ? q.Where(f => f.OwnerGroupId == g) : q.Where(f => false),
+            FileScope.Public => q.Where(f => f.OwnerUserId == null && f.OwnerGroupId == null),
+            _ => q.Where(f => false),
+        };
+        var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
+        var byParent = all.GroupBy(f => f.ParentFolderId ?? Guid.Empty).ToDictionary(g => g.Key, g => g.ToList());
+
+        object Build(Folder f) => new
+        {
+            id = f.Id,
+            name = f.ParentFolderId is null ? (s.ToString()) : f.Name,
+            children = byParent.TryGetValue(f.Id, out var kids)
+                ? kids.Select(Build).ToArray()
+                : Array.Empty<object>(),
+        };
+        var roots = all.Where(f => f.ParentFolderId is null).Select(Build).ToList();
+        return Ok(roots);
+    }
+
+    /// <summary>Time-limited download URL for inline preview (image / PDF iframe).</summary>
+    [HttpGet("/api/v1/files/{id:guid}/preview-url")]
+    public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access, [FromServices] IBlobStorageService blobs, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanReadAsync(user, file, ct)) return Forbid();
+        var sas = blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, TimeSpan.FromMinutes(5));
+        return Ok(new { url = sas.ToString(), contentType = file.ContentType, name = file.Name });
+    }
 }

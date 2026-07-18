@@ -20,6 +20,7 @@ public class NimShareDbContext : DbContext
     public DbSet<EmailGatewaySettings> EmailGateways => Set<EmailGatewaySettings>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<AiGatewaySettings> AiGateways => Set<AiGatewaySettings>();
+    public DbSet<FileEmbedding> FileEmbeddings => Set<FileEmbedding>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -123,6 +124,13 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.ApiKeyEncrypted).HasMaxLength(2000);
             e.Property(x => x.Model).HasMaxLength(120);
             e.Property(x => x.Endpoint).HasMaxLength(400);
+        });
+
+        b.Entity<FileEmbedding>(e =>
+        {
+            e.HasKey(x => x.FileId);
+            e.Property(x => x.Model).HasMaxLength(120).IsRequired();
+            e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<Folder>(e =>

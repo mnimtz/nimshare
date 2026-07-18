@@ -82,6 +82,17 @@
 @if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div> }
 @if (TempData["Error"] is string err) { <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div> }
 
+<div class="search-bar">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchQ" placeholder="@T["browse.search.placeholder"]" onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button onclick="doSearch()">@T["browse.search.button"]</button>
+</div>
+<div class="search-results" id="searchResults" style="display:none"></div>
+
+<div class="browse-layout">
+<aside class="tree-panel" id="treePanel"><div class="muted" style="padding:8px">@T["browse.tree.loading"]</div></aside>
+<div>
+
 <div class="browse-toolbar">
     @if (canWrite)
     {
@@ -154,9 +165,20 @@
                     <tr class="ctx" data-kind="file" data-id="@f.Id" data-name="@f.Name">
                         <td><input type="checkbox" class="row-check" value="@f.Id"/></td>
                         <td>
-                            <div class="seafile-name">
+                            <div class="seafile-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
                                 <div class="file-icon @TypeClass(f.Name)">@TypeLabel(f.Name)</div>
                                 <span class="name-text">@f.Name</span>
+                                @if (!string.IsNullOrEmpty(f.AiRiskFlag) && f.AiRiskFlag != "clean" && f.AiRiskFlag != "unknown")
+                                {
+                                    <span class="ai-risk" title="AI-detected risk">⚠ @f.AiRiskFlag</span>
+                                }
+                                @if (!string.IsNullOrEmpty(f.AiTags))
+                                {
+                                    foreach (var tag in f.AiTags.Split(',').Take(3))
+                                    {
+                                        <span class="ai-tag">@tag.Trim()</span>
+                                    }
+                                }
                             </div>
                         </td>
                         <td>@Bytes(f.SizeBytes)</td>
@@ -174,6 +196,17 @@
             </tbody>
         </table>
     }
+</div>
+
+</div></div>
+
+<!-- Preview modal -->
+<div class="modal-backdrop" id="modalPreview" onclick="if(event.target===this)closeModal('modalPreview')">
+    <div class="modal-panel" style="max-width:900px">
+        <h2 id="previewTitle"></h2>
+        <div id="previewBody" style="margin-top:var(--sp-4)"></div>
+        <div class="actions"><button class="btn btn-ghost" onclick="closeModal('modalPreview')">@T["modal.close"]</button></div>
+    </div>
 </div>
 
 <!-- Right-click context menu -->
@@ -362,6 +395,93 @@ async function performMove() {
     }
     document.getElementById('modalMove').classList.remove('open');
     if (fail) alert(ok + ' moved, ' + fail + ' failed'); else location.reload();
+}
+
+// ── Folder tree panel (loaded lazily on first paint) ──────────
+(async () => {
+    try {
+        const params = new URLSearchParams({ scope: SCOPE });
+        if (SCOPE === 'Group') params.set('groupId', @Json.Serialize(groupId?.ToString() ?? ""));
+        const r = await fetch('/api/v1/folders/tree?' + params.toString(), { credentials: 'same-origin' });
+        if (!r.ok) { document.getElementById('treePanel').innerHTML = ''; return; }
+        const tree = await r.json();
+        const wrap = document.getElementById('treePanel');
+        wrap.innerHTML = '';
+        tree.forEach(n => wrap.appendChild(renderNode(n, 0)));
+    } catch { document.getElementById('treePanel').innerHTML = ''; }
+    function renderNode(n, depth) {
+        const wrap = document.createElement('div');
+        const row = document.createElement('div');
+        row.className = 'tree-node';
+        const hasKids = n.children && n.children.length;
+        const t = document.createElement('span');
+        t.className = 'toggle';
+        t.textContent = hasKids ? '▸' : '·';
+        row.appendChild(t);
+        const nm = document.createElement('span');
+        nm.textContent = (depth === 0 ? '📁 ' : '') + n.name;
+        row.appendChild(nm);
+        row.addEventListener('click', () => {
+            if (n.id === FOLDER_ID) return;
+            location.href = '/browse/personal';  // navigation would need path-walk; simplest: root of scope
+        });
+        if (n.id === FOLDER_ID) row.classList.add('active');
+        wrap.appendChild(row);
+        if (hasKids) {
+            const kids = document.createElement('div');
+            kids.className = 'tree-children';
+            n.children.forEach(c => kids.appendChild(renderNode(c, depth + 1)));
+            wrap.appendChild(kids);
+            t.style.cursor = 'pointer';
+            t.addEventListener('click', (e) => { e.stopPropagation(); kids.classList.toggle('collapsed'); t.textContent = kids.classList.contains('collapsed') ? '▸' : '▾'; });
+            t.textContent = '▾';
+        }
+        return wrap;
+    }
+})();
+
+// ── Semantic search ────────────────────────────────────────────
+async function doSearch() {
+    const q = document.getElementById('searchQ').value.trim();
+    const out = document.getElementById('searchResults');
+    if (!q) { out.style.display = 'none'; return; }
+    out.style.display = 'block';
+    out.innerHTML = '<div class="muted" style="padding:8px">' + @Json.Serialize(T["browse.search.loading"].Value) + '</div>';
+    const r = await fetch('/api/v1/ai/search', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ query: q, scope: SCOPE, groupId: null, limit: 10 }),
+    });
+    if (r.status === 503) { out.innerHTML = '<div class="muted" style="padding:8px">' + @Json.Serialize(T["browse.search.disabled"].Value) + '</div>'; return; }
+    if (!r.ok) { out.innerHTML = '<div class="muted" style="padding:8px">' + @Json.Serialize(T["browse.search.error"].Value) + '</div>'; return; }
+    const hits = await r.json();
+    if (!hits.length) { out.innerHTML = '<div class="muted" style="padding:8px">' + @Json.Serialize(T["browse.search.no_hits"].Value) + '</div>'; return; }
+    out.innerHTML = '';
+    hits.forEach(h => {
+        const row = document.createElement('div');
+        row.className = 'hit';
+        row.innerHTML = `<div class="file-icon">📄</div><div style="flex:1"><div><strong>${escapeHtml(h.name)}</strong> <span class="score">${(h.score*100).toFixed(0)}%</span></div>${h.snippet ? '<div class="muted" style="font-size:.8rem">'+escapeHtml(h.snippet)+'</div>' : ''}</div>`;
+        row.onclick = () => openPreview(h.id);
+        out.appendChild(row);
+    });
+}
+function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── Inline preview modal ──────────────────────────────────────
+async function openPreview(fileId) {
+    const r = await fetch('/api/v1/files/' + fileId + '/preview-url', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('previewTitle').textContent = d.name;
+    const body = document.getElementById('previewBody');
+    const ct = (d.contentType || '').toLowerCase();
+    if (ct.startsWith('image/')) {
+        body.innerHTML = '<img class="preview-image" src="' + d.url + '"/>';
+    } else if (ct === 'application/pdf') {
+        body.innerHTML = '<iframe class="preview-frame" src="' + d.url + '"></iframe>';
+    } else {
+        body.innerHTML = '<p class="muted">' + @Json.Serialize(T["preview.unsupported"].Value) + '</p><p><a class="btn btn-primary" href="' + d.url + '" target="_blank">' + @Json.Serialize(T["preview.download"].Value) + '</a></p>';
+    }
+    document.getElementById('modalPreview').classList.add('open');
 }
 
 // ── Drag-drop + quick upload ──────────────────────────────────

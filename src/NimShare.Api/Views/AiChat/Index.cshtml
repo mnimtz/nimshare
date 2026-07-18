@@ -1,0 +1,91 @@
+@using NimShare.Api.Services
+@{
+    ViewData["Title"] = @T["chat.title"];
+    Layout = "_AppShell";
+    var enabled = (bool)(ViewData["Enabled"] ?? false);
+    var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
+}
+<div class="page-header">
+    <div>
+        <h1>@T["chat.title"]</h1>
+        <p class="lede">@T["chat.lede"]</p>
+    </div>
+</div>
+
+@if (!enabled)
+{
+    <div class="card" style="border-left:3px solid var(--status-warn);background:rgba(255,198,0,.06)">
+        @T["chat.disabled"]
+    </div>
+}
+else
+{
+    <div class="card" style="max-width:900px">
+        <div class="row" style="gap:var(--sp-3);flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="flex:1;min-width:220px">
+                <label>@T["chat.scope"]</label>
+                <select id="chatScope">
+                    <option value="Personal">@T["browse.tile.personal"]</option>
+                    <option value="Public">@T["browse.tile.public"]</option>
+                    @foreach (var g in groups)
+                    {
+                        <option value="Group|@g.Id">@g.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div id="chatLog" style="min-height:200px;max-height:520px;overflow-y:auto;padding:var(--sp-3);background:var(--tw-gray-100);border-radius:var(--r-sm);margin-top:var(--sp-3)"></div>
+        <div class="row" style="margin-top:var(--sp-3);gap:var(--sp-2)">
+            <input type="text" id="chatQ" placeholder="@T["chat.placeholder"]" style="flex:1" onkeydown="if(event.key==='Enter')chatSend()"/>
+            <button class="btn btn-primary" id="chatBtn" onclick="chatSend()">@T["chat.ask"]</button>
+        </div>
+        <div class="muted" style="margin-top:var(--sp-3);font-size:.8rem">@T["chat.note"]</div>
+    </div>
+}
+
+<script>
+const log = document.getElementById('chatLog');
+async function chatSend() {
+    const q = document.getElementById('chatQ').value.trim();
+    if (!q) return;
+    const scopeSel = document.getElementById('chatScope').value;
+    let scope = scopeSel, groupId = null;
+    if (scopeSel.startsWith('Group|')) { scope = 'Group'; groupId = scopeSel.slice(6); }
+    appendMsg('you', q);
+    document.getElementById('chatQ').value = '';
+    document.getElementById('chatBtn').disabled = true;
+    appendMsg('assistant', @Json.Serialize(T["chat.thinking"].Value), 'thinking');
+    try {
+        const r = await fetch('/api/v1/ai/chat', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify({ question: q, scope, groupId }),
+        });
+        document.querySelector('.msg.thinking')?.remove();
+        if (!r.ok) { appendMsg('assistant', @Json.Serialize(T["chat.error"].Value)); return; }
+        const d = await r.json();
+        if (!d.answer) appendMsg('assistant', @Json.Serialize(T["chat.no_context"].Value));
+        else {
+            appendMsg('assistant', d.answer);
+            if (d.citations?.length) {
+                const cites = document.createElement('div');
+                cites.style.cssText = 'margin-top:6px;font-size:.75rem;color:var(--tw-muted-blue)';
+                cites.innerHTML = @Json.Serialize(T["chat.sources"].Value) + ' ' + d.citations.map((c,i)=>`[${i+1}] ${c.name}`).join(', ');
+                log.appendChild(cites);
+            }
+        }
+    } finally {
+        document.getElementById('chatBtn').disabled = false;
+        log.scrollTop = log.scrollHeight;
+    }
+}
+function appendMsg(who, text, extra) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + who + (extra ? ' ' + extra : '');
+    el.style.cssText = 'margin:6px 0;padding:8px 12px;border-radius:8px;line-height:1.4;white-space:pre-wrap;'
+        + (who==='you' ? 'background:var(--tw-accent);color:white;text-align:right;margin-left:20%;'
+                       : 'background:white;border:1px solid var(--tw-gray-300);margin-right:20%;');
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+}
+</script>

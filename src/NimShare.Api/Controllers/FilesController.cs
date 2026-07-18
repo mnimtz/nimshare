@@ -82,7 +82,7 @@ public class FilesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id && f.OwnerId == user.Id, ct);
@@ -96,6 +96,10 @@ public class FilesController : ControllerBase
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // Fire-and-forget AI post-processing (tags, risk flag, embedding) when
+        // enabled in the gateway. Never blocks the uploader's response.
+        ai.QueueForFile(file.Id);
         return NoContent();
     }
 

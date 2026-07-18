@@ -86,12 +86,56 @@ document.querySelectorAll('[data-copy]').forEach(b => {
     });
 });
 document.querySelectorAll('[data-email]').forEach(b => {
-    b.addEventListener('click', async () => {
-        const to = prompt(@Json.Serialize(T["links.email.to"].Value));
-        if (!to) return;
-        const msg = prompt(@Json.Serialize(T["links.email.message"].Value)) || '';
-        const r = await api('POST', `/api/v1/links/${b.dataset.email}/send-email`, { toEmail: to, message: msg });
-        if (r.ok) alert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status);
-    });
+    b.addEventListener('click', () => openEmailModal(b.dataset.email));
 });
+async function openEmailModal(linkId) {
+    document.getElementById('emailLinkId').value = linkId;
+    document.getElementById('emailTo').value = '';
+    document.getElementById('emailMsg').value = '';
+    document.getElementById('modalEmail').classList.add('open');
+}
+async function draftWithAi() {
+    const linkId = document.getElementById('emailLinkId').value;
+    const btn = document.getElementById('draftBtn');
+    btn.disabled = true; btn.textContent = @Json.Serialize(T["links.email.drafting"].Value);
+    const r = await fetch('/api/v1/ai/draft-email', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ linkId, context: document.getElementById('emailTo').value || null }),
+    });
+    btn.disabled = false; btn.textContent = @Json.Serialize(T["links.email.draft_ai"].Value);
+    if (r.status === 503) { alert(@Json.Serialize(T["links.email.ai_disabled"].Value)); return; }
+    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    const d = await r.json();
+    document.getElementById('emailMsg').value = d.draft || '';
+}
+async function sendEmail() {
+    const linkId = document.getElementById('emailLinkId').value;
+    const to = document.getElementById('emailTo').value;
+    const msg = document.getElementById('emailMsg').value;
+    if (!to) return;
+    const r = await api('POST', `/api/v1/links/${linkId}/send-email`, { toEmail: to, message: msg });
+    document.getElementById('modalEmail').classList.remove('open');
+    if (r.ok) alert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status);
+}
 </script>
+
+<!-- Send-by-email modal with AI-draft button -->
+<div class="modal-backdrop" id="modalEmail" onclick="if(event.target===this)document.getElementById('modalEmail').classList.remove('open')">
+    <div class="modal-panel">
+        <h2>@T["links.action.email"]</h2>
+        <input type="hidden" id="emailLinkId"/>
+        <div class="field">
+            <label>@T["links.email.to"]</label>
+            <input type="email" id="emailTo" required/>
+        </div>
+        <div class="field">
+            <label>@T["links.email.message"]</label>
+            <textarea id="emailMsg" rows="6" placeholder="@T["links.email.placeholder"]"></textarea>
+        </div>
+        <button type="button" id="draftBtn" class="btn btn-ghost" onclick="draftWithAi()">✨ @T["links.email.draft_ai"]</button>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalEmail').classList.remove('open')">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="sendEmail()">@T["links.email.send"]</button>
+        </div>
+    </div>
+</div>

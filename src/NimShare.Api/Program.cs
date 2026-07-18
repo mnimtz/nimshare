@@ -180,6 +180,7 @@ builder.Services.AddScoped<IFolderService, FolderService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 builder.Services.AddScoped<IAiGatewayService, AiGatewayService>();
+builder.Services.AddSingleton<IAiPostProcessor, AiPostProcessor>();
 // The old SmtpNotificationService is replaced by the gateway-backed adapter so
 // existing callers (link download/upload notifications, "send by email" button)
 // route through the persisted, per-tenant email configuration.
