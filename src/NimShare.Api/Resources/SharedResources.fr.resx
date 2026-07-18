@@ -11,7 +11,48 @@
   <data name="nav.upload"><value>Envoyer</value></data>
   <data name="nav.links"><value>Liens</value></data>
   <data name="nav.settings"><value>Paramètres</value></data>
+  <data name="nav.password"><value>Mot de passe</value></data>
+  <data name="nav.users"><value>Utilisateurs</value></data>
   <data name="nav.signout"><value>Se déconnecter</value></data>
+
+  <data name="auth.email"><value>E-mail</value></data>
+  <data name="auth.display_name"><value>Votre nom</value></data>
+  <data name="auth.password"><value>Mot de passe</value></data>
+  <data name="auth.password_confirm"><value>Confirmez le mot de passe</value></data>
+  <data name="auth.password_helper"><value>Au moins 8 caractères. Une phrase secrète est recommandée.</value></data>
+
+  <data name="setup.title"><value>Créer le premier administrateur</value></data>
+  <data name="setup.subtitle"><value>Configuration initiale</value></data>
+  <data name="setup.lede"><value>C'est une nouvelle installation. Créez ci-dessous votre compte administrateur — il aura un accès complet, y compris la gestion des utilisateurs.</value></data>
+  <data name="setup.create_admin"><value>Créer l'administrateur</value></data>
+
+  <data name="login.title"><value>Connexion</value></data>
+  <data name="login.sign_in"><value>Se connecter</value></data>
+  <data name="login.remember_me"><value>Rester connecté</value></data>
+  <data name="login.or"><value>ou</value></data>
+
+  <data name="password.title"><value>Changer votre mot de passe</value></data>
+  <data name="password.lede"><value>Entrez votre mot de passe actuel et choisissez-en un nouveau.</value></data>
+  <data name="password.current"><value>Mot de passe actuel</value></data>
+  <data name="password.new"><value>Nouveau mot de passe</value></data>
+  <data name="password.save"><value>Mettre à jour le mot de passe</value></data>
+
+  <data name="users.title"><value>Utilisateurs</value></data>
+  <data name="users.lede"><value>Toutes les personnes ayant accès à cette instance NimShare. Les administrateurs peuvent créer, désactiver et supprimer des comptes.</value></data>
+  <data name="users.create_new"><value>Ajouter un utilisateur</value></data>
+  <data name="users.create"><value>Ajouter</value></data>
+  <data name="users.role"><value>Rôle</value></data>
+  <data name="users.role.user"><value>Utilisateur</value></data>
+  <data name="users.role.admin"><value>Administrateur</value></data>
+  <data name="users.state"><value>État</value></data>
+  <data name="users.active"><value>Actif</value></data>
+  <data name="users.disabled"><value>Désactivé</value></data>
+  <data name="users.type"><value>Connexion</value></data>
+  <data name="users.actions"><value>Actions</value></data>
+  <data name="users.action.disable"><value>Désactiver</value></data>
+  <data name="users.action.enable"><value>Activer</value></data>
+  <data name="users.action.delete"><value>Supprimer</value></data>
+  <data name="users.confirm.delete"><value>Supprimer cet utilisateur ? Ses fichiers et liens seront conservés.</value></data>
 
   <data name="welcome.title"><value>Bienvenue sur NimShare</value></data>
   <data name="welcome.headline"><value>Partagez des fichiers sans friction.</value></data>

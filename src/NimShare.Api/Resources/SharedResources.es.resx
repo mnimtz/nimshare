@@ -11,7 +11,48 @@
   <data name="nav.upload"><value>Subir</value></data>
   <data name="nav.links"><value>Enlaces</value></data>
   <data name="nav.settings"><value>Ajustes</value></data>
+  <data name="nav.password"><value>Contraseña</value></data>
+  <data name="nav.users"><value>Usuarios</value></data>
   <data name="nav.signout"><value>Cerrar sesión</value></data>
+
+  <data name="auth.email"><value>Correo</value></data>
+  <data name="auth.display_name"><value>Tu nombre</value></data>
+  <data name="auth.password"><value>Contraseña</value></data>
+  <data name="auth.password_confirm"><value>Confirmar contraseña</value></data>
+  <data name="auth.password_helper"><value>Al menos 8 caracteres. Se recomienda una frase de contraseña.</value></data>
+
+  <data name="setup.title"><value>Crear el primer administrador</value></data>
+  <data name="setup.subtitle"><value>Configuración inicial</value></data>
+  <data name="setup.lede"><value>Es una instalación nueva. Crea tu cuenta de administrador abajo — tendrá acceso total, incluida la gestión de usuarios.</value></data>
+  <data name="setup.create_admin"><value>Crear administrador</value></data>
+
+  <data name="login.title"><value>Iniciar sesión</value></data>
+  <data name="login.sign_in"><value>Iniciar sesión</value></data>
+  <data name="login.remember_me"><value>Mantenerme conectado</value></data>
+  <data name="login.or"><value>o</value></data>
+
+  <data name="password.title"><value>Cambiar tu contraseña</value></data>
+  <data name="password.lede"><value>Introduce tu contraseña actual y elige una nueva.</value></data>
+  <data name="password.current"><value>Contraseña actual</value></data>
+  <data name="password.new"><value>Nueva contraseña</value></data>
+  <data name="password.save"><value>Actualizar contraseña</value></data>
+
+  <data name="users.title"><value>Usuarios</value></data>
+  <data name="users.lede"><value>Cualquier persona con acceso a esta instancia de NimShare. Los administradores pueden crear, deshabilitar y eliminar cuentas.</value></data>
+  <data name="users.create_new"><value>Añadir un usuario</value></data>
+  <data name="users.create"><value>Añadir</value></data>
+  <data name="users.role"><value>Rol</value></data>
+  <data name="users.role.user"><value>Usuario</value></data>
+  <data name="users.role.admin"><value>Administrador</value></data>
+  <data name="users.state"><value>Estado</value></data>
+  <data name="users.active"><value>Activo</value></data>
+  <data name="users.disabled"><value>Deshabilitado</value></data>
+  <data name="users.type"><value>Inicio de sesión</value></data>
+  <data name="users.actions"><value>Acciones</value></data>
+  <data name="users.action.disable"><value>Deshabilitar</value></data>
+  <data name="users.action.enable"><value>Habilitar</value></data>
+  <data name="users.action.delete"><value>Eliminar</value></data>
+  <data name="users.confirm.delete"><value>¿Eliminar este usuario? Sus archivos y enlaces se mantendrán.</value></data>
 
   <data name="welcome.title"><value>Bienvenido a NimShare</value></data>
   <data name="welcome.headline"><value>Comparte archivos sin fricción.</value></data>

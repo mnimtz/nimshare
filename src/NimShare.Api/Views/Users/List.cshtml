@@ -1,0 +1,101 @@
+@model IEnumerable<NimShare.Core.Entities.User>
+@{ ViewData["Title"] = @T["users.title"]; Layout = "_AppShell"; }
+<div class="page-header">
+    <div>
+        <h1>@T["users.title"]</h1>
+        <p class="lede">@T["users.lede"]</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n)
+{
+    <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+<div class="card">
+    <h2 class="card-title">@T["users.create_new"]</h2>
+    <form method="post" action="/settings/users/create" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:200px">
+            <label>@T["auth.email"]</label>
+            <input type="email" name="email" required/>
+        </div>
+        <div class="field" style="flex:1;min-width:180px">
+            <label>@T["auth.display_name"]</label>
+            <input type="text" name="displayName" required/>
+        </div>
+        <div class="field" style="flex:1;min-width:180px">
+            <label>@T["auth.password"]</label>
+            <input type="text" name="password" required minlength="8"/>
+        </div>
+        <div class="field" style="width:130px">
+            <label>@T["users.role"]</label>
+            <select name="role">
+                <option value="User">@T["users.role.user"]</option>
+                <option value="Admin">@T["users.role.admin"]</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">@T["users.create"]</button>
+    </form>
+</div>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>@T["auth.email"]</th>
+        <th>@T["auth.display_name"]</th>
+        <th>@T["users.role"]</th>
+        <th>@T["users.state"]</th>
+        <th>@T["users.type"]</th>
+        <th>@T["users.actions"]</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var u in Model)
+    {
+        <tr>
+            <td class="mono">@u.Email</td>
+            <td>@u.DisplayName</td>
+            <td>
+                <form method="post" action="/settings/users/@u.Id/set-role" style="display:inline">
+                    <select name="role" onchange="this.form.submit()">
+                        <option value="User" selected="@(u.Role.ToString()=="User")">@T["users.role.user"]</option>
+                        <option value="Admin" selected="@(u.Role.ToString()=="Admin")">@T["users.role.admin"]</option>
+                    </select>
+                </form>
+            </td>
+            <td>
+                @if (u.IsActive)
+                {
+                    <span class="chip chip-ok">@T["users.active"]</span>
+                }
+                else
+                {
+                    <span class="chip chip-warn">@T["users.disabled"]</span>
+                }
+            </td>
+            <td class="muted">
+                @if (!string.IsNullOrEmpty(u.EntraOid))
+                {
+                    <span class="chip">Entra</span>
+                }
+                @if (u.PasswordHash is not null)
+                {
+                    <span class="chip">Local</span>
+                }
+            </td>
+            <td>
+                <form method="post" action="/settings/users/@u.Id/toggle-active" style="display:inline">
+                    <button class="btn btn-ghost btn-sm">@(u.IsActive ? @T["users.action.disable"] : @T["users.action.enable"])</button>
+                </form>
+                <form method="post" action="/settings/users/@u.Id/delete" style="display:inline" onsubmit="return confirm('@T["users.confirm.delete"]')">
+                    <button class="btn btn-ghost btn-sm">@T["users.action.delete"]</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

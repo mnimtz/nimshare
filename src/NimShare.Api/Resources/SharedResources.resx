@@ -11,7 +11,48 @@
   <data name="nav.upload"><value>Upload</value></data>
   <data name="nav.links"><value>Links</value></data>
   <data name="nav.settings"><value>Settings</value></data>
+  <data name="nav.password"><value>Password</value></data>
+  <data name="nav.users"><value>Users</value></data>
   <data name="nav.signout"><value>Sign out</value></data>
+
+  <data name="auth.email"><value>Email</value></data>
+  <data name="auth.display_name"><value>Your name</value></data>
+  <data name="auth.password"><value>Password</value></data>
+  <data name="auth.password_confirm"><value>Confirm password</value></data>
+  <data name="auth.password_helper"><value>At least 8 characters. A passphrase is recommended.</value></data>
+
+  <data name="setup.title"><value>Create the first administrator</value></data>
+  <data name="setup.subtitle"><value>First-run setup</value></data>
+  <data name="setup.lede"><value>This is a fresh install. Create your admin account below — it will have full access, including user management.</value></data>
+  <data name="setup.create_admin"><value>Create administrator</value></data>
+
+  <data name="login.title"><value>Sign in</value></data>
+  <data name="login.sign_in"><value>Sign in</value></data>
+  <data name="login.remember_me"><value>Keep me signed in</value></data>
+  <data name="login.or"><value>or</value></data>
+
+  <data name="password.title"><value>Change your password</value></data>
+  <data name="password.lede"><value>Enter your current password and choose a new one.</value></data>
+  <data name="password.current"><value>Current password</value></data>
+  <data name="password.new"><value>New password</value></data>
+  <data name="password.save"><value>Update password</value></data>
+
+  <data name="users.title"><value>Users</value></data>
+  <data name="users.lede"><value>Everyone with access to this NimShare instance. Admins can create, disable, and remove accounts.</value></data>
+  <data name="users.create_new"><value>Add a user</value></data>
+  <data name="users.create"><value>Add user</value></data>
+  <data name="users.role"><value>Role</value></data>
+  <data name="users.role.user"><value>User</value></data>
+  <data name="users.role.admin"><value>Administrator</value></data>
+  <data name="users.state"><value>State</value></data>
+  <data name="users.active"><value>Active</value></data>
+  <data name="users.disabled"><value>Disabled</value></data>
+  <data name="users.type"><value>Sign-in</value></data>
+  <data name="users.actions"><value>Actions</value></data>
+  <data name="users.action.disable"><value>Disable</value></data>
+  <data name="users.action.enable"><value>Enable</value></data>
+  <data name="users.action.delete"><value>Delete</value></data>
+  <data name="users.confirm.delete"><value>Delete this user? Their files and links will remain.</value></data>
 
   <data name="welcome.title"><value>Welcome to NimShare</value></data>
   <data name="welcome.headline"><value>Share files without the friction.</value></data>

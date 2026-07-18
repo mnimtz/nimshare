@@ -1,9 +1,9 @@
 @model IEnumerable<NimShare.Core.Entities.CustomDomain>
 @{
     ViewData["Title"] = @T["settings.title"];
+    Layout = "_AppShell";
     var user = (NimShare.Core.Entities.User)ViewData["User"]!;
 }
-<partial name="_AppShell"/>
 <div class="page-header">
     <div>
         <h1>@T["settings.title"]</h1>

@@ -19,22 +19,50 @@ public class CurrentUserService : ICurrentUserService
 
     public async Task<User> GetOrProvisionAsync(ClaimsPrincipal principal, CancellationToken ct = default)
     {
-        var oid = principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
-                  ?? principal.FindFirst("oid")?.Value
-                  ?? throw new UnauthorizedAccessException("No oid claim on principal.");
-
-        var existing = await _db.Users.SingleOrDefaultAsync(x => x.EntraOid == oid, ct);
-        if (existing is not null)
+        // Local cookie sign-in path: NameIdentifier holds the user's Guid directly.
+        if (principal.HasClaim(c => c.Type == "local" && c.Value == "true"))
         {
+            var sub = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? throw new UnauthorizedAccessException("No sub claim on local principal.");
+            if (!Guid.TryParse(sub, out var userId))
+                throw new UnauthorizedAccessException("Bad sub claim.");
+            var existing = await _db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct)
+                           ?? throw new UnauthorizedAccessException("User no longer exists.");
             existing.LastSeenAt = DateTimeOffset.UtcNow;
             await _db.SaveChangesAsync(ct);
             return existing;
         }
 
+        // Entra ID path: look up (or auto-provision) by object id.
+        var oid = principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+                  ?? principal.FindFirst("oid")?.Value
+                  ?? throw new UnauthorizedAccessException("No oid claim on principal.");
+
+        var existingByOid = await _db.Users.SingleOrDefaultAsync(x => x.EntraOid == oid, ct);
+        if (existingByOid is not null)
+        {
+            existingByOid.LastSeenAt = DateTimeOffset.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return existingByOid;
+        }
+
         var name = principal.FindFirst("name")?.Value ?? principal.Identity?.Name ?? "New user";
-        var email = principal.FindFirst("preferred_username")?.Value
-                    ?? principal.FindFirst(ClaimTypes.Email)?.Value
-                    ?? "";
+        var email = (principal.FindFirst("preferred_username")?.Value
+                     ?? principal.FindFirst(ClaimTypes.Email)?.Value
+                     ?? "").Trim().ToLowerInvariant();
+
+        // If a local user with the same email exists, link the Entra oid to it.
+        if (!string.IsNullOrEmpty(email))
+        {
+            var linkable = await _db.Users.SingleOrDefaultAsync(x => x.Email == email, ct);
+            if (linkable is not null)
+            {
+                linkable.EntraOid = oid;
+                linkable.LastSeenAt = DateTimeOffset.UtcNow;
+                await _db.SaveChangesAsync(ct);
+                return linkable;
+            }
+        }
 
         var user = new User
         {
@@ -42,6 +70,7 @@ public class CurrentUserService : ICurrentUserService
             DisplayName = name,
             Email = email,
             Role = UserRole.User,
+            IsActive = true,
             LastSeenAt = DateTimeOffset.UtcNow,
         };
         _db.Users.Add(user);

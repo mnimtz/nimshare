@@ -1,9 +1,13 @@
 @using System.Globalization
 @{
+    // _AppShell is used as a LAYOUT (Layout = "_AppShell" in each authenticated view),
+    // not as a partial. It wraps its own outer html via _Layout.
+    Layout = "_Layout";
     var currentPath = Context.Request.Path.Value ?? "/";
     string Active(string startsWith) => currentPath.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     var supported = new[] { ("en", "EN"), ("de", "DE"), ("fr", "FR"), ("it", "IT"), ("es", "ES") };
     var cur = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var isAdmin = User.IsInRole("Admin");
 }
 <div class="app-shell">
     <aside class="sidebar">
@@ -24,7 +28,12 @@
             <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
             <a href="/upload"    class="@Active("/upload")">@T["nav.upload"]</a>
             <a href="/links"     class="@Active("/links")">@T["nav.links"]</a>
-            <a href="/settings"  class="@Active("/settings")">@T["nav.settings"]</a>
+            <a href="/settings"  class="@(currentPath == "/settings" ? "active" : "")">@T["nav.settings"]</a>
+            <a href="/account/password" class="@Active("/account/password")">@T["nav.password"]</a>
+            @if (isAdmin)
+            {
+                <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
+            }
         </nav>
 
         <div class="sidebar-footer">
@@ -37,7 +46,7 @@
                 }
             </div>
             <div style="margin-top:12px">
-                <a href="/MicrosoftIdentity/Account/SignOut" style="color:rgba(255,255,255,.7);font-size:.8rem">@T["nav.signout"]</a>
+                <a href="/logout" style="color:rgba(255,255,255,.7);font-size:.8rem">@T["nav.signout"]</a>
             </div>
         </div>
     </aside>

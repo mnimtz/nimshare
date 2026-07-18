@@ -11,16 +11,21 @@ public class HomeController : Controller
 {
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
+    private readonly ILocalAuthService _auth;
 
-    public HomeController(NimShareDbContext db, ICurrentUserService users)
+    public HomeController(NimShareDbContext db, ICurrentUserService users, ILocalAuthService auth)
     {
         _db = db;
         _users = users;
+        _auth = auth;
     }
 
     [Route("/")]
-    public IActionResult Index()
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
+        // First-run: force the setup wizard until at least one Admin exists.
+        if (await _auth.IsFirstRunAsync(ct))
+            return RedirectToAction("Setup", "Account");
         if (User.Identity?.IsAuthenticated ?? false)
             return RedirectToAction(nameof(Dashboard));
         return View("Welcome");

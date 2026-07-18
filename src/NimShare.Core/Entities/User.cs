@@ -10,11 +10,17 @@ public class User
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <summary>Object id from the Entra ID token; the join key across sign-ins.</summary>
+    /// <summary>Object id from the Entra ID token; the join key for federated sign-ins. Empty for local-only accounts.</summary>
     public string EntraOid { get; set; } = string.Empty;
 
     public string DisplayName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+
+    /// <summary>bcrypt hash for local password auth. Null when the account is Entra-only.</summary>
+    public string? PasswordHash { get; set; }
+
+    /// <summary>Disabled users cannot sign in and their links are hidden from public resolution.</summary>
+    public bool IsActive { get; set; } = true;
 
     public UserRole Role { get; set; } = UserRole.User;
 

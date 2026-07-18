@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NimShare.Core.Entities;
 
 namespace NimShare.Core.Data;
@@ -18,14 +19,39 @@ public class NimShareDbContext : DbContext
     {
         base.OnModelCreating(b);
 
+        // Sqlite does not support ORDER BY on DateTimeOffset — apply a value
+        // converter that stores them as long ticks so queries work in both
+        // Sqlite (dev) and SQL Server (prod).
+        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            var converter = new ValueConverter<DateTimeOffset, long>(
+                v => v.UtcTicks,
+                v => new DateTimeOffset(v, TimeSpan.Zero));
+            var nullableConverter = new ValueConverter<DateTimeOffset?, long?>(
+                v => v.HasValue ? v.Value.UtcTicks : null,
+                v => v.HasValue ? new DateTimeOffset(v.Value, TimeSpan.Zero) : null);
+            foreach (var entityType in b.Model.GetEntityTypes())
+            {
+                foreach (var prop in entityType.GetProperties())
+                {
+                    if (prop.ClrType == typeof(DateTimeOffset))
+                        prop.SetValueConverter(converter);
+                    else if (prop.ClrType == typeof(DateTimeOffset?))
+                        prop.SetValueConverter(nullableConverter);
+                }
+            }
+        }
+
         b.Entity<User>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasIndex(x => x.EntraOid).IsUnique();
-            e.HasIndex(x => x.Email);
+            // EntraOid is unique when non-empty; empty is the sentinel for local-only accounts.
+            e.HasIndex(x => x.EntraOid);
+            e.HasIndex(x => x.Email).IsUnique();
             e.Property(x => x.EntraOid).HasMaxLength(64).IsRequired();
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.PasswordHash).HasMaxLength(120);
             e.Property(x => x.PreferredCulture).HasMaxLength(5).IsRequired();
         });
 

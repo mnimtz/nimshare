@@ -1,0 +1,34 @@
+@model NimShare.Api.Controllers.SetupViewModel
+@{ ViewData["Title"] = @T["setup.title"]; Layout = "_Layout"; }
+<div class="landing-shell">
+    <div class="landing-card" style="max-width: 560px">
+        <div class="landing-brand">
+            <span class="logo-tile">NIMSHARE</span>
+            <small>@T["setup.subtitle"]</small>
+        </div>
+        <h1>@T["setup.title"]</h1>
+        <p class="landing-meta">@T["setup.lede"]</p>
+
+        <form method="post" class="stack" style="margin-top: var(--sp-6)">
+            <div asp-validation-summary="All" class="helper" style="color:var(--status-critical)"></div>
+            <div class="field">
+                <label for="Email">@T["auth.email"]</label>
+                <input type="email" name="Email" id="Email" required autocomplete="email" value="@Model.Email"/>
+            </div>
+            <div class="field">
+                <label for="DisplayName">@T["auth.display_name"]</label>
+                <input type="text" name="DisplayName" id="DisplayName" required value="@Model.DisplayName"/>
+            </div>
+            <div class="field">
+                <label for="Password">@T["auth.password"]</label>
+                <input type="password" name="Password" id="Password" required autocomplete="new-password" minlength="8"/>
+                <div class="helper">@T["auth.password_helper"]</div>
+            </div>
+            <div class="field">
+                <label for="PasswordConfirm">@T["auth.password_confirm"]</label>
+                <input type="password" name="PasswordConfirm" id="PasswordConfirm" required autocomplete="new-password" minlength="8"/>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["setup.create_admin"]</button>
+        </form>
+    </div>
+</div>

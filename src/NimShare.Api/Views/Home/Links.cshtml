@@ -1,6 +1,5 @@
 @model IEnumerable<NimShare.Core.Entities.ShareLink>
-@{ ViewData["Title"] = @T["links.title"]; }
-<partial name="_AppShell"/>
+@{ ViewData["Title"] = @T["links.title"]; Layout = "_AppShell"; }
 <div class="page-header">
     <div>
         <h1>@T["links.title"]</h1>

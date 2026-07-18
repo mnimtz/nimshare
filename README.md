@@ -36,8 +36,11 @@ Built on **Azure App Service + Azure Blob Storage**. Deploy in one click.
 
 ### Multi-user & tenant isolation
 - Each user gets an isolated storage prefix (`users/{userId}/…`) and can only manage their own files/links.
-- Optional admin role with tenant-wide dashboard and quotas.
-- Sign in with **Microsoft Entra ID** (works with personal and organisational accounts via Entra External ID / B2C).
+- **Two roles**: `User` (own files/links only) and `Administrator` (full user management, disable/enable, delete).
+- **Two sign-in methods, both optional to mix**:
+  - **Local email + password** — always works. First user to hit the app is auto-promoted to Admin (first-run setup wizard).
+  - **Microsoft Entra ID** — optional, layered on top when configured (see [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md)). Existing local accounts get auto-linked by email on first Entra sign-in.
+- Admins manage users under **Settings → Users**: create, disable, change role, delete. Safety rails prevent demoting or deleting the last active admin.
 
 ### Custom domains per user (Settings → Domains)
 - Add `share.your-company.com` to your account.
@@ -110,15 +113,23 @@ What the template provisions:
 
 **No SQL Database, no Key Vault, no Entra ID parameters up front.** The app boots and the public welcome page renders immediately. To turn on sign-in, follow the post-deploy step below.
 
-### Post-deploy: enable sign-in
+### First run
+
+Open your site → NimShare shows a **First-run setup wizard**. Enter your email, name and a password → that account is created as the first Administrator. You're immediately signed in and land on the dashboard.
+
+From that moment: local email+password sign-in works via `/login`. Additional users can be created under **Settings → Users** (Admin-only page).
+
+### Optional: enable Microsoft Entra sign-in on top
+
+If you also want "Sign in with Microsoft" alongside the local login:
 
 1. Create an Entra ID app registration (see [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md); redirect URI is `https://<siteName>.azurewebsites.net/signin-oidc`).
-2. In the Azure portal, open your App Service → **Configuration** → **Application settings** and add:
+2. In the Azure portal, App Service → **Configuration** → **Application settings**:
    - `AzureAd__TenantId` = your tenant GUID (or `common` for multi-tenant)
    - `AzureAd__ClientId` = the app registration's Application (client) ID
 3. Save, then **Restart** the App Service.
 
-Sign-in now works.
+The login page now shows both: the email/password form + a "Sign in with Microsoft" button.
 
 ### Cost estimate
 

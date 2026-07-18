@@ -49,29 +49,39 @@ builder.Services.AddDbContext<NimShareDbContext>(o =>
 });
 
 // ── Auth ───────────────────────────────────────────────────────────────────
-// Web sign-in (cookies + OIDC to Entra ID) for Razor pages,
-// bearer JWT for the JSON API — both against the same Entra registration.
-//
-// If AzureAd:ClientId is empty (fresh checkout, no user-secrets yet), we skip
-// Entra wiring so the app still boots and public /s/{slug}, /u/{slug}, and
-// the branded welcome page render. Any [Authorize] route will then just 401.
+// Cookie sign-in is ALWAYS the default (local email+password accounts + the
+// first-run admin setup wizard depend on it). Entra ID is layered on top as
+// an OPTIONAL second sign-in method when AzureAd:ClientId is configured.
 var entraClientId = builder.Configuration["AzureAd:ClientId"];
 var entraConfigured = !string.IsNullOrWhiteSpace(entraClientId);
+
+var authBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/login";
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
+        options.Cookie.Name = "nimshare.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    });
+
 if (entraConfigured)
 {
-    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-        .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
+    // Add Entra as a SECONDARY scheme; Cookies stays the default so the local
+    // login page and setup wizard work without an Entra tenant.
+    authBuilder
+        .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"),
+            openIdConnectScheme: OpenIdConnectDefaults.AuthenticationScheme,
+            cookieScheme: null,
+            subscribeToOpenIdConnectMiddlewareDiagnosticsEvents: false)
         .EnableTokenAcquisitionToCallDownstreamApi()
         .AddInMemoryTokenCaches();
 
     builder.Services.AddAuthentication()
         .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"), jwtBearerScheme: "Bearer");
-}
-else
-{
-    // Minimal scheme so [Authorize] challenges return 401 instead of crashing.
-    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-        .AddCookie();
 }
 
 builder.Services.AddAuthorization(options =>
@@ -159,6 +169,7 @@ builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<ILinkAccessService, LinkAccessService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<INotificationService, SmtpNotificationService>();
 
 builder.Services.AddHttpContextAccessor();
@@ -239,6 +250,13 @@ app.UseMiddleware<CustomDomainMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Make "is Entra configured?" available to any Razor view.
+app.Use((ctx, next) =>
+{
+    ctx.Items["EntraConfigured"] = entraConfigured;
+    return next(ctx);
+});
 
 app.MapControllers();
 app.MapRazorPages();
