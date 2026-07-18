@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
@@ -21,6 +22,24 @@ builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOpt
 var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
 var connString = builder.Configuration.GetConnectionString("Default")
                  ?? "Data Source=nimshare.db";
+
+// When Sqlite points at a mounted volume like /data/nimshare.db, make sure
+// the directory exists — Azure Files creates the share, but not sub-paths.
+if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    var dataSourceStart = connString.IndexOf("Data Source=", StringComparison.OrdinalIgnoreCase);
+    if (dataSourceStart >= 0)
+    {
+        var raw = connString[(dataSourceStart + "Data Source=".Length)..];
+        var end = raw.IndexOf(';');
+        var path = end >= 0 ? raw[..end] : raw;
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+        {
+            try { Directory.CreateDirectory(dir); } catch { /* Azure Files may EPERM briefly */ }
+        }
+    }
+}
 builder.Services.AddDbContext<NimShareDbContext>(o =>
 {
     if (string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
@@ -194,7 +213,22 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Behind Azure App Service the app is on plain HTTP inside the container; the
+// front-door proxy terminates TLS. Trust the forwarded headers so Request.Scheme
+// reflects the outside "https" and generated redirect URIs match reality.
+var fwd = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+};
+fwd.KnownNetworks.Clear();
+fwd.KnownProxies.Clear();
+app.UseForwardedHeaders(fwd);
+
+if (!app.Environment.IsDevelopment())
+{
+    // Only redirect to HTTPS in prod; in dev we run plain HTTP on localhost.
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 app.UseRequestLocalization();

@@ -1,19 +1,25 @@
 # Costs
 
-Indicative USD/month at low usage (EU-West).
+Indicative EUR/month at low usage (EU-West), matching the defaults in `infra/azuredeploy.json`.
 
 | Component | SKU | Cost |
 |---|---|---|
-| App Service Plan | S1 | ~73 |
-| Azure SQL DB | Basic (5 DTU) | ~5 |
-| Storage Account | Standard LRS, 100 GB hot + 100 GB egress | ~6 |
-| Application Insights | 5 GB ingestion | ~12 |
-| Key Vault (optional) | Standard | ~1 |
-| **Total** | | **~97** |
+| App Service Plan | B1 (Linux) | ~10 |
+| Storage Account | Standard LRS, 100 GB Blob hot + 5 GB File share | ~2 |
+| **Total** | | **~12 EUR/month** |
+
+The metadata DB is SQLite persisted on the mounted Azure Files share — no separate managed SQL bill.
 
 ## Levers to shrink
 
-- **Drop to B1** App Service Plan — ~55 USD; lose free managed certs, so custom domains need a self-signed cert or Front Door.
-- **Serverless SQL** — auto-pauses at zero traffic; costs cents/day but adds a ~1 s cold start for the first request after idle.
+- **Drop to F1** App Service Plan — free tier, but the app sleeps when idle (first hit takes ~10 s) and there's no always-on for the notification scheduler.
 - **Cool blobs** — lifecycle rule at 30 days sends older shares to Cool tier; halves storage cost for archival files.
-- **Application Insights sampling** — set fixed-rate 20% in production; log volume shrinks 5×.
+
+## Levers to scale up
+
+- **Upgrade to S1** if you want:
+  - Custom domains per user with free App Service Managed Certificates
+  - Deployment slots for staging
+  - ~ 60 EUR/month
+- **Swap SQLite for Azure SQL** if you go past ~5 concurrent writers or want multi-region replication. Set `Database__Provider=SqlServer` and point `ConnectionStrings__Default` at your Azure SQL instance.
+- **Add Application Insights** — set `APPLICATIONINSIGHTS_CONNECTION_STRING`; auto-instruments requests/deps/exceptions.

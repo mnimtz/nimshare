@@ -89,18 +89,48 @@ Deep-dive in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the feature/data
 
 ### 1-click on Azure
 
-Click the **Deploy to Azure** button at the top. You'll be prompted for:
+Click the **Deploy to Azure** button at the top. Only one parameter is required:
 
-| Parameter | Meaning |
-|---|---|
-| `siteName` | Globally unique App Service name (also used for the default hostname) |
-| `sqlAdminLogin` / `sqlAdminPassword` | Credentials for the Azure SQL server the app will use |
-| `entraTenantId`, `entraClientId` | Entra ID app registration used for sign-in |
-| `location` | Azure region — pick one close to you or your team |
+| Parameter | Default | Meaning |
+|---|---|---|
+| `siteName` | *(required)* | Globally unique App Service name → `https://<siteName>.azurewebsites.net` |
+| `sku` | `B1` | Plan SKU. `B1` ≈ 10 EUR/month, always-on. `F1` free but sleeps. `S1`+ needed if you want custom domains with free managed TLS certs. |
+| `location` | resource-group region | Azure region |
+| `containerImage` | `ghcr.io/mnimtz/nimshare:latest` | Or pin a specific tag like `ghcr.io/mnimtz/nimshare:0.1.0` for reproducibility |
+| `tz` | `Europe/Berlin` | IANA timezone for link timestamps |
+| `defaultLang` | `en` | Fallback UI language (en/fr/it/de/es) |
 
-The template provisions: App Service Plan (S1 — needed for custom domains + free Managed Certificates), App Service, Storage Account with `files` container, Azure SQL Database (Basic tier), Application Insights, Log Analytics workspace, and a Key Vault for secrets. Managed identity is granted `Storage Blob Data Contributor` on the storage account and `Contributor` on the SQL DB.
+What the template provisions:
 
-Cost estimate: ~30–40 USD/month for the default SKUs at low usage. See [`docs/COSTS.md`](docs/COSTS.md).
+- **Linux App Service** running the container from GHCR (`ghcr.io/mnimtz/nimshare`)
+- **Storage Account** with:
+  - a `files` Blob container for user uploads
+  - a `nimshare-data` File share mounted at `/data` for the SQLite metadata DB
+- **Managed identity** on the App Service, granted `Storage Blob Data Contributor` on the storage account — no connection strings, no account keys in app settings
+
+**No SQL Database, no Key Vault, no Entra ID parameters up front.** The app boots and the public welcome page renders immediately. To turn on sign-in, follow the post-deploy step below.
+
+### Post-deploy: enable sign-in
+
+1. Create an Entra ID app registration (see [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md); redirect URI is `https://<siteName>.azurewebsites.net/signin-oidc`).
+2. In the Azure portal, open your App Service → **Configuration** → **Application settings** and add:
+   - `AzureAd__TenantId` = your tenant GUID (or `common` for multi-tenant)
+   - `AzureAd__ClientId` = the app registration's Application (client) ID
+3. Save, then **Restart** the App Service.
+
+Sign-in now works.
+
+### Cost estimate
+
+- App Service `B1`: ~10 EUR/month
+- Storage account (100 GB Blob + 5 GB File share): ~2 EUR/month
+- **Total: ~12 EUR/month** at personal-use volumes
+
+See [`docs/COSTS.md`](docs/COSTS.md).
+
+### Note on the GHCR image
+
+The first time you deploy, make sure the container package is public: <https://github.com/users/mnimtz/packages/container/nimshare/settings> → *Change visibility* → *Public*. Without this, App Service can't pull the image and you'll see a generic "Application Error" page.
 
 ### Local development
 
