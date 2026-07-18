@@ -342,4 +342,8 @@
   <data name="landing.ai_summary.unsupported"><value>This file type isn't supported for AI summaries yet.</value></data>
   <data name="landing.ai_summary.error"><value>Couldn't generate a summary. Try again later.</value></data>
   <data name="landing.folder.lede"><value>Files in this folder:</value></data>
+  <data name="browse.libraries.mine"><value>Mes bibliothèques</value></data>
+  <data name="browse.libraries.shared"><value>Partagé avec moi</value></data>
+  <data name="browse.libraries.groups"><value>Bibliothèques de groupe</value></data>
+  <data name="ctx.open"><value>Ouvrir</value></data>
 </root>

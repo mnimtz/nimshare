@@ -300,7 +300,53 @@ input:focus, select:focus, textarea:focus {
 .file-tile .name { font-weight: 700; color: var(--tw-primary); }
 .file-tile .sub { color: var(--tw-muted-blue); font-size: .85rem; }
 
-/* ── Language switcher ─────────────────────────────────────────── */
+/* ── Language dropdown (tonerwatch-style <details>) ────────────── */
+.sidebar-lang { position: relative; margin-bottom: var(--sp-3); }
+.sidebar-lang summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 8px 14px;
+    color: rgba(255, 255, 255, .78);
+    border-radius: var(--r-sm);
+    font-size: .88rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    transition: background var(--t-fast), color var(--t-fast);
+}
+.sidebar-lang summary::-webkit-details-marker { display: none; }
+.sidebar-lang summary::marker { content: none; }
+.sidebar-lang summary:hover { background: rgba(255, 255, 255, .10); color: var(--tw-white); }
+.sidebar-lang summary svg { width: 18px; height: 18px; opacity: .85; flex-shrink: 0; }
+.sidebar-lang summary .label { flex: 1; }
+.sidebar-lang summary .chev {
+    margin-left: auto; opacity: .6;
+    transition: transform var(--t-fast);
+}
+.sidebar-lang[open] summary .chev { transform: rotate(180deg); }
+.sidebar-lang .menu {
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: var(--r-sm);
+    padding: var(--sp-1);
+    margin-top: var(--sp-1);
+}
+.sidebar-lang .menu a {
+    display: block;
+    padding: 8px 14px;
+    color: rgba(255, 255, 255, .78);
+    border-radius: 4px;
+    font-size: .85rem;
+    text-decoration: none;
+    transition: background var(--t-fast), color var(--t-fast);
+}
+.sidebar-lang .menu a:hover { background: rgba(255, 255, 255, .10); color: var(--tw-white); }
+.sidebar-lang .menu a.current { color: var(--tw-white); font-weight: 700; }
+.sidebar-lang .menu a.current::before { content: '✓ '; opacity: .8; }
+
+/* ── (legacy) horizontal chips — still used on login/setup ────── */
 .lang-switcher {
     display: flex;
     gap: 3px;
@@ -511,6 +557,172 @@ input:focus, select:focus, textarea:focus {
 .actions-menu .menu a:hover { background: var(--tw-gray-100); color: var(--tw-primary); }
 .actions-menu .menu .divider { height: 1px; background: var(--tw-gray-200); margin: 4px 0; }
 .actions-menu .menu form { margin: 0; }
+
+/* ── Seafile-style browser rows with hover actions ────────────── */
+.seafile-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+.seafile-table thead th {
+    background: transparent;
+    color: var(--tw-muted-blue);
+    font-weight: 500;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--tw-gray-200);
+    text-align: left;
+}
+.seafile-table td {
+    padding: 10px var(--sp-4);
+    border-bottom: 1px solid var(--tw-gray-200);
+    font-size: .92rem;
+    vertical-align: middle;
+}
+.seafile-table tr:last-child td { border-bottom: none; }
+.seafile-table tbody tr {
+    transition: background var(--t-fast);
+    position: relative;
+}
+.seafile-table tbody tr:hover { background: var(--tw-gray-100); }
+.seafile-table tbody tr.selected { background: rgba(0, 160, 251, .06); }
+
+.seafile-name {
+    display: flex; align-items: center; gap: var(--sp-3);
+    color: var(--tw-primary); font-weight: 500;
+    text-decoration: none;
+}
+.seafile-name:hover .name-text { color: var(--tw-accent); }
+.seafile-name .file-icon {
+    width: 24px; height: 24px;
+    border-radius: 4px;
+    font-size: .55rem;
+    flex-shrink: 0;
+}
+
+/* Row-action icons revealed on hover — Seafile pattern */
+.row-actions {
+    display: flex; align-items: center; gap: 4px;
+    opacity: 0;
+    transition: opacity var(--t-fast);
+    justify-content: flex-end;
+}
+.seafile-table tbody tr:hover .row-actions,
+.seafile-table tbody tr.selected .row-actions,
+.row-actions.persistent { opacity: 1; }
+.row-actions button,
+.row-actions a {
+    background: transparent;
+    border: none;
+    padding: 6px;
+    color: var(--tw-muted-blue);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 1;
+    text-decoration: none;
+    transition: background var(--t-fast), color var(--t-fast);
+}
+.row-actions button:hover,
+.row-actions a:hover {
+    background: var(--tw-gray-200);
+    color: var(--tw-primary);
+}
+
+.row-check {
+    opacity: 0;
+    transition: opacity var(--t-fast);
+}
+.seafile-table tbody tr:hover .row-check,
+.seafile-table tbody tr.selected .row-check,
+.row-check:checked,
+.row-check.persistent { opacity: 1; }
+
+/* Right-click context menu */
+.ctx-menu {
+    position: fixed;
+    z-index: 100;
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-2) 0;
+    min-width: 220px;
+    display: none;
+}
+.ctx-menu.open { display: block; }
+.ctx-menu button {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 16px; background: none; border: none;
+    color: var(--tw-text); font-size: .9rem;
+    cursor: pointer;
+    display: flex; align-items: center; gap: var(--sp-3);
+}
+.ctx-menu button:hover { background: var(--tw-gray-100); color: var(--tw-primary); }
+.ctx-menu .divider { height: 1px; background: var(--tw-gray-200); margin: 4px 0; }
+.ctx-menu button .kbd {
+    margin-left: auto;
+    color: var(--tw-muted-blue);
+    font-family: var(--font-mono);
+    font-size: .75rem;
+}
+
+/* Library tiles on /browse root — Seafile-inspired, dezenter */
+.library-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--sp-4);
+    margin: var(--sp-4) 0 var(--sp-8);
+}
+.library-tile {
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r);
+    padding: var(--sp-4);
+    display: flex; align-items: center; gap: var(--sp-3);
+    text-decoration: none;
+    color: var(--tw-text);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.library-tile:hover {
+    border-color: var(--tw-accent);
+    box-shadow: var(--shadow);
+    color: var(--tw-primary);
+}
+.library-tile .icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    color: var(--tw-white);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    background: var(--tw-accent);
+}
+.library-tile.personal .icon { background: linear-gradient(135deg, var(--tw-accent), var(--tw-primary-alt)); }
+.library-tile.public   .icon { background: linear-gradient(135deg, var(--tw-green), var(--tw-accent)); }
+.library-tile.group    .icon { background: linear-gradient(135deg, var(--tw-magenta), var(--tw-accent)); }
+.library-tile .info { flex: 1; min-width: 0; }
+.library-tile .info .title {
+    font-weight: 700; color: var(--tw-primary); font-size: .95rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.library-tile .info .sub {
+    font-size: .78rem; color: var(--tw-muted-blue);
+}
+
+.library-section-title {
+    color: var(--tw-primary);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: var(--sp-6) 0 var(--sp-3);
+    display: flex; align-items: center; gap: var(--sp-2);
+}
 
 /* Drag-drop drop-zone overlay */
 .dropzone {

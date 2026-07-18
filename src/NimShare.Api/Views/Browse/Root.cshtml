@@ -11,37 +11,50 @@
     </div>
 </div>
 
-<div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-    <a href="/browse/personal" class="scope-tile" style="flex:1;min-width:260px">
-        <div class="icon" style="background:linear-gradient(135deg,var(--tw-accent),var(--tw-primary-alt))">MY</div>
-        <h3>@T["browse.tile.personal"]</h3>
-        <p>@T["browse.tile.personal.lede"]</p>
-    </a>
-    <a href="/browse/public" class="scope-tile" style="flex:1;min-width:260px">
-        <div class="icon" style="background:linear-gradient(135deg,var(--tw-green),var(--tw-accent))">PUB</div>
-        <h3>@T["browse.tile.public"]</h3>
-        <p>@T["browse.tile.public.lede"]</p>
+<div class="library-section-title">
+    <span>📁</span> @T["browse.libraries.mine"]
+</div>
+<div class="library-grid">
+    <a href="/browse/personal" class="library-tile personal">
+        <div class="icon">👤</div>
+        <div class="info">
+            <div class="title">@T["browse.tile.personal"]</div>
+            <div class="sub">@T["browse.tile.personal.lede"]</div>
+        </div>
     </a>
 </div>
 
-<h2 style="margin-top:var(--sp-8);color:var(--tw-primary)">@T["browse.tile.groups"]</h2>
-<p class="muted">@T["browse.tile.groups.lede"]</p>
+<div class="library-section-title">
+    <span>🌐</span> @T["browse.libraries.shared"]
+</div>
+<div class="library-grid">
+    <a href="/browse/public" class="library-tile public">
+        <div class="icon">🌐</div>
+        <div class="info">
+            <div class="title">@T["browse.tile.public"]</div>
+            <div class="sub">@T["browse.tile.public.lede"]</div>
+        </div>
+    </a>
+</div>
 
+<div class="library-section-title">
+    <span>👥</span> @T["browse.libraries.groups"]
+</div>
 @if (!groups.Any())
 {
-    <div class="card" style="margin-top:var(--sp-3)">
-        <p class="muted">@T["browse.tile.groups.empty"]</p>
-    </div>
+    <div class="card"><p class="muted">@T["browse.tile.groups.empty"]</p></div>
 }
 else
 {
-    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-3)">
+    <div class="library-grid">
         @foreach (var g in groups)
         {
-            <a href="/browse/group/@g.Id" class="scope-tile" style="flex:0 1 260px">
-                <div class="icon" style="background:linear-gradient(135deg,var(--tw-magenta),var(--tw-accent))">@(g.Name.Length > 2 ? g.Name.Substring(0,2).ToUpper() : g.Name.ToUpper())</div>
-                <h3>@g.Name</h3>
-                <p>@(g.MyRole == NimShare.Core.Entities.GroupRole.Manager ? @T["groups.role.manager"].Value : @T["groups.role.member"].Value)</p>
+            <a href="/browse/group/@g.Id" class="library-tile group">
+                <div class="icon">@(g.Name.Length > 0 ? g.Name[0].ToString().ToUpper() : "G")</div>
+                <div class="info">
+                    <div class="title">@g.Name</div>
+                    <div class="sub">@(g.MyRole == NimShare.Core.Entities.GroupRole.Manager ? @T["groups.role.manager"].Value : @T["groups.role.member"].Value)</div>
+                </div>
             </a>
         }
     </div>

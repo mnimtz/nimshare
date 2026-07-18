@@ -340,4 +340,8 @@
   <data name="landing.ai_summary.unsupported"><value>Dieser Dateityp wird fuer KI-Zusammenfassungen noch nicht unterstuetzt.</value></data>
   <data name="landing.ai_summary.error"><value>Konnte keine Zusammenfassung erstellen.</value></data>
   <data name="landing.folder.lede"><value>Dateien in diesem Ordner:</value></data>
+  <data name="browse.libraries.mine"><value>Meine Bibliotheken</value></data>
+  <data name="browse.libraries.shared"><value>Mit mir geteilt</value></data>
+  <data name="browse.libraries.groups"><value>Gruppen-Bibliotheken</value></data>
+  <data name="ctx.open"><value>Öffnen</value></data>
 </root>

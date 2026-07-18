@@ -48,12 +48,17 @@
     string TypeLabel(string name)
     {
         var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToUpperInvariant();
-        return string.IsNullOrEmpty(ext) ? "FILE" : (ext.Length > 4 ? ext[..4] : ext);
+        return string.IsNullOrEmpty(ext) ? "F" : ext[..1];
     }
     string SegPath(int upTo)
     {
         var parts = ancestry.Skip(1).Take(upTo).Select(a => Uri.EscapeDataString(a.Name));
         return string.Join('/', parts);
+    }
+    string FolderUrl(Folder sub)
+    {
+        var basePart = urlBase + (current.ParentFolderId is null ? "/" : "/" + SegPath(ancestry.Count - 1) + "/");
+        return basePart + Uri.EscapeDataString(sub.Name);
     }
 }
 <div class="page-header">
@@ -66,22 +71,11 @@
                 var isLast = i == ancestry.Count - 1;
                 var name = i == 0 ? scopeTitle : ancestry[i].Name;
                 var url = i == 0 ? urlBase : (urlBase + "/" + SegPath(i));
-                if (isLast)
-                {
-                    <span class="current">@name</span>
-                }
-                else
-                {
-                    <a href="@url">@name</a>
-                    <span class="sep">/</span>
-                }
+                if (isLast) { <span class="current">@name</span> }
+                else { <a href="@url">@name</a> <span class="sep">/</span> }
             }
         </div>
         <h1>@(current.ParentFolderId is null ? scopeTitle : current.Name)</h1>
-    </div>
-    <div class="view-toggle" id="viewToggle">
-        <button data-view="list" class="active" title="@T["browse.view.list"]">☰</button>
-        <button data-view="grid" title="@T["browse.view.grid"]">▦</button>
     </div>
 </div>
 
@@ -101,10 +95,7 @@
 
 <div class="bulk-toolbar" id="bulkBar">
     <span class="count" id="bulkCount">0 @T["bulk.selected"]</span>
-    @if (canWrite)
-    {
-        <button onclick="openMoveModal()">↦ @T["bulk.move"]</button>
-    }
+    @if (canWrite) { <button onclick="openMoveModal()">↦ @T["bulk.move"]</button> }
     <button onclick="bulkDelete()">🗑 @T["bulk.delete"]</button>
     <button onclick="clearSelection()" style="margin-left:auto">✕ @T["bulk.clear"]</button>
 </div>
@@ -116,100 +107,84 @@
     }
     else
     {
-        <table class="table" id="listView">
+        <table class="seafile-table">
             <thead>
-            <tr>
-                <th style="width:32px"><input type="checkbox" id="selectAll"/></th>
-                <th style="width:44px"></th>
-                <th>@T["file.name"]</th>
-                <th style="width:100px">@T["file.size"]</th>
-                <th style="width:200px">@T["file.uploaded"]</th>
-                @if (scope != FileScope.Personal) { <th style="width:180px">@T["groups.uploaded_by"]</th> }
-                <th style="width:80px"></th>
-            </tr>
+                <tr>
+                    <th style="width:36px"><input type="checkbox" id="selectAll" style="opacity:.5"/></th>
+                    <th>@T["file.name"]</th>
+                    <th style="width:100px">@T["file.size"]</th>
+                    <th style="width:180px">@T["file.uploaded"]</th>
+                    @if (scope != FileScope.Personal) { <th style="width:160px">@T["groups.uploaded_by"]</th> }
+                    <th style="width:140px"></th>
+                </tr>
             </thead>
             <tbody>
-            @foreach (var sub in subs)
-            {
-                <tr data-folder-id="@sub.Id">
-                    <td></td>
-                    <td><div class="file-icon folder">📁</div></td>
-                    <td class="browse-name"><a href="@(urlBase + (current.ParentFolderId is null ? "/" : "/" + SegPath(ancestry.Count - 1) + "/") + Uri.EscapeDataString(sub.Name))">@sub.Name</a></td>
-                    <td class="muted">—</td>
-                    <td class="muted">@sub.CreatedAt.ToString("u")</td>
-                    @if (scope != FileScope.Personal) { <td></td> }
-                    <td>
-                        <div class="actions-menu">
-                            <button onclick="toggleMenu(this)">⋯</button>
-                            <div class="menu">
-                                <button onclick="openShareFolderModal('@sub.Id')">🔗 @T["actions.share_link"]</button>
-                                <button onclick="openUploadRequestModal('@sub.Id')">📥 @T["actions.request_upload"]</button>
+                @foreach (var sub in subs)
+                {
+                    <tr class="ctx" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name">
+                        <td></td>
+                        <td>
+                            <a class="seafile-name" href="@FolderUrl(sub)">
+                                <div class="file-icon folder">📁</div>
+                                <span class="name-text">@sub.Name</span>
+                            </a>
+                        </td>
+                        <td class="muted">—</td>
+                        <td class="muted">@sub.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        @if (scope != FileScope.Personal) { <td></td> }
+                        <td>
+                            <div class="row-actions">
+                                <button title="@T["actions.share_link"]" onclick="openShareFolderModal('@sub.Id')">🔗</button>
+                                <button title="@T["actions.request_upload"]" onclick="openUploadRequestModal('@sub.Id')">📥</button>
                                 @if (canManage)
                                 {
-                                    <div class="divider"></div>
-                                    <button onclick="openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎ @T["actions.rename"]</button>
-                                    <form method="post" action="/browse/folders/@sub.Id/delete" onsubmit="return confirm('@T["actions.confirm_delete"]')">
+                                    <button title="@T["actions.rename"]" onclick="openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
+                                    <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline" onsubmit="return confirm('@T["actions.confirm_delete"]')">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="returnUrl" value="@currentUrl"/>
-                                        <button type="submit">🗑 @T["actions.delete"]</button>
+                                        <button title="@T["actions.delete"]" type="submit">🗑</button>
                                     </form>
                                 }
                             </div>
-                        </div>
-                    </td>
-                </tr>
-            }
-            @foreach (var f in files)
-            {
-                <tr data-file-id="@f.Id" data-file-name="@f.Name">
-                    <td><input type="checkbox" class="row-check" value="@f.Id"/></td>
-                    <td><div class="file-icon @TypeClass(f.Name)">@TypeLabel(f.Name)</div></td>
-                    <td class="browse-name">@f.Name</td>
-                    <td>@Bytes(f.SizeBytes)</td>
-                    <td class="muted">@f.CreatedAt.ToString("u")</td>
-                    @if (scope != FileScope.Personal) { <td class="muted">@f.Owner.DisplayName</td> }
-                    <td>
-                        <div class="actions-menu">
-                            <button onclick="toggleMenu(this)">⋯</button>
-                            <div class="menu">
-                                <button onclick="openShareFileModal('@f.Id')">🔗 @T["actions.share_link"]</button>
-                                @if (canWrite)
-                                {
-                                    <button onclick="openMoveSingle('@f.Id')">↦ @T["actions.move"]</button>
-                                }
-                                <div class="divider"></div>
-                                <button onclick="deleteFile('@f.Id')">🗑 @T["actions.delete"]</button>
+                        </td>
+                    </tr>
+                }
+                @foreach (var f in files)
+                {
+                    <tr class="ctx" data-kind="file" data-id="@f.Id" data-name="@f.Name">
+                        <td><input type="checkbox" class="row-check" value="@f.Id"/></td>
+                        <td>
+                            <div class="seafile-name">
+                                <div class="file-icon @TypeClass(f.Name)">@TypeLabel(f.Name)</div>
+                                <span class="name-text">@f.Name</span>
                             </div>
-                        </div>
-                    </td>
-                </tr>
-            }
+                        </td>
+                        <td>@Bytes(f.SizeBytes)</td>
+                        <td class="muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        @if (scope != FileScope.Personal) { <td class="muted">@f.Owner.DisplayName</td> }
+                        <td>
+                            <div class="row-actions">
+                                <button title="@T["actions.share_link"]" onclick="openShareFileModal('@f.Id')">🔗</button>
+                                @if (canWrite) { <button title="@T["actions.move"]" onclick="openMoveSingle('@f.Id')">↦</button> }
+                                <button title="@T["actions.delete"]" onclick="deleteFile('@f.Id')">🗑</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
-
-        <div class="grid-view" id="gridView" style="display:none">
-            @foreach (var sub in subs)
-            {
-                <div class="grid-tile">
-                    <input type="checkbox" class="check" disabled/>
-                    <div class="icon-big file-icon folder" style="font-size:2rem">📁</div>
-                    <a href="@(urlBase + (current.ParentFolderId is null ? "/" : "/" + SegPath(ancestry.Count - 1) + "/") + Uri.EscapeDataString(sub.Name))" style="color:var(--tw-primary);text-decoration:none">
-                        <div class="name">@sub.Name</div>
-                    </a>
-                    <div class="meta">@T["browse.folder_type"]</div>
-                </div>
-            }
-            @foreach (var f in files)
-            {
-                <div class="grid-tile" data-file-id="@f.Id" onclick="toggleGridSelect(this,'@f.Id')">
-                    <input type="checkbox" class="check row-check" value="@f.Id"/>
-                    <div class="icon-big file-icon @TypeClass(f.Name)" style="font-size:1.3rem">@TypeLabel(f.Name)</div>
-                    <div class="name">@f.Name</div>
-                    <div class="meta">@Bytes(f.SizeBytes)</div>
-                </div>
-            }
-        </div>
     }
+</div>
+
+<!-- Right-click context menu -->
+<div class="ctx-menu" id="ctxMenu">
+    <button data-act="open" style="display:none">📂 @T["ctx.open"]</button>
+    <button data-act="share">🔗 @T["actions.share_link"]</button>
+    <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
+    <div class="divider"></div>
+    <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
+    <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
+    <button data-act="delete">🗑 @T["actions.delete"]</button>
 </div>
 
 <partial name="_LinkModals" model="@current" />
@@ -235,41 +210,10 @@
 const FOLDER_ID = @Json.Serialize(current.Id);
 const RETURN_URL = @Json.Serialize(currentUrl);
 const SCOPE = @Json.Serialize(scope.ToString());
+const CAN_WRITE = @(canWrite ? "true" : "false");
+const CAN_MANAGE = @(canManage ? "true" : "false");
 
-// ── View toggle (persisted in localStorage) ────────────────────────────
-const listView = document.getElementById('listView');
-const gridView = document.getElementById('gridView');
-const viewToggle = document.getElementById('viewToggle');
-function setView(v) {
-    localStorage.setItem('browse.view', v);
-    if (!listView || !gridView) return;
-    listView.style.display = v === 'list' ? '' : 'none';
-    gridView.style.display = v === 'grid' ? '' : 'none';
-    viewToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
-}
-setView(localStorage.getItem('browse.view') || 'list');
-viewToggle.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.view); });
-
-// ── Actions menu ───────────────────────────────────────────────────────
-function toggleMenu(btn) {
-    const menu = btn.closest('.actions-menu');
-    document.querySelectorAll('.actions-menu[open]').forEach(m => { if (m !== menu) m.removeAttribute('open'); });
-    if (menu.hasAttribute('open')) menu.removeAttribute('open'); else menu.setAttribute('open', '');
-}
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.actions-menu')) {
-        document.querySelectorAll('.actions-menu[open]').forEach(m => m.removeAttribute('open'));
-    }
-});
-
-// ── Single file delete ─────────────────────────────────────────────────
-async function deleteFile(id) {
-    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
-    const r = await fetch('/api/v1/files/' + id, { method: 'DELETE', credentials: 'same-origin' });
-    if (r.ok) location.reload(); else alert('Failed: ' + r.status);
-}
-
-// ── Bulk selection ─────────────────────────────────────────────────────
+// ── Row selection ─────────────────────────────────────────────
 const bulkBar = document.getElementById('bulkBar');
 const bulkCount = document.getElementById('bulkCount');
 const selAll = document.getElementById('selectAll');
@@ -279,56 +223,116 @@ function updateSelection() {
     const selected = Array.from(boxes).filter(b => b.checked).length;
     bulkCount.textContent = selected + ' ' + @Json.Serialize(T["bulk.selected"].Value);
     bulkBar.classList.toggle('on', selected > 0);
-    // Sync grid tiles' .selected class
-    document.querySelectorAll('.grid-tile[data-file-id]').forEach(t => {
-        const cb = t.querySelector('.row-check');
-        if (cb) t.classList.toggle('selected', cb.checked);
+    document.querySelectorAll('tr.ctx[data-kind="file"]').forEach(tr => {
+        const cb = tr.querySelector('.row-check');
+        if (cb) {
+            tr.classList.toggle('selected', cb.checked);
+            cb.classList.toggle('persistent', cb.checked);
+        }
     });
 }
 document.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', updateSelection));
 if (selAll) selAll.addEventListener('change', () => {
-    document.querySelectorAll('#listView .row-check').forEach(cb => cb.checked = selAll.checked);
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = selAll.checked);
     updateSelection();
 });
-function toggleGridSelect(tile, id) {
-    const cb = document.querySelector('.row-check[value="' + id + '"]');
-    if (cb) { cb.checked = !cb.checked; updateSelection(); }
-}
 function selectedIds() {
-    return Array.from(document.querySelectorAll('.row-check'))
-        .filter(b => b.checked).map(b => b.value)
-        // Deduplicate between list + grid checkboxes for the same file.
-        .filter((v, i, a) => a.indexOf(v) === i);
+    return Array.from(document.querySelectorAll('.row-check')).filter(b => b.checked).map(b => b.value);
 }
 function clearSelection() {
     document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
     if (selAll) selAll.checked = false;
     updateSelection();
 }
+
 async function bulkDelete() {
     const ids = selectedIds();
     if (!ids.length) return;
-    const template = @Json.Serialize(T["bulk.confirm.delete"].Value);
-    if (!confirm(template.replace("{n}", ids.length))) return;
+    const tpl = @Json.Serialize(T["bulk.confirm.delete"].Value);
+    if (!confirm(tpl.replace("{n}", ids.length))) return;
     const r = await fetch('/api/v1/files/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify({ ids }),
     });
     if (r.ok) location.reload(); else alert('Failed: ' + r.status);
 }
 
-// ── Move (single or multiple) ──────────────────────────────────────────
+async function deleteFile(id) {
+    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
+    const r = await fetch('/api/v1/files/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+}
+
+// ── Right-click context menu ──────────────────────────────────
+const ctxMenu = document.getElementById('ctxMenu');
+let ctxTarget = null;
+document.querySelectorAll('tr.ctx').forEach(tr => {
+    tr.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name };
+        // Toggle actions based on kind + rights
+        const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
+        showFor('open',      ctxTarget.kind === 'folder');
+        showFor('uploadReq', ctxTarget.kind === 'folder');
+        showFor('rename',    ctxTarget.kind === 'folder' && CAN_MANAGE);
+        showFor('move',      ctxTarget.kind === 'file'   && CAN_WRITE);
+        showFor('share',     true);
+        showFor('delete',    (ctxTarget.kind === 'file') || (ctxTarget.kind === 'folder' && CAN_MANAGE));
+        // Position within viewport
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const w = 220, h = ctxMenu.offsetHeight || 200;
+        const x = Math.min(e.clientX, vw - w - 10);
+        const y = Math.min(e.clientY, vh - h - 10);
+        ctxMenu.style.left = x + 'px';
+        ctxMenu.style.top = y + 'px';
+        ctxMenu.classList.add('open');
+    });
+});
+document.addEventListener('click', () => ctxMenu.classList.remove('open'));
+window.addEventListener('scroll', () => ctxMenu.classList.remove('open'), true);
+ctxMenu.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+        const act = b.dataset.act;
+        if (!ctxTarget) return;
+        if (act === 'open' && ctxTarget.kind === 'folder') {
+            const url = document.querySelector(`tr.ctx[data-id="${ctxTarget.id}"] a.seafile-name`);
+            if (url) location.href = url.getAttribute('href');
+        }
+        if (act === 'share') {
+            if (ctxTarget.kind === 'file') openShareFileModal(ctxTarget.id);
+            else openShareFolderModal(ctxTarget.id);
+        }
+        if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
+        if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
+        if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
+        if (act === 'delete') {
+            if (ctxTarget.kind === 'file') deleteFile(ctxTarget.id);
+            else {
+                if (confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) {
+                    const f = document.createElement('form');
+                    f.method = 'post';
+                    f.action = '/browse/folders/' + ctxTarget.id + '/delete';
+                    const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (csrf) {
+                        const tf = csrf.cloneNode(true); f.appendChild(tf);
+                    }
+                    const rt = document.createElement('input'); rt.name='returnUrl'; rt.value = RETURN_URL; f.appendChild(rt);
+                    document.body.appendChild(f);
+                    f.submit();
+                }
+            }
+        }
+    });
+});
+
+// ── Move file(s) ──────────────────────────────────────────────
 let moveIds = [];
 async function openMoveModal() {
     moveIds = selectedIds();
     if (!moveIds.length) return;
     await populateMoveTargets();
-    {
-        const tpl = @Json.Serialize(T["move.hint.multi"].Value);
-        document.getElementById('moveHint').textContent = tpl.replace("{n}", moveIds.length);
-    }
+    const tpl = @Json.Serialize(T["move.hint.multi"].Value);
+    document.getElementById('moveHint').textContent = tpl.replace("{n}", moveIds.length);
     document.getElementById('modalMove').classList.add('open');
 }
 async function openMoveSingle(id) {
@@ -338,7 +342,6 @@ async function openMoveSingle(id) {
     document.getElementById('modalMove').classList.add('open');
 }
 async function populateMoveTargets() {
-    // A flat list of the caller's writable folders in this scope. The API returns them.
     const r = await fetch('/api/v1/folders/writable?scope=' + SCOPE + '&exclude=' + FOLDER_ID, { credentials: 'same-origin' });
     if (!r.ok) return;
     const items = await r.json();
@@ -352,9 +355,7 @@ async function performMove() {
     let ok = 0, fail = 0;
     for (const id of moveIds) {
         const r = await fetch('/api/v1/files/' + id + '/move', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
             body: JSON.stringify({ folderId }),
         });
         if (r.ok) ok++; else fail++;
@@ -363,7 +364,7 @@ async function performMove() {
     if (fail) alert(ok + ' moved, ' + fail + ' failed'); else location.reload();
 }
 
-// ── Drag-drop + quick upload ───────────────────────────────────────────
+// ── Drag-drop + quick upload ──────────────────────────────────
 const dropzone = document.getElementById('dropzone');
 const quickPick = document.getElementById('quickPick');
 if (dropzone) {
@@ -379,7 +380,6 @@ if (quickPick) quickPick.addEventListener('change', async () => { if (quickPick.
 async function uploadFiles(files) {
     const total = files.length;
     let done = 0;
-    // Show a lightweight toast so the user sees progress.
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--tw-primary);color:var(--tw-white);padding:10px 16px;border-radius:8px;box-shadow:var(--shadow-lg);z-index:100';
     document.body.appendChild(toast);
