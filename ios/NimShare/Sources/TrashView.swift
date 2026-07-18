@@ -12,7 +12,7 @@ struct TrashView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Papierkorb leer", systemImage: "trash",
+                ContentUnavailableView(String(localized: "Papierkorb leer"), systemImage: "trash",
                     description: Text("Gelöschte Dateien landen hier und können wiederhergestellt werden."))
             } else {
                 List {
@@ -33,14 +33,17 @@ struct TrashView: View {
                                 }
                             }
                         }
+                        // Restore is declared first so it sits closest to the
+                        // swiped edge — the primary/safer action. Purge stays
+                        // behind it and requires a longer swipe.
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) { Task { await purge(item.id) } } label: {
-                                Label("Endgültig", systemImage: "xmark.bin")
-                            }
                             Button { Task { await restore(item.id) } } label: {
                                 Label("Wiederherstellen", systemImage: "arrow.uturn.backward")
                             }
                             .tint(Theme.tungstenBlue)
+                            Button(role: .destructive) { Task { await purge(item.id) } } label: {
+                                Label("Endgültig", systemImage: "xmark.bin")
+                            }
                         }
                     }
                 }
@@ -49,7 +52,7 @@ struct TrashView: View {
                 Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
             }
         }
-        .navigationTitle("Papierkorb")
+        .navigationTitle(String(localized: "Papierkorb"))
         .task { await load() }
         .refreshable { await load() }
         .overlay { if busy { ProgressView() } }

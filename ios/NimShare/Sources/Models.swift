@@ -204,7 +204,15 @@ struct ActivityDto: Codable, Identifiable, Hashable {
     let targetUserId: UUID?
     let at: Date
 
-    var id: String { "\(kind)-\(actorName)-\(at.timeIntervalSince1970)" }
+    // Stable per-instance id — the server doesn't emit one for activity, so
+    // we synthesise a UUID at decode time. Using timestamp+kind collides on
+    // bulk uploads and makes SwiftUI ForEach diffing flicker.
+    let localId: UUID = UUID()
+    var id: UUID { localId }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, actorName, summary, fileId, folderId, groupId, targetUserId, at
+    }
 
     var iconName: String {
         switch kind {
@@ -215,7 +223,7 @@ struct ActivityDto: Codable, Identifiable, Hashable {
         case "FolderCreated": return "folder.badge.plus"
         case "FolderDeleted": return "folder.badge.minus"
         case "ShareLinkCreated": return "link.badge.plus"
-        case "ShareLinkRevoked": return "link.badge.plus"
+        case "ShareLinkRevoked": return "link.slash"
         case "DirectShareGranted": return "person.crop.circle.badge.plus"
         case "DirectShareRevoked": return "person.crop.circle.badge.xmark"
         case "GroupCreated", "GroupMemberAdded", "GroupMemberRemoved": return "person.3.fill"

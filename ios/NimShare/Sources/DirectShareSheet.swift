@@ -20,6 +20,9 @@ struct DirectShareSheet: View {
     @State private var userQuery = ""
     @State private var userMatches: [DirectShareUserOption] = []
     @State private var selectedUser: DirectShareUserOption?
+    /// The in-flight user-search task so a new keystroke can cancel the
+    /// previous request and prevent stale matches from overwriting fresh ones.
+    @State private var searchTask: Task<Void, Never>?
 
     @State private var groups: [DirectShareGroupOption] = []
     @State private var selectedGroup: DirectShareGroupOption?
@@ -28,7 +31,16 @@ struct DirectShareSheet: View {
     @State private var loading = false
     @State private var error: String?
 
-    enum PickerKind: String, CaseIterable { case user = "Nutzer", group = "Gruppe" }
+    enum PickerKind: CaseIterable, Identifiable {
+        case user, group
+        var id: Self { self }
+        var localized: LocalizedStringKey {
+            switch self {
+            case .user: return "Nutzer"
+            case .group: return "Gruppe"
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -41,8 +53,8 @@ struct DirectShareSheet: View {
 
                 Section("Neue Berechtigung") {
                     Picker("Typ", selection: $kind) {
-                        ForEach(PickerKind.allCases, id: \.self) { k in
-                            Text(k.rawValue).tag(k)
+                        ForEach(PickerKind.allCases) { k in
+                            Text(k.localized).tag(k)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -52,7 +64,11 @@ struct DirectShareSheet: View {
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                             .onChange(of: userQuery) { _, new in
-                                Task { await searchUsers(new) }
+                                searchTask?.cancel()
+                                if selectedUser?.displayName != new {
+                                    selectedUser = nil
+                                }
+                                searchTask = Task { await searchUsers(new) }
                             }
                         if !userMatches.isEmpty {
                             ForEach(userMatches) { u in
@@ -140,10 +156,20 @@ struct DirectShareSheet: View {
         (kind == .user && selectedUser != nil) || (kind == .group && selectedGroup != nil)
     }
 
+    /// Debounced user search. Cancelled by the caller when a new keystroke
+    /// lands, so out-of-order responses can't leak into userMatches.
     private func searchUsers(_ q: String) async {
-        guard let api = auth.api, q.count >= 2 else { userMatches = []; return }
-        do { userMatches = try await api.searchShareableUsers(q) }
-        catch { userMatches = [] }
+        // Debounce so we don't fire on every keystroke.
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        if Task.isCancelled { return }
+        guard let api = auth.api, q.count >= 2 else {
+            if !Task.isCancelled { userMatches = [] }
+            return
+        }
+        do {
+            let hits = try await api.searchShareableUsers(q)
+            if !Task.isCancelled { userMatches = hits }
+        } catch { /* ignore — search input is transient */ }
     }
 
     private func loadGroups() async {

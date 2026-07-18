@@ -113,7 +113,12 @@ struct FolderBrowserView: View {
     }
 
     private func joinPath(_ base: String, _ segment: String) -> String {
-        let escaped = segment.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? segment
+        // urlPathAllowed keeps `/`, so a folder name that contains a slash
+        // would split into two path segments and confuse the server. Drop
+        // the slash from the allowed set.
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/")
+        let escaped = segment.addingPercentEncoding(withAllowedCharacters: allowed) ?? segment
         return base.isEmpty ? escaped : base + "/" + escaped
     }
 

@@ -1,0 +1,465 @@
+{
+  "sourceLanguage" : "de",
+  "version" : "1.0",
+  "strings" : {
+    "Aktionen wie Uploads, Freigaben und Löschungen erscheinen hier." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Actions like uploads, shares and deletes show up here." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les actions comme téléversements, partages et suppressions apparaissent ici." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Azioni come caricamenti, condivisioni ed eliminazioni compaiono qui." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acciones como cargas, comparticiones y eliminaciones aparecen aquí." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Acties zoals uploads, delen en verwijderen verschijnen hier." } }
+      }
+    },
+    "Aktivität" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Activity" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Activité" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Attività" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Actividad" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Activiteit" } }
+      }
+    },
+    "Alle Nutzer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All users" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tous" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Tutti" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Todos" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Alle" } }
+      }
+    },
+    "Bereits freigegeben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Already shared" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déjà partagé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Già condiviso" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ya compartido" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Al gedeeld" } }
+      }
+    },
+    "Berechtigung" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permission" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autorisation" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Permesso" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Permiso" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rechten" } }
+      }
+    },
+    "Berechtigungen…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autorisations…" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Permessi…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Permisos…" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rechten…" } }
+      }
+    },
+    "Bibliotheken" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Libraries" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Bibliothèques" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Librerie" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Bibliotecas" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Bibliotheken" } }
+      }
+    },
+    "Chat" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Chat" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Chat" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Chat" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Chat" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Chat" } }
+      }
+    },
+    "Datei" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "File" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fichier" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "File" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Archivo" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Bestand" } }
+      }
+    },
+    "Dateien" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fichiers" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "File" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Archivos" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Bestanden" } }
+      }
+    },
+    "Endgültig" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Purge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Définitif" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Definitivo" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Definitivo" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Definitief" } }
+      }
+    },
+    "Entfernen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Rimuovi" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Verwijderen" } }
+      }
+    },
+    "Fav" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Fav" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fav" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Pref" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fav" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Fav" } }
+      }
+    },
+    "Favorit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Favorite" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Favori" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Preferito" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Favorito" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Favoriet" } }
+      }
+    },
+    "Favoriten" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Favorites" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Favoris" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Preferiti" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Favoritos" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Favorieten" } }
+      }
+    },
+    "Fertig" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Fatto" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hecho" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Klaar" } }
+      }
+    },
+    "Freigeben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Share" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partager" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Condividi" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartir" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Delen" } }
+      }
+    },
+    "Freigeben an…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Share with…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partager avec…" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Condividi con…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartir con…" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Delen met…" } }
+      }
+    },
+    "Für mich freigegeben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shared with me" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partagé avec moi" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Condivisi con me" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartido conmigo" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Met mij gedeeld" } }
+      }
+    },
+    "Gelöschte Dateien landen hier und können wiederhergestellt werden." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Deleted files land here and can be restored." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les fichiers supprimés arrivent ici et peuvent être restaurés." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "I file eliminati finiscono qui e possono essere ripristinati." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los archivos eliminados llegan aquí y pueden restaurarse." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Verwijderde bestanden komen hier en kunnen worden hersteld." } }
+      }
+    },
+    "Gruppe" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Group" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Groupe" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Gruppo" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Grupo" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Groep" } }
+      }
+    },
+    "Hier landen Dateien und Ordner, die andere für dich freigeben." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Files and folders others share with you land here." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les fichiers et dossiers partagés avec vous apparaissent ici." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "I file e le cartelle condivisi con te compaiono qui." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los archivos y carpetas compartidos contigo aparecen aquí." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Bestanden en mappen die anderen met jou delen verschijnen hier." } }
+      }
+    },
+    "Hinzufügen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Aggiungi" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Añadir" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Toevoegen" } }
+      }
+    },
+    "In Papierkorb" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move to Trash" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mettre à la corbeille" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Sposta nel cestino" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover a la papelera" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Naar prullenbak" } }
+      }
+    },
+    "Keine Favoriten" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No favorites" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun favori" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessun preferito" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin favoritos" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Geen favorieten" } }
+      }
+    },
+    "Keine Gruppen verfügbar" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No groups available" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun groupe disponible" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessun gruppo disponibile" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin grupos disponibles" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Geen groepen beschikbaar" } }
+      }
+    },
+    "Löschen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Elimina" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Verwijderen" } }
+      }
+    },
+    "Markiere Dateien mit ⭐, um sie hier zu sehen." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Star files with ⭐ to see them here." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Marquez des fichiers avec ⭐ pour les voir ici." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Contrassegna i file con ⭐ per vederli qui." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Marca archivos con ⭐ para verlos aquí." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Markeer bestanden met ⭐ om ze hier te zien." } }
+      }
+    },
+    "Meine" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mine" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mes" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Miei" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Míos" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Mijn" } }
+      }
+    },
+    "Meine Links" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "My links" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mes liens" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "I miei link" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mis enlaces" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Mijn links" } }
+      }
+    },
+    "Neue Berechtigung" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New grant" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouvelle autorisation" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nuovo permesso" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nuevo permiso" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Nieuwe rechten" } }
+      }
+    },
+    "Nichts freigegeben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing shared" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien de partagé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nulla condiviso" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nada compartido" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Niets gedeeld" } }
+      }
+    },
+    "Noch keine Aktivität" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No activity yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune activité" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessuna attività" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin actividad" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Nog geen activiteit" } }
+      }
+    },
+    "Noch niemand." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nobody yet." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Personne pour l'instant." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Ancora nessuno." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nadie todavía." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Nog niemand." } }
+      }
+    },
+    "Nur lesen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read-only" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lecture seule" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Solo lettura" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Solo lectura" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Alleen-lezen" } }
+      }
+    },
+    "Nutzer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "User" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utilisateur" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Utente" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Usuario" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Gebruiker" } }
+      }
+    },
+    "Nutzer suchen…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search users…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher un utilisateur…" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cerca utente…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar usuario…" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Gebruiker zoeken…" } }
+      }
+    },
+    "Ordner" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Folder" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossier" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cartella" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Carpeta" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Map" } }
+      }
+    },
+    "Papierkorb" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Trash" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Corbeille" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cestino" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Papelera" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Prullenbak" } }
+      }
+    },
+    "Papierkorb leer" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Trash is empty" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Corbeille vide" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cestino vuoto" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Papelera vacía" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Prullenbak leeg" } }
+      }
+    },
+    "Profil" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Profile" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Profil" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Profilo" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Perfil" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Profiel" } }
+      }
+    },
+    "Schreiben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Write" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Écriture" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Scrittura" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Escritura" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Schrijven" } }
+      }
+    },
+    "Schreibrechte" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read + write" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lecture + écriture" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Lettura + scrittura" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lectura + escritura" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Lezen + schrijven" } }
+      }
+    },
+    "Sichtbarkeit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Visibility" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Visibilité" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Visibilità" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Visibilidad" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Zichtbaarheid" } }
+      }
+    },
+    "Suche" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Recherche" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cerca" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Zoeken" } }
+      }
+    },
+    "Typ" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Kind" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Type" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Tipo" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tipo" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Type" } }
+      }
+    },
+    "Übersichten" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Overviews" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vues" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Panoramiche" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Resúmenes" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Overzichten" } }
+      }
+    },
+    "Vorschau" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aperçu" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Anteprima" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Voorbeeld" } }
+      }
+    },
+    "Wiederherstellen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restore" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Restaurer" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Ripristina" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Restaurar" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Herstellen" } }
+      }
+    },
+    "Lesen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lecture" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Lettura" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lectura" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Lezen" } }
+      }
+    },
+    "von %@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "from %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "de %@" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "da %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "de %@" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "van %@" } }
+      }
+    }
+  }
+}

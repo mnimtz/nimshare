@@ -12,7 +12,7 @@ struct SharedWithMeView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Nichts freigegeben", systemImage: "person.crop.circle",
+                ContentUnavailableView(String(localized: "Nichts freigegeben"), systemImage: "person.crop.circle",
                     description: Text("Hier landen Dateien und Ordner, die andere für dich freigeben."))
             } else {
                 List(items) { item in
@@ -32,7 +32,8 @@ struct SharedWithMeView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name).lineLimit(2)
                                 HStack(spacing: 6) {
-                                    Text("von \(item.sharedByName)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                    Text("von \(item.sharedByName)", comment: "shared-with-me subtitle: 'from <name>'")
+                                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                                     permBadge(item.permissionEnum)
                                 }
                             }
@@ -45,7 +46,7 @@ struct SharedWithMeView: View {
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
         }
-        .navigationTitle("Für mich freigegeben")
+        .navigationTitle(String(localized: "Für mich freigegeben"))
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }

@@ -114,10 +114,11 @@ final class NimShareAPI: ObservableObject {
     func listMyLinks() async throws -> [ShareLinkDto] {
         let req = request("GET", "api/v1/links")
         let (data, _) = try await perform(req)
-        // Endpoint may wrap in {items:[]} or return array — try both.
+        // Server returns a bare array; keep a wrapper fallback just in case
+        // future versions add pagination.
         if let arr = try? Self.jsonDecoder.decode([ShareLinkDto].self, from: data) { return arr }
         struct Wrapper: Decodable { let items: [ShareLinkDto] }
-        return (try? Self.jsonDecoder.decode(Wrapper.self, from: data).items) ?? []
+        return try Self.jsonDecoder.decode(Wrapper.self, from: data).items
     }
 
     struct SearchBody: Encodable {

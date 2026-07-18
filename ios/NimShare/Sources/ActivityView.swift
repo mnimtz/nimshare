@@ -12,16 +12,17 @@ struct ActivityView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Noch keine Aktivität", systemImage: "clock",
+                ContentUnavailableView(String(localized: "Noch keine Aktivität"), systemImage: "clock",
                     description: Text("Aktionen wie Uploads, Freigaben und Löschungen erscheinen hier."))
             } else {
                 List {
                     if auth.user?.role == "Admin" {
-                        Picker("", selection: $showAll) {
+                        Picker(String(localized: "Sichtbarkeit"), selection: $showAll) {
                             Text("Meine").tag(false)
                             Text("Alle Nutzer").tag(true)
                         }
                         .pickerStyle(.segmented)
+                        .labelsHidden()
                         .onChange(of: showAll) { _, _ in Task { await load() } }
                     }
                     ForEach(items) { item in
@@ -46,7 +47,7 @@ struct ActivityView: View {
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
         }
-        .navigationTitle("Aktivität")
+        .navigationTitle(String(localized: "Aktivität"))
         .task { await load() }
         .refreshable { await load() }
     }

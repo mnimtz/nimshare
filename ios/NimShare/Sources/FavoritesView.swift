@@ -6,13 +6,14 @@ struct FavoritesView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var previewFile: FileItem?
+    @State private var folderTargetInfo: String?  // shown as an alert for now
 
     var body: some View {
         Group {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Keine Favoriten", systemImage: "star",
+                ContentUnavailableView(String(localized: "Keine Favoriten"), systemImage: "star",
                     description: Text("Markiere Dateien mit ⭐, um sie hier zu sehen."))
             } else {
                 List {
@@ -24,6 +25,12 @@ struct FavoritesView: View {
                                     contentType: "application/octet-stream",
                                     createdAt: fav.createdAt, ownerName: nil,
                                     aiTags: nil, aiRiskFlag: nil)
+                            } else {
+                                // Folder favorites: we don't know the scope/path
+                                // just from the favorite row, so surface the id
+                                // to the user rather than pretending the tap
+                                // did nothing.
+                                folderTargetInfo = fav.name
                             }
                         } label: {
                             HStack {
@@ -44,7 +51,7 @@ struct FavoritesView: View {
                             Button(role: .destructive) {
                                 Task { await unstar(fav) }
                             } label: {
-                                Label("Entfernen", systemImage: "star.slash")
+                                Label(String(localized: "Entfernen"), systemImage: "star.slash")
                             }
                         }
                     }
@@ -52,10 +59,17 @@ struct FavoritesView: View {
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
         }
-        .navigationTitle("Favoriten")
+        .navigationTitle(String(localized: "Favoriten"))
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
+        .alert("Ordner öffnen", isPresented: Binding(
+            get: { folderTargetInfo != nil },
+            set: { if !$0 { folderTargetInfo = nil } })) {
+            Button("OK") { folderTargetInfo = nil }
+        } message: {
+            Text("Ordner-Favoriten öffnest du am schnellsten über die Bibliothek. Suche nach „\(folderTargetInfo ?? "")“.")
+        }
     }
 
     private func load() async {
