@@ -1,6 +1,5 @@
 @using NimShare.Core.Entities
 @using NimShare.Api.Services
-@using NimShare.Api.Controllers
 @{
     var scope = (FileScope)ViewData["Scope"]!;
     var groupId = ViewData["GroupId"] as Guid?;
@@ -13,7 +12,6 @@
     var canManage = (bool)(ViewData["CanManage"] ?? false);
     var urlBase = (string)ViewData["UrlBase"]!;
     var currentUrl = Context.Request.Path.Value ?? urlBase;
-    var libraryTree = (List<BrowseController.TreeNode>)ViewData["LibraryTree"]!;
 
     string scopeTitle = scope switch
     {
@@ -65,57 +63,7 @@
     }
 }
 
-@functions {
-    // Recursive tree rendering with <details>/<summary> so expand/collapse
-    // works without any JS. Server-side ancestry drives the "open" attribute.
-    void RenderTreeNode(BrowseController.TreeNode n, int depth)
-    {
-        var isLibrary = n.Kind == "library";
-        var openAttr = n.IsExpanded ? "open" : "";
-        var activeClass = n.IsActive ? "fm-tree-active" : "";
-        <text>
-        @if (n.Children.Count == 0)
-        {
-            <div class="fm-tree-leaf @(isLibrary ? "fm-tree-lib" : "") @activeClass" style="--depth:@depth">
-                <a href="@n.Href">
-                    <span class="fm-tree-icon">@n.Icon</span>
-                    <span class="fm-tree-label">@n.Label</span>
-                </a>
-            </div>
-        }
-        else
-        {
-            <details class="fm-tree-branch @(isLibrary ? "fm-tree-lib" : "")" style="--depth:@depth" @openAttr>
-                <summary class="@activeClass">
-                    <span class="fm-tree-caret">▸</span>
-                    <a href="@n.Href" class="fm-tree-linkinline">
-                        <span class="fm-tree-icon">@n.Icon</span>
-                        <span class="fm-tree-label">@n.Label</span>
-                    </a>
-                </summary>
-                <div class="fm-tree-children">
-                    @foreach (var child in n.Children)
-                    {
-                        RenderTreeNode(child, depth + 1);
-                    }
-                </div>
-            </details>
-        }
-        </text>
-    }
-}
-
 <div class="fm">
-    <aside class="fm-sidebar">
-        <div class="fm-sidebar-head">@T["browse.libraries.title"]</div>
-        <div class="fm-tree">
-            @foreach (var node in libraryTree)
-            {
-                RenderTreeNode(node, 0);
-            }
-        </div>
-    </aside>
-
     <section class="fm-main" id="dropzone" data-drop-label="@T["browse.drop_hint"]">
         <header class="fm-header">
             <div class="fm-breadcrumb">
@@ -177,9 +125,9 @@
                 <thead>
                     <tr>
                         <th class="col-check"><input type="checkbox" id="selectAll"/></th>
-                        <th class="col-name">@T["file.name"]</th>
-                        <th class="col-size">@T["file.size"]</th>
-                        <th class="col-date">@T["file.uploaded"]</th>
+                        <th class="col-name fm-sort" data-sort="name">@T["file.name"] <span class="fm-sort-caret">▴</span></th>
+                        <th class="col-size fm-sort" data-sort="size">@T["file.size"] <span class="fm-sort-caret"></span></th>
+                        <th class="col-date fm-sort" data-sort="date">@T["file.uploaded"] <span class="fm-sort-caret"></span></th>
                         @if (scope != FileScope.Personal) { <th class="col-owner">@T["groups.uploaded_by"]</th> }
                         <th class="col-actions"></th>
                     </tr>
@@ -187,7 +135,7 @@
                 <tbody>
                     @foreach (var sub in subs)
                     {
-                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" ondblclick="location.href='@FolderUrl(sub)'">
+                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" ondblclick="location.href='@FolderUrl(sub)'">
                             <td class="col-check"></td>
                             <td class="col-name">
                                 <a class="fm-name" href="@FolderUrl(sub)">
@@ -217,7 +165,7 @@
                     }
                     @foreach (var f in files)
                     {
-                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" ondblclick="openPreview('@f.Id')">
+                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-date="@f.CreatedAt.ToUnixTimeSeconds()" ondblclick="openPreview('@f.Id')">
                             <td class="col-check"><input type="checkbox" class="row-check" value="@f.Id" onclick="event.stopPropagation()"/></td>
                             <td class="col-name">
                                 <div class="fm-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
@@ -524,4 +472,36 @@ async function uploadFiles(fileList) {
 
 // Modal helpers used from generated onclicks.
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Column sorting (click header, folders always stay grouped on top) ──
+(function () {
+    let sortKey = 'name', sortDir = 1;
+    const tbody = document.querySelector('.fm-list tbody');
+    if (!tbody) return;
+    const sorters = {
+        name: (a, b) => a.dataset.name.localeCompare(b.dataset.name, undefined, { numeric: true, sensitivity: 'base' }),
+        size: (a, b) => Number(a.dataset.size) - Number(b.dataset.size),
+        date: (a, b) => Number(a.dataset.date) - Number(b.dataset.date),
+    };
+    function apply() {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const folders = rows.filter(r => r.dataset.kind === 'folder');
+        const files   = rows.filter(r => r.dataset.kind === 'file');
+        folders.sort((a, b) => sorters[sortKey](a, b) * sortDir);
+        files.sort((a, b) => sorters[sortKey](a, b) * sortDir);
+        tbody.innerHTML = '';
+        [...folders, ...files].forEach(r => tbody.appendChild(r));
+        document.querySelectorAll('.fm-sort .fm-sort-caret').forEach(el => el.textContent = '');
+        const active = document.querySelector(`.fm-sort[data-sort="${sortKey}"] .fm-sort-caret`);
+        if (active) active.textContent = sortDir === 1 ? '▴' : '▾';
+    }
+    document.querySelectorAll('.fm-sort').forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.dataset.sort;
+            if (key === sortKey) sortDir = -sortDir; else { sortKey = key; sortDir = 1; }
+            apply();
+        });
+    });
+    apply();
+})();
 </script>

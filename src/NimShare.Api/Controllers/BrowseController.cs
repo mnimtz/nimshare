@@ -34,90 +34,6 @@ public class BrowseController : Controller
         _access = access;
     }
 
-    // Node used to render the left sidebar tree.
-    public record TreeNode(
-        Guid? Id,
-        string Label,
-        string Icon,
-        string Href,
-        string Kind,      // "library" | "folder"
-        bool IsActive,    // this exact node is the one being viewed
-        bool IsExpanded,  // this node is on the ancestry path; open in <details>
-        List<TreeNode> Children);
-
-    private async Task<List<TreeNode>> BuildLibraryTreeAsync(
-        User me, List<GroupSummary> myGroups,
-        FileScope currentScope, Guid? currentGroupId,
-        List<Folder> ancestry, Folder currentFolder,
-        CancellationToken ct)
-    {
-        // The ancestor IDs (excluding the root itself) tell us which folders
-        // must be expanded to keep the active branch visible.
-        var expandedIds = ancestry.Select(a => a.Id).ToHashSet();
-
-        async Task<List<TreeNode>> ChildrenOf(Folder parent, string urlBase)
-        {
-            var kids = await _db.Folders
-                .Where(f => f.ParentFolderId == parent.Id)
-                .OrderBy(f => f.Name)
-                .ToListAsync(ct);
-            var result = new List<TreeNode>();
-            foreach (var k in kids)
-            {
-                var href = urlBase + "/" + Uri.EscapeDataString(k.Name);
-                var childKids = expandedIds.Contains(k.Id)
-                    ? await ChildrenOf(k, href)
-                    : new List<TreeNode>();
-                result.Add(new TreeNode(
-                    Id: k.Id,
-                    Label: k.Name,
-                    Icon: "📁",
-                    Href: href,
-                    Kind: "folder",
-                    IsActive: k.Id == currentFolder.Id,
-                    IsExpanded: expandedIds.Contains(k.Id),
-                    Children: childKids));
-            }
-            return result;
-        }
-
-        async Task<TreeNode> BuildLibrary(FileScope scope, Guid? groupId, string label, string icon)
-        {
-            var root = await _folders.GetOrCreateRootAsync(
-                scope,
-                scope == FileScope.Personal ? me.Id : null,
-                scope == FileScope.Group ? groupId : null,
-                me, ct);
-            var baseUrl = BuildUrlBase(scope, groupId);
-            var isActiveLibrary =
-                scope == currentScope
-                && groupId == currentGroupId
-                && currentFolder.ParentFolderId is null;
-            var isExpanded = scope == currentScope && groupId == currentGroupId;
-            var children = isExpanded ? await ChildrenOf(root, baseUrl) : new List<TreeNode>();
-            return new TreeNode(
-                Id: root.Id,
-                Label: label,
-                Icon: icon,
-                Href: baseUrl,
-                Kind: "library",
-                IsActive: isActiveLibrary,
-                IsExpanded: isExpanded,
-                Children: children);
-        }
-
-        var result = new List<TreeNode>
-        {
-            await BuildLibrary(FileScope.Personal, null, "Personal", "👤"),
-            await BuildLibrary(FileScope.Public, null, "Public", "🌐"),
-        };
-        foreach (var g in myGroups)
-        {
-            result.Add(await BuildLibrary(FileScope.Group, g.Id, g.Name, "👥"));
-        }
-        return result;
-    }
-
     // ── /browse — jump straight into the personal library ─────────────────
     // (No tile-picker intermediate — Seafile-style flow: sidebar has the
     // library switcher, the main pane is always a browser.)
@@ -170,12 +86,6 @@ public class BrowseController : Controller
         ViewData["CanWrite"] = canWrite;
         ViewData["CanManage"] = canManage;
         ViewData["UrlBase"] = BuildUrlBase(scope, groupId);
-        // Full library tree (Personal + Public + all my groups) rendered
-        // server-side into the left sidebar. Ancestry drives which folders are
-        // expanded so the active branch is always visible without a click.
-        var groups = await _access.ListMyGroupsAsync(me, ct);
-        ViewData["MyGroups"] = groups;
-        ViewData["LibraryTree"] = await BuildLibraryTreeAsync(me, groups, scope, groupId, ancestry, current, ct);
 
         if (scope == FileScope.Group && groupId is Guid gg)
         {

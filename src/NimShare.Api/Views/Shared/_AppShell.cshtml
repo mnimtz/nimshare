@@ -50,8 +50,36 @@
 
     var settingsOpen = currentPath.StartsWith("/settings", StringComparison.OrdinalIgnoreCase)
                        || currentPath.StartsWith("/account", StringComparison.OrdinalIgnoreCase);
+    var browseOpen = currentPath.StartsWith("/browse", StringComparison.OrdinalIgnoreCase);
+
+    // Which library scope is currently in view — drives the highlight on the
+    // Ablage sub-nav so the user always knows where they are.
+    string browseKind = "";
+    Guid? browseGroupId = null;
+    if (browseOpen)
+    {
+        var parts = currentPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            browseKind = parts[1].ToLowerInvariant();
+            if (browseKind == "group" && parts.Length >= 3 && Guid.TryParse(parts[2], out var gg)) browseGroupId = gg;
+        }
+    }
 }
 <div class="app-shell">
+    <!-- Mobile top-bar with hamburger — only shown on narrow screens -->
+    <header class="mobile-topbar">
+        <button class="mobile-menu-btn" aria-label="Menu" onclick="document.body.classList.toggle('nav-open')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <a class="mobile-brand" href="/dashboard">
+            <img src="~/img/icon-64.png" width="28" height="28" alt="NimShare"/>
+            <span>NimShare</span>
+        </a>
+        <span style="width:40px"></span>
+    </header>
+    <div class="nav-backdrop" onclick="document.body.classList.remove('nav-open')"></div>
+
     <aside class="sidebar">
         <a class="sidebar-brand" href="/dashboard">
             <span class="logo-tile" style="background:transparent;box-shadow:none;padding:0">
@@ -65,8 +93,31 @@
 
         <nav class="sidebar-nav">
             <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
-            <a href="/browse/personal" class="@Active("/browse")">📁 @T["nav.storage"]</a>
-            <a href="/links"     class="@Exact("/links")">@T["nav.links"]</a>
+
+            <!-- ── Ablage: expandable with library sub-items ────────────── -->
+            <div class="nav-group @(browseOpen ? "" : "collapsed")" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
+                <div class="nav-group-head">
+                    <span>📁 @T["nav.storage"]</span>
+                    <span class="chevron">▾</span>
+                </div>
+                <div class="nav-group-body">
+                    <a href="/browse/personal" class="nav-sub @(browseOpen && browseKind == "personal" ? "active" : "")">
+                        <span class="nav-sub-ic">👤</span>@T["browse.libraries.mine"]
+                    </a>
+                    <a href="/browse/public" class="nav-sub @(browseOpen && browseKind == "public" ? "active" : "")">
+                        <span class="nav-sub-ic">🌐</span>@T["browse.libraries.shared"]
+                    </a>
+                    @foreach (var (gId, gName) in myGroups)
+                    {
+                        var isCur = browseOpen && browseKind == "group" && browseGroupId == gId;
+                        <a href="/browse/group/@gId" class="nav-sub @(isCur ? "active" : "")">
+                            <span class="nav-sub-ic">👥</span>@gName
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
             <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
 
             <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="this.classList.toggle('collapsed')">
@@ -135,3 +186,9 @@
         @RenderBody()
     </main>
 </div>
+<script>
+    // Close off-canvas drawer when a nav link is tapped (mobile).
+    document.querySelectorAll('.sidebar-nav a, .sidebar-brand').forEach(a => {
+        a.addEventListener('click', () => document.body.classList.remove('nav-open'));
+    });
+</script>

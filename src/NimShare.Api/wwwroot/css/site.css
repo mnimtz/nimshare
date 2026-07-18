@@ -1022,11 +1022,134 @@ input:focus, select:focus, textarea:focus {
 .chip-warn     { background: rgba(255,198,0,.20); color: #634e12; }
 .chip-critical { background: rgba(220,38,38,.15); color: var(--status-critical); }
 
+/* ── Expandable "Ablage" nav-group (blue chip when active) ───── */
+.nav-group { margin: 4px 0; user-select: none; }
+.nav-group-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--sp-3) var(--sp-4);
+    color: rgba(255,255,255,.82);
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: background var(--t-fast);
+}
+.nav-group-head:hover { background: rgba(255,255,255,.06); color: var(--tw-white); }
+.nav-group .chevron { font-size: .75rem; transition: transform var(--t-fast); opacity: .7; }
+.nav-group.collapsed .chevron { transform: rotate(-90deg); }
+.nav-group.collapsed .nav-group-body { display: none; }
+.nav-group-body { padding: 2px 0 4px; display: flex; flex-direction: column; gap: 1px; }
+.nav-sub {
+    display: flex !important;
+    align-items: center;
+    gap: 8px !important;
+    padding: 6px 12px 6px 32px !important;
+    color: rgba(255,255,255,.72) !important;
+    font-size: .88rem !important;
+    font-weight: 400 !important;
+    border-radius: 4px !important;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nav-sub:hover { background: rgba(255,255,255,.05) !important; color: var(--tw-white) !important; }
+.nav-sub.active {
+    background: rgba(0,160,251,.16) !important;
+    color: var(--tw-white) !important;
+    font-weight: 600 !important;
+}
+.nav-sub-ic { font-size: .95rem; opacity: .85; flex-shrink: 0; }
+
+/* ── Mobile top-bar + off-canvas drawer ───────────────────────── */
+.mobile-topbar { display: none; }
+.nav-backdrop { display: none; }
+
 @media (max-width: 900px) {
     .app-shell { grid-template-columns: 1fr; }
-    .sidebar { position: fixed; z-index: 10; width: 100%; height: auto; }
-    .workspace { padding: var(--sp-4); }
+
+    /* Top-bar with hamburger + logo + spacer */
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 14px;
+        background: var(--tw-primary);
+        color: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    }
+    .mobile-menu-btn {
+        background: transparent;
+        border: 0;
+        color: #fff;
+        padding: 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+    }
+    .mobile-menu-btn:hover { background: rgba(255,255,255,.10); }
+    .mobile-brand {
+        display: flex; align-items: center; gap: 8px;
+        color: #fff; text-decoration: none;
+        font-weight: 700; font-size: 1rem;
+    }
+    .mobile-brand img { border-radius: 6px; background: #fff; padding: 2px; }
+
+    /* Sidebar: off-canvas drawer */
+    .sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        z-index: 25;
+        width: 82%;
+        max-width: 320px;
+        height: 100vh; max-height: 100vh;
+        transform: translateX(-105%);
+        transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    body.nav-open .sidebar { transform: translateX(0); }
+    body.nav-open { overflow: hidden; }
+
+    .nav-backdrop {
+        display: block;
+        position: fixed; inset: 0;
+        background: rgba(0,18,59,.55);
+        z-index: 22;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .25s;
+    }
+    body.nav-open .nav-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Any nav link click closes the drawer */
+    .sidebar a { -webkit-tap-highlight-color: rgba(255,255,255,.1); }
+
+    .workspace {
+        padding: var(--sp-4);
+        width: 100%;
+        max-width: 100%;
+    }
+    /* When the workspace hosts the file-manager on mobile, keep the whole
+       thing scrollable and don't force flex-height. */
+    .workspace:has(.fm) { padding: 0; }
+    .fm { grid-template-columns: 1fr !important; }
+    .fm-sidebar { display: none !important; }
+    .fm-main { padding: 14px 14px 40px !important; }
+    .fm-header { flex-direction: column; align-items: stretch; gap: 10px; }
+    .fm-toolbar { flex-wrap: wrap; }
+    .fm-list .col-owner,
+    .fm-list .col-date { display: none; }
+    .fm-list td, .fm-list th { padding: 8px 6px; font-size: .85rem; }
+    .fm-icon { width: 28px; height: 28px; }
 }
+
+/* Close drawer on link click (delegated in JS) */
+body.nav-open { position: relative; }
 
 /* ═══════════════════════════════════════════════════════════════════
    File Manager — Seafile-style two-pane view
@@ -1037,8 +1160,7 @@ input:focus, select:focus, textarea:focus {
 .workspace:has(.fm) { padding: 0; }
 
 .fm {
-    display: grid;
-    grid-template-columns: 280px 1fr;
+    display: block;
     min-height: calc(100vh - 12px);
     background: var(--tw-white);
 }
@@ -1291,6 +1413,9 @@ input:focus, select:focus, textarea:focus {
     top: 0;
     z-index: 2;
 }
+.fm-sort { cursor: pointer; user-select: none; }
+.fm-sort:hover { color: var(--tw-primary); }
+.fm-sort-caret { display: inline-block; width: 12px; color: var(--tw-primary-alt); font-size: .8rem; margin-left: 2px; }
 .fm-list tbody tr {
     border-bottom: 1px solid var(--tw-gray-200);
     cursor: default;
