@@ -370,4 +370,5 @@
   <data name="links.email.drafting"><value>Entwerfe...</value></data>
   <data name="links.email.ai_disabled"><value>KI-entworfene E-Mails sind deaktiviert.</value></data>
   <data name="links.email.placeholder"><value>Kurze Nachricht oder 'Mit KI entwerfen' klicken.</value></data>
+  <data name="browse.tree.folders"><value>Ordner</value></data>
 </root>

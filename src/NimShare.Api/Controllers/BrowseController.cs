@@ -34,15 +34,11 @@ public class BrowseController : Controller
         _access = access;
     }
 
-    // ── /browse — root: scope tiles ────────────────────────────────────────
+    // ── /browse — jump straight into the personal library ─────────────────
+    // (No tile-picker intermediate — Seafile-style flow: sidebar has the
+    // library switcher, the main pane is always a browser.)
     [HttpGet("")]
-    public async Task<IActionResult> Root(CancellationToken ct)
-    {
-        var me = await _users.GetOrProvisionAsync(User, ct);
-        var groups = await _access.ListMyGroupsAsync(me, ct);
-        ViewData["Groups"] = groups;
-        return View("Root");
-    }
+    public IActionResult Root() => RedirectToAction(nameof(Personal), new { path = "" });
 
     // ── /browse/personal[/**] ──────────────────────────────────────────────
     [HttpGet("personal/{**path}")]
@@ -90,6 +86,9 @@ public class BrowseController : Controller
         ViewData["CanWrite"] = canWrite;
         ViewData["CanManage"] = canManage;
         ViewData["UrlBase"] = BuildUrlBase(scope, groupId);
+        // Library sidebar (Seafile-style): drives the Personal/Public/Groups
+        // switcher at the top of the tree-panel.
+        ViewData["MyGroups"] = await _access.ListMyGroupsAsync(me, ct);
 
         if (scope == FileScope.Group && groupId is Guid gg)
         {

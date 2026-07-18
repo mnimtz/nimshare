@@ -1,4 +1,5 @@
 @using NimShare.Core.Entities
+@using NimShare.Api.Services
 @{
     var scope = (FileScope)ViewData["Scope"]!;
     var groupId = ViewData["GroupId"] as Guid?;
@@ -11,6 +12,7 @@
     var canManage = (bool)(ViewData["CanManage"] ?? false);
     var urlBase = (string)ViewData["UrlBase"]!;
     var currentUrl = Context.Request.Path.Value ?? urlBase;
+    var myGroups = (List<GroupSummary>)(ViewData["MyGroups"] ?? new List<GroupSummary>());
 
     string scopeTitle = scope switch
     {
@@ -90,7 +92,42 @@
 <div class="search-results" id="searchResults" style="display:none"></div>
 
 <div class="browse-layout">
-<aside class="tree-panel" id="treePanel"><div class="muted" style="padding:8px">@T["browse.tree.loading"]</div></aside>
+<aside class="tree-panel" id="treePanel">
+    <div class="lib-section">
+        <div class="lib-heading">@T["browse.libraries.mine"]</div>
+        <a class="lib-item @(scope == FileScope.Personal ? "active" : "")" href="/browse/personal">
+            <span class="lib-icon" style="background:linear-gradient(135deg,#0f5db5,#0a3e7c)">👤</span>
+            <span class="lib-name">@T["browse.tile.personal"]</span>
+        </a>
+    </div>
+    <div class="lib-section">
+        <div class="lib-heading">@T["browse.libraries.shared"]</div>
+        <a class="lib-item @(scope == FileScope.Public ? "active" : "")" href="/browse/public">
+            <span class="lib-icon" style="background:linear-gradient(135deg,#22c3a6,#0aa07f)">🌐</span>
+            <span class="lib-name">@T["browse.tile.public"]</span>
+        </a>
+    </div>
+    @if (myGroups.Any())
+    {
+        <div class="lib-section">
+            <div class="lib-heading">@T["browse.libraries.groups"]</div>
+            @foreach (var g in myGroups)
+            {
+                var isActive = scope == FileScope.Group && groupId == g.Id;
+                <a class="lib-item @(isActive ? "active" : "")" href="/browse/group/@g.Id">
+                    <span class="lib-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">
+                        @(g.Name.Length > 0 ? g.Name[0].ToString().ToUpper() : "G")
+                    </span>
+                    <span class="lib-name">@g.Name</span>
+                </a>
+            }
+        </div>
+    }
+    <div class="lib-section">
+        <div class="lib-heading">@T["browse.tree.folders"]</div>
+        <div id="folderTree"><div class="muted" style="padding:4px 8px;font-size:.85rem">@T["browse.tree.loading"]</div></div>
+    </div>
+</aside>
 <div>
 
 <div class="browse-toolbar">
@@ -399,16 +436,17 @@ async function performMove() {
 
 // ── Folder tree panel (loaded lazily on first paint) ──────────
 (async () => {
+    const treeMount = document.getElementById('folderTree');
+    if (!treeMount) return;
     try {
         const params = new URLSearchParams({ scope: SCOPE });
         if (SCOPE === 'Group') params.set('groupId', @Json.Serialize(groupId?.ToString() ?? ""));
         const r = await fetch('/api/v1/folders/tree?' + params.toString(), { credentials: 'same-origin' });
-        if (!r.ok) { document.getElementById('treePanel').innerHTML = ''; return; }
+        if (!r.ok) { treeMount.innerHTML = ''; return; }
         const tree = await r.json();
-        const wrap = document.getElementById('treePanel');
-        wrap.innerHTML = '';
-        tree.forEach(n => wrap.appendChild(renderNode(n, 0)));
-    } catch { document.getElementById('treePanel').innerHTML = ''; }
+        treeMount.innerHTML = '';
+        tree.forEach(n => treeMount.appendChild(renderNode(n, 0)));
+    } catch { treeMount.innerHTML = ''; }
     function renderNode(n, depth, parent) {
         // Track parent for path-walk on click.
         const parentMap = window.__treeParents || (window.__treeParents = new Map());
