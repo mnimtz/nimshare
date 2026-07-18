@@ -53,6 +53,50 @@
   <data name="users.action.enable"><value>Activer</value></data>
   <data name="users.action.delete"><value>Supprimer</value></data>
   <data name="users.confirm.delete"><value>Supprimer cet utilisateur ? Ses fichiers et liens seront conservés.</value></data>
+  <data name="users.quota"><value>Quota</value></data>
+  <data name="users.quota.save"><value>Enregistrer</value></data>
+
+  <data name="nav.files"><value>Fichiers</value></data>
+  <data name="nav.files.personal"><value>Mes fichiers</value></data>
+  <data name="nav.files.public"><value>Public</value></data>
+  <data name="nav.groups"><value>Groupes</value></data>
+
+  <data name="groups.title"><value>Groupes</value></data>
+  <data name="groups.lede"><value>Équipes qui partagent un pool de fichiers commun. Les gestionnaires ajoutent des membres et gèrent les fichiers.</value></data>
+  <data name="groups.empty"><value>Vous n'êtes membre d'aucun groupe.</value></data>
+  <data name="groups.create_new"><value>Créer un nouveau groupe</value></data>
+  <data name="groups.name"><value>Nom du groupe</value></data>
+  <data name="groups.description"><value>Description</value></data>
+  <data name="groups.no_description"><value>Aucune description.</value></data>
+  <data name="groups.create"><value>Créer le groupe</value></data>
+  <data name="groups.members"><value>Membres</value></data>
+  <data name="groups.add_member"><value>Ajouter un membre</value></data>
+  <data name="groups.add"><value>Ajouter</value></data>
+  <data name="groups.remove"><value>Retirer</value></data>
+  <data name="groups.role.member"><value>Membre</value></data>
+  <data name="groups.role.manager"><value>Gestionnaire</value></data>
+  <data name="groups.files"><value>Fichiers du groupe</value></data>
+  <data name="groups.no_files"><value>Aucun fichier pour l'instant.</value></data>
+  <data name="groups.uploaded_by"><value>Envoyé par</value></data>
+  <data name="groups.open_files"><value>Ouvrir les fichiers</value></data>
+  <data name="groups.delete"><value>Supprimer le groupe</value></data>
+  <data name="groups.confirm.delete"><value>Supprimer ce groupe ? Ses fichiers partagés perdront leur portée.</value></data>
+
+  <data name="browse.personal"><value>Mes fichiers</value></data>
+  <data name="browse.public"><value>Fichiers publics</value></data>
+  <data name="browse.group"><value>Groupe</value></data>
+  <data name="browse.personal.lede"><value>Fichiers que vous seul pouvez voir. Partagez via un lien pour autrui.</value></data>
+  <data name="browse.public.lede"><value>Fichiers accessibles à toute personne connectée sur ce NimShare.</value></data>
+  <data name="browse.group.lede"><value>Fichiers partagés avec tous les membres du groupe.</value></data>
+  <data name="browse.upload_here"><value>Envoyer un fichier ici</value></data>
+  <data name="browse.files"><value>Fichiers</value></data>
+  <data name="browse.empty"><value>Aucun fichier ici pour l'instant.</value></data>
+
+  <data name="links.action.copy"><value>Copier l'URL</value></data>
+  <data name="links.action.email"><value>Envoyer par e-mail</value></data>
+  <data name="links.email.to"><value>À quelle adresse e-mail ?</value></data>
+  <data name="links.email.message"><value>Message facultatif :</value></data>
+  <data name="links.email.sent"><value>E-mail envoyé.</value></data>
 
   <data name="welcome.title"><value>Bienvenue sur NimShare</value></data>
   <data name="welcome.headline"><value>Partagez des fichiers sans friction.</value></data>

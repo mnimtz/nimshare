@@ -1,13 +1,25 @@
 @using System.Globalization
+@using Microsoft.EntityFrameworkCore
+@inject NimShare.Core.Data.NimShareDbContext DbForShell
 @{
-    // _AppShell is used as a LAYOUT (Layout = "_AppShell" in each authenticated view),
-    // not as a partial. It wraps its own outer html via _Layout.
     Layout = "_Layout";
     var currentPath = Context.Request.Path.Value ?? "/";
     string Active(string startsWith) => currentPath.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    string Exact(string p) => string.Equals(currentPath, p, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     var supported = new[] { ("en", "EN"), ("de", "DE"), ("fr", "FR"), ("it", "IT"), ("es", "ES") };
     var cur = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
     var isAdmin = User.IsInRole("Admin");
+
+    var myGroups = new List<(Guid Id, string Name)>();
+    var subClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (Guid.TryParse(subClaim, out var myId))
+    {
+        myGroups = await DbForShell.GroupMemberships
+            .Where(m => m.UserId == myId)
+            .OrderBy(m => m.Group.Name)
+            .Select(m => new ValueTuple<Guid, string>(m.GroupId, m.Group.Name))
+            .ToListAsync();
+    }
 }
 <div class="app-shell">
     <aside class="sidebar">
@@ -27,8 +39,24 @@
         <nav class="sidebar-nav">
             <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
             <a href="/upload"    class="@Active("/upload")">@T["nav.upload"]</a>
-            <a href="/links"     class="@Active("/links")">@T["nav.links"]</a>
-            <a href="/settings"  class="@(currentPath == "/settings" ? "active" : "")">@T["nav.settings"]</a>
+            <a href="/links"     class="@Exact("/links")">@T["nav.links"]</a>
+
+            <div style="height:1px;background:rgba(255,255,255,.08);margin:var(--sp-2) 0"></div>
+
+            <div style="padding:var(--sp-2) var(--sp-4);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)">@T["nav.files"]</div>
+            <a href="/files/personal" class="@Active("/files/personal")">@T["nav.files.personal"]</a>
+            <a href="/files/public"   class="@Active("/files/public")">@T["nav.files.public"]</a>
+            <a href="/groups"         class="@Exact("/groups")">@T["nav.groups"]</a>
+
+            @foreach (var (gid, gname) in myGroups)
+            {
+                var active = currentPath.Contains($"/files/group/{gid}") || currentPath.Contains($"/groups/{gid}") ? "active" : "";
+                <a href="/files/group/@gid" class="@active" style="padding-left:var(--sp-8);font-size:.85rem">@gname</a>
+            }
+
+            <div style="height:1px;background:rgba(255,255,255,.08);margin:var(--sp-2) 0"></div>
+
+            <a href="/settings"  class="@Exact("/settings")">@T["nav.settings"]</a>
             <a href="/account/password" class="@Active("/account/password")">@T["nav.password"]</a>
             @if (isAdmin)
             {
@@ -45,8 +73,9 @@
                     <a href="?ui-culture=@code" class="@cls">@label</a>
                 }
             </div>
-            <div style="margin-top:12px">
+            <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
                 <a href="/logout" style="color:rgba(255,255,255,.7);font-size:.8rem">@T["nav.signout"]</a>
+                <span style="color:rgba(255,255,255,.35);font-size:.7rem;font-family:var(--font-mono)">v@(NimShare.Api.BuildInfo.Version)</span>
             </div>
         </div>
     </aside>

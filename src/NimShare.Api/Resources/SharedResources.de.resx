@@ -53,6 +53,50 @@
   <data name="users.action.enable"><value>Aktivieren</value></data>
   <data name="users.action.delete"><value>Löschen</value></data>
   <data name="users.confirm.delete"><value>Diesen Benutzer löschen? Dateien und Links bleiben erhalten.</value></data>
+  <data name="users.quota"><value>Speicherlimit</value></data>
+  <data name="users.quota.save"><value>Speichern</value></data>
+
+  <data name="nav.files"><value>Dateien</value></data>
+  <data name="nav.files.personal"><value>Meine Dateien</value></data>
+  <data name="nav.files.public"><value>Öffentlich</value></data>
+  <data name="nav.groups"><value>Gruppen</value></data>
+
+  <data name="groups.title"><value>Gruppen</value></data>
+  <data name="groups.lede"><value>Teams, die einen gemeinsamen Dateipool nutzen. Manager verwalten Mitglieder und Dateien; Mitglieder können lesen und hochladen.</value></data>
+  <data name="groups.empty"><value>Du bist noch in keiner Gruppe.</value></data>
+  <data name="groups.create_new"><value>Neue Gruppe anlegen</value></data>
+  <data name="groups.name"><value>Gruppenname</value></data>
+  <data name="groups.description"><value>Beschreibung</value></data>
+  <data name="groups.no_description"><value>Keine Beschreibung.</value></data>
+  <data name="groups.create"><value>Gruppe anlegen</value></data>
+  <data name="groups.members"><value>Mitglieder</value></data>
+  <data name="groups.add_member"><value>Mitglied hinzufügen</value></data>
+  <data name="groups.add"><value>Hinzufügen</value></data>
+  <data name="groups.remove"><value>Entfernen</value></data>
+  <data name="groups.role.member"><value>Mitglied</value></data>
+  <data name="groups.role.manager"><value>Manager</value></data>
+  <data name="groups.files"><value>Dateien in dieser Gruppe</value></data>
+  <data name="groups.no_files"><value>Noch keine Dateien.</value></data>
+  <data name="groups.uploaded_by"><value>Hochgeladen von</value></data>
+  <data name="groups.open_files"><value>Dateien öffnen</value></data>
+  <data name="groups.delete"><value>Gruppe löschen</value></data>
+  <data name="groups.confirm.delete"><value>Diese Gruppe löschen? Geteilte Dateien verlieren ihre Gruppen-Zuordnung.</value></data>
+
+  <data name="browse.personal"><value>Meine Dateien</value></data>
+  <data name="browse.public"><value>Öffentliche Dateien</value></data>
+  <data name="browse.group"><value>Gruppe</value></data>
+  <data name="browse.personal.lede"><value>Nur für dich sichtbar. Per Link teilen, damit andere zugreifen können.</value></data>
+  <data name="browse.public.lede"><value>Alle angemeldeten Nutzer auf diesem NimShare können hier lesen und hochladen.</value></data>
+  <data name="browse.group.lede"><value>Alle Gruppenmitglieder sehen diese Dateien. Manager können alles löschen; Mitglieder nur Eigenes.</value></data>
+  <data name="browse.upload_here"><value>Hier eine Datei hochladen</value></data>
+  <data name="browse.files"><value>Dateien</value></data>
+  <data name="browse.empty"><value>Noch keine Dateien hier.</value></data>
+
+  <data name="links.action.copy"><value>URL kopieren</value></data>
+  <data name="links.action.email"><value>Per E-Mail senden</value></data>
+  <data name="links.email.to"><value>An welche E-Mail-Adresse?</value></data>
+  <data name="links.email.message"><value>Optionale Nachricht:</value></data>
+  <data name="links.email.sent"><value>E-Mail versandt.</value></data>
 
   <data name="welcome.title"><value>Willkommen bei NimShare</value></data>
   <data name="welcome.headline"><value>Dateien teilen — schnell, sauber, kontrolliert.</value></data>

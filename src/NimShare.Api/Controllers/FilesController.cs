@@ -23,13 +23,20 @@ public class FilesController : ControllerBase
         _users = users;
     }
 
-    public record CreateFileRequest(string Name, long SizeBytes, string ContentType, string? Folder);
+    public record CreateFileRequest(string Name, long SizeBytes, string ContentType, string? Folder, string? Scope, Guid? GroupId);
     public record CreateFileResponse(Guid FileId, string UploadUrl, string UploadMethod, DateTimeOffset ExpiresAt);
 
     [HttpPost]
-    public async Task<ActionResult<CreateFileResponse>> Create([FromBody] CreateFileRequest req, CancellationToken ct)
+    public async Task<ActionResult<CreateFileResponse>> Create([FromBody] CreateFileRequest req, [FromServices] IFileAccessService access, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
+
+        // Parse scope; default is Personal.
+        var scope = FileScope.Personal;
+        if (!string.IsNullOrWhiteSpace(req.Scope) && Enum.TryParse<FileScope>(req.Scope, true, out var parsed))
+            scope = parsed;
+        if (!await access.CanUploadIntoAsync(user, scope, req.GroupId, ct))
+            return Problem(statusCode: 403, title: "Cannot upload into this scope");
 
         var usedBytes = await _db.Files
             .Where(f => f.OwnerId == user.Id && f.Status != StorageFileStatus.Deleted)
@@ -41,6 +48,8 @@ public class FilesController : ControllerBase
         var file = new StorageFile
         {
             OwnerId = user.Id,
+            Scope = scope,
+            GroupId = scope == FileScope.Group ? req.GroupId : null,
             Name = req.Name,
             SizeBytes = req.SizeBytes,
             ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,
@@ -98,12 +107,13 @@ public class FilesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Delete(Guid id, [FromServices] IFileAccessService access, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.Include(f => f.ShareLinks)
-            .SingleOrDefaultAsync(f => f.Id == id && f.OwnerId == user.Id, ct);
+            .SingleOrDefaultAsync(f => f.Id == id, ct);
         if (file is null) return NotFound();
+        if (!await access.CanDeleteAsync(user, file, ct)) return Forbid();
 
         // Soft-delete first, then best-effort remove the blob.
         file.Status = StorageFileStatus.Deleted;

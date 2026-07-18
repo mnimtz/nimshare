@@ -53,6 +53,50 @@
   <data name="users.action.enable"><value>Enable</value></data>
   <data name="users.action.delete"><value>Delete</value></data>
   <data name="users.confirm.delete"><value>Delete this user? Their files and links will remain.</value></data>
+  <data name="users.quota"><value>Quota</value></data>
+  <data name="users.quota.save"><value>Save</value></data>
+
+  <data name="nav.files"><value>Files</value></data>
+  <data name="nav.files.personal"><value>My files</value></data>
+  <data name="nav.files.public"><value>Public</value></data>
+  <data name="nav.groups"><value>Groups</value></data>
+
+  <data name="groups.title"><value>Groups</value></data>
+  <data name="groups.lede"><value>Teams that share a common pool of files. Managers can add members and manage the group's files; members can read and upload.</value></data>
+  <data name="groups.empty"><value>You're not a member of any group yet.</value></data>
+  <data name="groups.create_new"><value>Create a new group</value></data>
+  <data name="groups.name"><value>Group name</value></data>
+  <data name="groups.description"><value>Description</value></data>
+  <data name="groups.no_description"><value>No description.</value></data>
+  <data name="groups.create"><value>Create group</value></data>
+  <data name="groups.members"><value>Members</value></data>
+  <data name="groups.add_member"><value>Add a member</value></data>
+  <data name="groups.add"><value>Add</value></data>
+  <data name="groups.remove"><value>Remove</value></data>
+  <data name="groups.role.member"><value>Member</value></data>
+  <data name="groups.role.manager"><value>Manager</value></data>
+  <data name="groups.files"><value>Files in this group</value></data>
+  <data name="groups.no_files"><value>No files yet.</value></data>
+  <data name="groups.uploaded_by"><value>Uploaded by</value></data>
+  <data name="groups.open_files"><value>Open files</value></data>
+  <data name="groups.delete"><value>Delete group</value></data>
+  <data name="groups.confirm.delete"><value>Delete this group? All its shared files will be un-scoped.</value></data>
+
+  <data name="browse.personal"><value>My files</value></data>
+  <data name="browse.public"><value>Public files</value></data>
+  <data name="browse.group"><value>Group</value></data>
+  <data name="browse.personal.lede"><value>Files only you can see. Share via link for anyone else to reach them.</value></data>
+  <data name="browse.public.lede"><value>Files everyone signed in on this NimShare can see and add to.</value></data>
+  <data name="browse.group.lede"><value>Files shared with everyone in this group. Managers can delete anything; members can delete what they uploaded.</value></data>
+  <data name="browse.upload_here"><value>Upload a file here</value></data>
+  <data name="browse.files"><value>Files</value></data>
+  <data name="browse.empty"><value>No files here yet.</value></data>
+
+  <data name="links.action.copy"><value>Copy URL</value></data>
+  <data name="links.action.email"><value>Send by email</value></data>
+  <data name="links.email.to"><value>Send this share link to which email address?</value></data>
+  <data name="links.email.message"><value>Optional message to include:</value></data>
+  <data name="links.email.sent"><value>Email queued.</value></data>
 
   <data name="welcome.title"><value>Welcome to NimShare</value></data>
   <data name="welcome.headline"><value>Share files without the friction.</value></data>

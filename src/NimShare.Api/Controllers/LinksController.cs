@@ -153,6 +153,33 @@ public class LinksController : ControllerBase
         return NoContent();
     }
 
+    public record SendByEmailRequest(string ToEmail, string? Message);
+
+    [HttpPost("{id:guid}/send-email")]
+    public async Task<IActionResult> SendByEmail(Guid id, [FromBody] SendByEmailRequest req, [FromServices] INotificationService notify, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var link = await _db.ShareLinks.Include(l => l.File).SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        if (link is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(req.ToEmail) || !req.ToEmail.Contains('@'))
+            return Problem(statusCode: 422, title: "Invalid recipient email");
+        var url = BuildPublicUrl(link.Slug);
+        var subject = $"{user.DisplayName} shared a file with you: {link.File.Name}";
+        var body = $"""
+                    Hello,
+
+                    {user.DisplayName} ({user.Email}) has shared a file with you:
+
+                    {link.File.Name}
+                    {url}
+
+                    {(string.IsNullOrWhiteSpace(req.Message) ? "" : "Message from the sender:\n" + req.Message + "\n\n")}
+                    — NimShare
+                    """;
+        await notify.SendShareLinkAsync(req.ToEmail.Trim(), user.DisplayName, subject, body, ct);
+        return Ok(new { sent = true });
+    }
+
     private LinkDto ToDto(ShareLink l) => new(
         l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
         l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,

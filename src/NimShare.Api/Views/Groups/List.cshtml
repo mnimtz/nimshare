@@ -1,0 +1,64 @@
+@model IEnumerable<NimShare.Core.Entities.Group>
+@{
+    ViewData["Title"] = @T["groups.title"];
+    Layout = "_AppShell";
+    var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+}
+<div class="page-header">
+    <div>
+        <h1>@T["groups.title"]</h1>
+        <p class="lede">@T["groups.lede"]</p>
+    </div>
+</div>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+@if (isAdmin)
+{
+    <div class="card">
+        <h2 class="card-title">@T["groups.create_new"]</h2>
+        <form method="post" action="/groups/create" class="row" style="align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:220px">
+                <label>@T["groups.name"]</label>
+                <input type="text" name="name" required maxlength="120"/>
+            </div>
+            <div class="field" style="flex:2;min-width:280px">
+                <label>@T["groups.description"]</label>
+                <input type="text" name="description" maxlength="2000"/>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["groups.create"]</button>
+        </form>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="card"><p class="muted">@T["groups.empty"]</p></div>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>@T["groups.name"]</th>
+            <th>@T["groups.description"]</th>
+            <th>@T["groups.members"]</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var g in Model)
+        {
+            <tr>
+                <td><a href="/groups/@g.Id">@g.Name</a></td>
+                <td class="muted">@g.Description</td>
+                <td>@g.Members.Count</td>
+                <td><a class="btn btn-ghost btn-sm" href="/files/group/@g.Id">@T["groups.open_files"]</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

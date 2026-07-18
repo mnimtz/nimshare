@@ -12,6 +12,11 @@
     <ProjectReference Include="..\NimShare.Core\NimShare.Core.csproj" />
   </ItemGroup>
 
+  <!-- Ship VERSION next to the app so BuildInfo can read it at runtime. -->
+  <ItemGroup>
+    <None Include="..\..\VERSION" Link="VERSION" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!--
     Force the embedded resource names to include the "Resources" folder segment.
     Without this override, MSBuild strips the folder and produces

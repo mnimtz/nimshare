@@ -40,6 +40,8 @@ else
                 <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
                 <td><span class="chip @state.Item1">@state.Item2</span></td>
                 <td>
+                    <button class="btn btn-ghost btn-sm" data-copy="@Url.RouteUrl(new{controller="Share",action="Landing",slug=l.Slug}) ?? $"/s/{l.Slug}">@T["links.action.copy"]</button>
+                    <button class="btn btn-ghost btn-sm" data-email="@l.Id">@T["links.action.email"]</button>
                     @if (!l.IsRevoked)
                     {
                         <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
@@ -74,6 +76,22 @@ document.querySelectorAll('[data-delete]').forEach(b => {
         if (!confirm(@Json.Serialize(T["links.confirm.delete"].Value))) return;
         const r = await api('DELETE', `/api/v1/links/${b.dataset.delete}`);
         if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+    });
+});
+document.querySelectorAll('[data-copy]').forEach(b => {
+    b.addEventListener('click', async () => {
+        const url = location.origin + b.dataset.copy;
+        try { await navigator.clipboard.writeText(url); b.textContent = '✓'; setTimeout(()=>b.textContent=@Json.Serialize(T["links.action.copy"].Value), 1200); }
+        catch { prompt('Copy this URL:', url); }
+    });
+});
+document.querySelectorAll('[data-email]').forEach(b => {
+    b.addEventListener('click', async () => {
+        const to = prompt(@Json.Serialize(T["links.email.to"].Value));
+        if (!to) return;
+        const msg = prompt(@Json.Serialize(T["links.email.message"].Value)) || '';
+        const r = await api('POST', `/api/v1/links/${b.dataset.email}/send-email`, { toEmail: to, message: msg });
+        if (r.ok) alert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status);
     });
 });
 </script>

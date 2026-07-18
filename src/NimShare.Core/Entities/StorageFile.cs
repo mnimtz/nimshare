@@ -7,12 +7,33 @@ public enum StorageFileStatus
     Deleted = 2
 }
 
+/// <summary>Where a file lives — controls who can see/modify it.</summary>
+public enum FileScope
+{
+    /// <summary>Only the OwnerId user can see or modify.</summary>
+    Personal = 0,
+
+    /// <summary>Every signed-in user can see and add files. Only the uploader (or an Admin) can delete.</summary>
+    Public = 1,
+
+    /// <summary>All members of GroupId can see. Only the uploader, group Managers, or Admins can delete.</summary>
+    Group = 2
+}
+
 public class StorageFile
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>The user who uploaded the file. Owns quota accounting even for public/group files.</summary>
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;
+
+    /// <summary>Where the file lives — Personal, Public, or in a Group.</summary>
+    public FileScope Scope { get; set; } = FileScope.Personal;
+
+    /// <summary>The group this file belongs to, when Scope=Group. Null otherwise.</summary>
+    public Guid? GroupId { get; set; }
+    public Group? Group { get; set; }
 
     public string Name { get; set; } = string.Empty;
     public long SizeBytes { get; set; }

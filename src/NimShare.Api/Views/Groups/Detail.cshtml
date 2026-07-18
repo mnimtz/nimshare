@@ -1,0 +1,124 @@
+@model NimShare.Core.Entities.Group
+@{
+    ViewData["Title"] = Model.Name;
+    Layout = "_AppShell";
+    var canManage = (bool)(ViewData["CanManage"] ?? false);
+    var files = (List<NimShare.Core.Entities.StorageFile>)(ViewData["Files"] ?? new List<NimShare.Core.Entities.StorageFile>());
+    var candidates = (List<NimShare.Core.Entities.User>)(ViewData["Candidates"] ?? new List<NimShare.Core.Entities.User>());
+    string Bytes(long b)
+    {
+        string[] u = { "B", "KB", "MB", "GB", "TB" };
+        double v = b; int i = 0;
+        while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
+        return $"{v:0.##} {u[i]}";
+    }
+}
+<div class="page-header">
+    <div>
+        <h1>@Model.Name</h1>
+        <p class="lede">@(Model.Description ?? T["groups.no_description"].Value)</p>
+    </div>
+    <div class="row">
+        <a class="btn btn-primary" href="/files/group/@Model.Id">@T["groups.open_files"]</a>
+        @if (canManage)
+        {
+            <form method="post" action="/groups/@Model.Id/delete" onsubmit="return confirm('@T["groups.confirm.delete"]')" style="display:inline">
+                <button class="btn btn-ghost">@T["groups.delete"]</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+<div class="card">
+    <h2 class="card-title">@T["groups.members"] (@Model.Members.Count)</h2>
+    @if (canManage && candidates.Any())
+    {
+        <form method="post" action="/groups/@Model.Id/members/add" class="row" style="align-items:flex-end;margin-bottom:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:2;min-width:220px">
+                <label>@T["groups.add_member"]</label>
+                <select name="userId" required>
+                    @foreach (var u in candidates)
+                    {
+                        <option value="@u.Id">@u.DisplayName (@u.Email)</option>
+                    }
+                </select>
+            </div>
+            <div class="field" style="width:140px">
+                <label>@T["users.role"]</label>
+                <select name="role">
+                    <option value="Member">@T["groups.role.member"]</option>
+                    <option value="Manager">@T["groups.role.manager"]</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["groups.add"]</button>
+        </form>
+    }
+
+    <table class="table">
+        <thead>
+        <tr><th>@T["auth.display_name"]</th><th>@T["auth.email"]</th><th>@T["users.role"]</th><th></th></tr>
+        </thead>
+        <tbody>
+        @foreach (var m in Model.Members.OrderByDescending(x => x.Role).ThenBy(x => x.User.DisplayName))
+        {
+            <tr>
+                <td>@m.User.DisplayName</td>
+                <td class="mono">@m.User.Email</td>
+                <td>
+                    @if (canManage)
+                    {
+                        <form method="post" action="/groups/@Model.Id/members/@m.UserId/set-role" style="display:inline">
+                            <select name="role" onchange="this.form.submit()">
+                                <option value="Member" selected="@(m.Role==NimShare.Core.Entities.GroupRole.Member)">@T["groups.role.member"]</option>
+                                <option value="Manager" selected="@(m.Role==NimShare.Core.Entities.GroupRole.Manager)">@T["groups.role.manager"]</option>
+                            </select>
+                        </form>
+                    }
+                    else
+                    {
+                        <span>@(m.Role == NimShare.Core.Entities.GroupRole.Manager ? T["groups.role.manager"] : T["groups.role.member"])</span>
+                    }
+                </td>
+                <td>
+                    @if (canManage)
+                    {
+                        <form method="post" action="/groups/@Model.Id/members/@m.UserId/remove" style="display:inline">
+                            <button class="btn btn-ghost btn-sm">@T["groups.remove"]</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2 class="card-title">@T["groups.files"] (@files.Count)</h2>
+    @if (!files.Any())
+    {
+        <p class="muted">@T["groups.no_files"]</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th>@T["file.uploaded"]</th><th>@T["groups.uploaded_by"]</th></tr></thead>
+            <tbody>
+            @foreach (var f in files.OrderByDescending(x => x.CreatedAt))
+            {
+                <tr>
+                    <td>@f.Name</td>
+                    <td>@Bytes(f.SizeBytes)</td>
+                    <td class="muted">@f.CreatedAt.ToString("u")</td>
+                    <td class="muted">@f.Owner.DisplayName</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>

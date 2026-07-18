@@ -170,6 +170,7 @@ builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<ILinkAccessService, LinkAccessService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
+builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<INotificationService, SmtpNotificationService>();
 
 builder.Services.AddHttpContextAccessor();

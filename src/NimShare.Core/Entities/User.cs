@@ -37,4 +37,5 @@ public class User
     public ICollection<ShareLink> ShareLinks { get; set; } = new List<ShareLink>();
     public ICollection<UploadRequestLink> UploadRequests { get; set; } = new List<UploadRequestLink>();
     public ICollection<CustomDomain> CustomDomains { get; set; } = new List<CustomDomain>();
+    public ICollection<GroupMembership> Groups { get; set; } = new List<GroupMembership>();
 }

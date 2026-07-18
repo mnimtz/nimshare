@@ -90,6 +90,21 @@ public class UsersController : Controller
     }
 
     [Authorize(Policy = "WebUser")]
+    [HttpPost("/settings/users/{id:guid}/set-quota")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetQuota(Guid id, long quotaGb, CancellationToken ct)
+    {
+        if (!await RequireAdmin(ct)) return Forbid();
+        var u = await _db.Users.FindAsync(new object[] { id }, ct);
+        if (u is null) return NotFound();
+        if (quotaGb < 1 || quotaGb > 10240) { TempData["Error"] = "Quota must be between 1 GB and 10 TB."; return RedirectToAction(nameof(List)); }
+        u.QuotaBytes = quotaGb * 1024L * 1024L * 1024L;
+        await _db.SaveChangesAsync(ct);
+        TempData["Notice"] = $"Quota updated to {quotaGb} GB.";
+        return RedirectToAction(nameof(List));
+    }
+
+    [Authorize(Policy = "WebUser")]
     [HttpPost("/settings/users/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

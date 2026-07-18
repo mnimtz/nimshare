@@ -25,6 +25,9 @@ public interface INotificationService
 {
     Task NotifyDownloadAsync(ShareLink link, string ipHash, CancellationToken ct = default);
     Task NotifyUploadAsync(UploadRequestLink request, string filename, CancellationToken ct = default);
+
+    /// <summary>Sends a plain-text share link email from the current user to an arbitrary recipient.</summary>
+    Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default);
 }
 
 public class SmtpNotificationService : INotificationService
@@ -88,6 +91,16 @@ public class SmtpNotificationService : INotificationService
         private readonly CultureInfo _prev;
         public CultureScope(CultureInfo c) { _prev = CultureInfo.CurrentUICulture; CultureInfo.CurrentUICulture = c; }
         public void Dispose() { CultureInfo.CurrentUICulture = _prev; }
+    }
+
+    public Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default)
+    {
+        if (!_options.Enabled)
+        {
+            _logger.LogInformation("SMTP disabled — would send share link to {To}: {Subject}", toEmail, subject);
+            return Task.CompletedTask;
+        }
+        return SendAsync(toEmail, subject, body, ct);
     }
 
     private async Task SendAsync(string to, string subject, string body, CancellationToken ct)

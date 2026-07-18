@@ -14,6 +14,8 @@ public class NimShareDbContext : DbContext
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
     public DbSet<CustomDomain> CustomDomains => Set<CustomDomain>();
     public DbSet<UploadRequestLink> UploadRequests => Set<UploadRequestLink>();
+    public DbSet<Group> Groups => Set<Group>();
+    public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -59,6 +61,7 @@ public class NimShareDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.OwnerId);
+            e.HasIndex(x => new { x.Scope, x.GroupId });
             e.HasIndex(x => new { x.OwnerId, x.Folder });
             e.Property(x => x.Name).HasMaxLength(255).IsRequired();
             e.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
@@ -67,6 +70,22 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Folder).HasMaxLength(400);
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.HasOne(x => x.Owner).WithMany(u => u.Files).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Group).WithMany(g => g.Files).HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        b.Entity<Group>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Name);
+            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+        });
+
+        b.Entity<GroupMembership>(e =>
+        {
+            e.HasKey(x => new { x.GroupId, x.UserId });
+            e.HasOne(x => x.Group).WithMany(g => g.Members).HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User).WithMany(u => u.Groups).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<ShareLink>(e =>
