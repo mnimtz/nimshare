@@ -409,4 +409,8 @@
   <data name="actions.star"><value>Favorite</value></data>
   <data name="actions.unstar"><value>Remove favorite</value></data>
   <data name="file.owner"><value>Owner</value></data>
+  <data name="favorites.hint"><value>Click ⭐ on any file or folder to add it here.</value></data>
+  <data name="shared.lede"><value>Files and folders others have granted you access to.</value></data>
+  <data name="shared.by"><value>Shared by</value></data>
+  <data name="shared.since"><value>Since</value></data>
 </root>

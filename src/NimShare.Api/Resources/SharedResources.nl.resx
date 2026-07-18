@@ -410,4 +410,8 @@
   <data name="actions.star"><value>Favoriet</value></data>
   <data name="actions.unstar"><value>Uit favorieten</value></data>
   <data name="file.owner"><value>Eigenaar</value></data>
+  <data name="favorites.hint"><value>Klik op ⭐ naast een bestand of map om deze hier toe te voegen.</value></data>
+  <data name="shared.lede"><value>Bestanden en mappen die anderen met jou hebben gedeeld.</value></data>
+  <data name="shared.by"><value>Gedeeld door</value></data>
+  <data name="shared.since"><value>Sinds</value></data>
 </root>

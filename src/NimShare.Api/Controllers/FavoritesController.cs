@@ -23,7 +23,8 @@ public class FavoritesPageController : Controller
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var favs = await _db.UserFavorites
-            .Where(f => f.UserId == me.Id)
+            .Where(f => f.UserId == me.Id
+                && (f.FileId == null || f.File!.Status != StorageFileStatus.Deleted))
             .Include(f => f.File)
             .Include(f => f.Folder)
             .OrderByDescending(f => f.CreatedAt)
@@ -40,7 +41,8 @@ public class FavoritesPageController : Controller
         var myGroupIds = await _db.GroupMemberships
             .Where(m => m.UserId == me.Id).Select(m => m.GroupId).ToListAsync(ct);
         var shares = await _db.DirectShares
-            .Where(s => s.TargetUserId == me.Id || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId.Value)))
+            .Where(s => (s.TargetUserId == me.Id || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId.Value)))
+                && (s.FileId == null || s.File!.Status != StorageFileStatus.Deleted))
             .Include(s => s.File).Include(s => s.Folder).Include(s => s.SharedByUser).Include(s => s.TargetGroup)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(ct);

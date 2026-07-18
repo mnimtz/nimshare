@@ -227,6 +227,13 @@ public class NimShareDbContext : DbContext
             e.HasIndex(x => new { x.TargetUserId, x.FolderId });
             e.HasIndex(x => new { x.TargetGroupId, x.FileId });
             e.HasIndex(x => new { x.TargetGroupId, x.FolderId });
+            // Concurrency-safe upsert: two POSTs to /direct-shares with the
+            // same (item, target) can now only produce one row — the second
+            // hits the unique index and we treat it as "already there".
+            e.HasIndex(x => new { x.FileId, x.TargetUserId }).IsUnique().HasFilter("\"FileId\" IS NOT NULL AND \"TargetUserId\" IS NOT NULL");
+            e.HasIndex(x => new { x.FileId, x.TargetGroupId }).IsUnique().HasFilter("\"FileId\" IS NOT NULL AND \"TargetGroupId\" IS NOT NULL");
+            e.HasIndex(x => new { x.FolderId, x.TargetUserId }).IsUnique().HasFilter("\"FolderId\" IS NOT NULL AND \"TargetUserId\" IS NOT NULL");
+            e.HasIndex(x => new { x.FolderId, x.TargetGroupId }).IsUnique().HasFilter("\"FolderId\" IS NOT NULL AND \"TargetGroupId\" IS NOT NULL");
             // Restrict everywhere: DB won't cascade-delete these; controllers
             // clean them up explicitly when the target file/folder or user/group
             // goes away, so we don't hit SQL Server's multi-cascade-path guard.
@@ -240,8 +247,8 @@ public class NimShareDbContext : DbContext
         b.Entity<UserFavorite>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.UserId, x.FileId });
-            e.HasIndex(x => new { x.UserId, x.FolderId });
+            e.HasIndex(x => new { x.UserId, x.FileId }).IsUnique().HasFilter("\"FileId\" IS NOT NULL");
+            e.HasIndex(x => new { x.UserId, x.FolderId }).IsUnique().HasFilter("\"FolderId\" IS NOT NULL");
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(x => x.Folder).WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);

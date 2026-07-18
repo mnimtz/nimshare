@@ -34,6 +34,9 @@ public interface IFileAccessService
 
     /// <summary>True if the file has ANY grant to the given user via direct-share (self or group).</summary>
     Task<bool> HasDirectShareAsync(User user, Guid fileId, DirectSharePermission minLevel, CancellationToken ct = default);
+
+    Task<DirectSharePermission?> EffectivePermissionOnFileAsync(User user, StorageFile file, CancellationToken ct = default);
+    Task<DirectSharePermission?> EffectivePermissionOnFolderAsync(User user, Folder folder, CancellationToken ct = default);
 }
 
 public record GroupSummary(Guid Id, string Name, GroupRole MyRole);
@@ -142,7 +145,9 @@ public class FileAccessService : IFileAccessService
         var f = await _db.Files.FindAsync(new object[] { fileId }, ct);
         if (f?.FolderId is null) return false;
         var folderId = f.FolderId;
-        while (folderId is Guid fid)
+        var visited = new HashSet<Guid>();
+        var maxDepth = 64;
+        while (folderId is Guid fid && visited.Add(fid) && visited.Count <= maxDepth)
         {
             var byFolder = await _db.DirectShares
                 .Where(s => s.FolderId == fid
@@ -155,5 +160,57 @@ public class FileAccessService : IFileAccessService
             folderId = parent;
         }
         return false;
+    }
+
+    /// <summary>
+    /// The strongest permission the caller has on a file, considering both
+    /// scope-based access and direct-share grants. Used to prevent grant
+    /// escalation ("you may not grant more than you have").
+    /// </summary>
+    public async Task<DirectSharePermission?> EffectivePermissionOnFileAsync(User user, StorageFile file, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin) return DirectSharePermission.Write;
+        if (file.OwnerId == user.Id) return DirectSharePermission.Write;
+        if (file.Scope == FileScope.Group && file.GroupId is Guid g && await IsGroupManagerAsync(user, g, ct))
+            return DirectSharePermission.Write;
+        if (await HasDirectShareAsync(user, file.Id, DirectSharePermission.Write, ct))
+            return DirectSharePermission.Write;
+        if (await CanReadAsync(user, file, ct))
+            return DirectSharePermission.Read;
+        return null;
+    }
+
+    /// <summary>Same for a folder — walks the ancestor chain for direct grants.</summary>
+    public async Task<DirectSharePermission?> EffectivePermissionOnFolderAsync(User user, Folder folder, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin) return DirectSharePermission.Write;
+        if (folder.OwnerUserId == user.Id) return DirectSharePermission.Write;
+        if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid g && await IsGroupManagerAsync(user, g, ct))
+            return DirectSharePermission.Write;
+
+        // Walk up looking for any grant that gives Write; along the way remember
+        // if we saw at least a Read anywhere. Same cycle guard as HasDirectShare.
+        var visited = new HashSet<Guid>();
+        Guid? cursor = folder.Id;
+        var haveRead = false;
+        var maxDepth = 64;
+        while (cursor is Guid fid && visited.Add(fid) && visited.Count <= maxDepth)
+        {
+            var grants = await _db.DirectShares
+                .Where(s => s.FolderId == fid
+                    && (s.TargetUserId == user.Id
+                        || (s.TargetGroupId != null && _db.GroupMemberships.Any(m => m.UserId == user.Id && m.GroupId == s.TargetGroupId))))
+                .Select(s => s.Permission)
+                .ToListAsync(ct);
+            if (grants.Contains(DirectSharePermission.Write)) return DirectSharePermission.Write;
+            if (grants.Contains(DirectSharePermission.Read)) haveRead = true;
+            var parent = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
+            cursor = parent;
+        }
+        // Fall back to scope-based read (group member = read).
+        if (folder.Scope == FileScope.Public) return DirectSharePermission.Read;
+        if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid gm && await IsGroupMemberAsync(user, gm, ct))
+            return DirectSharePermission.Read;
+        return haveRead ? DirectSharePermission.Read : null;
     }
 }

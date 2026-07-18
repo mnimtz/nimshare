@@ -411,4 +411,8 @@
   <data name="actions.star"><value>Favori</value></data>
   <data name="actions.unstar"><value>Retirer des favoris</value></data>
   <data name="file.owner"><value>Propriétaire</value></data>
+  <data name="favorites.hint"><value>Cliquez sur ⭐ à côté d'un fichier ou dossier pour l'ajouter ici.</value></data>
+  <data name="shared.lede"><value>Fichiers et dossiers que d'autres ont partagés avec vous.</value></data>
+  <data name="shared.by"><value>Partagé par</value></data>
+  <data name="shared.since"><value>Depuis</value></data>
 </root>

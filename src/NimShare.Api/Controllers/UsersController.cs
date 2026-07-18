@@ -121,13 +121,15 @@ public class UsersController : Controller
         var wanted = (groupIds ?? Array.Empty<Guid>()).Distinct().ToHashSet();
         var existing = await _db.GroupMemberships.Where(m => m.UserId == id).ToListAsync(ct);
         var haveIds = existing.Select(m => m.GroupId).ToHashSet();
-        // Add missing
+        // Add missing (as Member — Managers are promoted separately elsewhere)
         foreach (var gid in wanted.Except(haveIds))
         {
             _db.GroupMemberships.Add(new GroupMembership { UserId = id, GroupId = gid, Role = GroupRole.Member });
         }
-        // Remove ones no longer wanted
-        _db.GroupMemberships.RemoveRange(existing.Where(m => !wanted.Contains(m.GroupId)));
+        // Remove ones no longer wanted — but leave Manager rows alone so a
+        // simple save-of-the-form can't silently demote them.
+        _db.GroupMemberships.RemoveRange(
+            existing.Where(m => !wanted.Contains(m.GroupId) && m.Role != GroupRole.Manager));
         await _db.SaveChangesAsync(ct);
         TempData["Notice"] = "Memberships updated for " + u.DisplayName;
         return RedirectToAction(nameof(List));

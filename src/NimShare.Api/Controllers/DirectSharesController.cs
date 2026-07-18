@@ -45,13 +45,14 @@ public class DirectSharesController : ControllerBase
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         q = (q ?? "").Trim();
-        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id);
-        if (q.Length > 0)
-        {
-            var like = "%" + q + "%";
-            query = query.Where(u => EF.Functions.Like(u.DisplayName, like) || EF.Functions.Like(u.Email, like));
-        }
-        var rows = await query
+        // Require at least 2 characters so an empty q doesn't enumerate the
+        // whole directory. Escape LIKE meta-chars so users can't wildcard.
+        if (q.Length < 2) return Ok(Array.Empty<UserOption>());
+        var escaped = q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+        var like = "%" + escaped + "%";
+        var rows = await _db.Users
+            .Where(u => u.IsActive && u.Id != me.Id)
+            .Where(u => EF.Functions.Like(u.DisplayName, like, "\\") || EF.Functions.Like(u.Email, like, "\\"))
             .OrderBy(u => u.DisplayName)
             .Take(20)
             .Select(u => new UserOption(u.Id, u.DisplayName, u.Email))
@@ -128,19 +129,26 @@ public class DirectSharesController : ControllerBase
         if (!Enum.TryParse<DirectSharePermission>(req.Permission, true, out var perm))
             return Problem(statusCode: 422, title: "Permission must be Read or Write.");
 
-        // Authorization: the target file/folder must be one the caller can share.
+        // Authorization: not just "can share", but "may not grant a higher
+        // permission than you have yourself" — otherwise a Read-recipient
+        // could re-share as Write and escalate. Compute the caller's own
+        // effective permission on the item, then require perm ≤ that.
+        DirectSharePermission? mine;
         if (req.FileId is Guid fid)
         {
             var file = await _db.Files.FindAsync(new object[] { fid }, ct);
             if (file is null) return NotFound();
-            if (!await _access.CanShareAsync(me, file, ct)) return Forbid();
+            mine = await _access.EffectivePermissionOnFileAsync(me, file, ct);
         }
         else
         {
             var folder = await _db.Folders.FindAsync(new object[] { req.FolderId!.Value }, ct);
             if (folder is null) return NotFound();
-            if (!await _folders.CanReadAsync(folder, me, ct)) return Forbid();
+            mine = await _access.EffectivePermissionOnFolderAsync(me, folder, ct);
         }
+        if (mine is null) return Forbid();
+        if (perm > mine)
+            return Problem(statusCode: 403, title: "Cannot grant a permission higher than your own on this item.");
 
         // Idempotency: same (item, target) upserts the permission.
         var existing = await _db.DirectShares.FirstOrDefaultAsync(s =>

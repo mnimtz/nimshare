@@ -119,6 +119,113 @@ struct PreviewUrlResponse: Codable {
     let contentType: String?
 }
 
+// MARK: - Trash
+struct TrashItemDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let sizeBytes: Int64
+    let contentType: String
+    let deletedAt: Date?
+    let ownerName: String?
+}
+
+// MARK: - Favorites
+struct FavoriteDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let kind: String     // "file" | "folder"
+    let targetId: UUID
+    let name: String
+    let createdAt: Date
+}
+
+struct ToggleFavoriteResponse: Codable {
+    let starred: Bool
+}
+
+// MARK: - Direct shares (Berechtigungen)
+enum DirectSharePermission: String, Codable, CaseIterable, Identifiable {
+    case read = "Read"
+    case write = "Write"
+    var id: String { rawValue }
+    var localized: String {
+        switch self {
+        case .read: return NSLocalizedString("Read", comment: "")
+        case .write: return NSLocalizedString("Write", comment: "")
+        }
+    }
+}
+
+struct DirectShareDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let fileId: UUID?
+    let folderId: UUID?
+    let userId: UUID?
+    let userDisplayName: String?
+    let groupId: UUID?
+    let groupName: String?
+    let permission: String
+    let createdAt: Date
+
+    var permissionEnum: DirectSharePermission { DirectSharePermission(rawValue: permission) ?? .read }
+    var displayName: String { userDisplayName ?? groupName ?? "?" }
+    var isGroup: Bool { groupId != nil }
+}
+
+struct DirectShareUserOption: Codable, Identifiable, Hashable {
+    let id: UUID
+    let displayName: String
+    let email: String
+}
+
+struct DirectShareGroupOption: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
+}
+
+struct SharedWithMeItemDto: Codable, Identifiable, Hashable {
+    let kind: String     // "file" | "folder"
+    let id: UUID
+    let name: String
+    let permission: String
+    let sharedByName: String
+    let sharedAt: Date
+
+    var permissionEnum: DirectSharePermission { DirectSharePermission(rawValue: permission) ?? .read }
+}
+
+// MARK: - Activity
+struct ActivityDto: Codable, Identifiable, Hashable {
+    let kind: String
+    let actorName: String
+    let summary: String
+    let fileId: UUID?
+    let folderId: UUID?
+    let groupId: UUID?
+    let targetUserId: UUID?
+    let at: Date
+
+    var id: String { "\(kind)-\(actorName)-\(at.timeIntervalSince1970)" }
+
+    var iconName: String {
+        switch kind {
+        case "FileUploaded": return "arrow.up.doc.fill"
+        case "FileDeleted": return "trash.fill"
+        case "FileRenamed", "FolderRenamed": return "pencil"
+        case "FileMoved": return "arrowshape.turn.up.right.fill"
+        case "FolderCreated": return "folder.badge.plus"
+        case "FolderDeleted": return "folder.badge.minus"
+        case "ShareLinkCreated": return "link.badge.plus"
+        case "ShareLinkRevoked": return "link.badge.plus"
+        case "DirectShareGranted": return "person.crop.circle.badge.plus"
+        case "DirectShareRevoked": return "person.crop.circle.badge.xmark"
+        case "GroupCreated", "GroupMemberAdded", "GroupMemberRemoved": return "person.3.fill"
+        case "UserSignedIn": return "person.crop.circle.fill.badge.checkmark"
+        case "UserInvited": return "envelope.badge.fill"
+        default: return "clock.fill"
+        }
+    }
+}
+
 // MARK: - API Error
 enum ApiError: LocalizedError {
     case notAuthorized

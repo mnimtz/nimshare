@@ -4,15 +4,15 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             NavigationStack { BrowseRootView() }
-                .tabItem { Label("Files", systemImage: "folder.fill") }
+                .tabItem { Label("Dateien", systemImage: "folder.fill") }
             NavigationStack { SearchView() }
-                .tabItem { Label("Search", systemImage: "sparkle.magnifyingglass") }
+                .tabItem { Label("Suche", systemImage: "sparkle.magnifyingglass") }
             NavigationStack { ChatView() }
                 .tabItem { Label("Chat", systemImage: "message.badge.filled.fill") }
-            NavigationStack { LinksView() }
-                .tabItem { Label("Links", systemImage: "link") }
+            NavigationStack { ActivityView() }
+                .tabItem { Label("Aktivität", systemImage: "clock.fill") }
             NavigationStack { ProfileView() }
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tabItem { Label("Profil", systemImage: "person.crop.circle") }
         }
     }
 }

@@ -409,4 +409,8 @@
   <data name="actions.star"><value>Favorit</value></data>
   <data name="actions.unstar"><value>Kein Favorit</value></data>
   <data name="file.owner"><value>Eigentümer</value></data>
+  <data name="favorites.hint"><value>Klicke auf ⭐ bei einer Datei oder einem Ordner, um sie hier abzulegen.</value></data>
+  <data name="shared.lede"><value>Dateien und Ordner, die andere für dich freigegeben haben.</value></data>
+  <data name="shared.by"><value>Freigegeben von</value></data>
+  <data name="shared.since"><value>Seit</value></data>
 </root>

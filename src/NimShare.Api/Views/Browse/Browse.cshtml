@@ -550,6 +550,12 @@ async function ds_loadGroups() {
     const sel = document.getElementById('dsGroupSel');
     sel.innerHTML = '';
     items.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.textContent = g.name; sel.appendChild(o); });
+    // If the user isn't in any group there's nothing to grant to — hide the
+    // "group" option in the kind picker so a bad POST can't be sent.
+    const kindSel = document.getElementById('dsKind');
+    const groupOpt = kindSel.querySelector('option[value="group"]');
+    if (groupOpt) groupOpt.disabled = items.length === 0;
+    if (items.length === 0 && kindSel.value === 'group') { kindSel.value = 'user'; ds_switchKind(); }
 }
 async function ds_add() {
     if (!dsCurrent) return;

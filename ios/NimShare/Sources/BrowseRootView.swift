@@ -25,22 +25,32 @@ struct BrowseRootView: View {
 
     private var content: some View {
         List {
-            Section("My libraries") {
+            Section("Bibliotheken") {
                 ForEach(scopes.filter { $0.scope.lowercased() == "personal" }) { tile in
                     scopeRow(tile)
                 }
-            }
-            Section("Shared") {
                 ForEach(scopes.filter { $0.scope.lowercased() == "public" }) { tile in
                     scopeRow(tile)
                 }
+                let groups = scopes.filter { $0.scope.lowercased() == "group" }
+                ForEach(groups) { tile in
+                    scopeRow(tile)
+                }
             }
-            let groups = scopes.filter { $0.scope.lowercased() == "group" }
-            if !groups.isEmpty {
-                Section("Group libraries") {
-                    ForEach(groups) { tile in
-                        scopeRow(tile)
-                    }
+
+            Section("Übersichten") {
+                NavigationLink { FavoritesView() } label: {
+                    Label("Favoriten", systemImage: "star.fill").foregroundStyle(.yellow)
+                }
+                NavigationLink { SharedWithMeView() } label: {
+                    Label("Für mich freigegeben", systemImage: "person.crop.circle.badge.checkmark")
+                        .foregroundStyle(Theme.tungstenBlue)
+                }
+                NavigationLink { LinksView() } label: {
+                    Label("Meine Links", systemImage: "link").foregroundStyle(Theme.tungstenBlue)
+                }
+                NavigationLink { TrashView() } label: {
+                    Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
                 }
             }
         }

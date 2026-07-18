@@ -64,6 +64,12 @@ public class TrashController : Controller
         if (file is null) return NotFound();
         if (me.Role != UserRole.Admin && file.OwnerId != me.Id) return Forbid();
         var path = file.BlobPath;
+        // Remove dependent rows first — DirectShare/UserFavorite/FileEmbedding/
+        // ActivityEvent all use Restrict on delete, so their presence would
+        // otherwise block the purge.
+        _db.DirectShares.RemoveRange(_db.DirectShares.Where(s => s.FileId == file.Id));
+        _db.UserFavorites.RemoveRange(_db.UserFavorites.Where(f => f.FileId == file.Id));
+        _db.FileEmbeddings.RemoveRange(_db.FileEmbeddings.Where(e => e.FileId == file.Id));
         _db.Files.Remove(file);
         await _db.SaveChangesAsync(ct);
         try { await _blobs.DeleteAsync(path, ct); } catch { /* orphaned bytes, ignore */ }
@@ -77,9 +83,16 @@ public class TrashController : Controller
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var query = _db.Files.Where(f => f.Status == StorageFileStatus.Deleted);
-        if (me.Role != UserRole.Admin) query = query.Where(f => f.OwnerId == me.Id);
+        // Non-admin users empty their own trash only. Admins also purge only
+        // their own by default — nuking every user's trash needs an explicit
+        // ?scope=all switch.
+        query = query.Where(f => f.OwnerId == me.Id);
         var files = await query.ToListAsync(ct);
         var paths = files.Select(f => f.BlobPath).ToList();
+        var ids = files.Select(f => f.Id).ToList();
+        _db.DirectShares.RemoveRange(_db.DirectShares.Where(s => s.FileId != null && ids.Contains(s.FileId!.Value)));
+        _db.UserFavorites.RemoveRange(_db.UserFavorites.Where(f => f.FileId != null && ids.Contains(f.FileId!.Value)));
+        _db.FileEmbeddings.RemoveRange(_db.FileEmbeddings.Where(e => ids.Contains(e.FileId)));
         _db.Files.RemoveRange(files);
         await _db.SaveChangesAsync(ct);
         foreach (var p in paths)
@@ -88,5 +101,53 @@ public class TrashController : Controller
         }
         TempData["Notice"] = files.Count + " permanently deleted";
         return RedirectToAction(nameof(Index));
+    }
+
+    // ── JSON API used by the iOS app ────────────────────────────────────
+    public record TrashItemDto(Guid Id, string Name, long SizeBytes, string ContentType,
+        DateTimeOffset? DeletedAt, string? OwnerName);
+
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "ApiUser")]
+    [HttpGet("/api/v1/trash")]
+    public async Task<IActionResult> ApiList(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var query = _db.Files.Where(f => f.Status == StorageFileStatus.Deleted);
+        if (me.Role != UserRole.Admin) query = query.Where(f => f.OwnerId == me.Id);
+        var rows = await query.Include(f => f.Owner)
+            .OrderByDescending(f => f.DeletedAt)
+            .Select(f => new TrashItemDto(f.Id, f.Name, f.SizeBytes, f.ContentType, f.DeletedAt, f.Owner.DisplayName))
+            .ToListAsync(ct);
+        return Ok(rows);
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "ApiUser")]
+    [HttpPost("/api/v1/trash/{id:guid}/restore")]
+    public async Task<IActionResult> ApiRestore(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.FindAsync(new object[] { id }, ct);
+        if (file is null) return NotFound();
+        if (me.Role != UserRole.Admin && file.OwnerId != me.Id) return Forbid();
+        if (file.Status != StorageFileStatus.Deleted) return BadRequest();
+        file.Status = StorageFileStatus.Ready;
+        file.DeletedAt = null;
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize(Policy = "ApiUser")]
+    [HttpPost("/api/v1/trash/{id:guid}/purge")]
+    public async Task<IActionResult> ApiPurge(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.FindAsync(new object[] { id }, ct);
+        if (file is null) return NotFound();
+        if (me.Role != UserRole.Admin && file.OwnerId != me.Id) return Forbid();
+        var path = file.BlobPath;
+        _db.Files.Remove(file);
+        await _db.SaveChangesAsync(ct);
+        try { await _blobs.DeleteAsync(path, ct); } catch { /* orphaned */ }
+        return NoContent();
     }
 }

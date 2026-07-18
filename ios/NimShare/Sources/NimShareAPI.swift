@@ -144,4 +144,111 @@ final class NimShareAPI: ObservableObject {
         let (data, _) = try await perform(req)
         return try decode(ChatResponseDto.self, data)
     }
+
+    // MARK: - Trash
+
+    func listTrash() async throws -> [TrashItemDto] {
+        let req = request("GET", "api/v1/trash")
+        let (data, _) = try await perform(req)
+        return try decode([TrashItemDto].self, data)
+    }
+
+    func restoreFromTrash(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/trash/\(id)/restore")
+        _ = try await perform(req)
+    }
+
+    func purgeFromTrash(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/trash/\(id)/purge")
+        _ = try await perform(req)
+    }
+
+    func deleteFile(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/files/\(id)")
+        _ = try await perform(req)
+    }
+
+    // MARK: - Favorites
+
+    func listFavorites() async throws -> [FavoriteDto] {
+        let req = request("GET", "api/v1/favorites")
+        let (data, _) = try await perform(req)
+        return try decode([FavoriteDto].self, data)
+    }
+
+    struct ToggleFavoriteBody: Encodable {
+        let fileId: UUID?
+        let folderId: UUID?
+    }
+    func toggleFavorite(fileId: UUID? = nil, folderId: UUID? = nil) async throws -> Bool {
+        let body = try Self.jsonEncoder.encode(ToggleFavoriteBody(fileId: fileId, folderId: folderId))
+        let req = request("POST", "api/v1/favorites/toggle", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ToggleFavoriteResponse.self, data).starred
+    }
+
+    // MARK: - Direct shares
+
+    func directShares(forFile id: UUID) async throws -> [DirectShareDto] {
+        let req = request("GET", "api/v1/direct-shares/for-file/\(id)")
+        let (data, _) = try await perform(req)
+        return try decode([DirectShareDto].self, data)
+    }
+
+    func directShares(forFolder id: UUID) async throws -> [DirectShareDto] {
+        let req = request("GET", "api/v1/direct-shares/for-folder/\(id)")
+        let (data, _) = try await perform(req)
+        return try decode([DirectShareDto].self, data)
+    }
+
+    func searchShareableUsers(_ q: String) async throws -> [DirectShareUserOption] {
+        let req = request("GET", "api/v1/direct-shares/users", query: [.init(name: "q", value: q)])
+        let (data, _) = try await perform(req)
+        return try decode([DirectShareUserOption].self, data)
+    }
+
+    func listShareableGroups() async throws -> [DirectShareGroupOption] {
+        let req = request("GET", "api/v1/direct-shares/groups")
+        let (data, _) = try await perform(req)
+        return try decode([DirectShareGroupOption].self, data)
+    }
+
+    struct CreateDirectShareBody: Encodable {
+        let fileId: UUID?
+        let folderId: UUID?
+        let userId: UUID?
+        let groupId: UUID?
+        let permission: String
+    }
+    func createDirectShare(fileId: UUID? = nil, folderId: UUID? = nil,
+                           userId: UUID? = nil, groupId: UUID? = nil,
+                           permission: DirectSharePermission) async throws {
+        let body = try Self.jsonEncoder.encode(CreateDirectShareBody(
+            fileId: fileId, folderId: folderId, userId: userId, groupId: groupId,
+            permission: permission.rawValue))
+        let req = request("POST", "api/v1/direct-shares", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    func revokeDirectShare(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/direct-shares/\(id)")
+        _ = try await perform(req)
+    }
+
+    func sharedWithMe() async throws -> [SharedWithMeItemDto] {
+        let req = request("GET", "api/v1/direct-shares/shared-with-me")
+        let (data, _) = try await perform(req)
+        return try decode([SharedWithMeItemDto].self, data)
+    }
+
+    // MARK: - Activity
+
+    func activity(all: Bool = false, limit: Int = 100) async throws -> [ActivityDto] {
+        let req = request("GET", "api/v1/activity", query: [
+            .init(name: "all", value: all ? "true" : "false"),
+            .init(name: "limit", value: String(limit)),
+        ])
+        let (data, _) = try await perform(req)
+        return try decode([ActivityDto].self, data)
+    }
 }

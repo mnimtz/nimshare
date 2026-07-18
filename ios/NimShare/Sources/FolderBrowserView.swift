@@ -11,6 +11,8 @@ struct FolderBrowserView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var previewFile: FileItem?
+    @State private var directShareTarget: DirectShareSheet.Target?
+    @State private var directShareName: String = ""
 
     var body: some View {
         Group {
@@ -29,12 +31,15 @@ struct FolderBrowserView: View {
         .sheet(item: $previewFile) { file in
             NavigationStack { FilePreviewView(file: file) }
         }
+        .sheet(item: $directShareTarget) { target in
+            DirectShareSheet(target: target, itemName: directShareName)
+        }
     }
 
     private func list(_ d: BrowseResponse) -> some View {
         List {
             if !d.subfolders.isEmpty {
-                Section("Folders") {
+                Section("Ordner") {
                     ForEach(d.subfolders) { f in
                         NavigationLink {
                             FolderBrowserView(
@@ -50,16 +55,52 @@ struct FolderBrowserView: View {
                                 Text(f.name)
                             }
                         }
+                        .contextMenu {
+                            Button {
+                                directShareName = f.name
+                                directShareTarget = .folder(f.id)
+                            } label: { Label("Berechtigungen…", systemImage: "person.crop.circle.badge.plus") }
+                            Button { Task { await toggleFav(folderId: f.id) } } label: {
+                                Label("Favorit", systemImage: "star")
+                            }
+                        }
                     }
                 }
             }
             if !d.files.isEmpty {
-                Section("Files") {
+                Section("Dateien") {
                     ForEach(d.files) { f in
                         Button { previewFile = f } label: {
                             FileRowView(file: f)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button { previewFile = f } label: { Label("Vorschau", systemImage: "eye") }
+                            Button {
+                                directShareName = f.name
+                                directShareTarget = .file(f.id)
+                            } label: { Label("Berechtigungen…", systemImage: "person.crop.circle.badge.plus") }
+                            Button { Task { await toggleFav(fileId: f.id) } } label: {
+                                Label("Favorit", systemImage: "star")
+                            }
+                            Button(role: .destructive) { Task { await deleteFile(f.id) } } label: {
+                                Label("In Papierkorb", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) { Task { await deleteFile(f.id) } } label: {
+                                Label("Löschen", systemImage: "trash")
+                            }
+                            Button { Task { await toggleFav(fileId: f.id) } } label: {
+                                Label("Fav", systemImage: "star")
+                            }.tint(.yellow)
+                            Button {
+                                directShareName = f.name
+                                directShareTarget = .file(f.id)
+                            } label: {
+                                Label("Freigeben", systemImage: "person.crop.circle.badge.plus")
+                            }.tint(Theme.tungstenBlue)
+                        }
                     }
                 }
             }
@@ -94,6 +135,29 @@ struct FolderBrowserView: View {
             error = e.localizedDescription
             if case .notAuthorized = e { auth.signOut() }
         } catch let ex { error = ex.localizedDescription }
+    }
+
+    private func toggleFav(fileId: UUID? = nil, folderId: UUID? = nil) async {
+        guard let api = auth.api else { return }
+        do { _ = try await api.toggleFavorite(fileId: fileId, folderId: folderId) }
+        catch let ex { error = ex.localizedDescription }
+    }
+
+    private func deleteFile(_ id: UUID) async {
+        guard let api = auth.api else { return }
+        do {
+            try await api.deleteFile(id)
+            await load()
+        } catch let ex { error = ex.localizedDescription }
+    }
+}
+
+extension DirectShareSheet.Target: Identifiable {
+    var id: String {
+        switch self {
+        case .file(let id): return "f-\(id)"
+        case .folder(let id): return "d-\(id)"
+        }
     }
 }
 

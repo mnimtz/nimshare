@@ -411,4 +411,8 @@
   <data name="actions.star"><value>Preferito</value></data>
   <data name="actions.unstar"><value>Rimuovi preferito</value></data>
   <data name="file.owner"><value>Proprietario</value></data>
+  <data name="favorites.hint"><value>Fai clic su ⭐ accanto a un file o cartella per aggiungerlo qui.</value></data>
+  <data name="shared.lede"><value>File e cartelle che altri hanno condiviso con te.</value></data>
+  <data name="shared.by"><value>Condiviso da</value></data>
+  <data name="shared.since"><value>Dal</value></data>
 </root>
