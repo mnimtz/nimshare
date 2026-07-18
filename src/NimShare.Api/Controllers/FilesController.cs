@@ -122,6 +122,48 @@ public class FilesController : ControllerBase
         return file is null ? NotFound() : Ok(file);
     }
 
+    public record MoveRequest(Guid FolderId);
+
+    [HttpPost("{id:guid}/move")]
+    public async Task<IActionResult> Move(Guid id, [FromBody] MoveRequest req,
+        [FromServices] IFileAccessService access, [FromServices] IFolderService folders, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanDeleteAsync(user, file, ct)) return Forbid();
+        var target = await _db.Folders.FindAsync(new object[] { req.FolderId }, ct);
+        if (target is null) return NotFound();
+        if (!await folders.CanWriteAsync(target, user, ct)) return Forbid();
+        file.FolderId = target.Id;
+        file.Scope = target.Scope;
+        file.GroupId = target.OwnerGroupId;
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    public record BulkDeleteRequest(Guid[] Ids);
+
+    [HttpPost("bulk-delete")]
+    public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteRequest req, [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var files = await _db.Files.Include(f => f.ShareLinks)
+            .Where(f => req.Ids.Contains(f.Id)).ToListAsync(ct);
+        var deleted = 0;
+        foreach (var f in files)
+        {
+            if (!await access.CanDeleteAsync(user, f, ct)) continue;
+            f.Status = StorageFileStatus.Deleted;
+            f.DeletedAt = DateTimeOffset.UtcNow;
+            foreach (var link in f.ShareLinks) link.IsRevoked = true;
+            await _blobs.DeleteAsync(f.BlobPath, ct);
+            deleted++;
+        }
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { deleted });
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, [FromServices] IFileAccessService access, CancellationToken ct)
     {

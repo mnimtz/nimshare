@@ -2,6 +2,7 @@ using Markdig;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using NimShare.Api.Services;
@@ -41,10 +42,30 @@ public class ShareController : Controller
     }
 
     [HttpGet("{slug}")]
-    public async Task<IActionResult> Landing(string slug, CancellationToken ct)
+    public async Task<IActionResult> Landing(string slug, [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
-        if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready)
+        if (link is null) return View("NotFound");
+
+        // Folder share: render the mini file-browser landing instead of the file landing.
+        if (link.FolderId is Guid folderId && link.FileId is null)
+        {
+            var now0 = DateTimeOffset.UtcNow;
+            if (!link.IsActive(now0)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+            var folder = await db.Folders.FindAsync(new object[] { folderId }, ct);
+            if (folder is null) return View("NotFound");
+            var files = await folderSvc.ListFilesAsync(folder, ct);
+            await _access.LogAsync(link, ShareLinkAccessKind.Landing,
+                _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+                Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            return View("FolderLanding", new FolderLandingViewModel(
+                link.Slug, folder.Name, RenderMarkdown(link.Message),
+                link.PasswordHash is not null, link.Owner.DisplayName,
+                files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList()));
+        }
+
+        if (link.File is null || link.File.Status != StorageFileStatus.Ready)
             return View("NotFound");
 
         var now = DateTimeOffset.UtcNow;
@@ -99,6 +120,36 @@ public class ShareController : Controller
         return Redirect(sas.ToString());
     }
 
+    /// <summary>Per-file download from within a folder share.</summary>
+    [HttpPost("{slug}/f/{fileId:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DownloadFolderFile(string slug, Guid fileId, string? password,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null) return View("NotFound");
+        var now = DateTimeOffset.UtcNow;
+        if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+
+        var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
+        {
+            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            TempData["PasswordError"] = _t["share.password.error"].Value;
+            return RedirectToAction(nameof(Landing), new { slug });
+        }
+        // Verify the file is actually in that folder.
+        var file = await db.Files.SingleOrDefaultAsync(f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null) return View("NotFound");
+
+        if (!await _access.TryConsumeDownloadAsync(link, ct))
+            return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        await _access.LogAsync(link, ShareLinkAccessKind.Download, ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        await _notify.NotifyDownloadAsync(link, ipHash, ct);
+        var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType);
+        return Redirect(sas.ToString());
+    }
+
     private static string RenderMarkdown(string? md)
     {
         if (string.IsNullOrWhiteSpace(md)) return "";
@@ -106,6 +157,12 @@ public class ShareController : Controller
         return Markdown.ToHtml(md, pipeline);
     }
 }
+
+public record FolderLandingViewModel(
+    string Slug, string FolderName, string MessageHtml,
+    bool HasPassword, string OwnerName,
+    List<FolderLandingFile> Files);
+public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
 public record LandingViewModel(
     string Slug,

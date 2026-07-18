@@ -1,0 +1,115 @@
+@model NimShare.Core.Entities.AiGatewaySettings
+@using NimShare.Core.Entities
+@{ ViewData["Title"] = @T["ai.title"]; Layout = "_AppShell"; }
+<div class="page-header">
+    <div>
+        <h1>@T["ai.title"]</h1>
+        <p class="lede">@T["ai.lede"]</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n)
+{
+    <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+<form method="post" action="/settings/ai" class="card" style="max-width:820px">
+    @Html.AntiForgeryToken()
+    <h2 class="card-title">@T["ai.provider_section"]</h2>
+    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:1;min-width:200px">
+            <label for="Provider">@T["ai.provider"]</label>
+            <select name="Provider" id="Provider">
+                <option value="Disabled"    selected="@(Model.Provider==AiProvider.Disabled)">@T["ai.provider.disabled"]</option>
+                <option value="OpenAi"      selected="@(Model.Provider==AiProvider.OpenAi)">OpenAI</option>
+                <option value="Gemini"      selected="@(Model.Provider==AiProvider.Gemini)">Google Gemini</option>
+                <option value="Anthropic"   selected="@(Model.Provider==AiProvider.Anthropic)">Anthropic Claude</option>
+                <option value="AzureOpenAi" selected="@(Model.Provider==AiProvider.AzureOpenAi)">Azure OpenAI</option>
+            </select>
+        </div>
+        <div class="field" style="flex:1;min-width:200px">
+            <label for="Model">@T["ai.model"]</label>
+            <input type="text" name="Model" id="Model" value="@Model.Model" placeholder="gpt-4o-mini | gemini-2.0-flash | claude-3-5-haiku-latest"/>
+            <div class="helper">@T["ai.model_helper"]</div>
+        </div>
+    </div>
+    <div class="field" id="endpointField" style="display:none">
+        <label for="Endpoint">@T["ai.endpoint"]</label>
+        <input type="url" name="Endpoint" id="Endpoint" value="@Model.Endpoint" placeholder="https://your-resource.openai.azure.com"/>
+    </div>
+    <div class="field">
+        <label for="ApiKey">@T["ai.api_key"]</label>
+        <input type="password" name="ApiKey" id="ApiKey" placeholder="@(string.IsNullOrEmpty(Model.ApiKeyEncrypted) ? "" : T["email_gateway.leave_blank"].Value)"/>
+        <div class="helper">@T["ai.api_key_helper"]</div>
+    </div>
+
+    <h2 class="card-title" style="margin-top:var(--sp-6)">@T["ai.features"]</h2>
+    <p class="muted">@T["ai.features_lede"]</p>
+
+    @{
+        (string key, bool val, string labelKey, string descKey, string status)[] toggles =
+        {
+            ("EnableAutoSummary",           Model.EnableAutoSummary,           "ai.feat.auto_summary",             "ai.feat.auto_summary.desc",             "ready"),
+            ("EnableSmartTags",             Model.EnableSmartTags,             "ai.feat.smart_tags",               "ai.feat.smart_tags.desc",               "ready"),
+            ("EnableSemanticSearch",        Model.EnableSemanticSearch,        "ai.feat.semantic_search",          "ai.feat.semantic_search.desc",          "preview"),
+            ("EnableGuidedUploadRequests",  Model.EnableGuidedUploadRequests,  "ai.feat.guided_upload",            "ai.feat.guided_upload.desc",            "preview"),
+            ("EnableContentRiskDetection",  Model.EnableContentRiskDetection,  "ai.feat.risk_detect",              "ai.feat.risk_detect.desc",              "ready"),
+            ("EnableDraftedShareEmails",    Model.EnableDraftedShareEmails,    "ai.feat.email_drafts",             "ai.feat.email_drafts.desc",             "ready"),
+            ("EnableChatWithFiles",         Model.EnableChatWithFiles,         "ai.feat.chat",                     "ai.feat.chat.desc",                     "preview"),
+            ("EnableOcr",                   Model.EnableOcr,                   "ai.feat.ocr",                      "ai.feat.ocr.desc",                      "preview"),
+        };
+    }
+    @foreach (var (key, val, labelKey, descKey, status) in toggles)
+    {
+        <div class="card" style="margin:var(--sp-3) 0;padding:var(--sp-4);background:var(--tw-gray-100)">
+            <label style="display:flex;align-items:flex-start;gap:var(--sp-3);font-weight:400;cursor:pointer">
+                <input type="checkbox" name="@key" value="true" checked="@val" style="margin-top:4px"/>
+                <div style="flex:1">
+                    <div style="font-weight:700;color:var(--tw-primary);display:flex;align-items:center;gap:var(--sp-2)">
+                        @T[labelKey]
+                        @if (status == "preview")
+                        {
+                            <span class="chip chip-warn">@T["ai.status.preview"]</span>
+                        }
+                        else
+                        {
+                            <span class="chip chip-ok">@T["ai.status.ready"]</span>
+                        }
+                    </div>
+                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T[descKey]</div>
+                </div>
+            </label>
+        </div>
+    }
+
+    <div style="margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--tw-gray-200)">
+        <button type="submit" class="btn btn-primary">@T["ai.save"]</button>
+    </div>
+</form>
+
+<script>
+(function () {
+    const providerEl = document.getElementById('Provider');
+    const endpointField = document.getElementById('endpointField');
+    const modelEl = document.getElementById('Model');
+    function apply() {
+        const p = providerEl.value;
+        endpointField.style.display = p === 'AzureOpenAi' ? '' : 'none';
+        if (!modelEl.value) {
+            const defaults = {
+                'OpenAi': 'gpt-4o-mini',
+                'AzureOpenAi': 'gpt-4o-mini',
+                'Gemini': 'gemini-2.0-flash',
+                'Anthropic': 'claude-3-5-haiku-latest'
+            };
+            if (defaults[p]) modelEl.placeholder = defaults[p];
+        }
+    }
+    providerEl.addEventListener('change', apply);
+    apply();
+})();
+</script>

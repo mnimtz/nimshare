@@ -1,0 +1,56 @@
+@model NimShare.Api.Controllers.FolderLandingViewModel
+@{
+    ViewData["Title"] = Model.FolderName;
+    Layout = "_Layout";
+    string Bytes(long b)
+    {
+        string[] u = { "B", "KB", "MB", "GB", "TB" };
+        double v = b; int i = 0;
+        while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
+        return $"{v:0.##} {u[i]}";
+    }
+}
+<div class="landing-shell">
+    <div class="landing-card" style="max-width:720px">
+        <div class="landing-brand">
+            <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            <small>@T["landing.shared_by"] @Model.OwnerName</small>
+        </div>
+        <h1>📁 @Model.FolderName</h1>
+        <p class="landing-meta">@T["landing.folder.lede"] @Model.Files.Count</p>
+        @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
+        {
+            <div class="card" style="background:var(--tw-gray-100);margin-top:var(--sp-4)">
+                @Html.Raw(Model.MessageHtml)
+            </div>
+        }
+        <table class="table" style="margin-top:var(--sp-6)">
+            <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var f in Model.Files)
+            {
+                <tr>
+                    <td>@f.Name</td>
+                    <td class="muted">@Bytes(f.SizeBytes)</td>
+                    <td>
+                        <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
+                            @if (Model.HasPassword)
+                            {
+                                <input type="hidden" name="password" id="pw-@f.Id" required/>
+                                <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm">@T["landing.download.button"]</button>
+                            }
+                            else
+                            {
+                                <button type="submit" class="btn btn-primary btn-sm">@T["landing.download.button"]</button>
+                            }
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <p class="landing-meta" style="margin-top:var(--sp-6)">
+            @T["landing.powered_by"] <strong>NimShare</strong>
+        </p>
+    </div>
+</div>

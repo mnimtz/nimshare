@@ -68,6 +68,7 @@
     <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
     <PackageReference Include="MailKit" Version="4.10.0" />
+    <PackageReference Include="PdfPig" Version="0.1.9" />
   </ItemGroup>
 
 </Project>

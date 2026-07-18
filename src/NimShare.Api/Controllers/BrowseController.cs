@@ -151,4 +151,33 @@ public class BrowseController : Controller
 
     private string SafeReturn(string? url) =>
         !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : "/browse";
+
+    /// <summary>Flat list of the current user's writable folders — used by the Move modal.</summary>
+    [HttpGet("/api/v1/folders/writable")]
+    public async Task<IActionResult> WritableFolders(string scope, Guid? exclude, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (!Enum.TryParse<FileScope>(scope, true, out var s)) return BadRequest();
+
+        IQueryable<Folder> q = _db.Folders.Where(f => f.Scope == s);
+        if (s == FileScope.Personal)
+            q = q.Where(f => f.OwnerUserId == me.Id || me.Role == UserRole.Admin);
+        else if (s == FileScope.Group)
+        {
+            var myGroupIds = _db.GroupMemberships.Where(m => m.UserId == me.Id).Select(m => m.GroupId);
+            q = q.Where(f => myGroupIds.Contains(f.OwnerGroupId!.Value) || me.Role == UserRole.Admin);
+        }
+        var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
+        // Build path label per folder by walking up.
+        var byId = all.ToDictionary(f => f.Id);
+        string PathOf(Folder f)
+        {
+            var parts = new List<string> { f.Name };
+            var cur = f;
+            while (cur.ParentFolderId is Guid pid && byId.TryGetValue(pid, out var p)) { parts.Insert(0, p.Name); cur = p; }
+            return string.Join(" / ", parts);
+        }
+        var items = all.Where(f => f.Id != exclude).Select(f => new { id = f.Id, path = PathOf(f) }).ToList();
+        return Ok(items);
+    }
 }

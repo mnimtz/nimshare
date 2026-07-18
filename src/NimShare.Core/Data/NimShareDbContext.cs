@@ -19,6 +19,7 @@ public class NimShareDbContext : DbContext
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<EmailGatewaySettings> EmailGateways => Set<EmailGatewaySettings>();
     public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<AiGatewaySettings> AiGateways => Set<AiGatewaySettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -73,6 +74,9 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.ContainerName).HasMaxLength(60).IsRequired();
             e.Property(x => x.Folder).HasMaxLength(400);
             e.Property(x => x.Sha256).HasMaxLength(64);
+            e.Property(x => x.AiSummary).HasMaxLength(2000);
+            e.Property(x => x.AiTags).HasMaxLength(500);
+            e.Property(x => x.AiRiskFlag).HasMaxLength(120);
             e.HasOne(x => x.Owner).WithMany(u => u.Files).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Group).WithMany(g => g.Files).HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.SetNull);
         });
@@ -111,6 +115,14 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.SmtpUsername).HasMaxLength(200);
             e.Property(x => x.SmtpPasswordEncrypted).HasMaxLength(2000);
             e.Property(x => x.ResendApiKeyEncrypted).HasMaxLength(2000);
+        });
+
+        b.Entity<AiGatewaySettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ApiKeyEncrypted).HasMaxLength(2000);
+            e.Property(x => x.Model).HasMaxLength(120);
+            e.Property(x => x.Endpoint).HasMaxLength(400);
         });
 
         b.Entity<Folder>(e =>

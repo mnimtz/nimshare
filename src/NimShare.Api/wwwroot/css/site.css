@@ -512,6 +512,109 @@ input:focus, select:focus, textarea:focus {
 .actions-menu .menu .divider { height: 1px; background: var(--tw-gray-200); margin: 4px 0; }
 .actions-menu .menu form { margin: 0; }
 
+/* Drag-drop drop-zone overlay */
+.dropzone {
+    position: relative;
+    border: 2px dashed transparent;
+    border-radius: var(--r);
+    transition: border-color var(--t), background var(--t);
+    padding: var(--sp-2);
+    min-height: 200px;
+}
+.dropzone.drag-over {
+    border-color: var(--tw-accent);
+    background: rgba(0, 160, 251, .05);
+}
+.dropzone.drag-over::before {
+    content: "↓ " attr(data-drop-label);
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--tw-accent);
+    font-weight: 700;
+    font-size: 1.4rem;
+    background: var(--tw-white);
+    padding: var(--sp-3) var(--sp-6);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.bulk-toolbar {
+    display: none;
+    position: sticky;
+    top: 0;
+    background: var(--tw-primary);
+    color: var(--tw-white);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-sm);
+    align-items: center;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-3);
+    z-index: 10;
+}
+.bulk-toolbar.on { display: flex; }
+.bulk-toolbar .count { font-weight: 700; }
+.bulk-toolbar button {
+    background: transparent;
+    color: var(--tw-white);
+    border: 1px solid rgba(255,255,255,.35);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .88rem;
+}
+.bulk-toolbar button:hover { background: rgba(255,255,255,.10); }
+
+/* Grid view */
+.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--sp-4);
+}
+.grid-tile {
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r);
+    padding: var(--sp-4);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    cursor: pointer;
+    transition: box-shadow var(--t-fast);
+}
+.grid-tile:hover { box-shadow: var(--shadow); }
+.grid-tile.selected { border-color: var(--tw-accent); background: rgba(0,160,251,.04); }
+.grid-tile .icon-big { width: 80px; height: 80px; margin: 0 auto var(--sp-3); border-radius: 10px; }
+.grid-tile .name { font-weight: 700; color: var(--tw-primary); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grid-tile .meta { color: var(--tw-muted-blue); font-size: .78rem; margin-top: 4px; }
+.grid-tile .check {
+    position: absolute; top: 8px; left: 8px;
+    width: 20px; height: 20px;
+}
+.grid-tile .actions-menu {
+    position: absolute; top: 6px; right: 6px;
+}
+
+.view-toggle {
+    display: inline-flex;
+    background: var(--tw-gray-200);
+    border-radius: var(--r-sm);
+    padding: 3px;
+    gap: 3px;
+}
+.view-toggle button {
+    background: transparent; border: none; padding: 6px 12px; border-radius: 4px;
+    cursor: pointer; font-size: .85rem;
+    color: var(--tw-muted-blue);
+}
+.view-toggle button.active {
+    background: var(--tw-white);
+    color: var(--tw-primary);
+    box-shadow: var(--shadow-sm);
+}
+
 /* Modal */
 .modal-backdrop {
     position: fixed; inset: 0;

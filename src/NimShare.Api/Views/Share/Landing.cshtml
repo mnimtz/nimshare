@@ -37,6 +37,30 @@
             </div>
         </div>
 
+        <div id="aiSummaryBlock" style="margin-top:var(--sp-4)">
+            <button type="button" class="btn btn-ghost btn-sm" id="aiSummaryBtn" onclick="loadAiSummary()">✨ @T["landing.ai_summary"]</button>
+            <div id="aiSummaryOut" class="muted" style="margin-top:var(--sp-3);font-style:italic;line-height:1.5"></div>
+        </div>
+        <script>
+        async function loadAiSummary() {
+            const btn = document.getElementById('aiSummaryBtn');
+            const out = document.getElementById('aiSummaryOut');
+            btn.disabled = true;
+            out.textContent = @Json.Serialize(T["landing.ai_summary.loading"].Value);
+            const r = await fetch('/api/v1/ai/summary', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ slug: @Json.Serialize(Model.Slug) })
+            });
+            if (r.status === 503) { out.textContent = @Json.Serialize(T["landing.ai_summary.disabled"].Value); btn.style.display='none'; return; }
+            if (r.status === 415) { out.textContent = @Json.Serialize(T["landing.ai_summary.unsupported"].Value); return; }
+            if (!r.ok) { out.textContent = @Json.Serialize(T["landing.ai_summary.error"].Value); btn.disabled=false; return; }
+            const d = await r.json();
+            out.textContent = d.summary || '';
+            btn.style.display='none';
+        }
+        </script>
+
         <form method="post" asp-controller="Share" asp-action="Submit" asp-route-slug="@Model.Slug" class="stack">
             @if (Model.HasPassword)
             {

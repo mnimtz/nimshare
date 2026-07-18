@@ -53,6 +53,15 @@ public class StorageFile
     public Guid? FolderId { get; set; }
     public Folder? FolderRef { get; set; }
 
+    /// <summary>Cached AI-generated 2-3 sentence summary (v0.7.0+). Populated by first landing click.</summary>
+    public string? AiSummary { get; set; }
+
+    /// <summary>Comma-separated AI-generated tags. Set on upload complete when the feature is on.</summary>
+    public string? AiTags { get; set; }
+
+    /// <summary>Content risk classification result (e.g. "clean", "pii", "credit-card"). Set on public uploads.</summary>
+    public string? AiRiskFlag { get; set; }
+
     public StorageFileStatus Status { get; set; } = StorageFileStatus.Pending;
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
