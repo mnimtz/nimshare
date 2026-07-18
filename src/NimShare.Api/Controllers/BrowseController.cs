@@ -214,6 +214,71 @@ public class BrowseController : Controller
         return Ok(roots);
     }
 
+    // ── JSON browse for mobile clients ────────────────────────────────────
+    public record MobileScopeTile(string Scope, Guid? GroupId, string Name);
+    public record MobileFolderItem(Guid Id, string Name);
+    public record MobileFileItem(Guid Id, string Name, long SizeBytes, string ContentType,
+        DateTimeOffset CreatedAt, string? OwnerName, string? AiTags, string? AiRiskFlag);
+    public record MobileBreadcrumb(string Name, string Path);
+    public record MobileBrowseResponse(
+        List<MobileFolderItem> Subfolders, List<MobileFileItem> Files,
+        List<MobileBreadcrumb> Breadcrumbs, Guid CurrentFolderId, bool CanWrite, bool CanManage);
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("/api/v1/browse/scopes")]
+    public async Task<IActionResult> MobileScopes(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var groups = await _access.ListMyGroupsAsync(me, ct);
+        var tiles = new List<MobileScopeTile>
+        {
+            new("Personal", null, "Personal"),
+            new("Public", null, "Public"),
+        };
+        tiles.AddRange(groups.Select(g => new MobileScopeTile("Group", g.Id, g.Name)));
+        return Ok(tiles);
+    }
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("/api/v1/browse/list")]
+    public async Task<IActionResult> MobileList(string scope, Guid? groupId, string? path, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (!Enum.TryParse<FileScope>(scope, true, out var s)) return BadRequest();
+        if (s == FileScope.Group && groupId is Guid g0
+            && me.Role != UserRole.Admin && !await _access.IsGroupMemberAsync(me, g0, ct))
+            return Forbid();
+
+        var root = await _folders.GetOrCreateRootAsync(s,
+            s == FileScope.Personal ? me.Id : null,
+            s == FileScope.Group ? groupId : null,
+            me, ct);
+        var segs = string.IsNullOrEmpty(path)
+            ? Array.Empty<string>()
+            : path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var current = await _folders.ResolvePathAsync(root, segs, ct);
+        if (current is null) return NotFound();
+        if (!await _folders.CanReadAsync(current, me, ct)) return Forbid();
+        var subs = await _folders.ListSubfoldersAsync(current, ct);
+        var files = await _folders.ListFilesAsync(current, ct);
+        var ancestry = await _folders.GetAncestryAsync(current, ct);
+        var canWrite = await _folders.CanWriteAsync(current, me, ct);
+        var canManage = await _folders.CanManageAsync(current, me, ct);
+        var crumbs = new List<MobileBreadcrumb>();
+        for (int i = 0; i < ancestry.Count; i++)
+        {
+            var name = i == 0 ? (s == FileScope.Group ? "Group" : s.ToString()) : ancestry[i].Name;
+            var p = string.Join('/', ancestry.Skip(1).Take(i).Select(a => Uri.EscapeDataString(a.Name)));
+            crumbs.Add(new MobileBreadcrumb(name, p));
+        }
+        var resp = new MobileBrowseResponse(
+            subs.Select(f => new MobileFolderItem(f.Id, f.Name)).ToList(),
+            files.Select(f => new MobileFileItem(f.Id, f.Name, f.SizeBytes, f.ContentType,
+                f.CreatedAt, f.Owner?.DisplayName, f.AiTags, f.AiRiskFlag)).ToList(),
+            crumbs, current.Id, canWrite, canManage);
+        return Ok(resp);
+    }
+
     /// <summary>Time-limited download URL for inline preview (image / PDF iframe).</summary>
     [HttpGet("/api/v1/files/{id:guid}/preview-url")]
     public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access, [FromServices] IBlobStorageService blobs, CancellationToken ct)

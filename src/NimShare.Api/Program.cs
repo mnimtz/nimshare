@@ -84,6 +84,24 @@ if (entraConfigured)
         .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"), jwtBearerScheme: "Bearer");
 }
 
+// Local JWT scheme for mobile clients that authenticate with email + password.
+// Coexists with the Entra Bearer scheme (when Entra is configured) — the ApiUser
+// policy accepts either.
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+{
+    // A separate helper to build the scheme without pulling the whole service
+    // provider up here — the JwtTokenService is a singleton so it's safe to
+    // resolve once.
+    using var sp = builder.Services.BuildServiceProvider();
+    var jwt = sp.GetRequiredService<IJwtTokenService>();
+    builder.Services.AddAuthentication()
+        .AddJwtBearer(JwtTokenService.SchemeName, o =>
+        {
+            o.TokenValidationParameters = jwt.ValidationParameters;
+            o.SaveToken = true;
+        });
+}
+
 builder.Services.AddAuthorization(options =>
 {
     // ApiUser accepts BOTH schemes so the same /api/v1/* endpoints work for
@@ -92,8 +110,8 @@ builder.Services.AddAuthorization(options =>
     // Cookie-authenticated state-changing calls need antiforgery — see the
     // [AutoValidateAntiforgeryToken] filter registered on controllers below.
     var schemes = entraConfigured
-        ? new[] { "Bearer", CookieAuthenticationDefaults.AuthenticationScheme }
-        : new[] { CookieAuthenticationDefaults.AuthenticationScheme };
+        ? new[] { "Bearer", JwtTokenService.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme }
+        : new[] { JwtTokenService.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme };
     options.AddPolicy("ApiUser", p =>
         p.RequireAuthenticatedUser().AddAuthenticationSchemes(schemes));
     options.AddPolicy("WebUser", p =>

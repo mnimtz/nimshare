@@ -48,3 +48,10 @@ Thumbs.db
 ## Node (in case a frontend workspace is added later)
 node_modules/
 dist/
+
+## iOS
+ios/NimShare.xcodeproj/
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace/
+ios/**/*.xcuserdatad/
