@@ -19,6 +19,7 @@ WORKDIR /src
 
 # Copy csproj files first so restore can cache when only source changes.
 COPY NimShare.sln ./
+COPY VERSION ./
 COPY src/NimShare.Api/NimShare.Api.csproj src/NimShare.Api/
 COPY src/NimShare.Core/NimShare.Core.csproj src/NimShare.Core/
 RUN dotnet restore src/NimShare.Api/NimShare.Api.csproj
