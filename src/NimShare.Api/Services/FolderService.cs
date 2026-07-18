@@ -141,15 +141,17 @@ public class FolderService : IFolderService
             .OrderBy(f => f.Name)
             .ToListAsync(ct);
 
-    public Task<bool> CanReadAsync(Folder folder, User user, CancellationToken ct = default) =>
-        Task.FromResult(folder.Scope switch
+    public async Task<bool> CanReadAsync(Folder folder, User user, CancellationToken ct = default)
+    {
+        return folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id || user.Role == UserRole.Admin,
             FileScope.Public => true,
-            FileScope.Group => folder.OwnerGroupId is Guid g && (user.Role == UserRole.Admin
-                                || _db.GroupMemberships.Any(m => m.GroupId == g && m.UserId == user.Id)),
+            FileScope.Group => folder.OwnerGroupId is Guid g
+                && (user.Role == UserRole.Admin || await _access.IsGroupMemberAsync(user, g, ct)),
             _ => false,
-        });
+        };
+    }
 
     public async Task<bool> CanWriteAsync(Folder folder, User user, CancellationToken ct = default)
     {

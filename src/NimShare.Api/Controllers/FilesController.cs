@@ -139,6 +139,16 @@ public class FilesController : ControllerBase
         var target = await _db.Folders.FindAsync(new object[] { req.FolderId }, ct);
         if (target is null) return NotFound();
         if (!await folders.CanWriteAsync(target, user, ct)) return Forbid();
+        // Refuse moving into another user's Personal folder — would leave the file
+        // orphaned (readable by neither party) unless we also reassign ownership,
+        // which changes quota accounting silently. Not supported yet.
+        if (target.Scope == FileScope.Personal
+            && target.OwnerUserId is Guid targetOwner
+            && targetOwner != file.OwnerId)
+        {
+            return Problem(statusCode: 409, title: "Cross-owner Personal move not allowed",
+                detail: "Move to Public or a Group instead.");
+        }
         file.FolderId = target.Id;
         file.Scope = target.Scope;
         file.GroupId = target.OwnerGroupId;
@@ -154,17 +164,25 @@ public class FilesController : ControllerBase
         var user = await _users.GetOrProvisionAsync(User, ct);
         var files = await _db.Files.Include(f => f.ShareLinks)
             .Where(f => req.Ids.Contains(f.Id)).ToListAsync(ct);
+        var toDeleteBlobs = new List<string>();
         var deleted = 0;
+        // Persist soft-delete FIRST so the DB is durable even if blob delete
+        // fails partway. Blob deletes are idempotent, so retrying is safe.
         foreach (var f in files)
         {
             if (!await access.CanDeleteAsync(user, f, ct)) continue;
             f.Status = StorageFileStatus.Deleted;
             f.DeletedAt = DateTimeOffset.UtcNow;
             foreach (var link in f.ShareLinks) link.IsRevoked = true;
-            await _blobs.DeleteAsync(f.BlobPath, ct);
+            toDeleteBlobs.Add(f.BlobPath);
             deleted++;
         }
         await _db.SaveChangesAsync(ct);
+        // Best-effort blob cleanup. Failures leave orphan bytes we can sweep later.
+        foreach (var path in toDeleteBlobs)
+        {
+            try { await _blobs.DeleteAsync(path, ct); } catch { /* swept later */ }
+        }
         return Ok(new { deleted });
     }
 

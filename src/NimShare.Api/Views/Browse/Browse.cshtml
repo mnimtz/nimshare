@@ -409,7 +409,10 @@ async function performMove() {
         wrap.innerHTML = '';
         tree.forEach(n => wrap.appendChild(renderNode(n, 0)));
     } catch { document.getElementById('treePanel').innerHTML = ''; }
-    function renderNode(n, depth) {
+    function renderNode(n, depth, parent) {
+        // Track parent for path-walk on click.
+        const parentMap = window.__treeParents || (window.__treeParents = new Map());
+        if (parent) parentMap.set(n.id, parent);
         const wrap = document.createElement('div');
         const row = document.createElement('div');
         row.className = 'tree-node';
@@ -423,14 +426,25 @@ async function performMove() {
         row.appendChild(nm);
         row.addEventListener('click', () => {
             if (n.id === FOLDER_ID) return;
-            location.href = '/browse/personal';  // navigation would need path-walk; simplest: root of scope
+            // Walk up the tree to build the correct path within the current scope.
+            const segs = [];
+            let cur = n;
+            const parentMap = window.__treeParents || (window.__treeParents = new Map());
+            while (cur && parentMap.get(cur.id)) {
+                segs.unshift(encodeURIComponent(cur.name));
+                cur = parentMap.get(cur.id);
+            }
+            const url = segs.length
+                ? @Json.Serialize(urlBase) + '/' + segs.join('/')
+                : @Json.Serialize(urlBase);
+            location.href = url;
         });
         if (n.id === FOLDER_ID) row.classList.add('active');
         wrap.appendChild(row);
         if (hasKids) {
             const kids = document.createElement('div');
             kids.className = 'tree-children';
-            n.children.forEach(c => kids.appendChild(renderNode(c, depth + 1)));
+            n.children.forEach(c => kids.appendChild(renderNode(c, depth + 1, n)));
             wrap.appendChild(kids);
             t.style.cursor = 'pointer';
             t.addEventListener('click', (e) => { e.stopPropagation(); kids.classList.toggle('collapsed'); t.textContent = kids.classList.contains('collapsed') ? '▸' : '▾'; });

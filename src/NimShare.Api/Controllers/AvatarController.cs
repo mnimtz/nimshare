@@ -6,8 +6,11 @@ using NimShare.Core.Data;
 
 namespace NimShare.Api.Controllers;
 
-/// <summary>Streams the user's uploaded avatar image from Blob Storage.</summary>
-[AllowAnonymous]
+/// <summary>
+/// Streams the user's uploaded avatar image from Blob Storage. Auth-required
+/// to prevent unauthenticated user-id enumeration via 200-vs-404 probing.
+/// </summary>
+[Authorize(Policy = "WebUser")]
 [Route("/avatars")]
 public class AvatarController : Controller
 {
@@ -20,8 +23,8 @@ public class AvatarController : Controller
         _blobs = blobs;
     }
 
-    // v-query is a cache-buster; content is public-cacheable.
-    [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any)]
+    // v-query is a cache-buster; content cacheable within the browser only (private).
+    [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Client)]
     [HttpGet("{userId:guid}")]
     public async Task<IActionResult> Get(Guid userId, CancellationToken ct)
     {

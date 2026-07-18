@@ -160,8 +160,11 @@ public class BrowseController : Controller
         if (!Enum.TryParse<FileScope>(scope, true, out var s)) return BadRequest();
 
         IQueryable<Folder> q = _db.Folders.Where(f => f.Scope == s);
+        // Restrict Personal to the caller's OWN folders — even Admin. Cross-owner
+        // moves are refused by FilesController.Move, and listing every user's
+        // private tree in a dropdown would be both huge and confusing.
         if (s == FileScope.Personal)
-            q = q.Where(f => f.OwnerUserId == me.Id || me.Role == UserRole.Admin);
+            q = q.Where(f => f.OwnerUserId == me.Id);
         else if (s == FileScope.Group)
         {
             var myGroupIds = _db.GroupMemberships.Where(m => m.UserId == me.Id).Select(m => m.GroupId);

@@ -106,13 +106,21 @@ public class AiController : ControllerBase
         if (!settings.EnableSemanticSearch || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "Semantic search is disabled.");
         if (string.IsNullOrWhiteSpace(req.Query)) return BadRequest();
-
         var me = await users.GetOrProvisionAsync(User, ct);
+        var (ok, hits, err) = await RetrieveHitsAsync(req, me, access, ct);
+        if (!ok) return err!;
+        return Ok(hits);
+    }
+
+    /// <summary>Shared retrieval used by both Search and Chat — returns raw hits so
+    /// Chat doesn't have to unpack an IActionResult.</summary>
+    private async Task<(bool Ok, List<SearchHit> Hits, IActionResult? Error)> RetrieveHitsAsync(
+        SearchReq req, User me, IFileAccessService access, CancellationToken ct)
+    {
         var provider = await _ai.CreateProviderAsync(ct);
         var qv = await provider.EmbedAsync(req.Query, ct);
-        if (qv is null) return Problem(statusCode: 502, title: "Provider does not support embeddings.");
+        if (qv is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
 
-        // Restrict to files the caller can read.
         var readable = access.ApplyReadFilter(_db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me);
         if (Enum.TryParse<NimShare.Core.Entities.FileScope>(req.Scope, true, out var sc))
         {
@@ -121,10 +129,9 @@ public class AiController : ControllerBase
                 : readable.Where(f => f.Scope == sc);
         }
         var fileIds = await readable.Select(f => f.Id).ToListAsync(ct);
-        if (fileIds.Count == 0) return Ok(Array.Empty<SearchHit>());
+        if (fileIds.Count == 0) return (true, new(), null);
 
         var embs = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
-        // Score all candidate embeddings client-side; small datasets are fine.
         var scored = new List<(Guid Id, double Score)>();
         foreach (var e in embs)
         {
@@ -141,8 +148,8 @@ public class AiController : ControllerBase
         {
             var f = byId[t.Id];
             return new SearchHit(t.Id, f.Name, Math.Round(t.Score, 4), f.AiSummary?[..Math.Min(160, f.AiSummary.Length)], f.FolderId);
-        });
-        return Ok(hits);
+        }).ToList();
+        return (true, hits, null);
     }
 
     private static double Cosine(float[] a, float[] b)
@@ -167,10 +174,10 @@ public class AiController : ControllerBase
             return Problem(statusCode: 503, title: "Chat is disabled.");
         if (string.IsNullOrWhiteSpace(req.Question)) return BadRequest();
 
-        // Re-use Search to retrieve the top passages.
-        var searchResult = await Search(new SearchReq(req.Question, req.Scope, req.GroupId, 6), users, access, ct);
-        if (searchResult is not OkObjectResult ok) return searchResult;
-        var hits = ((IEnumerable<SearchHit>)ok.Value!).ToList();
+        // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
+        var me = await users.GetOrProvisionAsync(User, ct);
+        var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);
+        if (!ok) return err!;
         if (hits.Count == 0)
             return Ok(new { answer = string.Empty, citations = Array.Empty<SearchHit>() });
 
