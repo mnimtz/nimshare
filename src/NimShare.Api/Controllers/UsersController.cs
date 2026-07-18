@@ -111,6 +111,29 @@ public class UsersController : Controller
     }
 
     [Authorize(Policy = "WebUser")]
+    [HttpPost("/settings/users/{id:guid}/set-groups")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetGroups(Guid id, Guid[] groupIds, CancellationToken ct)
+    {
+        if (!await RequireAdmin(ct)) return Forbid();
+        var u = await _db.Users.FindAsync(new object[] { id }, ct);
+        if (u is null) return NotFound();
+        var wanted = (groupIds ?? Array.Empty<Guid>()).Distinct().ToHashSet();
+        var existing = await _db.GroupMemberships.Where(m => m.UserId == id).ToListAsync(ct);
+        var haveIds = existing.Select(m => m.GroupId).ToHashSet();
+        // Add missing
+        foreach (var gid in wanted.Except(haveIds))
+        {
+            _db.GroupMemberships.Add(new GroupMembership { UserId = id, GroupId = gid, Role = GroupRole.Member });
+        }
+        // Remove ones no longer wanted
+        _db.GroupMemberships.RemoveRange(existing.Where(m => !wanted.Contains(m.GroupId)));
+        await _db.SaveChangesAsync(ct);
+        TempData["Notice"] = "Memberships updated for " + u.DisplayName;
+        return RedirectToAction(nameof(List));
+    }
+
+    [Authorize(Policy = "WebUser")]
     [HttpPost("/settings/users/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

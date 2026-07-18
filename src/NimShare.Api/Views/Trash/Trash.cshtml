@@ -1,0 +1,65 @@
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = @T["trash.title"];
+    Layout = "_AppShell";
+    var files = (List<StorageFile>)ViewData["Files"]!;
+    string Bytes(long b) { string[] u = { "B","KB","MB","GB","TB" }; double v=b; int i=0; while(v>=1024 && i<u.Length-1){v/=1024;i++;} return $"{v:0.##} {u[i]}"; }
+}
+<div class="page-header">
+    <div>
+        <h1>🗑 @T["trash.title"]</h1>
+        <p class="lede">@T["trash.lede"]</p>
+    </div>
+    @if (files.Any())
+    {
+        <form method="post" action="/trash/empty" onsubmit="return confirm('@T["trash.confirm_empty"]')">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-secondary">🧨 @T["trash.empty"]</button>
+        </form>
+    }
+</div>
+
+@if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div> }
+
+@if (!files.Any())
+{
+    <div class="fm-empty">
+        <div class="fm-empty-art">🗑</div>
+        <div class="fm-empty-title">@T["trash.empty_state"]</div>
+    </div>
+}
+else
+{
+    <table class="fm-list">
+        <thead>
+            <tr>
+                <th>@T["file.name"]</th>
+                <th style="width:110px">@T["file.size"]</th>
+                <th style="width:170px">@T["trash.deleted_at"]</th>
+                <th style="width:160px">@T["file.owner"]</th>
+                <th style="width:220px"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var f in files)
+        {
+            <tr class="fm-row">
+                <td><span class="fm-name"><span class="fm-icon fm-icon-file">📄</span>@f.Name</span></td>
+                <td>@Bytes(f.SizeBytes)</td>
+                <td class="muted">@(f.DeletedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                <td class="muted">@f.Owner?.DisplayName</td>
+                <td>
+                    <form method="post" action="/trash/@f.Id/restore" style="display:inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-ghost" title="@T["trash.restore"]">↩ @T["trash.restore"]</button>
+                    </form>
+                    <form method="post" action="/trash/@f.Id/purge" style="display:inline" onsubmit="return confirm('@T["trash.confirm_purge"]')">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-ghost" title="@T["trash.purge"]" style="color:var(--status-critical)">✕ @T["trash.purge"]</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

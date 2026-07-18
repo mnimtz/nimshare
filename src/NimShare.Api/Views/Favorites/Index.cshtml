@@ -1,0 +1,58 @@
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = @T["nav.favorites"];
+    Layout = "_AppShell";
+    var favs = (List<UserFavorite>)ViewData["Favorites"]!;
+}
+<div class="page-header">
+    <div>
+        <h1>⭐ @T["nav.favorites"]</h1>
+    </div>
+</div>
+
+@if (!favs.Any())
+{
+    <div class="fm-empty">
+        <div class="fm-empty-art">⭐</div>
+        <div class="fm-empty-title">@T["nav.favorites"]</div>
+        <div class="fm-empty-hint">Click the star icon on any file or folder to add it here.</div>
+    </div>
+}
+else
+{
+    <table class="fm-list">
+        <thead>
+            <tr>
+                <th>@T["file.name"]</th>
+                <th style="width:170px">@T["file.uploaded"]</th>
+                <th style="width:80px"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var f in favs)
+        {
+            var isFile = f.FileId is not null;
+            var name = f.File?.Name ?? f.Folder?.Name ?? "?";
+            <tr class="fm-row">
+                <td>
+                    <span class="fm-name">
+                        <span class="fm-icon @(isFile ? "fm-icon-file" : "fm-icon-folder")">@(isFile ? "📄" : "📁")</span>
+                        @if (isFile)
+                        {
+                            <a href="#" onclick="event.preventDefault();fetch('/api/v1/files/'+@Json.Serialize(f.FileId)+'/preview-url').then(r=>r.json()).then(d=>window.open(d.url,'_blank'))">@name</a>
+                        }
+                        else
+                        {
+                            <span>@name</span>
+                        }
+                    </span>
+                </td>
+                <td class="muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                <td>
+                    <button class="btn btn-ghost" title="@T["actions.unstar"]" onclick='fetch("/api/v1/favorites/toggle",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({fileId:@Json.Serialize(f.FileId),folderId:@Json.Serialize(f.FolderId)})}).then(()=>location.reload())'>✕</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

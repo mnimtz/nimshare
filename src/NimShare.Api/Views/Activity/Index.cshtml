@@ -1,0 +1,50 @@
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = @T["activity.title"];
+    Layout = "_AppShell";
+    var items = (List<ActivityEvent>)ViewData["Items"]!;
+    var showAll = (bool)(ViewData["ShowAll"] ?? false);
+    var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+}
+<div class="page-header">
+    <div>
+        <h1>🕐 @T["activity.title"]</h1>
+        <p class="lede">@T["activity.lede"]</p>
+    </div>
+    @if (isAdmin)
+    {
+        <div>
+            <a class="btn @(showAll ? "btn-ghost" : "btn-primary")" href="/activity">@T["activity.filter_me"]</a>
+            <a class="btn @(showAll ? "btn-primary" : "btn-ghost")" href="/activity?all=true">@T["activity.filter_all"]</a>
+        </div>
+    }
+</div>
+
+@if (!items.Any())
+{
+    <div class="card"><p class="muted">@T["activity.empty"]</p></div>
+}
+else
+{
+    <table class="fm-list">
+        <thead>
+            <tr>
+                <th style="width:180px">@T["activity.when"]</th>
+                <th style="width:130px">@T["activity.kind"]</th>
+                <th>@T["activity.summary"]</th>
+                @if (showAll) { <th style="width:180px">@T["activity.actor"]</th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in items)
+            {
+                <tr class="fm-row">
+                    <td class="muted">@e.At.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td><span class="chip">@e.Kind.ToString()</span></td>
+                    <td>@e.Summary</td>
+                    @if (showAll) { <td class="muted">@e.Actor?.DisplayName</td> }
+                </tr>
+            }
+        </tbody>
+    </table>
+}

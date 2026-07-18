@@ -71,6 +71,14 @@
     </form>
 </details>
 
+@{
+    // Membership map: userId -> set of groupIds — driven by the same Groups list
+    // already loaded above, so no extra query.
+    var membership = groups
+        .SelectMany(g => g.Members.Select(m => new { m.UserId, GroupId = g.Id }))
+        .GroupBy(x => x.UserId)
+        .ToDictionary(g => g.Key, g => g.Select(x => x.GroupId).ToHashSet());
+}
 <table class="table">
     <thead>
     <tr>
@@ -78,6 +86,7 @@
         <th>@T["auth.display_name"]</th>
         <th>@T["users.role"]</th>
         <th>@T["users.quota"]</th>
+        <th>@T["nav.groups"]</th>
         <th>@T["users.state"]</th>
         <th>@T["users.type"]</th>
         <th>@T["users.actions"]</th>
@@ -87,6 +96,7 @@
     @foreach (var u in Model)
     {
         var quotaGb = u.QuotaBytes / 1024 / 1024 / 1024;
+        var mine = membership.TryGetValue(u.Id, out var mset) ? mset : new HashSet<Guid>();
         <tr>
             <td class="mono">@u.Email</td>
             <td>@u.DisplayName</td>
@@ -106,6 +116,21 @@
                     <span class="muted">GB</span>
                     <button class="btn btn-ghost btn-sm">@T["users.quota.save"]</button>
                 </form>
+            </td>
+            <td>
+                <details>
+                    <summary style="cursor:pointer">@mine.Count @T["groups.members"]</summary>
+                    <form method="post" action="/settings/users/@u.Id/set-groups" style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+                        @Html.AntiForgeryToken()
+                        @foreach (var g in groups)
+                        {
+                            <label style="display:flex;align-items:center;gap:6px;font-weight:400">
+                                <input type="checkbox" name="groupIds" value="@g.Id" @(mine.Contains(g.Id) ? "checked" : "")/> @g.Name
+                            </label>
+                        }
+                        <button type="submit" class="btn btn-ghost btn-sm" style="align-self:flex-start">@T["users.quota.save"]</button>
+                    </form>
+                </details>
             </td>
             <td>
                 @if (u.IsActive)

@@ -214,12 +214,43 @@
 <!-- Right-click context menu -->
 <div class="ctx-menu" id="ctxMenu">
     <button data-act="open" style="display:none">📂 @T["ctx.open"]</button>
+    <button data-act="preview" style="display:none">👁 Preview</button>
     <button data-act="share">🔗 @T["actions.share_link"]</button>
+    <button data-act="directShare">🤝 @T["share.direct"]</button>
     <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
+    <button data-act="favorite">⭐ @T["actions.star"]</button>
     <div class="divider"></div>
     <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
     <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
     <button data-act="delete">🗑 @T["actions.delete"]</button>
+</div>
+
+<!-- Direct-share modal (share to specific users / groups) -->
+<div class="modal-backdrop" id="modalDirectShare" onclick="if(event.target===this)closeModal('modalDirectShare')">
+    <div class="modal-panel" style="max-width:640px">
+        <h2>🤝 @T["share.direct"] — <span id="dsTargetName" class="muted"></span></h2>
+        <div class="field">
+            <label>@T["share.target.user"] / @T["share.target.group"]</label>
+            <div class="row" style="gap:6px">
+                <select id="dsKind">
+                    <option value="user">👤 @T["share.target.user"]</option>
+                    <option value="group">👥 @T["share.target.group"]</option>
+                </select>
+                <input type="text" id="dsPicker" placeholder="@T["share.search_users"]" style="flex:1" list="dsUserList"/>
+                <select id="dsGroupSel" style="flex:1;display:none"></select>
+                <datalist id="dsUserList"></datalist>
+                <select id="dsPerm">
+                    <option value="Read">@T["share.perm.read"]</option>
+                    <option value="Write">@T["share.perm.write"]</option>
+                </select>
+                <button class="btn btn-primary" onclick="ds_add()">@T["share.add"]</button>
+            </div>
+        </div>
+        <div class="stack" id="dsList" style="margin-top:12px"></div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalDirectShare')">@T["modal.close"]</button>
+        </div>
+    </div>
 </div>
 
 <partial name="_LinkModals" model="@current" />
@@ -303,12 +334,15 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         e.preventDefault();
         ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name };
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
-        showFor('open',      ctxTarget.kind === 'folder');
-        showFor('uploadReq', ctxTarget.kind === 'folder');
-        showFor('rename',    ctxTarget.kind === 'folder' && CAN_MANAGE);
-        showFor('move',      ctxTarget.kind === 'file'   && CAN_WRITE);
-        showFor('share',     true);
-        showFor('delete',    (ctxTarget.kind === 'file') || (ctxTarget.kind === 'folder' && CAN_MANAGE));
+        showFor('open',        ctxTarget.kind === 'folder');
+        showFor('preview',     ctxTarget.kind === 'file');
+        showFor('uploadReq',   ctxTarget.kind === 'folder');
+        showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
+        showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE);
+        showFor('share',       true);
+        showFor('directShare', true);
+        showFor('favorite',    true);
+        showFor('delete',      (ctxTarget.kind === 'file') || (ctxTarget.kind === 'folder' && CAN_MANAGE));
         const vw = window.innerWidth, vh = window.innerHeight;
         const w = 220, h = ctxMenu.offsetHeight || 200;
         const x = Math.min(e.clientX, vw - w - 10);
@@ -328,10 +362,13 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             const url = document.querySelector(`tr.ctx[data-id="${ctxTarget.id}"] a.fm-name`);
             if (url) location.href = url.getAttribute('href');
         }
+        if (act === 'preview' && ctxTarget.kind === 'file') openPreview(ctxTarget.id);
         if (act === 'share') {
             if (ctxTarget.kind === 'file') openShareFileModal(ctxTarget.id);
             else openShareFolderModal(ctxTarget.id);
         }
+        if (act === 'directShare') openDirectShare(ctxTarget);
+        if (act === 'favorite') toggleFavorite(ctxTarget);
         if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
@@ -472,6 +509,106 @@ async function uploadFiles(fileList) {
 
 // Modal helpers used from generated onclicks.
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Direct share modal ────────────────────────────────────────
+let dsCurrent = null; // { kind: 'file'|'folder', id, name }
+async function openDirectShare(target) {
+    dsCurrent = target;
+    document.getElementById('dsTargetName').textContent = target.name;
+    document.getElementById('modalDirectShare').classList.add('open');
+    document.getElementById('dsKind').value = 'user';
+    ds_switchKind();
+    await ds_loadGroups();
+    await ds_loadShares();
+}
+document.getElementById('dsKind').addEventListener('change', ds_switchKind);
+function ds_switchKind() {
+    const kind = document.getElementById('dsKind').value;
+    document.getElementById('dsPicker').style.display = kind === 'user' ? '' : 'none';
+    document.getElementById('dsGroupSel').style.display = kind === 'group' ? '' : 'none';
+}
+let dsUserCache = new Map();
+document.getElementById('dsPicker').addEventListener('input', async (e) => {
+    const q = e.target.value;
+    const r = await fetch('/api/v1/direct-shares/users?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const items = await r.json();
+    const dl = document.getElementById('dsUserList');
+    dl.innerHTML = '';
+    dsUserCache.clear();
+    items.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.displayName + ' <' + u.email + '>';
+        dl.appendChild(o);
+        dsUserCache.set(o.value, u.id);
+    });
+});
+async function ds_loadGroups() {
+    const r = await fetch('/api/v1/direct-shares/groups', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const items = await r.json();
+    const sel = document.getElementById('dsGroupSel');
+    sel.innerHTML = '';
+    items.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.textContent = g.name; sel.appendChild(o); });
+}
+async function ds_add() {
+    if (!dsCurrent) return;
+    const kind = document.getElementById('dsKind').value;
+    const perm = document.getElementById('dsPerm').value;
+    const body = { permission: perm };
+    if (dsCurrent.kind === 'file') body.fileId = dsCurrent.id;
+    else body.folderId = dsCurrent.id;
+    if (kind === 'user') {
+        const val = document.getElementById('dsPicker').value;
+        const uid = dsUserCache.get(val);
+        if (!uid) { alert('Pick a user from the suggestions.'); return; }
+        body.userId = uid;
+    } else {
+        body.groupId = document.getElementById('dsGroupSel').value;
+    }
+    const r = await fetch('/api/v1/direct-shares', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    document.getElementById('dsPicker').value = '';
+    await ds_loadShares();
+}
+async function ds_loadShares() {
+    if (!dsCurrent) return;
+    const url = dsCurrent.kind === 'file'
+        ? '/api/v1/direct-shares/for-file/' + dsCurrent.id
+        : '/api/v1/direct-shares/for-folder/' + dsCurrent.id;
+    const r = await fetch(url, { credentials: 'same-origin' });
+    if (!r.ok) { document.getElementById('dsList').innerHTML = ''; return; }
+    const items = await r.json();
+    const out = document.getElementById('dsList');
+    if (!items.length) { out.innerHTML = '<p class="muted">' + @Json.Serialize(T["share.none"].Value) + '</p>'; return; }
+    out.innerHTML = items.map(i => `
+        <div class="row" style="justify-content:space-between;padding:6px 8px;border:1px solid var(--tw-gray-200);border-radius:6px">
+            <span>${i.userId ? '👤' : '👥'} ${escapeHtml(i.userDisplayName || i.groupName || '?')}</span>
+            <span class="chip ${i.permission === 'Write' ? 'chip-warn' : ''}">${i.permission}</span>
+            <button class="btn btn-ghost" onclick="ds_revoke('${i.id}')">✕</button>
+        </div>`).join('');
+}
+async function ds_revoke(id) {
+    const r = await fetch('/api/v1/direct-shares/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok) await ds_loadShares();
+}
+
+// ── Favorite toggle ───────────────────────────────────────────
+async function toggleFavorite(target) {
+    const body = target.kind === 'file' ? { fileId: target.id } : { folderId: target.id };
+    const r = await fetch('/api/v1/favorites/toggle', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (r.ok) {
+        const d = await r.json();
+        const row = document.querySelector(`tr.ctx[data-id="${target.id}"]`);
+        if (row) row.classList.toggle('is-fav', d.starred);
+    }
+}
 
 // ── Column sorting (click header, folders always stay grouped on top) ──
 (function () {

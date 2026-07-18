@@ -195,6 +195,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<IFolderService, FolderService>();
+builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 builder.Services.AddScoped<IAiGatewayService, AiGatewayService>();

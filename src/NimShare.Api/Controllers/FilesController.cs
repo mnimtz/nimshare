@@ -164,25 +164,17 @@ public class FilesController : ControllerBase
         var user = await _users.GetOrProvisionAsync(User, ct);
         var files = await _db.Files.Include(f => f.ShareLinks)
             .Where(f => req.Ids.Contains(f.Id)).ToListAsync(ct);
-        var toDeleteBlobs = new List<string>();
         var deleted = 0;
-        // Persist soft-delete FIRST so the DB is durable even if blob delete
-        // fails partway. Blob deletes are idempotent, so retrying is safe.
+        // Soft-delete: blob stays until purged from Trash; user can restore.
         foreach (var f in files)
         {
             if (!await access.CanDeleteAsync(user, f, ct)) continue;
             f.Status = StorageFileStatus.Deleted;
             f.DeletedAt = DateTimeOffset.UtcNow;
             foreach (var link in f.ShareLinks) link.IsRevoked = true;
-            toDeleteBlobs.Add(f.BlobPath);
             deleted++;
         }
         await _db.SaveChangesAsync(ct);
-        // Best-effort blob cleanup. Failures leave orphan bytes we can sweep later.
-        foreach (var path in toDeleteBlobs)
-        {
-            try { await _blobs.DeleteAsync(path, ct); } catch { /* swept later */ }
-        }
         return Ok(new { deleted });
     }
 
@@ -195,12 +187,11 @@ public class FilesController : ControllerBase
         if (file is null) return NotFound();
         if (!await access.CanDeleteAsync(user, file, ct)) return Forbid();
 
-        // Soft-delete first, then best-effort remove the blob.
+        // Soft-delete only — blob is kept until purged from Trash.
         file.Status = StorageFileStatus.Deleted;
         file.DeletedAt = DateTimeOffset.UtcNow;
         foreach (var link in file.ShareLinks) link.IsRevoked = true;
         await _db.SaveChangesAsync(ct);
-        await _blobs.DeleteAsync(file.BlobPath, ct);
         return NoContent();
     }
 

@@ -1137,13 +1137,64 @@ input:focus, select:focus, textarea:focus {
     /* When the workspace hosts the file-manager on mobile, keep the whole
        thing scrollable and don't force flex-height. */
     /* .fm is display:block globally — no grid override needed. */
-    .fm-main { padding: 14px 14px 40px !important; }
-    .fm-header { flex-direction: column; align-items: stretch; gap: 10px; }
-    .fm-toolbar { flex-wrap: wrap; }
+    .fm-main { padding: 12px 12px 40px !important; }
+    .fm-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .fm-breadcrumb {
+        font-size: .95rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 4px;
+    }
+    .fm-toolbar {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .fm-toolbar .fm-btn { flex-shrink: 0; }
     .fm-list .col-owner,
-    .fm-list .col-date { display: none; }
-    .fm-list td, .fm-list th { padding: 8px 6px; font-size: .85rem; }
-    .fm-icon { width: 28px; height: 28px; }
+    .fm-list .col-date,
+    .fm-list .col-size { display: none; }
+    .fm-list td, .fm-list th { padding: 10px 8px; font-size: .92rem; }
+    .fm-list .col-check { width: 30px; }
+    .fm-list .col-actions { width: auto; }
+    .fm-icon { width: 32px; height: 32px; }
+    /* On mobile, row actions are always visible (no hover on touch) */
+    .fm-row-actions { opacity: 1 !important; }
+    .fm-row-actions button { padding: 8px 6px; font-size: 1.05rem; }
+    .fm-name { gap: 8px; }
+    .fm-name-text { font-size: .95rem; }
+    .fm-searchbar { padding: 10px 12px; }
+    .fm-searchbar input { font-size: 1rem; /* prevents iOS auto-zoom */ }
+
+    /* Page headers on other views also compact */
+    .workspace .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .workspace .page-header h1 { font-size: 1.5rem; }
+    .workspace .page-header .lede { font-size: .9rem; }
+
+    /* Cards & tables mobile-friendly */
+    .card { padding: 16px; }
+    .table th, .table td { padding: 8px 6px; font-size: .85rem; }
+
+    /* Modal panels never overflow the viewport */
+    .modal-panel {
+        width: calc(100vw - 20px);
+        max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        margin: 10px;
+    }
+
+    /* Kill horizontal scroll — everything wraps */
+    body { overflow-x: hidden; }
+    .workspace { min-width: 0; }
 }
 
 /* Close drawer on link click (delegated in JS) */

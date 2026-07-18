@@ -21,6 +21,9 @@ public class NimShareDbContext : DbContext
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<AiGatewaySettings> AiGateways => Set<AiGatewaySettings>();
     public DbSet<FileEmbedding> FileEmbeddings => Set<FileEmbedding>();
+    public DbSet<DirectShare> DirectShares => Set<DirectShare>();
+    public DbSet<UserFavorite> UserFavorites => Set<UserFavorite>();
+    public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -215,6 +218,42 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Message).HasMaxLength(2000);
             e.Property(x => x.TargetFolder).HasMaxLength(400);
             e.HasOne(x => x.Owner).WithMany(u => u.UploadRequests).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<DirectShare>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.TargetUserId, x.FileId });
+            e.HasIndex(x => new { x.TargetUserId, x.FolderId });
+            e.HasIndex(x => new { x.TargetGroupId, x.FileId });
+            e.HasIndex(x => new { x.TargetGroupId, x.FolderId });
+            // Restrict everywhere: DB won't cascade-delete these; controllers
+            // clean them up explicitly when the target file/folder or user/group
+            // goes away, so we don't hit SQL Server's multi-cascade-path guard.
+            e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.Folder).WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.TargetUser).WithMany().HasForeignKey(x => x.TargetUserId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.TargetGroup).WithMany().HasForeignKey(x => x.TargetGroupId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.SharedByUser).WithMany().HasForeignKey(x => x.SharedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<UserFavorite>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.FileId });
+            e.HasIndex(x => new { x.UserId, x.FolderId });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.Folder).WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+        });
+
+        b.Entity<ActivityEvent>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ActorUserId, x.At });
+            e.HasIndex(x => x.At);
+            e.Property(x => x.Summary).HasMaxLength(400).IsRequired();
+            e.HasOne(x => x.Actor).WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
