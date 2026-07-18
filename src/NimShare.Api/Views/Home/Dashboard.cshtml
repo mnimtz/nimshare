@@ -1,0 +1,81 @@
+@model IEnumerable<NimShare.Core.Entities.StorageFile>
+@{ ViewData["Title"] = @T["dashboard.title"]; }
+@Html.Partial("_AppShell")
+@section _ { <!-- unused --> }
+@{
+    var usedBytes = (long)ViewData["UsedBytes"]!;
+    var quotaBytes = (long)ViewData["QuotaBytes"]!;
+    var pct = quotaBytes > 0 ? Math.Min(100, (double)usedBytes / quotaBytes * 100) : 0;
+    string Bytes(long b)
+    {
+        string[] u = { "B","KB","MB","GB","TB" };
+        double v = b; int i = 0;
+        while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
+        return $"{v:0.##} {u[i]}";
+    }
+}
+<div class="workspace-inner">
+    <div class="page-header">
+        <div>
+            <h1>@T["dashboard.greeting"], @ViewData["UserName"]</h1>
+            <p class="lede">@T["dashboard.lede"]</p>
+        </div>
+        <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
+    </div>
+
+    <div class="row" style="gap:var(--sp-6);align-items:stretch">
+        <div class="card" style="flex:1;min-width:220px">
+            <div class="muted">@T["dashboard.stat.files"]</div>
+            <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@ViewData["FileCount"]</div>
+        </div>
+        <div class="card" style="flex:1;min-width:220px">
+            <div class="muted">@T["dashboard.stat.links"]</div>
+            <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@ViewData["LinkCount"]</div>
+        </div>
+        <div class="card" style="flex:2;min-width:280px">
+            <div class="muted">@T["dashboard.stat.usage"]</div>
+            <div style="font-size:1rem;color:var(--tw-primary);margin-bottom:6px">
+                @Bytes(usedBytes) / @Bytes(quotaBytes)
+            </div>
+            <div style="height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                <div style="height:100%;width:@pct.ToString("0")%;background:var(--pillar-gradient-h)"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-8)">
+        <h2 class="card-title">@T["dashboard.recent_files"]</h2>
+        @if (!Model.Any())
+        {
+            <p class="muted">@T["dashboard.no_files"]</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>@T["file.name"]</th>
+                    <th>@T["file.size"]</th>
+                    <th>@T["file.type"]</th>
+                    <th>@T["file.uploaded"]</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var f in Model)
+                {
+                    <tr>
+                        <td>@f.Name</td>
+                        <td>@Bytes(f.SizeBytes)</td>
+                        <td class="muted mono">@f.ContentType</td>
+                        <td class="muted">@f.CreatedAt.ToString("u")</td>
+                        <td>
+                            <a class="btn btn-ghost btn-sm" href="/upload?fileId=@f.Id">@T["file.share"]</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

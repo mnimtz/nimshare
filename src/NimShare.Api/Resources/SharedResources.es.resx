@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="brand.product_name"><value>NimShare</value></data>
+
+  <data name="nav.dashboard"><value>Panel</value></data>
+  <data name="nav.upload"><value>Subir</value></data>
+  <data name="nav.links"><value>Enlaces</value></data>
+  <data name="nav.settings"><value>Ajustes</value></data>
+  <data name="nav.signout"><value>Cerrar sesión</value></data>
+
+  <data name="welcome.title"><value>Bienvenido a NimShare</value></data>
+  <data name="welcome.headline"><value>Comparte archivos sin fricción.</value></data>
+  <data name="welcome.subhead"><value>Sube una vez, comparte por un enlace personalizado con caducidad, contraseña y límite de descargas — en tu propio inquilino de Azure.</value></data>
+  <data name="welcome.bullet1"><value>Slugs personalizados, contraseñas, caducidad, límites</value></data>
+  <data name="welcome.bullet2"><value>Multiusuario con inicio de sesión Microsoft Entra ID</value></data>
+  <data name="welcome.bullet3"><value>Dominios personalizados por usuario (Ajustes → Dominios)</value></data>
+  <data name="welcome.bullet4"><value>Enfoque API-first — clientes iOS y Android próximamente</value></data>
+  <data name="welcome.signin"><value>Iniciar sesión con Microsoft</value></data>
+
+  <data name="dashboard.title"><value>Panel</value></data>
+  <data name="dashboard.greeting"><value>Hola</value></data>
+  <data name="dashboard.lede"><value>Un vistazo rápido a tus archivos, enlaces y almacenamiento.</value></data>
+  <data name="dashboard.new_upload"><value>Nueva subida</value></data>
+  <data name="dashboard.stat.files"><value>Archivos</value></data>
+  <data name="dashboard.stat.links"><value>Enlaces activos</value></data>
+  <data name="dashboard.stat.usage"><value>Almacenamiento usado</value></data>
+  <data name="dashboard.recent_files"><value>Archivos recientes</value></data>
+  <data name="dashboard.no_files"><value>Aún no hay archivos — empieza con tu primera subida.</value></data>
+
+  <data name="file.name"><value>Nombre</value></data>
+  <data name="file.size"><value>Tamaño</value></data>
+  <data name="file.type"><value>Tipo</value></data>
+  <data name="file.uploaded"><value>Subido</value></data>
+  <data name="file.share"><value>Compartir</value></data>
+
+  <data name="upload.title"><value>Subir un archivo</value></data>
+  <data name="upload.lede"><value>Suelta un archivo y configura las reglas de compartición.</value></data>
+  <data name="upload.step1"><value>1. Elige un archivo</value></data>
+  <data name="upload.step2"><value>2. Configura el enlace</value></data>
+  <data name="upload.button"><value>Subir</value></data>
+  <data name="upload.slug"><value>Slug personalizado (opcional)</value></data>
+  <data name="upload.slug_helper"><value>3–64 caracteres, minúsculas, dígitos, « - » o « _ ». Déjalo vacío para un slug aleatorio.</value></data>
+  <data name="upload.password"><value>Contraseña (opcional)</value></data>
+  <data name="upload.max_downloads"><value>Descargas máx. (opcional)</value></data>
+  <data name="upload.expires_at"><value>Fecha de caducidad (opcional)</value></data>
+  <data name="upload.message"><value>Mensaje (Markdown)</value></data>
+  <data name="upload.message_placeholder"><value>Aquí está la presentación de la que hablamos…</value></data>
+  <data name="upload.notify_me"><value>Notifícame por correo al descargarse</value></data>
+  <data name="upload.create_link"><value>Crear enlace</value></data>
+  <data name="upload.done"><value>Tu enlace para compartir está listo</value></data>
+  <data name="upload.share_this"><value>Comparte esta URL:</value></data>
+  <data name="upload.copy"><value>Copiar</value></data>
+
+  <data name="links.title"><value>Tus enlaces</value></data>
+  <data name="links.lede"><value>Cada enlace que has creado. Revoca, ajusta o elimina.</value></data>
+  <data name="links.empty"><value>Aún no hay enlaces.</value></data>
+  <data name="links.slug"><value>Slug</value></data>
+  <data name="links.downloads"><value>Descargas</value></data>
+  <data name="links.expires"><value>Caduca</value></data>
+  <data name="links.state"><value>Estado</value></data>
+  <data name="links.active"><value>Activo</value></data>
+  <data name="links.revoked"><value>Revocado</value></data>
+  <data name="links.expired"><value>Caducado</value></data>
+
+  <data name="settings.title"><value>Ajustes</value></data>
+  <data name="settings.lede"><value>Tu perfil, idioma y dominios personalizados para compartir.</value></data>
+  <data name="settings.profile"><value>Perfil</value></data>
+  <data name="settings.name"><value>Nombre</value></data>
+  <data name="settings.email"><value>Correo</value></data>
+  <data name="settings.role"><value>Rol</value></data>
+  <data name="settings.language"><value>Idioma</value></data>
+  <data name="settings.language_note"><value>Cambia de idioma en cualquier momento desde el pie de la barra lateral. Las páginas públicas respetan el idioma del navegador del destinatario.</value></data>
+  <data name="settings.domains"><value>Dominios personalizados</value></data>
+  <data name="settings.domains_note"><value>Sirve tus enlaces desde tu propio dominio, p. ej. share.tu-empresa.com. Requiere un CNAME + un registro TXT de verificación.</value></data>
+  <data name="settings.add_domain"><value>Añadir dominio</value></data>
+  <data name="settings.hostname"><value>Host</value></data>
+  <data name="settings.verification"><value>Verificación</value></data>
+  <data name="settings.certificate"><value>Certificado</value></data>
+  <data name="settings.verify"><value>Verificar</value></data>
+
+  <data name="landing.title"><value>Alguien ha compartido un archivo contigo</value></data>
+  <data name="landing.shared_by"><value>Compartido por</value></data>
+  <data name="landing.expires_at"><value>Caduca:</value></data>
+  <data name="landing.downloads_left"><value>descargas restantes</value></data>
+  <data name="landing.password.label"><value>Este enlace está protegido — introduce la contraseña:</value></data>
+  <data name="landing.download.button"><value>Descargar</value></data>
+  <data name="landing.powered_by"><value>Con la tecnología de</value></data>
+  <data name="landing.brand_note"><value>Estilizado según las guías de Tungsten Automation.</value></data>
+
+  <data name="share.password.error"><value>Contraseña incorrecta. Inténtalo de nuevo.</value></data>
+  <data name="share.expired.title"><value>Este enlace ha caducado</value></data>
+  <data name="share.expired.body"><value>Pide al remitente un enlace nuevo.</value></data>
+  <data name="share.notfound.title"><value>Enlace no encontrado</value></data>
+  <data name="share.notfound.body"><value>El enlace no existe o ha sido revocado.</value></data>
+
+  <data name="upload.landing.title"><value>Te han pedido que envíes un archivo</value></data>
+  <data name="upload.landing.request_by"><value>Solicitado por</value></data>
+  <data name="upload.landing.pick_file"><value>Elige un archivo para enviar</value></data>
+  <data name="upload.landing.button"><value>Enviar</value></data>
+  <data name="upload.notfound.title"><value>Enlace de subida no encontrado</value></data>
+  <data name="upload.notfound.body"><value>El enlace no existe o ha sido revocado.</value></data>
+  <data name="upload.expired.title"><value>Este enlace de subida ha caducado</value></data>
+  <data name="upload.expired.body"><value>Pide al remitente un enlace nuevo.</value></data>
+</root>

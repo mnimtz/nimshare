@@ -1,0 +1,52 @@
+@model IEnumerable<NimShare.Core.Entities.ShareLink>
+@{ ViewData["Title"] = @T["links.title"]; }
+@Html.Partial("_AppShell")
+<div class="page-header">
+    <div>
+        <h1>@T["links.title"]</h1>
+        <p class="lede">@T["links.lede"]</p>
+    </div>
+    <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card"><p class="muted">@T["links.empty"]</p></div>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>@T["links.slug"]</th>
+            <th>@T["file.name"]</th>
+            <th>@T["links.downloads"]</th>
+            <th>@T["links.expires"]</th>
+            <th>@T["links.state"]</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var l in Model)
+        {
+            var state = l.IsRevoked
+                ? ("chip-critical", @T["links.revoked"].Value)
+                : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
+                    ? ("chip-warn", @T["links.expired"].Value)
+                    : ("chip-ok", @T["links.active"].Value);
+            <tr>
+                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td>@l.File.Name</td>
+                <td>@l.DownloadCount @(l.MaxDownloads is int m ? $" / {m}" : "")</td>
+                <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
+                <td><span class="chip @state.Item1">@state.Item2</span></td>
+                <td>
+                    <form method="post" action="/api/v1/links/@l.Id" style="display:inline">
+                        @* This form is a placeholder — client-side JS below turns clicks into PATCH/DELETE. *@
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,48 @@
+@using System.Globalization
+@{
+    var currentPath = Context.Request.Path.Value ?? "/";
+    string Active(string startsWith) => currentPath.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    var supported = new[] { ("en", "EN"), ("de", "DE"), ("fr", "FR"), ("it", "IT"), ("es", "ES") };
+    var cur = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+}
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/dashboard">
+            <span class="logo-tile" style="background:var(--tw-white)">
+                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="32" height="32" rx="6" fill="var(--tw-primary)"/>
+                    <path d="M6 22V10h4l6 8V10h4v12h-4l-6-8v8H6z" fill="var(--tw-white)"/>
+                </svg>
+            </span>
+            <span class="wordmark">
+                <span class="name">NimShare</span>
+                <span class="product">by Tungsten</span>
+            </span>
+        </a>
+
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
+            <a href="/upload"    class="@Active("/upload")">@T["nav.upload"]</a>
+            <a href="/links"     class="@Active("/links")">@T["nav.links"]</a>
+            <a href="/settings"  class="@Active("/settings")">@T["nav.settings"]</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div>@ViewData["UserName"]</div>
+            <div class="lang-switcher" style="margin-top:8px">
+                @foreach (var (code, label) in supported)
+                {
+                    var cls = code == cur ? "active" : "";
+                    <a href="?ui-culture=@code" class="@cls">@label</a>
+                }
+            </div>
+            <div style="margin-top:12px">
+                <a href="/MicrosoftIdentity/Account/SignOut" style="color:rgba(255,255,255,.7);font-size:.8rem">@T["nav.signout"]</a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="workspace">
+        @RenderBody()
+    </main>
+</div>

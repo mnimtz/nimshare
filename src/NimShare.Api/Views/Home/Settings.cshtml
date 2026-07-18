@@ -1,0 +1,83 @@
+@model IEnumerable<NimShare.Core.Entities.CustomDomain>
+@{
+    ViewData["Title"] = @T["settings.title"];
+    var user = (NimShare.Core.Entities.User)ViewData["User"]!;
+}
+@Html.Partial("_AppShell")
+<div class="page-header">
+    <div>
+        <h1>@T["settings.title"]</h1>
+        <p class="lede">@T["settings.lede"]</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-title">@T["settings.profile"]</h2>
+    <div class="row" style="gap:var(--sp-6)">
+        <div><span class="muted">@T["settings.name"]</span><br/><strong>@user.DisplayName</strong></div>
+        <div><span class="muted">@T["settings.email"]</span><br/><strong>@user.Email</strong></div>
+        <div><span class="muted">@T["settings.role"]</span><br/><strong>@user.Role</strong></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-title">@T["settings.language"]</h2>
+    <p class="muted">@T["settings.language_note"]</p>
+</div>
+
+<div class="card">
+    <h2 class="card-title">@T["settings.domains"]</h2>
+    <p class="muted">@T["settings.domains_note"]</p>
+
+    <div class="row" style="margin:var(--sp-4) 0">
+        <input type="text" id="dom-host" placeholder="share.your-company.com" style="flex:1"/>
+        <button class="btn btn-primary" id="add-domain">@T["settings.add_domain"]</button>
+    </div>
+
+    @if (Model.Any())
+    {
+        <table class="table">
+            <thead><tr>
+                <th>@T["settings.hostname"]</th>
+                <th>@T["settings.verification"]</th>
+                <th>@T["settings.certificate"]</th>
+                <th></th>
+            </tr></thead>
+            <tbody>
+            @foreach (var d in Model)
+            {
+                <tr>
+                    <td class="mono">@d.Hostname</td>
+                    <td><span class="chip">@d.VerificationStatus</span></td>
+                    <td><span class="chip">@d.CertificateStatus</span></td>
+                    <td><button class="btn btn-ghost btn-sm" data-verify="@d.Id">@T["settings.verify"]</button></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+<script>
+document.getElementById('add-domain').addEventListener('click', async () => {
+    const host = document.getElementById('dom-host').value.trim();
+    if (!host) return;
+    const r = await fetch('/api/v1/custom-domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostname: host })
+    });
+    if (!r.ok) { alert('Rejected: ' + r.status); return; }
+    const d = await r.json();
+    alert(`Add this DNS record:\n\nHost: ${d.txtRecordHost}\nType: TXT\nValue: ${d.verificationToken}\n\nThen CNAME ${d.cnameHost} → ${d.cnameTarget}\n\nThen click Verify.`);
+    location.reload();
+});
+document.querySelectorAll('[data-verify]').forEach(b => {
+    b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-verify');
+        const r = await fetch(`/api/v1/custom-domains/${id}/verify`, { method: 'POST' });
+        alert(r.ok ? 'Kicked off' : 'Failed');
+        location.reload();
+    });
+});
+</script>

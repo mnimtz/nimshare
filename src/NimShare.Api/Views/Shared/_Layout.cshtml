@@ -1,0 +1,16 @@
+@using System.Globalization
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>@ViewData["Title"] · @T["brand.product_name"]</title>
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link href="https://fonts.bunny.net/css?family=red-hat-display:300,400,500,700,900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="~/css/site.css"/>
+    <link rel="icon" type="image/svg+xml" href="~/img/favicon.svg"/>
+</head>
+<body>
+@RenderBody()
+</body>
+</html>

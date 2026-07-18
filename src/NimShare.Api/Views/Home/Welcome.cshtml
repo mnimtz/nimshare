@@ -1,0 +1,18 @@
+@{ ViewData["Title"] = @T["welcome.title"]; Layout = "_Layout"; }
+<div class="landing-shell">
+    <div class="landing-card" style="max-width: 640px">
+        <div class="landing-brand">
+            <span class="logo-tile">NIMSHARE</span>
+            <small>by Tungsten Automation</small>
+        </div>
+        <h1>@T["welcome.headline"]</h1>
+        <p class="landing-meta">@T["welcome.subhead"]</p>
+        <ul style="margin: var(--sp-6) 0; padding-left: var(--sp-6); color: var(--tw-primary); line-height: 2">
+            <li>@T["welcome.bullet1"]</li>
+            <li>@T["welcome.bullet2"]</li>
+            <li>@T["welcome.bullet3"]</li>
+            <li>@T["welcome.bullet4"]</li>
+        </ul>
+        <a class="btn btn-primary" href="/MicrosoftIdentity/Account/SignIn">@T["welcome.signin"]</a>
+    </div>
+</div>

@@ -1,0 +1,74 @@
+@model NimShare.Api.Controllers.LandingViewModel
+@{
+    ViewData["Title"] = Model.FileName;
+    Layout = "_Layout";
+}
+<div class="landing-shell">
+    <div class="landing-card">
+        <div class="landing-brand">
+            <span class="logo-tile">NIMSHARE</span>
+            <small>@T["landing.shared_by"] @Model.OwnerName</small>
+        </div>
+
+        <h1>@T["landing.title"]</h1>
+        <p class="landing-meta">
+            @if (Model.ExpiresAt is not null)
+            {
+                <span>@T["landing.expires_at"] <span class="mono">@Model.ExpiresAt.Value.ToString("u")</span></span>
+            }
+            @if (Model.MaxDownloads is not null)
+            {
+                <span class="chip">@(Model.MaxDownloads - Model.DownloadCount) / @Model.MaxDownloads @T["landing.downloads_left"]</span>
+            }
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
+        {
+            <div class="card" style="background:var(--tw-gray-100);margin-top:var(--sp-6)">
+                @Html.Raw(Model.MessageHtml)
+            </div>
+        }
+
+        <div class="file-tile">
+            <div class="icon">@GetExt(Model.FileName)</div>
+            <div class="meta">
+                <span class="name">@Model.FileName</span>
+                <span class="sub">@HumanBytes(Model.SizeBytes) · @Model.ContentType</span>
+            </div>
+        </div>
+
+        <form method="post" asp-controller="Share" asp-action="Submit" asp-route-slug="@Model.Slug" class="stack">
+            @if (Model.HasPassword)
+            {
+                <div class="field">
+                    <label for="password">@T["landing.password.label"]</label>
+                    <input type="password" name="password" id="password" required autofocus/>
+                    @if (TempData["PasswordError"] is string err)
+                    {
+                        <div class="helper" style="color:var(--status-critical)">@err</div>
+                    }
+                </div>
+            }
+            <button type="submit" class="btn btn-primary">@T["landing.download.button"]</button>
+        </form>
+
+        <p class="landing-meta" style="margin-top:var(--sp-6)">
+            @T["landing.powered_by"] <strong>NimShare</strong> · <span class="mono">@T["landing.brand_note"]</span>
+        </p>
+    </div>
+</div>
+
+@functions {
+    static string GetExt(string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToUpperInvariant();
+        return string.IsNullOrEmpty(ext) ? "FILE" : (ext.Length > 4 ? ext[..4] : ext);
+    }
+    static string HumanBytes(long b)
+    {
+        string[] u = { "B", "KB", "MB", "GB", "TB" };
+        double v = b; int i = 0;
+        while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
+        return $"{v:0.##} {u[i]}";
+    }
+}

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore NimShare.sln
+
+      - name: Build
+        run: dotnet build NimShare.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test NimShare.sln --configuration Release --no-build --verbosity normal
+        continue-on-error: true
+
+      - name: Publish
+        run: dotnet publish src/NimShare.Api/NimShare.Api.csproj --configuration Release --no-build --output ./publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nimshare-app
+          path: ./publish
+          retention-days: 7

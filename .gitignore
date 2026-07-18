@@ -1,0 +1,50 @@
+## Ignore Visual Studio / Rider temp files
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+## Build outputs
+bin/
+obj/
+out/
+publish/
+*.dll
+*.pdb
+*.exe
+*.log
+
+## dotnet
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nupkg
+
+## Environment / secrets
+appsettings.Development.json
+appsettings.Local.json
+.env
+.env.*
+*.pfx
+*.pem
+secrets/
+
+## SQLite dev DB
+*.db
+*.db-*
+*.sqlite
+*.sqlite-journal
+
+## Azure
+.azure/
+*.azurePubxml
+
+## Editors
+.DS_Store
+Thumbs.db
+*.swp
+
+## Node (in case a frontend workspace is added later)
+node_modules/
+dist/

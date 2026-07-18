@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="brand.product_name"><value>NimShare</value></data>
+
+  <data name="nav.dashboard"><value>Tableau de bord</value></data>
+  <data name="nav.upload"><value>Envoyer</value></data>
+  <data name="nav.links"><value>Liens</value></data>
+  <data name="nav.settings"><value>Paramètres</value></data>
+  <data name="nav.signout"><value>Se déconnecter</value></data>
+
+  <data name="welcome.title"><value>Bienvenue sur NimShare</value></data>
+  <data name="welcome.headline"><value>Partagez des fichiers sans friction.</value></data>
+  <data name="welcome.subhead"><value>Un seul envoi, puis un lien personnalisé avec expiration, mot de passe et plafond de téléchargements — sur votre propre locataire Azure.</value></data>
+  <data name="welcome.bullet1"><value>Slugs personnalisés, mots de passe, expiration, plafonds</value></data>
+  <data name="welcome.bullet2"><value>Multi-utilisateurs avec connexion Microsoft Entra ID</value></data>
+  <data name="welcome.bullet3"><value>Domaines personnalisés par utilisateur (Paramètres → Domaines)</value></data>
+  <data name="welcome.bullet4"><value>Approche API-first — clients iOS et Android à venir</value></data>
+  <data name="welcome.signin"><value>Se connecter avec Microsoft</value></data>
+
+  <data name="dashboard.title"><value>Tableau de bord</value></data>
+  <data name="dashboard.greeting"><value>Bonjour</value></data>
+  <data name="dashboard.lede"><value>Un aperçu rapide de vos fichiers, liens et stockage.</value></data>
+  <data name="dashboard.new_upload"><value>Nouvel envoi</value></data>
+  <data name="dashboard.stat.files"><value>Fichiers</value></data>
+  <data name="dashboard.stat.links"><value>Liens actifs</value></data>
+  <data name="dashboard.stat.usage"><value>Stockage utilisé</value></data>
+  <data name="dashboard.recent_files"><value>Fichiers récents</value></data>
+  <data name="dashboard.no_files"><value>Aucun fichier encore — commencez par votre premier envoi.</value></data>
+
+  <data name="file.name"><value>Nom</value></data>
+  <data name="file.size"><value>Taille</value></data>
+  <data name="file.type"><value>Type</value></data>
+  <data name="file.uploaded"><value>Envoyé</value></data>
+  <data name="file.share"><value>Partager</value></data>
+
+  <data name="upload.title"><value>Envoyer un fichier</value></data>
+  <data name="upload.lede"><value>Déposez un fichier, puis configurez les règles de partage.</value></data>
+  <data name="upload.step1"><value>1. Choisissez un fichier</value></data>
+  <data name="upload.step2"><value>2. Configurez le lien</value></data>
+  <data name="upload.button"><value>Envoyer</value></data>
+  <data name="upload.slug"><value>Slug personnalisé (optionnel)</value></data>
+  <data name="upload.slug_helper"><value>3 à 64 caractères, minuscules, chiffres, « - » ou « _ ». Laissez vide pour un slug aléatoire.</value></data>
+  <data name="upload.password"><value>Mot de passe (optionnel)</value></data>
+  <data name="upload.max_downloads"><value>Téléchargements max. (optionnel)</value></data>
+  <data name="upload.expires_at"><value>Date d'expiration (optionnelle)</value></data>
+  <data name="upload.message"><value>Message (Markdown)</value></data>
+  <data name="upload.message_placeholder"><value>Voici la présentation dont nous avons parlé…</value></data>
+  <data name="upload.notify_me"><value>M'informer par e-mail lors du téléchargement</value></data>
+  <data name="upload.create_link"><value>Créer le lien</value></data>
+  <data name="upload.done"><value>Votre lien de partage est prêt</value></data>
+  <data name="upload.share_this"><value>Partagez cette URL :</value></data>
+  <data name="upload.copy"><value>Copier</value></data>
+
+  <data name="links.title"><value>Vos liens</value></data>
+  <data name="links.lede"><value>Chaque lien de partage que vous avez créé. Révoquez, ajustez ou supprimez.</value></data>
+  <data name="links.empty"><value>Aucun lien pour le moment.</value></data>
+  <data name="links.slug"><value>Slug</value></data>
+  <data name="links.downloads"><value>Téléchargements</value></data>
+  <data name="links.expires"><value>Expire</value></data>
+  <data name="links.state"><value>État</value></data>
+  <data name="links.active"><value>Actif</value></data>
+  <data name="links.revoked"><value>Révoqué</value></data>
+  <data name="links.expired"><value>Expiré</value></data>
+
+  <data name="settings.title"><value>Paramètres</value></data>
+  <data name="settings.lede"><value>Votre profil, votre langue et vos domaines de partage personnalisés.</value></data>
+  <data name="settings.profile"><value>Profil</value></data>
+  <data name="settings.name"><value>Nom</value></data>
+  <data name="settings.email"><value>E-mail</value></data>
+  <data name="settings.role"><value>Rôle</value></data>
+  <data name="settings.language"><value>Langue</value></data>
+  <data name="settings.language_note"><value>Changez de langue à tout moment depuis le pied de la barre latérale. Les pages publiques de partage respectent la langue du navigateur du destinataire.</value></data>
+  <data name="settings.domains"><value>Domaines personnalisés</value></data>
+  <data name="settings.domains_note"><value>Servez vos liens de partage depuis votre propre domaine, par ex. share.votre-entreprise.com. Nécessite un CNAME + un enregistrement TXT de vérification.</value></data>
+  <data name="settings.add_domain"><value>Ajouter un domaine</value></data>
+  <data name="settings.hostname"><value>Nom d'hôte</value></data>
+  <data name="settings.verification"><value>Vérification</value></data>
+  <data name="settings.certificate"><value>Certificat</value></data>
+  <data name="settings.verify"><value>Vérifier</value></data>
+
+  <data name="landing.title"><value>Un fichier a été partagé avec vous</value></data>
+  <data name="landing.shared_by"><value>Partagé par</value></data>
+  <data name="landing.expires_at"><value>Expire :</value></data>
+  <data name="landing.downloads_left"><value>téléchargements restants</value></data>
+  <data name="landing.password.label"><value>Ce lien est protégé — entrez le mot de passe :</value></data>
+  <data name="landing.download.button"><value>Télécharger</value></data>
+  <data name="landing.powered_by"><value>Propulsé par</value></data>
+  <data name="landing.brand_note"><value>Habillé selon la charte Tungsten Automation.</value></data>
+
+  <data name="share.password.error"><value>Mot de passe incorrect. Réessayez.</value></data>
+  <data name="share.expired.title"><value>Ce lien a expiré</value></data>
+  <data name="share.expired.body"><value>Demandez un nouveau lien à l'expéditeur.</value></data>
+  <data name="share.notfound.title"><value>Lien introuvable</value></data>
+  <data name="share.notfound.body"><value>Le lien n'existe pas ou a été révoqué.</value></data>
+
+  <data name="upload.landing.title"><value>On vous demande d'envoyer un fichier</value></data>
+  <data name="upload.landing.request_by"><value>Demandé par</value></data>
+  <data name="upload.landing.pick_file"><value>Choisissez un fichier à envoyer</value></data>
+  <data name="upload.landing.button"><value>Envoyer</value></data>
+  <data name="upload.notfound.title"><value>Lien d'envoi introuvable</value></data>
+  <data name="upload.notfound.body"><value>Le lien n'existe pas ou a été révoqué.</value></data>
+  <data name="upload.expired.title"><value>Ce lien d'envoi a expiré</value></data>
+  <data name="upload.expired.body"><value>Demandez un nouveau lien à l'expéditeur.</value></data>
+</root>

@@ -1,0 +1,55 @@
+@model NimShare.Api.Controllers.UploadLandingViewModel
+@{ ViewData["Title"] = @T["upload.landing.title"]; Layout = "_Layout"; }
+<div class="landing-shell">
+    <div class="landing-card">
+        <div class="landing-brand">
+            <span class="logo-tile">NIMSHARE</span>
+            <small>@T["upload.landing.request_by"] @Model.OwnerName</small>
+        </div>
+        <h1>@T["upload.landing.title"]</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
+        {
+            <div class="card" style="background:var(--tw-gray-100)">@Html.Raw(Model.MessageHtml)</div>
+        }
+        <div class="field" style="margin-top:var(--sp-6)">
+            <label for="file">@T["upload.landing.pick_file"]</label>
+            <input type="file" id="file" name="file"/>
+        </div>
+        @if (Model.HasPassword)
+        {
+            <div class="field">
+                <label for="password">@T["landing.password.label"]</label>
+                <input type="password" id="password"/>
+            </div>
+        }
+        <button id="upload-btn" class="btn btn-primary" style="margin-top:var(--sp-4)">@T["upload.landing.button"]</button>
+        <div id="upload-status" class="helper"></div>
+    </div>
+</div>
+<script>
+    const slug = @Json.Serialize(Model.Slug);
+    const btn = document.getElementById('upload-btn');
+    const status = document.getElementById('upload-status');
+    btn.addEventListener('click', async () => {
+        const f = document.getElementById('file').files[0];
+        if (!f) { status.textContent = 'Pick a file first.'; return; }
+        const pw = document.getElementById('password')?.value;
+        btn.disabled = true; status.textContent = 'Requesting upload slot…';
+        const init = await fetch(`/u/${slug}/init`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: f.name, sizeBytes: f.size, contentType: f.type, password: pw })
+        });
+        if (!init.ok) { status.textContent = 'Rejected: ' + init.status; btn.disabled = false; return; }
+        const { fileId, uploadUrl } = await init.json();
+        status.textContent = 'Uploading…';
+        const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'x-ms-blob-type': 'BlockBlob' }, body: f });
+        if (!put.ok) { status.textContent = 'Upload failed'; btn.disabled = false; return; }
+        await fetch(`/u/${slug}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId })
+        });
+        status.textContent = 'Done — thanks!';
+    });
+</script>

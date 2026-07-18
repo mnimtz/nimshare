@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="brand.product_name"><value>NimShare</value></data>
+
+  <data name="nav.dashboard"><value>Dashboard</value></data>
+  <data name="nav.upload"><value>Upload</value></data>
+  <data name="nav.links"><value>Links</value></data>
+  <data name="nav.settings"><value>Settings</value></data>
+  <data name="nav.signout"><value>Sign out</value></data>
+
+  <data name="welcome.title"><value>Welcome to NimShare</value></data>
+  <data name="welcome.headline"><value>Share files without the friction.</value></data>
+  <data name="welcome.subhead"><value>Upload once, share via personalised links with expiry, password, download limits — on your own Azure tenant.</value></data>
+  <data name="welcome.bullet1"><value>Custom slugs, passwords, expiry, download caps</value></data>
+  <data name="welcome.bullet2"><value>Multi-user with Microsoft Entra ID sign-in</value></data>
+  <data name="welcome.bullet3"><value>Custom domains per user (Settings → Domains)</value></data>
+  <data name="welcome.bullet4"><value>API-first — iOS and Android clients coming</value></data>
+  <data name="welcome.signin"><value>Sign in with Microsoft</value></data>
+
+  <data name="dashboard.title"><value>Dashboard</value></data>
+  <data name="dashboard.greeting"><value>Hello</value></data>
+  <data name="dashboard.lede"><value>A quick view of your files, links, and storage.</value></data>
+  <data name="dashboard.new_upload"><value>New upload</value></data>
+  <data name="dashboard.stat.files"><value>Files</value></data>
+  <data name="dashboard.stat.links"><value>Active links</value></data>
+  <data name="dashboard.stat.usage"><value>Storage used</value></data>
+  <data name="dashboard.recent_files"><value>Recent files</value></data>
+  <data name="dashboard.no_files"><value>No files yet — start with your first upload.</value></data>
+
+  <data name="file.name"><value>Name</value></data>
+  <data name="file.size"><value>Size</value></data>
+  <data name="file.type"><value>Type</value></data>
+  <data name="file.uploaded"><value>Uploaded</value></data>
+  <data name="file.share"><value>Share</value></data>
+
+  <data name="upload.title"><value>Upload a file</value></data>
+  <data name="upload.lede"><value>Drop a file, then configure the sharing rules.</value></data>
+  <data name="upload.step1"><value>1. Pick a file</value></data>
+  <data name="upload.step2"><value>2. Configure the link</value></data>
+  <data name="upload.button"><value>Upload</value></data>
+  <data name="upload.slug"><value>Custom slug (optional)</value></data>
+  <data name="upload.slug_helper"><value>3–64 characters, lowercase letters, digits, "-" or "_". Leave empty for a random slug.</value></data>
+  <data name="upload.password"><value>Password (optional)</value></data>
+  <data name="upload.max_downloads"><value>Max downloads (optional)</value></data>
+  <data name="upload.expires_at"><value>Expires at (optional)</value></data>
+  <data name="upload.message"><value>Message (Markdown)</value></data>
+  <data name="upload.message_placeholder"><value>Here's the deck we discussed…</value></data>
+  <data name="upload.notify_me"><value>Notify me by email on download</value></data>
+  <data name="upload.create_link"><value>Create link</value></data>
+  <data name="upload.done"><value>Your share link is ready</value></data>
+  <data name="upload.share_this"><value>Share this URL:</value></data>
+  <data name="upload.copy"><value>Copy</value></data>
+
+  <data name="links.title"><value>Your links</value></data>
+  <data name="links.lede"><value>Every share link you've created. Revoke, adjust, or delete.</value></data>
+  <data name="links.empty"><value>No links yet.</value></data>
+  <data name="links.slug"><value>Slug</value></data>
+  <data name="links.downloads"><value>Downloads</value></data>
+  <data name="links.expires"><value>Expires</value></data>
+  <data name="links.state"><value>State</value></data>
+  <data name="links.active"><value>Active</value></data>
+  <data name="links.revoked"><value>Revoked</value></data>
+  <data name="links.expired"><value>Expired</value></data>
+
+  <data name="settings.title"><value>Settings</value></data>
+  <data name="settings.lede"><value>Your profile, language, and custom share domains.</value></data>
+  <data name="settings.profile"><value>Profile</value></data>
+  <data name="settings.name"><value>Name</value></data>
+  <data name="settings.email"><value>Email</value></data>
+  <data name="settings.role"><value>Role</value></data>
+  <data name="settings.language"><value>Language</value></data>
+  <data name="settings.language_note"><value>Switch languages any time from the sidebar footer. Public share pages honour your recipient's browser language automatically.</value></data>
+  <data name="settings.domains"><value>Custom domains</value></data>
+  <data name="settings.domains_note"><value>Serve your share links from your own domain, e.g. share.your-company.com. Requires a CNAME + a TXT verification record.</value></data>
+  <data name="settings.add_domain"><value>Add domain</value></data>
+  <data name="settings.hostname"><value>Hostname</value></data>
+  <data name="settings.verification"><value>Verification</value></data>
+  <data name="settings.certificate"><value>Certificate</value></data>
+  <data name="settings.verify"><value>Verify</value></data>
+
+  <data name="landing.title"><value>Someone shared a file with you</value></data>
+  <data name="landing.shared_by"><value>Shared by</value></data>
+  <data name="landing.expires_at"><value>Expires:</value></data>
+  <data name="landing.downloads_left"><value>downloads left</value></data>
+  <data name="landing.password.label"><value>This link is protected — enter the password:</value></data>
+  <data name="landing.download.button"><value>Download</value></data>
+  <data name="landing.powered_by"><value>Powered by</value></data>
+  <data name="landing.brand_note"><value>Brand-styled with Tungsten Automation guidelines.</value></data>
+
+  <data name="share.password.error"><value>Wrong password. Try again.</value></data>
+  <data name="share.expired.title"><value>This link has expired</value></data>
+  <data name="share.expired.body"><value>Ask the sender for a fresh link.</value></data>
+  <data name="share.notfound.title"><value>Link not found</value></data>
+  <data name="share.notfound.body"><value>The link either doesn't exist or has been revoked.</value></data>
+
+  <data name="upload.landing.title"><value>You've been asked to send a file</value></data>
+  <data name="upload.landing.request_by"><value>Requested by</value></data>
+  <data name="upload.landing.pick_file"><value>Pick a file to send</value></data>
+  <data name="upload.landing.button"><value>Send</value></data>
+  <data name="upload.notfound.title"><value>Upload link not found</value></data>
+  <data name="upload.notfound.body"><value>The link either doesn't exist or has been revoked.</value></data>
+  <data name="upload.expired.title"><value>This upload link has expired</value></data>
+  <data name="upload.expired.body"><value>Ask the sender for a fresh link.</value></data>
+</root>
