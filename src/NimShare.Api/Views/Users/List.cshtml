@@ -1,5 +1,8 @@
 @model IEnumerable<NimShare.Core.Entities.User>
-@{ ViewData["Title"] = @T["users.title"]; Layout = "_AppShell"; }
+@{
+    ViewData["Title"] = @T["users.title"]; Layout = "_AppShell";
+    var groups = (List<NimShare.Core.Entities.Group>)(ViewData["Groups"] ?? new List<NimShare.Core.Entities.Group>());
+}
 <div class="page-header">
     <div>
         <h1>@T["users.title"]</h1>
@@ -20,6 +23,7 @@
     <h2 class="card-title">@T["users.invite"]</h2>
     <p class="muted">@T["users.invite.lede"]</p>
     <form method="post" action="/settings/users/invite" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-2)">
+    @Html.AntiForgeryToken()
         <div class="field" style="flex:2;min-width:220px">
             <label>@T["auth.email"]</label>
             <input type="email" name="email" required placeholder="new.user@example.com"/>
@@ -43,6 +47,7 @@
     <summary style="cursor:pointer;font-weight:700;color:var(--tw-primary)">@T["users.create_new"]</summary>
     <p class="muted" style="margin-top:var(--sp-3)">@T["users.create_new.lede"]</p>
     <form method="post" action="/settings/users/create" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-3)">
+    @Html.AntiForgeryToken()
         <div class="field" style="flex:1;min-width:200px">
             <label>@T["auth.email"]</label>
             <input type="email" name="email" required/>
@@ -87,6 +92,7 @@
             <td>@u.DisplayName</td>
             <td>
                 <form method="post" action="/settings/users/@u.Id/set-role" style="display:inline">
+    @Html.AntiForgeryToken()
                     <select name="role" onchange="this.form.submit()">
                         <option value="User" selected="@(u.Role.ToString()=="User")">@T["users.role.user"]</option>
                         <option value="Admin" selected="@(u.Role.ToString()=="Admin")">@T["users.role.admin"]</option>
@@ -95,6 +101,7 @@
             </td>
             <td>
                 <form method="post" action="/settings/users/@u.Id/set-quota" class="row" style="gap:4px;align-items:center">
+    @Html.AntiForgeryToken()
                     <input type="number" name="quotaGb" value="@quotaGb" min="1" max="10240" style="width:80px;padding:4px 6px"/>
                     <span class="muted">GB</span>
                     <button class="btn btn-ghost btn-sm">@T["users.quota.save"]</button>
@@ -122,9 +129,11 @@
             </td>
             <td>
                 <form method="post" action="/settings/users/@u.Id/toggle-active" style="display:inline">
+    @Html.AntiForgeryToken()
                     <button class="btn btn-ghost btn-sm">@(u.IsActive ? @T["users.action.disable"] : @T["users.action.enable"])</button>
                 </form>
                 <form method="post" action="/settings/users/@u.Id/delete" style="display:inline" onsubmit="return confirm('@T["users.confirm.delete"]')">
+    @Html.AntiForgeryToken()
                     <button class="btn btn-ghost btn-sm">@T["users.action.delete"]</button>
                 </form>
             </td>
@@ -132,3 +141,70 @@
     }
     </tbody>
 </table>
+
+<div style="height:var(--sp-8)"></div>
+
+<div class="page-header">
+    <div>
+        <h1 id="groups">@T["groups.title"]</h1>
+        <p class="lede">@T["groups.lede"]</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-title">@T["groups.create_new"]</h2>
+    <form method="post" action="/groups/create" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap">
+        @Html.AntiForgeryToken()
+        <div class="field" style="flex:1;min-width:220px">
+            <label>@T["groups.name"]</label>
+            <input type="text" name="name" required maxlength="120"/>
+        </div>
+        <div class="field" style="flex:2;min-width:280px">
+            <label>@T["groups.description"]</label>
+            <input type="text" name="description" maxlength="2000"/>
+        </div>
+        <button type="submit" class="btn btn-primary">@T["groups.create"]</button>
+    </form>
+</div>
+
+@if (!groups.Any())
+{
+    <div class="card"><p class="muted">@T["groups.empty"]</p></div>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>@T["groups.name"]</th>
+            <th>@T["groups.description"]</th>
+            <th>@T["groups.members"]</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var g in groups)
+        {
+            <tr>
+                <td><a href="/groups/@g.Id">@g.Name</a></td>
+                <td class="muted">@g.Description</td>
+                <td>
+                    @g.Members.Count
+                    @foreach (var m in g.Members.Take(3))
+                    {
+                        <span class="chip" style="margin-left:4px">@m.User.DisplayName</span>
+                    }
+                    @if (g.Members.Count > 3)
+                    {
+                        <span class="muted" style="margin-left:4px">+@(g.Members.Count - 3)</span>
+                    }
+                </td>
+                <td>
+                    <a class="btn btn-ghost btn-sm" href="/groups/@g.Id">@T["users.action.manage"]</a>
+                    <a class="btn btn-ghost btn-sm" href="/browse/group/@g.Id">@T["groups.open_files"]</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

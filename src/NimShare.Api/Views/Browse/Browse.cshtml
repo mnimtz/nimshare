@@ -1,27 +1,27 @@
-@model IEnumerable<NimShare.Core.Entities.StorageFile>
 @using NimShare.Core.Entities
 @{
     var scope = (FileScope)ViewData["Scope"]!;
     var groupId = ViewData["GroupId"] as Guid?;
     var groupName = ViewData["GroupName"] as string;
-    var canManageGroup = (bool)(ViewData["CanManageGroup"] ?? false);
-    var titleKey = scope switch
+    var current = (Folder)ViewData["Current"]!;
+    var ancestry = (List<Folder>)ViewData["Ancestry"]!;
+    var subs = (List<Folder>)ViewData["Subfolders"]!;
+    var files = (List<StorageFile>)ViewData["Files"]!;
+    var canWrite = (bool)(ViewData["CanWrite"] ?? false);
+    var canManage = (bool)(ViewData["CanManage"] ?? false);
+    var urlBase = (string)ViewData["UrlBase"]!;
+    var currentUrl = Context.Request.Path.Value ?? urlBase;
+
+    string scopeTitle = scope switch
     {
-        FileScope.Personal => "browse.personal",
-        FileScope.Public => "browse.public",
-        FileScope.Group => "browse.group",
-        _ => "browse.personal"
+        FileScope.Personal => T["browse.tile.personal"].Value,
+        FileScope.Public => T["browse.tile.public"].Value,
+        FileScope.Group => groupName ?? T["browse.tile.groups"].Value,
+        _ => "",
     };
-    var uploadScope = scope switch
-    {
-        FileScope.Personal => "Personal",
-        FileScope.Public => "Public",
-        FileScope.Group => "Group",
-        _ => "Personal"
-    };
-    var displayTitle = scope == FileScope.Group ? groupName ?? T[titleKey].Value : T[titleKey].Value;
-    ViewData["Title"] = displayTitle;
+    ViewData["Title"] = current.ParentFolderId is null ? scopeTitle : current.Name;
     Layout = "_AppShell";
+
     string Bytes(long b)
     {
         string[] u = { "B", "KB", "MB", "GB", "TB" };
@@ -29,94 +29,176 @@
         while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
         return $"{v:0.##} {u[i]}";
     }
+    string TypeClass(string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
+        return ext switch
+        {
+            "pdf" => "pdf",
+            "doc" or "docx" or "odt" => "doc",
+            "xls" or "xlsx" or "csv" or "ods" => "xls",
+            "ppt" or "pptx" or "odp" => "ppt",
+            "png" or "jpg" or "jpeg" or "gif" or "webp" or "svg" or "heic" => "img",
+            "mp4" or "mov" or "avi" or "mkv" or "webm" => "vid",
+            "zip" or "7z" or "rar" or "tar" or "gz" => "zip",
+            "txt" or "md" or "log" => "txt",
+            _ => ""
+        };
+    }
+    string TypeLabel(string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToUpperInvariant();
+        return string.IsNullOrEmpty(ext) ? "FILE" : (ext.Length > 4 ? ext[..4] : ext);
+    }
+    string SegPath(int upTo)
+    {
+        var parts = ancestry.Skip(1).Take(upTo).Select(a => Uri.EscapeDataString(a.Name));
+        return string.Join('/', parts);
+    }
 }
 <div class="page-header">
     <div>
-        <h1>@displayTitle</h1>
-        <p class="lede">
-            @switch (scope)
+        <div class="breadcrumb">
+            <a href="/browse">@T["browse.root.title"]</a>
+            <span class="sep">/</span>
+            @for (var i = 0; i < ancestry.Count; i++)
             {
-                case FileScope.Personal: @T["browse.personal.lede"]; break;
-                case FileScope.Public:   @T["browse.public.lede"]; break;
-                case FileScope.Group:    @T["browse.group.lede"]; break;
+                var isLast = i == ancestry.Count - 1;
+                var name = i == 0 ? scopeTitle : ancestry[i].Name;
+                var url = i == 0 ? urlBase : (urlBase + "/" + SegPath(i));
+                if (isLast)
+                {
+                    <span class="current">@name</span>
+                }
+                else
+                {
+                    <a href="@url">@name</a>
+                    <span class="sep">/</span>
+                }
             }
-        </p>
+        </div>
+        <h1>@(current.ParentFolderId is null ? scopeTitle : current.Name)</h1>
     </div>
 </div>
 
-<div class="card">
-    <h2 class="card-title">@T["browse.upload_here"]</h2>
-    <div class="field">
-        <input type="file" id="pick"/>
-        <div class="helper" id="pickmeta"></div>
-    </div>
-    <button class="btn btn-primary" id="uploadBtn">@T["upload.button"]</button>
-    <div class="helper" id="uploadStatus"></div>
-</div>
+@if (TempData["Notice"] is string n)
+{
+    <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
 
-<div class="card">
-    <h2 class="card-title">@T["browse.files"] (@Model.Count())</h2>
-    @if (!Model.Any())
+<div class="browse-toolbar">
+    @if (canWrite)
     {
-        <p class="muted">@T["browse.empty"]</p>
+        <button class="btn btn-primary" onclick="openNewFolderModal()">+ @T["browse.new_folder"]</button>
+        <button class="btn btn-secondary" onclick="openUploadModal()">↑ @T["browse.upload"]</button>
     }
-    else
-    {
-        <table class="table">
-            <thead>
+    <button class="btn btn-ghost" onclick="openShareFolderModal('@current.Id')">🔗 @T["browse.share_this"]</button>
+    <button class="btn btn-ghost" onclick="openUploadRequestModal('@current.Id')">📥 @T["browse.request_upload"]</button>
+</div>
+
+@if (!subs.Any() && !files.Any())
+{
+    <div class="card"><p class="muted">@T["browse.empty"]</p></div>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th style="width:44px"></th>
+            <th>@T["file.name"]</th>
+            <th style="width:100px">@T["file.size"]</th>
+            <th style="width:200px">@T["file.uploaded"]</th>
+            @if (scope != FileScope.Personal) { <th style="width:180px">@T["groups.uploaded_by"]</th> }
+            <th style="width:80px"></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var sub in subs)
+        {
             <tr>
-                <th>@T["file.name"]</th>
-                <th>@T["file.size"]</th>
-                <th>@T["file.uploaded"]</th>
-                @if (scope != FileScope.Personal) { <th>@T["groups.uploaded_by"]</th> }
-                <th></th>
+                <td><div class="file-icon folder">📁</div></td>
+                <td class="browse-name">
+                    <a href="@(urlBase + (current.ParentFolderId is null ? "/" : "/" + SegPath(ancestry.Count - 1) + "/") + Uri.EscapeDataString(sub.Name))">@sub.Name</a>
+                </td>
+                <td class="muted">—</td>
+                <td class="muted">@sub.CreatedAt.ToString("u")</td>
+                @if (scope != FileScope.Personal) { <td></td> }
+                <td>
+                    <div class="actions-menu">
+                        <button onclick="toggleMenu(this)">⋯</button>
+                        <div class="menu">
+                            <button onclick="openShareFolderModal('@sub.Id')">🔗 @T["actions.share_link"]</button>
+                            <button onclick="openUploadRequestModal('@sub.Id')">📥 @T["actions.request_upload"]</button>
+                            @if (await IsManageable(sub, canManage))
+                            {
+                                <div class="divider"></div>
+                                <button onclick="openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎ @T["actions.rename"]</button>
+                                <form method="post" action="/browse/folders/@sub.Id/delete" onsubmit="return confirm('@T["actions.confirm_delete"]')">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="returnUrl" value="@currentUrl"/>
+                                    <button type="submit">🗑 @T["actions.delete"]</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </td>
             </tr>
-            </thead>
-            <tbody>
-            @foreach (var f in Model)
-            {
-                <tr>
-                    <td>@f.Name</td>
-                    <td>@Bytes(f.SizeBytes)</td>
-                    <td class="muted">@f.CreatedAt.ToString("u")</td>
-                    @if (scope != FileScope.Personal) { <td class="muted">@f.Owner.DisplayName</td> }
-                    <td>
-                        <a class="btn btn-ghost btn-sm" href="/upload?fileId=@f.Id">@T["file.share"]</a>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    }
-</div>
+        }
+        @foreach (var f in files)
+        {
+            <tr>
+                <td><div class="file-icon @TypeClass(f.Name)">@TypeLabel(f.Name)</div></td>
+                <td class="browse-name">@f.Name</td>
+                <td>@Bytes(f.SizeBytes)</td>
+                <td class="muted">@f.CreatedAt.ToString("u")</td>
+                @if (scope != FileScope.Personal) { <td class="muted">@f.Owner.DisplayName</td> }
+                <td>
+                    <div class="actions-menu">
+                        <button onclick="toggleMenu(this)">⋯</button>
+                        <div class="menu">
+                            <button onclick="openShareFileModal('@f.Id')">🔗 @T["actions.share_link"]</button>
+                            <div class="divider"></div>
+                            <form method="post" action="/api/v1/files/@f.Id" onsubmit="event.preventDefault(); deleteFile('@f.Id')">
+                                <button type="submit">🗑 @T["actions.delete"]</button>
+                            </form>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@functions {
+    async Task<bool> IsManageable(Folder f, bool inheritedCanManage) => inheritedCanManage;
+}
+
+<partial name="_LinkModals" model="@current" />
 
 <script>
-const scope = @Html.Raw(Json.Serialize(uploadScope));
-const groupId = @Html.Raw(groupId is null ? "null" : "\"" + groupId + "\"");
-const btn = document.getElementById('uploadBtn');
-const pick = document.getElementById('pick');
-const status = document.getElementById('uploadStatus');
-const meta = document.getElementById('pickmeta');
-pick.addEventListener('change', () => {
-    const f = pick.files[0]; if (!f) { meta.textContent=''; return; }
-    meta.textContent = `${f.name} · ${(f.size/1024/1024).toFixed(2)} MiB · ${f.type||'application/octet-stream'}`;
+const FOLDER_ID = @Json.Serialize(current.Id);
+const RETURN_URL = @Json.Serialize(currentUrl);
+
+function toggleMenu(btn) {
+    const menu = btn.closest('.actions-menu');
+    document.querySelectorAll('.actions-menu[open]').forEach(m => { if (m !== menu) m.removeAttribute('open'); });
+    if (menu.hasAttribute('open')) menu.removeAttribute('open'); else menu.setAttribute('open', '');
+}
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.actions-menu')) {
+        document.querySelectorAll('.actions-menu[open]').forEach(m => m.removeAttribute('open'));
+    }
 });
-btn.addEventListener('click', async () => {
-    const f = pick.files[0]; if (!f) { status.textContent = 'Pick a file first.'; return; }
-    btn.disabled = true; status.textContent = 'Requesting upload slot…';
-    const init = await fetch('/api/v1/files', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        credentials: 'same-origin',
-        body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: f.type, scope, groupId })
-    });
-    if (!init.ok) { status.textContent = 'Rejected: ' + init.status; btn.disabled = false; return; }
-    const { fileId, uploadUrl } = await init.json();
-    status.textContent = 'Uploading directly to storage…';
-    const put = await fetch(uploadUrl, {method:'PUT', headers:{'x-ms-blob-type':'BlockBlob','x-ms-blob-content-type':f.type||'application/octet-stream'}, body: f});
-    if (!put.ok) { status.textContent = 'Upload failed'; btn.disabled = false; return; }
-    await fetch(`/api/v1/files/${fileId}/complete`, {method:'POST', credentials:'same-origin'});
-    status.textContent = 'Done ✓ — reloading…';
-    setTimeout(() => location.reload(), 600);
-});
+
+async function deleteFile(id) {
+    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
+    const r = await fetch('/api/v1/files/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+}
 </script>

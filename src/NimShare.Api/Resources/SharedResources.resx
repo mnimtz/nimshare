@@ -60,6 +60,44 @@
   <data name="nav.files.personal"><value>My files</value></data>
   <data name="nav.files.public"><value>Public</value></data>
   <data name="nav.groups"><value>Groups</value></data>
+  <data name="nav.storage"><value>Storage</value></data>
+
+  <data name="browse.root.title"><value>Storage</value></data>
+  <data name="browse.root.lede"><value>Pick a space to work in. Your own files stay private; the public bucket is shared; each group has its own pool.</value></data>
+  <data name="browse.tile.personal"><value>My files</value></data>
+  <data name="browse.tile.personal.lede"><value>Files only you can see.</value></data>
+  <data name="browse.tile.public"><value>Public</value></data>
+  <data name="browse.tile.public.lede"><value>Shared with everyone signed in on this NimShare.</value></data>
+  <data name="browse.tile.groups"><value>Groups</value></data>
+  <data name="browse.tile.groups.lede"><value>Files shared inside each of your teams.</value></data>
+  <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet. Ask an admin to add you.</value></data>
+
+  <data name="browse.new_folder"><value>New folder</value></data>
+  <data name="browse.upload"><value>Upload</value></data>
+  <data name="browse.share_this"><value>Share this folder</value></data>
+  <data name="browse.request_upload"><value>Request upload here</value></data>
+  <data name="browse.folder_name"><value>Folder name</value></data>
+
+  <data name="actions.share_link"><value>Create share link</value></data>
+  <data name="actions.request_upload"><value>Request upload</value></data>
+  <data name="actions.rename"><value>Rename</value></data>
+  <data name="actions.delete"><value>Delete</value></data>
+  <data name="actions.confirm_delete"><value>Delete this item?</value></data>
+
+  <data name="modal.cancel"><value>Cancel</value></data>
+  <data name="modal.close"><value>Close</value></data>
+  <data name="modal.create"><value>Create</value></data>
+  <data name="modal.save"><value>Save</value></data>
+  <data name="modal.create_link"><value>Create link</value></data>
+  <data name="modal.share.title"><value>Share link options</value></data>
+  <data name="modal.share.for_file"><value>Recipient will be able to download this file.</value></data>
+  <data name="modal.share.for_folder"><value>Recipient will see all files in this folder.</value></data>
+  <data name="modal.upload_request.title"><value>Upload request link</value></data>
+  <data name="modal.upload_request.lede"><value>Send someone a link they can use to upload files directly into this folder.</value></data>
+  <data name="modal.upload_request.max_uploads"><value>Max uploads</value></data>
+
+  <data name="users.action.manage"><value>Manage</value></data>
+  <data name="links.folder_target"><value>(folder share)</value></data>
 
   <data name="groups.title"><value>Groups</value></data>
   <data name="groups.lede"><value>Teams that share a common pool of files. Managers can add members and manage the group's files; members can read and upload.</value></data>

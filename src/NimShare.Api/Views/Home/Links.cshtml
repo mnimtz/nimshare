@@ -35,7 +35,7 @@ else
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
                 <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>@l.File.Name</td>
+                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
                 <td>@l.DownloadCount @(l.MaxDownloads is int m ? $" / {m}" : "")</td>
                 <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
                 <td><span class="chip @state.Item1">@state.Item2</span></td>

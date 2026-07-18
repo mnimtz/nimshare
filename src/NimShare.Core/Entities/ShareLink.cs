@@ -4,8 +4,13 @@ public class ShareLink
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public Guid FileId { get; set; }
-    public StorageFile File { get; set; } = null!;
+    /// <summary>Set when this link points at a single file. Mutually exclusive with FolderId.</summary>
+    public Guid? FileId { get; set; }
+    public StorageFile? File { get; set; }
+
+    /// <summary>Set when this link points at a whole folder (recipient gets a mini browser or ZIP). Mutually exclusive with FileId.</summary>
+    public Guid? FolderId { get; set; }
+    public Folder? Folder { get; set; }
 
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;

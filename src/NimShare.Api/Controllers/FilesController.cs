@@ -23,19 +23,34 @@ public class FilesController : ControllerBase
         _users = users;
     }
 
-    public record CreateFileRequest(string Name, long SizeBytes, string ContentType, string? Folder, string? Scope, Guid? GroupId);
+    public record CreateFileRequest(string Name, long SizeBytes, string ContentType,
+        string? Folder, string? Scope, Guid? GroupId, Guid? FolderId);
     public record CreateFileResponse(Guid FileId, string UploadUrl, string UploadMethod, DateTimeOffset ExpiresAt);
 
     [HttpPost]
-    public async Task<ActionResult<CreateFileResponse>> Create([FromBody] CreateFileRequest req, [FromServices] IFileAccessService access, CancellationToken ct)
+    public async Task<ActionResult<CreateFileResponse>> Create([FromBody] CreateFileRequest req,
+        [FromServices] IFileAccessService access,
+        [FromServices] IFolderService folders,
+        CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
 
-        // Parse scope; default is Personal.
-        var scope = FileScope.Personal;
-        if (!string.IsNullOrWhiteSpace(req.Scope) && Enum.TryParse<FileScope>(req.Scope, true, out var parsed))
+        // Resolve folder — if the client gave a FolderId, use it (new file-browser flow).
+        Folder? folder = null;
+        if (req.FolderId is Guid folderId)
+        {
+            folder = await _db.Folders.FindAsync(new object[] { folderId }, ct);
+            if (folder is null) return NotFound();
+            if (!await folders.CanWriteAsync(folder, user, ct))
+                return Problem(statusCode: 403, title: "Cannot upload into this folder");
+        }
+
+        // Parse scope; default is Personal (or derive from folder if present).
+        var scope = folder?.Scope ?? FileScope.Personal;
+        if (folder is null && !string.IsNullOrWhiteSpace(req.Scope) && Enum.TryParse<FileScope>(req.Scope, true, out var parsed))
             scope = parsed;
-        if (!await access.CanUploadIntoAsync(user, scope, req.GroupId, ct))
+        var groupId = folder?.OwnerGroupId ?? req.GroupId;
+        if (folder is null && !await access.CanUploadIntoAsync(user, scope, groupId, ct))
             return Problem(statusCode: 403, title: "Cannot upload into this scope");
 
         var usedBytes = await _db.Files
@@ -49,7 +64,8 @@ public class FilesController : ControllerBase
         {
             OwnerId = user.Id,
             Scope = scope,
-            GroupId = scope == FileScope.Group ? req.GroupId : null,
+            GroupId = scope == FileScope.Group ? groupId : null,
+            FolderId = folder?.Id,
             Name = req.Name,
             SizeBytes = req.SizeBytes,
             ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,

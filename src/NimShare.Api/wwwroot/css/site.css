@@ -379,6 +379,148 @@ input:focus, select:focus, textarea:focus {
     background: rgba(255, 255, 255, .08);
 }
 
+/* ── File browser ──────────────────────────────────────────────── */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    color: var(--tw-muted-blue);
+    font-size: .9rem;
+    margin-bottom: var(--sp-4);
+    flex-wrap: wrap;
+}
+.breadcrumb a {
+    color: var(--tw-accent);
+    text-decoration: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.breadcrumb a:hover { background: var(--tw-gray-200); }
+.breadcrumb .sep { color: var(--tw-gray-300); font-size: 1rem; }
+.breadcrumb .current { color: var(--tw-primary); font-weight: 700; }
+
+.browse-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+    flex-wrap: wrap;
+}
+
+.file-icon {
+    width: 32px; height: 32px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    display: grid; place-items: center;
+    color: var(--tw-white);
+    font-weight: 900;
+    font-size: .65rem;
+    letter-spacing: .04em;
+    background: linear-gradient(135deg, var(--tw-accent) 0%, var(--tw-primary-alt) 100%);
+}
+.file-icon.folder { background: linear-gradient(135deg, #FFC600 0%, #FF9900 100%); }
+.file-icon.pdf    { background: linear-gradient(135deg, #DC2626 0%, #7f1010 100%); }
+.file-icon.doc    { background: linear-gradient(135deg, #2b6cb0 0%, #1a365d 100%); }
+.file-icon.xls    { background: linear-gradient(135deg, #059669 0%, #064e3b 100%); }
+.file-icon.ppt    { background: linear-gradient(135deg, #ea580c 0%, #7c2d12 100%); }
+.file-icon.img    { background: linear-gradient(135deg, #ec4899 0%, #831843 100%); }
+.file-icon.vid    { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); }
+.file-icon.zip    { background: linear-gradient(135deg, #64748b 0%, #1e293b 100%); }
+.file-icon.txt    { background: linear-gradient(135deg, #6b7280 0%, #374151 100%); }
+
+.browse-name {
+    display: flex; align-items: center; gap: var(--sp-3);
+}
+.browse-name a { color: var(--tw-primary); font-weight: 500; text-decoration: none; }
+.browse-name a:hover { color: var(--tw-accent); }
+
+.scope-tile {
+    display: block;
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+    text-decoration: none;
+    color: var(--tw-primary);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--t-fast), transform var(--t-fast);
+    position: relative;
+    overflow: hidden;
+}
+.scope-tile:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    color: var(--tw-primary);
+}
+.scope-tile h3 { color: var(--tw-primary); font-size: 1.1rem; margin-bottom: var(--sp-2); }
+.scope-tile p { color: var(--tw-muted-blue); font-size: .88rem; }
+.scope-tile .icon {
+    width: 48px; height: 48px; border-radius: var(--r);
+    display: grid; place-items: center;
+    color: var(--tw-white); font-size: 1.4rem; font-weight: 900;
+    margin-bottom: var(--sp-4);
+}
+
+.actions-menu { position: relative; display: inline-block; }
+.actions-menu > button {
+    background: transparent; border: 1px solid var(--tw-gray-300);
+    color: var(--tw-primary); padding: 4px 10px; border-radius: 6px;
+    cursor: pointer; font-size: .85rem;
+}
+.actions-menu > button:hover { background: var(--tw-gray-200); }
+.actions-menu > .menu {
+    position: absolute; top: 100%; right: 0;
+    background: var(--tw-white); border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-2) 0;
+    min-width: 200px;
+    z-index: 20;
+    display: none;
+}
+.actions-menu[open] > .menu { display: block; }
+.actions-menu .menu button,
+.actions-menu .menu form button,
+.actions-menu .menu a {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 16px; background: none; border: none; cursor: pointer;
+    color: var(--tw-text); font-size: .9rem;
+    text-decoration: none;
+}
+.actions-menu .menu button:hover,
+.actions-menu .menu a:hover { background: var(--tw-gray-100); color: var(--tw-primary); }
+.actions-menu .menu .divider { height: 1px; background: var(--tw-gray-200); margin: 4px 0; }
+.actions-menu .menu form { margin: 0; }
+
+/* Modal */
+.modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,18,59,.55);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 50;
+    padding: var(--sp-4);
+}
+.modal-backdrop.open { display: flex; }
+.modal-panel {
+    background: var(--tw-white);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 560px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    padding: var(--sp-6);
+}
+.modal-panel h2 { color: var(--tw-primary); margin-bottom: var(--sp-4); }
+.modal-panel .actions {
+    display: flex; justify-content: flex-end; gap: var(--sp-3);
+    margin-top: var(--sp-6);
+}
+.modal-result {
+    display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-4);
+    padding: var(--sp-3); background: var(--tw-gray-100); border-radius: var(--r-sm);
+}
+.modal-result input { flex: 1; }
+
 /* ── Collapsible sidebar section ───────────────────────────────── */
 .nav-section {
     padding: var(--sp-3) var(--sp-4);

@@ -8,58 +8,147 @@ using NimShare.Core.Entities;
 namespace NimShare.Api.Controllers;
 
 /// <summary>
-/// Scoped file browser. /files/personal, /files/public, /files/group/{id}.
-/// Each shows the files that belong to that scope, filtered by permissions.
+/// Hierarchical file browser ("Ablage") — a single sidebar entry that shows a
+/// classic file/folder tree per scope. URLs:
+///   /browse                             list of top-level scope tiles
+///   /browse/personal                    personal root
+///   /browse/personal/Projects/Q3        deep subfolder
+///   /browse/public                      public root
+///   /browse/group/{groupId}             group root
+///   /browse/group/{groupId}/Docs/...    deeper
 /// </summary>
 [Authorize(Policy = "WebUser")]
+[Route("/browse")]
 public class BrowseController : Controller
 {
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
+    private readonly IFolderService _folders;
     private readonly IFileAccessService _access;
 
-    public BrowseController(NimShareDbContext db, ICurrentUserService users, IFileAccessService access)
+    public BrowseController(NimShareDbContext db, ICurrentUserService users, IFolderService folders, IFileAccessService access)
     {
         _db = db;
         _users = users;
+        _folders = folders;
         _access = access;
     }
 
-    [HttpGet("/files")]
-    [HttpGet("/files/personal")]
-    public async Task<IActionResult> Personal(CancellationToken ct) => await Render(FileScope.Personal, null, ct);
-
-    [HttpGet("/files/public")]
-    public async Task<IActionResult> Public(CancellationToken ct) => await Render(FileScope.Public, null, ct);
-
-    [HttpGet("/files/group/{groupId:guid}")]
-    public async Task<IActionResult> Group(Guid groupId, CancellationToken ct)
+    // ── /browse — root: scope tiles ────────────────────────────────────────
+    [HttpGet("")]
+    public async Task<IActionResult> Root(CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
-        if (me.Role != UserRole.Admin && !await _access.IsGroupMemberAsync(me, groupId, ct))
-            return Forbid();
-        return await Render(FileScope.Group, groupId, ct);
+        var groups = await _access.ListMyGroupsAsync(me, ct);
+        ViewData["Groups"] = groups;
+        return View("Root");
     }
 
-    private async Task<IActionResult> Render(FileScope scope, Guid? groupId, CancellationToken ct)
+    // ── /browse/personal[/**] ──────────────────────────────────────────────
+    [HttpGet("personal/{**path}")]
+    public Task<IActionResult> Personal(string? path, CancellationToken ct) => RenderScope(FileScope.Personal, null, path, ct);
+
+    // ── /browse/public[/**] ────────────────────────────────────────────────
+    [HttpGet("public/{**path}")]
+    public Task<IActionResult> Public(string? path, CancellationToken ct) => RenderScope(FileScope.Public, null, path, ct);
+
+    // ── /browse/group/{id}[/**] ────────────────────────────────────────────
+    [HttpGet("group/{groupId:guid}/{**path}")]
+    public Task<IActionResult> Group(Guid groupId, string? path, CancellationToken ct) => RenderScope(FileScope.Group, groupId, path, ct);
+
+    private async Task<IActionResult> RenderScope(FileScope scope, Guid? groupId, string? path, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
-        var q = _db.Files
-            .Include(f => f.Owner)
-            .Where(f => f.Status == StorageFileStatus.Ready && f.Scope == scope);
-        if (scope == FileScope.Personal) q = q.Where(f => f.OwnerId == me.Id);
-        if (scope == FileScope.Group) q = q.Where(f => f.GroupId == groupId);
+        if (scope == FileScope.Group && groupId is Guid g
+            && me.Role != UserRole.Admin && !await _access.IsGroupMemberAsync(me, g, ct))
+            return Forbid();
 
-        var files = await q.OrderByDescending(f => f.CreatedAt).ToListAsync(ct);
+        var root = await _folders.GetOrCreateRootAsync(
+            scope,
+            scope == FileScope.Personal ? me.Id : null,
+            scope == FileScope.Group ? groupId : null,
+            me, ct);
+        var segments = string.IsNullOrEmpty(path)
+            ? Array.Empty<string>()
+            : path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var current = await _folders.ResolvePathAsync(root, segments, ct);
+        if (current is null) return NotFound();
+        if (!await _folders.CanReadAsync(current, me, ct)) return Forbid();
+
+        var subs = await _folders.ListSubfoldersAsync(current, ct);
+        var files = await _folders.ListFilesAsync(current, ct);
+        var ancestry = await _folders.GetAncestryAsync(current, ct);
+        var canWrite = await _folders.CanWriteAsync(current, me, ct);
+        var canManage = await _folders.CanManageAsync(current, me, ct);
 
         ViewData["Scope"] = scope;
         ViewData["GroupId"] = groupId;
-        if (groupId is Guid g)
+        ViewData["Current"] = current;
+        ViewData["Ancestry"] = ancestry;
+        ViewData["Subfolders"] = subs;
+        ViewData["Files"] = files;
+        ViewData["CanWrite"] = canWrite;
+        ViewData["CanManage"] = canManage;
+        ViewData["UrlBase"] = BuildUrlBase(scope, groupId);
+
+        if (scope == FileScope.Group && groupId is Guid gg)
         {
-            var group = await _db.Groups.FindAsync(new object[] { g }, ct);
-            ViewData["GroupName"] = group?.Name ?? "";
-            ViewData["CanManageGroup"] = me.Role == UserRole.Admin || await _access.IsGroupManagerAsync(me, g, ct);
+            var g0 = await _db.Groups.FindAsync(new object[] { gg }, ct);
+            ViewData["GroupName"] = g0?.Name;
         }
-        return View("Browse", files);
+        return View("Browse");
     }
+
+    private static string BuildUrlBase(FileScope scope, Guid? groupId) => scope switch
+    {
+        FileScope.Personal => "/browse/personal",
+        FileScope.Public => "/browse/public",
+        FileScope.Group => $"/browse/group/{groupId}",
+        _ => "/browse",
+    };
+
+    // ── POST: create folder ────────────────────────────────────────────────
+    [HttpPost("folders/create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateFolder(Guid parentId, string name, string returnUrl, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var parent = await _db.Folders.FindAsync(new object[] { parentId }, ct);
+        if (parent is null) return NotFound();
+        if (!await _folders.CanWriteAsync(parent, me, ct)) return Forbid();
+        try { await _folders.CreateChildAsync(parent, name, me, ct); }
+        catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return Redirect(SafeReturn(returnUrl));
+    }
+
+    // ── POST: rename folder ────────────────────────────────────────────────
+    [HttpPost("folders/{id:guid}/rename")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RenameFolder(Guid id, string name, string returnUrl, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        try { await _folders.RenameAsync(folder, name, ct); }
+        catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return Redirect(SafeReturn(returnUrl));
+    }
+
+    // ── POST: delete folder ────────────────────────────────────────────────
+    [HttpPost("folders/{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteFolder(Guid id, string returnUrl, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        try { await _folders.DeleteAsync(folder, ct); }
+        catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return Redirect(SafeReturn(returnUrl));
+    }
+
+    private string SafeReturn(string? url) =>
+        !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : "/browse";
 }

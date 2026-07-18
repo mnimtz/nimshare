@@ -17,6 +17,7 @@
 }
 
 <form method="post" action="/settings/profile" class="card" style="max-width:640px">
+    @Html.AntiForgeryToken()
     <h2 class="card-title">@T["profile.identity"]</h2>
     <div class="field">
         <label for="DisplayName">@T["auth.display_name"]</label>

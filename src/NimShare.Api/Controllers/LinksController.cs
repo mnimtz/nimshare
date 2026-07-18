@@ -30,7 +30,8 @@ public class LinksController : ControllerBase
     }
 
     public record CreateLinkRequest(
-        Guid FileId,
+        Guid? FileId,
+        Guid? FolderId,
         string? Slug,
         string? Password,
         DateTimeOffset? ExpiresAt,
@@ -45,14 +46,29 @@ public class LinksController : ControllerBase
         bool IsRevoked, DateTimeOffset CreatedAt);
 
     [HttpPost]
-    public async Task<ActionResult<LinkDto>> Create([FromBody] CreateLinkRequest req, CancellationToken ct)
+    public async Task<ActionResult<LinkDto>> Create([FromBody] CreateLinkRequest req,
+        [FromServices] IFileAccessService access,
+        [FromServices] IFolderService folderSvc,
+        CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
+        if (req.FileId is null && req.FolderId is null)
+            return Problem(statusCode: 422, title: "Either FileId or FolderId is required.");
+        if (req.FileId is not null && req.FolderId is not null)
+            return Problem(statusCode: 422, title: "Provide either FileId or FolderId, not both.");
 
-        var file = await _db.Files.SingleOrDefaultAsync(
-            f => f.Id == req.FileId && f.OwnerId == user.Id && f.Status == StorageFileStatus.Ready, ct);
-        if (file is null) return Problem(statusCode: 404, title: "File not found",
-            detail: "The file must exist, belong to you, and be in Ready state.");
+        StorageFile? file = null;
+        NimShare.Core.Entities.Folder? folder = null;
+        if (req.FileId is Guid fid)
+        {
+            file = await _db.Files.Include(f => f.Owner).SingleOrDefaultAsync(f => f.Id == fid && f.Status == StorageFileStatus.Ready, ct);
+            if (file is null || !await access.CanShareAsync(user, file, ct)) return Forbid();
+        }
+        else if (req.FolderId is Guid folid)
+        {
+            folder = await _db.Folders.FindAsync(new object[] { folid }, ct);
+            if (folder is null || !await folderSvc.CanReadAsync(folder, user, ct)) return Forbid();
+        }
 
         string slug;
         try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
@@ -61,7 +77,8 @@ public class LinksController : ControllerBase
 
         var link = new ShareLink
         {
-            FileId = file.Id,
+            FileId = file?.Id,
+            FolderId = folder?.Id,
             OwnerId = user.Id,
             Slug = slug,
             PasswordHash = string.IsNullOrEmpty(req.Password) ? null : _hasher.Hash(req.Password),

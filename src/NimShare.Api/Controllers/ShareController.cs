@@ -44,7 +44,7 @@ public class ShareController : Controller
     public async Task<IActionResult> Landing(string slug, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
-        if (link is null || link.File.Status != StorageFileStatus.Ready)
+        if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready)
             return View("NotFound");
 
         var now = DateTimeOffset.UtcNow;
@@ -74,7 +74,7 @@ public class ShareController : Controller
     public async Task<IActionResult> Submit(string slug, string? password, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
-        if (link is null || link.File.Status != StorageFileStatus.Ready) return View("NotFound");
+        if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return View("NotFound");
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 

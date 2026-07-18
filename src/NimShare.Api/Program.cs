@@ -176,6 +176,7 @@ builder.Services.AddScoped<ILinkAccessService, LinkAccessService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
+builder.Services.AddScoped<IFolderService, FolderService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 // The old SmtpNotificationService is replaced by the gateway-backed adapter so

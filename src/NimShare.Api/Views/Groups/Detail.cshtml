@@ -23,6 +23,7 @@
         @if (canManage)
         {
             <form method="post" action="/groups/@Model.Id/delete" onsubmit="return confirm('@T["groups.confirm.delete"]')" style="display:inline">
+    @Html.AntiForgeryToken()
                 <button class="btn btn-ghost">@T["groups.delete"]</button>
             </form>
         }
@@ -39,6 +40,7 @@
     @if (canManage && candidates.Any())
     {
         <form method="post" action="/groups/@Model.Id/members/add" class="row" style="align-items:flex-end;margin-bottom:var(--sp-4);flex-wrap:wrap">
+    @Html.AntiForgeryToken()
             <div class="field" style="flex:2;min-width:220px">
                 <label>@T["groups.add_member"]</label>
                 <select name="userId" required>
@@ -73,6 +75,7 @@
                     @if (canManage)
                     {
                         <form method="post" action="/groups/@Model.Id/members/@m.UserId/set-role" style="display:inline">
+    @Html.AntiForgeryToken()
                             <select name="role" onchange="this.form.submit()">
                                 <option value="Member" selected="@(m.Role==NimShare.Core.Entities.GroupRole.Member)">@T["groups.role.member"]</option>
                                 <option value="Manager" selected="@(m.Role==NimShare.Core.Entities.GroupRole.Manager)">@T["groups.role.manager"]</option>
@@ -88,6 +91,7 @@
                     @if (canManage)
                     {
                         <form method="post" action="/groups/@Model.Id/members/@m.UserId/remove" style="display:inline">
+    @Html.AntiForgeryToken()
                             <button class="btn btn-ghost btn-sm">@T["groups.remove"]</button>
                         </form>
                     }

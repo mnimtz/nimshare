@@ -1,0 +1,271 @@
+@model NimShare.Core.Entities.Folder
+@{
+    var currentUrl = Context.Request.Path.Value ?? "/browse";
+}
+
+<!-- New Folder Modal -->
+<div class="modal-backdrop" id="modalNewFolder" onclick="if(event.target===this)closeModal('modalNewFolder')">
+    <div class="modal-panel">
+        <h2>@T["browse.new_folder"]</h2>
+        <form method="post" action="/browse/folders/create">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="parentId" value="@Model.Id"/>
+            <input type="hidden" name="returnUrl" value="@currentUrl"/>
+            <div class="field">
+                <label for="newFolderName">@T["browse.folder_name"]</label>
+                <input type="text" name="name" id="newFolderName" required maxlength="255" autofocus/>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalNewFolder')">@T["modal.cancel"]</button>
+                <button type="submit" class="btn btn-primary">@T["modal.create"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Rename Folder Modal -->
+<div class="modal-backdrop" id="modalRenameFolder" onclick="if(event.target===this)closeModal('modalRenameFolder')">
+    <div class="modal-panel">
+        <h2>@T["actions.rename"]</h2>
+        <form method="post" id="renameForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@currentUrl"/>
+            <div class="field">
+                <label for="renameName">@T["browse.folder_name"]</label>
+                <input type="text" name="name" id="renameName" required maxlength="255"/>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalRenameFolder')">@T["modal.cancel"]</button>
+                <button type="submit" class="btn btn-primary">@T["modal.save"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Upload Modal (drag-drop stays TODO; simple file picker for now) -->
+<div class="modal-backdrop" id="modalUpload" onclick="if(event.target===this)closeModal('modalUpload')">
+    <div class="modal-panel">
+        <h2>@T["browse.upload"]</h2>
+        <div class="field">
+            <input type="file" id="uploadPick" multiple/>
+        </div>
+        <div id="uploadStatus" class="helper"></div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalUpload')">@T["modal.close"]</button>
+            <button type="button" class="btn btn-primary" onclick="startUpload()">@T["browse.upload"]</button>
+        </div>
+    </div>
+</div>
+
+<!-- Share Link Modal -->
+<div class="modal-backdrop" id="modalShare" onclick="if(event.target===this)closeModal('modalShare')">
+    <div class="modal-panel">
+        <h2>@T["modal.share.title"]</h2>
+        <p class="muted" id="shareTargetHint"></p>
+        <div class="field">
+            <label>@T["upload.slug"]</label>
+            <input type="text" id="shareSlug" placeholder="project-x"/>
+            <div class="helper">@T["upload.slug_helper"]</div>
+        </div>
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.password"]</label>
+                <input type="text" id="sharePw"/>
+            </div>
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.max_downloads"]</label>
+                <input type="number" id="shareMax" min="1"/>
+            </div>
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.expires_at"]</label>
+                <input type="datetime-local" id="shareExp"/>
+            </div>
+        </div>
+        <div class="field">
+            <label>@T["upload.message"]</label>
+            <textarea id="shareMsg" rows="2" placeholder="@T["upload.message_placeholder"]"></textarea>
+        </div>
+        <label style="font-weight:400"><input type="checkbox" id="shareNotify"/> @T["upload.notify_me"]</label>
+        <div id="shareResult" style="display:none">
+            <div class="modal-result">
+                <input id="shareUrl" readonly/>
+                <button class="btn btn-ghost" onclick="copyShareUrl()">📋</button>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalShare')">@T["modal.close"]</button>
+            <button type="button" class="btn btn-primary" onclick="createShareLink()">@T["modal.create_link"]</button>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Request Modal -->
+<div class="modal-backdrop" id="modalUploadReq" onclick="if(event.target===this)closeModal('modalUploadReq')">
+    <div class="modal-panel">
+        <h2>@T["modal.upload_request.title"]</h2>
+        <p class="muted">@T["modal.upload_request.lede"]</p>
+        <div class="field">
+            <label>@T["upload.slug"]</label>
+            <input type="text" id="urSlug"/>
+        </div>
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.password"]</label>
+                <input type="text" id="urPw"/>
+            </div>
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["modal.upload_request.max_uploads"]</label>
+                <input type="number" id="urMax" min="1"/>
+            </div>
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.expires_at"]</label>
+                <input type="datetime-local" id="urExp"/>
+            </div>
+        </div>
+        <div class="field">
+            <label>@T["upload.message"]</label>
+            <textarea id="urMsg" rows="2"></textarea>
+        </div>
+        <div id="urResult" style="display:none">
+            <div class="modal-result">
+                <input id="urUrl" readonly/>
+                <button class="btn btn-ghost" onclick="copyUploadReqUrl()">📋</button>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalUploadReq')">@T["modal.close"]</button>
+            <button type="button" class="btn btn-primary" onclick="createUploadRequest()">@T["modal.create_link"]</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentShareTarget = { type: null, id: null };
+let currentUploadReqFolder = null;
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openNewFolderModal() {
+    document.getElementById('newFolderName').value = '';
+    openModal('modalNewFolder');
+}
+
+function openRenameFolderModal(id, name) {
+    document.getElementById('renameForm').action = '/browse/folders/' + id + '/rename';
+    document.getElementById('renameName').value = name;
+    openModal('modalRenameFolder');
+}
+
+function openUploadModal() {
+    document.getElementById('uploadPick').value = '';
+    document.getElementById('uploadStatus').textContent = '';
+    openModal('modalUpload');
+}
+
+function openShareFileModal(fileId) {
+    currentShareTarget = { type: 'file', id: fileId };
+    document.getElementById('shareTargetHint').textContent = @Json.Serialize(T["modal.share.for_file"].Value);
+    resetShareModal();
+    openModal('modalShare');
+}
+function openShareFolderModal(folderId) {
+    currentShareTarget = { type: 'folder', id: folderId };
+    document.getElementById('shareTargetHint').textContent = @Json.Serialize(T["modal.share.for_folder"].Value);
+    resetShareModal();
+    openModal('modalShare');
+}
+function resetShareModal() {
+    ['shareSlug','sharePw','shareMax','shareExp','shareMsg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('shareNotify').checked = false;
+    document.getElementById('shareResult').style.display = 'none';
+}
+
+function openUploadRequestModal(folderId) {
+    currentUploadReqFolder = folderId;
+    ['urSlug','urPw','urMax','urExp','urMsg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('urResult').style.display = 'none';
+    openModal('modalUploadReq');
+}
+
+async function createShareLink() {
+    const body = {
+        slug: document.getElementById('shareSlug').value || null,
+        password: document.getElementById('sharePw').value || null,
+        maxDownloads: parseInt(document.getElementById('shareMax').value, 10) || null,
+        expiresAt: document.getElementById('shareExp').value ? new Date(document.getElementById('shareExp').value).toISOString() : null,
+        message: document.getElementById('shareMsg').value || null,
+        notifyOnAccess: document.getElementById('shareNotify').checked,
+    };
+    if (currentShareTarget.type === 'file') {
+        body.fileId = currentShareTarget.id;
+    } else {
+        body.folderId = currentShareTarget.id;
+    }
+    const r = await fetch('/api/v1/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) { alert('Failed: ' + r.status + ' ' + await r.text()); return; }
+    const link = await r.json();
+    document.getElementById('shareUrl').value = link.url;
+    document.getElementById('shareResult').style.display = 'block';
+}
+function copyShareUrl() {
+    const el = document.getElementById('shareUrl');
+    el.select();
+    navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
+}
+
+async function createUploadRequest() {
+    const body = {
+        slug: document.getElementById('urSlug').value || null,
+        password: document.getElementById('urPw').value || null,
+        maxUploads: parseInt(document.getElementById('urMax').value, 10) || null,
+        expiresAt: document.getElementById('urExp').value ? new Date(document.getElementById('urExp').value).toISOString() : null,
+        message: document.getElementById('urMsg').value || null,
+        targetFolder: 'Received',
+        notifyOnUpload: true,
+    };
+    const r = await fetch('/api/v1/upload-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    const link = await r.json();
+    document.getElementById('urUrl').value = link.url;
+    document.getElementById('urResult').style.display = 'block';
+}
+function copyUploadReqUrl() {
+    const el = document.getElementById('urUrl');
+    el.select();
+    navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
+}
+
+async function startUpload() {
+    const files = document.getElementById('uploadPick').files;
+    if (!files.length) { document.getElementById('uploadStatus').textContent = 'Pick at least one file.'; return; }
+    const status = document.getElementById('uploadStatus');
+    for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        status.textContent = `Uploading ${i+1} / ${files.length}: ${f.name}…`;
+        const init = await fetch('/api/v1/files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: f.type, folderId: FOLDER_ID }),
+        });
+        if (!init.ok) { status.textContent = 'Rejected: ' + init.status; return; }
+        const { fileId, uploadUrl } = await init.json();
+        const put = await fetch(uploadUrl, { method: 'PUT', headers: {'x-ms-blob-type':'BlockBlob'}, body: f });
+        if (!put.ok) { status.textContent = 'Upload failed for ' + f.name; return; }
+        await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
+    }
+    status.textContent = 'Done ✓ — reloading…';
+    setTimeout(() => location.reload(), 400);
+}
+</script>

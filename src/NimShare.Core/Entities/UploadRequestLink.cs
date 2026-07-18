@@ -18,8 +18,12 @@ public class UploadRequestLink
     /// <summary>Markdown message shown to the recipient before they drop the file.</summary>
     public string? Message { get; set; }
 
-    /// <summary>Target folder in the owner's namespace for received files.</summary>
+    /// <summary>Target folder in the owner's namespace for received files (legacy string path).</summary>
     public string TargetFolder { get; set; } = "Received";
+
+    /// <summary>Target folder as a first-class entity; when set, uploads land under this folder.</summary>
+    public Guid? TargetFolderId { get; set; }
+    public Folder? TargetFolderRef { get; set; }
 
     public bool NotifyOnUpload { get; set; } = true;
     public bool IsRevoked { get; set; }

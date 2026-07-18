@@ -21,6 +21,7 @@
     <div class="card">
         <h2 class="card-title">@T["groups.create_new"]</h2>
         <form method="post" action="/groups/create" class="row" style="align-items:flex-end;flex-wrap:wrap">
+    @Html.AntiForgeryToken()
             <div class="field" style="flex:1;min-width:220px">
                 <label>@T["groups.name"]</label>
                 <input type="text" name="name" required maxlength="120"/>

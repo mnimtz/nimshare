@@ -18,6 +18,7 @@ public class NimShareDbContext : DbContext
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<EmailGatewaySettings> EmailGateways => Set<EmailGatewaySettings>();
+    public DbSet<Folder> Folders => Set<Folder>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -111,6 +112,39 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.ResendApiKeyEncrypted).HasMaxLength(2000);
         });
 
+        b.Entity<Folder>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Scope, x.OwnerUserId, x.OwnerGroupId, x.ParentFolderId });
+            e.HasIndex(x => new { x.ParentFolderId, x.Name });
+            e.Property(x => x.Name).HasMaxLength(255).IsRequired();
+            e.HasOne(x => x.Parent).WithMany(p => p.Children).HasForeignKey(x => x.ParentFolderId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Wire the new StorageFile.FolderId (nullable, restrict on delete — the app
+        // moves files out of a folder before allowing folder delete).
+        b.Entity<StorageFile>()
+            .HasOne(f => f.FolderRef)
+            .WithMany(fo => fo.Files)
+            .HasForeignKey(f => f.FolderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ShareLink now allows FileId OR FolderId (nullable both). FileId's existing
+        // FK from an earlier config is loosened here.
+        b.Entity<ShareLink>()
+            .HasOne(l => l.Folder)
+            .WithMany()
+            .HasForeignKey(l => l.FolderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.Entity<UploadRequestLink>()
+            .HasOne(l => l.TargetFolderRef)
+            .WithMany()
+            .HasForeignKey(l => l.TargetFolderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         b.Entity<ShareLink>(e =>
         {
             e.HasKey(x => x.Id);
@@ -125,7 +159,7 @@ public class NimShareDbContext : DbContext
             // paths" conflict on SQL Server. Both are Restrict; the code path
             // that deletes a User is expected to soft-delete or explicitly
             // clean up files/links first.
-            e.HasOne(x => x.File).WithMany(f => f.ShareLinks).HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.File).WithMany(f => f.ShareLinks).HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(x => x.Owner).WithMany(u => u.ShareLinks).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
 

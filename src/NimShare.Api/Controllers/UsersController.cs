@@ -36,6 +36,12 @@ public class UsersController : Controller
     {
         if (!await RequireAdmin(ct)) return Forbid();
         var users = await _db.Users.OrderBy(u => u.CreatedAt).ToListAsync(ct);
+        // Groups list for the Groups section on the same page.
+        var groups = await _db.Groups
+            .Include(g => g.Members).ThenInclude(m => m.User)
+            .OrderBy(g => g.Name)
+            .ToListAsync(ct);
+        ViewData["Groups"] = groups;
         return View(users);
     }
 

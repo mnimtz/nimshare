@@ -18,6 +18,7 @@
 }
 
 <form method="post" action="/settings/email" class="card" style="max-width:720px">
+    @Html.AntiForgeryToken()
     <div class="field">
         <label for="Provider">@T["email_gateway.provider"]</label>
         <select name="Provider" id="Provider">
@@ -74,6 +75,7 @@
 </form>
 
 <form method="post" action="/settings/email/test" class="card" style="max-width:720px">
+    @Html.AntiForgeryToken()
     <h2 class="card-title">@T["email_gateway.test"]</h2>
     <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-end">
         <div class="field" style="flex:1;min-width:260px">

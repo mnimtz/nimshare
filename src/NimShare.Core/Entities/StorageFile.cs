@@ -46,8 +46,12 @@ public class StorageFile
     /// <summary>Optional — populated at complete time when the client provides it.</summary>
     public string? Sha256 { get; set; }
 
-    /// <summary>Folder path within the user's own namespace, e.g. "Projects/Q3". Empty = root.</summary>
+    /// <summary>Folder path within the user's own namespace, e.g. "Projects/Q3". Empty = root. Legacy — new files use FolderId.</summary>
     public string Folder { get; set; } = string.Empty;
+
+    /// <summary>Owning folder — nullable for legacy files, always set for files uploaded in v0.6.0+.</summary>
+    public Guid? FolderId { get; set; }
+    public Folder? FolderRef { get; set; }
 
     public StorageFileStatus Status { get; set; } = StorageFileStatus.Pending;
 

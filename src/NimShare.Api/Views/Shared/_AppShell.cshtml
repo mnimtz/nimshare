@@ -60,19 +60,8 @@
 
         <nav class="sidebar-nav">
             <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
-            <a href="/upload"    class="@Exact("/upload")">@T["nav.upload"]</a>
+            <a href="/browse"    class="@Active("/browse")">📁 @T["nav.storage"]</a>
             <a href="/links"     class="@Exact("/links")">@T["nav.links"]</a>
-
-            <div class="nav-section" style="margin-top:var(--sp-2)">@T["nav.files"]</div>
-            <a href="/files/personal" class="@Active("/files/personal")">@T["nav.files.personal"]</a>
-            <a href="/files/public"   class="@Active("/files/public")">@T["nav.files.public"]</a>
-            <a href="/groups"         class="@Exact("/groups")">@T["nav.groups"]</a>
-
-            @foreach (var (gid, gname) in myGroups)
-            {
-                var active = currentPath.Contains($"/files/group/{gid}") || currentPath.Contains($"/groups/{gid}") ? "active" : "";
-                <a href="/files/group/@gid" class="@active" style="padding-left:var(--sp-8);font-size:.85rem">@gname</a>
-            }
 
             <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="this.classList.toggle('collapsed')">
                 <span>@T["nav.settings"]</span><span class="chevron">▾</span>

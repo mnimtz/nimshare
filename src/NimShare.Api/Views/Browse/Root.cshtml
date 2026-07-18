@@ -1,0 +1,48 @@
+@using NimShare.Api.Services
+@{
+    ViewData["Title"] = @T["browse.root.title"];
+    Layout = "_AppShell";
+    var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
+}
+<div class="page-header">
+    <div>
+        <h1>@T["browse.root.title"]</h1>
+        <p class="lede">@T["browse.root.lede"]</p>
+    </div>
+</div>
+
+<div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+    <a href="/browse/personal" class="scope-tile" style="flex:1;min-width:260px">
+        <div class="icon" style="background:linear-gradient(135deg,var(--tw-accent),var(--tw-primary-alt))">MY</div>
+        <h3>@T["browse.tile.personal"]</h3>
+        <p>@T["browse.tile.personal.lede"]</p>
+    </a>
+    <a href="/browse/public" class="scope-tile" style="flex:1;min-width:260px">
+        <div class="icon" style="background:linear-gradient(135deg,var(--tw-green),var(--tw-accent))">PUB</div>
+        <h3>@T["browse.tile.public"]</h3>
+        <p>@T["browse.tile.public.lede"]</p>
+    </a>
+</div>
+
+<h2 style="margin-top:var(--sp-8);color:var(--tw-primary)">@T["browse.tile.groups"]</h2>
+<p class="muted">@T["browse.tile.groups.lede"]</p>
+
+@if (!groups.Any())
+{
+    <div class="card" style="margin-top:var(--sp-3)">
+        <p class="muted">@T["browse.tile.groups.empty"]</p>
+    </div>
+}
+else
+{
+    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-3)">
+        @foreach (var g in groups)
+        {
+            <a href="/browse/group/@g.Id" class="scope-tile" style="flex:0 1 260px">
+                <div class="icon" style="background:linear-gradient(135deg,var(--tw-magenta),var(--tw-accent))">@(g.Name.Length > 2 ? g.Name.Substring(0,2).ToUpper() : g.Name.ToUpper())</div>
+                <h3>@g.Name</h3>
+                <p>@(g.MyRole == NimShare.Core.Entities.GroupRole.Manager ? @T["groups.role.manager"].Value : @T["groups.role.member"].Value)</p>
+            </a>
+        }
+    </div>
+}
