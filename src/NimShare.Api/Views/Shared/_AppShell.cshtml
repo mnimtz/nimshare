@@ -1,49 +1,69 @@
 @using System.Globalization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
+@using NimShare.Core.Entities
 @inject NimShare.Core.Data.NimShareDbContext DbForShell
 @{
     Layout = "_Layout";
     var currentPath = Context.Request.Path.Value ?? "/";
     string Active(string startsWith) => currentPath.StartsWith(startsWith, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     string Exact(string p) => string.Equals(currentPath, p, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-    var supported = new[] { ("en", "EN"), ("de", "DE"), ("fr", "FR"), ("it", "IT"), ("es", "ES") };
+    var supported = new[]
+    {
+        ("en", "EN"), ("de", "DE"), ("fr", "FR"),
+        ("it", "IT"), ("es", "ES"), ("nl", "NL"),
+    };
     var cur = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
     var isAdmin = User.IsInRole("Admin");
 
+    // Load the current user + their groups for the sidebar user-card + group list.
+    string displayName = User.Identity?.Name ?? "";
+    string email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+    string initials = "?";
     var myGroups = new List<(Guid Id, string Name)>();
-    var subClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var subClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (Guid.TryParse(subClaim, out var myId))
     {
+        var u = await DbForShell.Users.FindAsync(myId);
+        if (u is not null) { displayName = u.DisplayName; email = u.Email; }
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            initials = parts.Length switch
+            {
+                >= 2 => $"{parts[0][0]}{parts[^1][0]}",
+                1 => parts[0].Length > 1 ? parts[0][..2] : parts[0],
+                _ => "?"
+            };
+        }
         myGroups = await DbForShell.GroupMemberships
             .Where(m => m.UserId == myId)
             .OrderBy(m => m.Group.Name)
             .Select(m => new ValueTuple<Guid, string>(m.GroupId, m.Group.Name))
             .ToListAsync();
     }
+
+    var settingsOpen = currentPath.StartsWith("/settings", StringComparison.OrdinalIgnoreCase)
+                       || currentPath.StartsWith("/account", StringComparison.OrdinalIgnoreCase);
 }
 <div class="app-shell">
     <aside class="sidebar">
         <a class="sidebar-brand" href="/dashboard">
-            <span class="logo-tile" style="background:var(--tw-white)">
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="32" height="32" rx="6" fill="var(--tw-primary)"/>
-                    <path d="M6 22V10h4l6 8V10h4v12h-4l-6-8v8H6z" fill="var(--tw-white)"/>
-                </svg>
+            <span class="logo-tile" style="background:transparent;box-shadow:none;padding:0">
+                <img src="~/img/icon-64.png" width="44" height="44" alt="NimShare" style="border-radius:8px"/>
             </span>
             <span class="wordmark">
                 <span class="name">NimShare</span>
-                <span class="product">by Tungsten</span>
+                <span class="product">Share. Upload. Anywhere.</span>
             </span>
         </a>
 
         <nav class="sidebar-nav">
             <a href="/dashboard" class="@Active("/dashboard")">@T["nav.dashboard"]</a>
-            <a href="/upload"    class="@Active("/upload")">@T["nav.upload"]</a>
+            <a href="/upload"    class="@Exact("/upload")">@T["nav.upload"]</a>
             <a href="/links"     class="@Exact("/links")">@T["nav.links"]</a>
 
-            <div style="height:1px;background:rgba(255,255,255,.08);margin:var(--sp-2) 0"></div>
-
-            <div style="padding:var(--sp-2) var(--sp-4);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)">@T["nav.files"]</div>
+            <div class="nav-section" style="margin-top:var(--sp-2)">@T["nav.files"]</div>
             <a href="/files/personal" class="@Active("/files/personal")">@T["nav.files.personal"]</a>
             <a href="/files/public"   class="@Active("/files/public")">@T["nav.files.public"]</a>
             <a href="/groups"         class="@Exact("/groups")">@T["nav.groups"]</a>
@@ -54,28 +74,42 @@
                 <a href="/files/group/@gid" class="@active" style="padding-left:var(--sp-8);font-size:.85rem">@gname</a>
             }
 
-            <div style="height:1px;background:rgba(255,255,255,.08);margin:var(--sp-2) 0"></div>
-
-            <a href="/settings"  class="@Exact("/settings")">@T["nav.settings"]</a>
-            <a href="/account/password" class="@Active("/account/password")">@T["nav.password"]</a>
-            @if (isAdmin)
-            {
-                <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
-            }
+            <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="this.classList.toggle('collapsed')">
+                <span>@T["nav.settings"]</span><span class="chevron">▾</span>
+            </div>
+            <div class="nav-section-body">
+                <a href="/settings/profile" class="@Active("/settings/profile")">@T["nav.profile"]</a>
+                @if (isAdmin)
+                {
+                    <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
+                    <a href="/settings/email" class="@Active("/settings/email")">@T["nav.email_gateway"]</a>
+                }
+                <a href="/settings" class="@Exact("/settings")">@T["nav.domains"]</a>
+            </div>
         </nav>
 
         <div class="sidebar-footer">
-            <div>@ViewData["UserName"]</div>
-            <div class="lang-switcher" style="margin-top:8px">
+            <div class="user-card">
+                <div class="avatar">@initials</div>
+                <div class="name-block">
+                    <div class="name">@displayName</div>
+                    <div class="email">@email</div>
+                </div>
+                <a href="/logout" class="signout" title="@T["nav.signout"]" aria-label="@T["nav.signout"]">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
+
+            <div class="lang-switcher">
                 @foreach (var (code, label) in supported)
                 {
                     var cls = code == cur ? "active" : "";
                     <a href="?ui-culture=@code" class="@cls">@label</a>
                 }
             </div>
-            <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
-                <a href="/logout" style="color:rgba(255,255,255,.7);font-size:.8rem">@T["nav.signout"]</a>
-                <span style="color:rgba(255,255,255,.35);font-size:.7rem;font-family:var(--font-mono)">v@(NimShare.Api.BuildInfo.Version)</span>
+
+            <div style="margin-top:var(--sp-3);color:rgba(255,255,255,.35);font-size:.7rem;font-family:var(--font-mono);text-align:center">
+                NimShare v@(NimShare.Api.BuildInfo.Version)
             </div>
         </div>
     </aside>

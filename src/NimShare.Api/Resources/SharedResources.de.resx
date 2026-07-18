@@ -98,6 +98,47 @@
   <data name="links.email.message"><value>Optionale Nachricht:</value></data>
   <data name="links.email.sent"><value>E-Mail versandt.</value></data>
 
+  <data name="nav.profile"><value>Profil</value></data>
+  <data name="nav.email_gateway"><value>E-Mail-Gateway</value></data>
+  <data name="nav.domains"><value>Domains</value></data>
+
+  <data name="profile.title"><value>Dein Profil</value></data>
+  <data name="profile.lede"><value>Name, E-Mail und optionales Profilbild. Und dein Passwort ändern.</value></data>
+  <data name="profile.identity"><value>Identität</value></data>
+  <data name="profile.email_note"><value>Wende dich an einen Administrator, um deine E-Mail zu ändern.</value></data>
+  <data name="profile.avatar_url"><value>Profilbild-URL (optional)</value></data>
+  <data name="profile.avatar_helper"><value>URL eines öffentlichen Bilds einfügen. Sonst werden deine Initialen in der Seitenleiste angezeigt.</value></data>
+  <data name="profile.save"><value>Profil speichern</value></data>
+
+  <data name="users.invite"><value>Benutzer einladen</value></data>
+  <data name="users.invite.lede"><value>Der Empfänger bekommt einen Einmal-Link, wählt sein Passwort selbst und landet direkt in NimShare.</value></data>
+  <data name="users.invite.send"><value>Einladung senden</value></data>
+  <data name="users.create_new.lede"><value>Lieber Passwort selbst setzen und außerhalb weitergeben? Nutze das klassische Anlegen-Formular unten.</value></data>
+
+  <data name="invite.accept.title"><value>Passwort festlegen</value></data>
+  <data name="invite.accept.lede"><value>Du wurdest zu NimShare eingeladen als</value></data>
+  <data name="invite.accept.button"><value>Konto anlegen &amp; anmelden</value></data>
+  <data name="invite.invalid.title"><value>Einladung ungültig</value></data>
+  <data name="invite.invalid.body"><value>Der Link ist abgelaufen, bereits verwendet oder widerrufen. Bitte den Absender um eine frische Einladung.</value></data>
+
+  <data name="email_gateway.title"><value>E-Mail-Gateway</value></data>
+  <data name="email_gateway.lede"><value>Wähle, wie NimShare E-Mails verschickt — Download-Benachrichtigungen, Link-per-E-Mail, Einladungen. Zugangsdaten liegen verschlüsselt in der Datenbank.</value></data>
+  <data name="email_gateway.provider"><value>Anbieter</value></data>
+  <data name="email_gateway.provider.disabled"><value>Deaktiviert (nur loggen)</value></data>
+  <data name="email_gateway.from_name"><value>Absender-Name</value></data>
+  <data name="email_gateway.from_address"><value>Absender-Adresse</value></data>
+  <data name="email_gateway.smtp_host"><value>SMTP-Server</value></data>
+  <data name="email_gateway.smtp_port"><value>Port</value></data>
+  <data name="email_gateway.smtp_starttls"><value>STARTTLS verwenden</value></data>
+  <data name="email_gateway.smtp_user"><value>Benutzername</value></data>
+  <data name="email_gateway.smtp_pass"><value>Passwort</value></data>
+  <data name="email_gateway.resend_key"><value>Resend API-Key</value></data>
+  <data name="email_gateway.leave_blank"><value>Leer lassen, um den bestehenden Wert zu behalten.</value></data>
+  <data name="email_gateway.save"><value>Gateway speichern</value></data>
+  <data name="email_gateway.test"><value>Test-Mail senden</value></data>
+  <data name="email_gateway.test_recipient"><value>Empfängeradresse</value></data>
+  <data name="email_gateway.test_send"><value>Test senden</value></data>
+
   <data name="welcome.title"><value>Willkommen bei NimShare</value></data>
   <data name="welcome.headline"><value>Dateien teilen — schnell, sauber, kontrolliert.</value></data>
   <data name="welcome.subhead"><value>Einmal hochladen, dann per personalisiertem Link teilen: mit Ablauf, Passwort und Download-Limit — auf deinem eigenen Azure-Tenant.</value></data>

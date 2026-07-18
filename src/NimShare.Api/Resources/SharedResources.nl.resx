@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="brand.product_name"><value>NimShare</value></data>
+
+  <data name="nav.dashboard"><value>Dashboard</value></data>
+  <data name="nav.upload"><value>Uploaden</value></data>
+  <data name="nav.links"><value>Links</value></data>
+  <data name="nav.settings"><value>Instellingen</value></data>
+  <data name="nav.password"><value>Wachtwoord</value></data>
+  <data name="nav.users"><value>Gebruikers</value></data>
+  <data name="nav.signout"><value>Afmelden</value></data>
+  <data name="nav.files"><value>Bestanden</value></data>
+  <data name="nav.files.personal"><value>Mijn bestanden</value></data>
+  <data name="nav.files.public"><value>Openbaar</value></data>
+  <data name="nav.groups"><value>Groepen</value></data>
+
+  <data name="auth.email"><value>E-mail</value></data>
+  <data name="auth.display_name"><value>Jouw naam</value></data>
+  <data name="auth.password"><value>Wachtwoord</value></data>
+  <data name="auth.password_confirm"><value>Bevestig wachtwoord</value></data>
+  <data name="auth.password_helper"><value>Minstens 8 tekens. Een wachtwoordzin wordt aanbevolen.</value></data>
+
+  <data name="setup.title"><value>Maak de eerste beheerder aan</value></data>
+  <data name="setup.subtitle"><value>Eerste installatie</value></data>
+  <data name="setup.lede"><value>Dit is een nieuwe installatie. Maak hieronder je beheerdersaccount aan — het krijgt volledige toegang, inclusief gebruikersbeheer.</value></data>
+  <data name="setup.create_admin"><value>Beheerder aanmaken</value></data>
+
+  <data name="login.title"><value>Aanmelden</value></data>
+  <data name="login.sign_in"><value>Aanmelden</value></data>
+  <data name="login.remember_me"><value>Aangemeld blijven</value></data>
+  <data name="login.or"><value>of</value></data>
+
+  <data name="password.title"><value>Wachtwoord wijzigen</value></data>
+  <data name="password.lede"><value>Voer je huidige wachtwoord in en kies een nieuw.</value></data>
+  <data name="password.current"><value>Huidig wachtwoord</value></data>
+  <data name="password.new"><value>Nieuw wachtwoord</value></data>
+  <data name="password.save"><value>Wachtwoord bijwerken</value></data>
+
+  <data name="welcome.title"><value>Welkom bij NimShare</value></data>
+  <data name="welcome.headline"><value>Deel bestanden zonder gedoe.</value></data>
+  <data name="welcome.subhead"><value>Eenmaal uploaden, delen via persoonlijke links met vervaldatum, wachtwoord en downloadlimieten — op je eigen Azure-tenant.</value></data>
+  <data name="welcome.bullet1"><value>Aangepaste slugs, wachtwoorden, vervaldata en limieten</value></data>
+  <data name="welcome.bullet2"><value>Meerdere gebruikers met Microsoft Entra ID-aanmelding</value></data>
+  <data name="welcome.bullet3"><value>Aangepaste domeinen per gebruiker (Instellingen → Domeinen)</value></data>
+  <data name="welcome.bullet4"><value>API-first — iOS- en Android-clients volgen</value></data>
+  <data name="welcome.signin"><value>Aanmelden met Microsoft</value></data>
+
+  <data name="dashboard.title"><value>Dashboard</value></data>
+  <data name="dashboard.greeting"><value>Hallo</value></data>
+  <data name="dashboard.lede"><value>Een snel overzicht van je bestanden, links en opslag.</value></data>
+  <data name="dashboard.new_upload"><value>Nieuwe upload</value></data>
+  <data name="dashboard.stat.files"><value>Bestanden</value></data>
+  <data name="dashboard.stat.links"><value>Actieve links</value></data>
+  <data name="dashboard.stat.usage"><value>Opslag in gebruik</value></data>
+  <data name="dashboard.recent_files"><value>Recente bestanden</value></data>
+  <data name="dashboard.no_files"><value>Nog geen bestanden — start met je eerste upload.</value></data>
+
+  <data name="file.name"><value>Naam</value></data>
+  <data name="file.size"><value>Grootte</value></data>
+  <data name="file.type"><value>Type</value></data>
+  <data name="file.uploaded"><value>Geüpload</value></data>
+  <data name="file.share"><value>Delen</value></data>
+
+  <data name="upload.title"><value>Een bestand uploaden</value></data>
+  <data name="upload.lede"><value>Zet een bestand neer en configureer daarna de deelregels.</value></data>
+  <data name="upload.step1"><value>1. Kies een bestand</value></data>
+  <data name="upload.step2"><value>2. Configureer de link</value></data>
+  <data name="upload.button"><value>Uploaden</value></data>
+  <data name="upload.slug"><value>Aangepaste slug (optioneel)</value></data>
+  <data name="upload.slug_helper"><value>3–64 tekens, kleine letters, cijfers, « - » of « _ ». Laat leeg voor een willekeurige slug.</value></data>
+  <data name="upload.password"><value>Wachtwoord (optioneel)</value></data>
+  <data name="upload.max_downloads"><value>Max. downloads (optioneel)</value></data>
+  <data name="upload.expires_at"><value>Vervalt op (optioneel)</value></data>
+  <data name="upload.message"><value>Bericht (Markdown)</value></data>
+  <data name="upload.message_placeholder"><value>Hier is de presentatie waar we het over hadden…</value></data>
+  <data name="upload.notify_me"><value>Meld me per e-mail bij download</value></data>
+  <data name="upload.create_link"><value>Link maken</value></data>
+  <data name="upload.done"><value>Je deellink is klaar</value></data>
+  <data name="upload.share_this"><value>Deel deze URL:</value></data>
+  <data name="upload.copy"><value>Kopiëren</value></data>
+
+  <data name="links.title"><value>Jouw links</value></data>
+  <data name="links.lede"><value>Elke deellink die je hebt aangemaakt. Trek in, pas aan of verwijder.</value></data>
+  <data name="links.empty"><value>Nog geen links.</value></data>
+  <data name="links.slug"><value>Slug</value></data>
+  <data name="links.downloads"><value>Downloads</value></data>
+  <data name="links.expires"><value>Vervalt</value></data>
+  <data name="links.state"><value>Status</value></data>
+  <data name="links.active"><value>Actief</value></data>
+  <data name="links.revoked"><value>Ingetrokken</value></data>
+  <data name="links.expired"><value>Verlopen</value></data>
+  <data name="links.action.revoke"><value>Intrekken</value></data>
+  <data name="links.action.delete"><value>Verwijderen</value></data>
+  <data name="links.action.copy"><value>URL kopiëren</value></data>
+  <data name="links.action.email"><value>Per e-mail versturen</value></data>
+  <data name="links.confirm.revoke"><value>Deze link intrekken? Het bestand blijft; de URL werkt niet meer.</value></data>
+  <data name="links.confirm.delete"><value>Deze link definitief verwijderen? Het bestand blijft.</value></data>
+  <data name="links.email.to"><value>Naar welk e-mailadres versturen?</value></data>
+  <data name="links.email.message"><value>Optioneel bericht:</value></data>
+  <data name="links.email.sent"><value>E-mail verzonden.</value></data>
+
+  <data name="settings.title"><value>Instellingen</value></data>
+  <data name="settings.lede"><value>Je profiel, taal en aangepaste deel-domeinen.</value></data>
+  <data name="settings.profile"><value>Profiel</value></data>
+  <data name="settings.name"><value>Naam</value></data>
+  <data name="settings.email"><value>E-mail</value></data>
+  <data name="settings.role"><value>Rol</value></data>
+  <data name="settings.language"><value>Taal</value></data>
+  <data name="settings.language_note"><value>Wissel op elk moment van taal via de voettekst van de zijbalk. Openbare deelpagina's respecteren de browsertaal van de ontvanger.</value></data>
+  <data name="settings.domains"><value>Aangepaste domeinen</value></data>
+  <data name="settings.domains_note"><value>Serveer je deellinks vanaf je eigen domein, bv. share.jouw-bedrijf.nl. Vereist een CNAME + een TXT-verificatierecord.</value></data>
+  <data name="settings.add_domain"><value>Domein toevoegen</value></data>
+  <data name="settings.hostname"><value>Hostnaam</value></data>
+  <data name="settings.verification"><value>Verificatie</value></data>
+  <data name="settings.certificate"><value>Certificaat</value></data>
+  <data name="settings.verify"><value>Verifiëren</value></data>
+
+  <data name="users.title"><value>Gebruikers</value></data>
+  <data name="users.lede"><value>Iedereen met toegang tot dit NimShare. Beheerders kunnen accounts aanmaken, deactiveren en verwijderen.</value></data>
+  <data name="users.create_new"><value>Gebruiker toevoegen</value></data>
+  <data name="users.create"><value>Toevoegen</value></data>
+  <data name="users.role"><value>Rol</value></data>
+  <data name="users.role.user"><value>Gebruiker</value></data>
+  <data name="users.role.admin"><value>Beheerder</value></data>
+  <data name="users.state"><value>Status</value></data>
+  <data name="users.active"><value>Actief</value></data>
+  <data name="users.disabled"><value>Gedeactiveerd</value></data>
+  <data name="users.type"><value>Aanmelding</value></data>
+  <data name="users.actions"><value>Acties</value></data>
+  <data name="users.action.disable"><value>Deactiveren</value></data>
+  <data name="users.action.enable"><value>Activeren</value></data>
+  <data name="users.action.delete"><value>Verwijderen</value></data>
+  <data name="users.confirm.delete"><value>Deze gebruiker verwijderen? Bestanden en links blijven behouden.</value></data>
+  <data name="users.quota"><value>Quotum</value></data>
+  <data name="users.quota.save"><value>Opslaan</value></data>
+
+  <data name="groups.title"><value>Groepen</value></data>
+  <data name="groups.lede"><value>Teams die een gemeenschappelijke pool van bestanden delen. Managers beheren leden en bestanden.</value></data>
+  <data name="groups.empty"><value>Je bent nog geen lid van een groep.</value></data>
+  <data name="groups.create_new"><value>Nieuwe groep aanmaken</value></data>
+  <data name="groups.name"><value>Groepsnaam</value></data>
+  <data name="groups.description"><value>Beschrijving</value></data>
+  <data name="groups.no_description"><value>Geen beschrijving.</value></data>
+  <data name="groups.create"><value>Groep aanmaken</value></data>
+  <data name="groups.members"><value>Leden</value></data>
+  <data name="groups.add_member"><value>Lid toevoegen</value></data>
+  <data name="groups.add"><value>Toevoegen</value></data>
+  <data name="groups.remove"><value>Verwijderen</value></data>
+  <data name="groups.role.member"><value>Lid</value></data>
+  <data name="groups.role.manager"><value>Manager</value></data>
+  <data name="groups.files"><value>Bestanden in deze groep</value></data>
+  <data name="groups.no_files"><value>Nog geen bestanden.</value></data>
+  <data name="groups.uploaded_by"><value>Geüpload door</value></data>
+  <data name="groups.open_files"><value>Bestanden openen</value></data>
+  <data name="groups.delete"><value>Groep verwijderen</value></data>
+  <data name="groups.confirm.delete"><value>Deze groep verwijderen? Gedeelde bestanden verliezen hun groepsomvang.</value></data>
+
+  <data name="browse.personal"><value>Mijn bestanden</value></data>
+  <data name="browse.public"><value>Openbare bestanden</value></data>
+  <data name="browse.group"><value>Groep</value></data>
+  <data name="browse.personal.lede"><value>Bestanden die alleen jij kunt zien. Deel via een link om anderen toegang te geven.</value></data>
+  <data name="browse.public.lede"><value>Bestanden toegankelijk voor iedereen die op deze NimShare is aangemeld.</value></data>
+  <data name="browse.group.lede"><value>Bestanden gedeeld met alle leden van deze groep.</value></data>
+  <data name="browse.upload_here"><value>Hier een bestand uploaden</value></data>
+  <data name="browse.files"><value>Bestanden</value></data>
+  <data name="browse.empty"><value>Nog geen bestanden hier.</value></data>
+
+  <data name="landing.title"><value>Iemand heeft een bestand met je gedeeld</value></data>
+  <data name="landing.shared_by"><value>Gedeeld door</value></data>
+  <data name="landing.expires_at"><value>Vervalt:</value></data>
+  <data name="landing.downloads_left"><value>downloads over</value></data>
+  <data name="landing.password.label"><value>Deze link is beveiligd — voer het wachtwoord in:</value></data>
+  <data name="landing.download.button"><value>Downloaden</value></data>
+  <data name="landing.powered_by"><value>Mogelijk gemaakt door</value></data>
+  <data name="landing.brand_note"><value>Gestyled volgens de Tungsten Automation-richtlijnen.</value></data>
+
+  <data name="share.password.error"><value>Onjuist wachtwoord. Probeer opnieuw.</value></data>
+  <data name="share.expired.title"><value>Deze link is verlopen</value></data>
+  <data name="share.expired.body"><value>Vraag de afzender om een nieuwe link.</value></data>
+  <data name="share.notfound.title"><value>Link niet gevonden</value></data>
+  <data name="share.notfound.body"><value>De link bestaat niet of is ingetrokken.</value></data>
+
+  <data name="upload.landing.title"><value>Er is je gevraagd een bestand te verzenden</value></data>
+  <data name="upload.landing.request_by"><value>Aangevraagd door</value></data>
+  <data name="upload.landing.pick_file"><value>Kies een bestand om te versturen</value></data>
+  <data name="upload.landing.button"><value>Versturen</value></data>
+  <data name="upload.notfound.title"><value>Upload-link niet gevonden</value></data>
+  <data name="upload.notfound.body"><value>De link bestaat niet of is ingetrokken.</value></data>
+  <data name="upload.expired.title"><value>Deze upload-link is verlopen</value></data>
+  <data name="upload.expired.body"><value>Vraag de afzender om een nieuwe link.</value></data>
+
+  <data name="email.download.subject"><value>Jouw link "{0}" is gedownload</value></data>
+  <data name="email.download.body"><value>Hallo {0},&#10;&#10;Jouw deellink "{1}" is zojuist gedownload.&#10;&#10;- Totaal aantal downloads: {2}&#10;- Ontvanger (IP-hash, gezouten): {3}...&#10;- Tijd (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.upload.subject"><value>Iemand heeft "{0}" naar jouw link geüpload</value></data>
+  <data name="email.upload.body"><value>Hallo {0},&#10;&#10;Er is een bestand geüpload via je upload-link "{1}":&#10;&#10;- Bestandsnaam: {2}&#10;- Doelmap: {3}&#10;- Tijd (UTC): {4}&#10;&#10;— NimShare</value></data>
+
+  <data name="nav.profile"><value>Profiel</value></data>
+  <data name="nav.email_gateway"><value>E-mailgateway</value></data>
+  <data name="nav.domains"><value>Domeinen</value></data>
+
+  <data name="profile.title"><value>Jouw profiel</value></data>
+  <data name="profile.lede"><value>Naam, e-mail en optionele profielfoto. Je kunt ook je wachtwoord wijzigen.</value></data>
+  <data name="profile.identity"><value>Identiteit</value></data>
+  <data name="profile.email_note"><value>Neem contact op met een beheerder om je e-mailadres te wijzigen.</value></data>
+  <data name="profile.avatar_url"><value>URL profielfoto (optioneel)</value></data>
+  <data name="profile.avatar_helper"><value>Plak een openbare afbeeldings-URL. Anders worden je initialen in de zijbalk getoond.</value></data>
+  <data name="profile.save"><value>Profiel opslaan</value></data>
+
+  <data name="users.invite"><value>Gebruiker uitnodigen</value></data>
+  <data name="users.invite.lede"><value>De ontvanger krijgt een eenmalige link, kiest zijn eigen wachtwoord en komt direct in NimShare.</value></data>
+  <data name="users.invite.send"><value>Uitnodiging versturen</value></data>
+  <data name="users.create_new.lede"><value>Liever zelf een wachtwoord instellen? Gebruik het klassieke formulier hieronder.</value></data>
+
+  <data name="invite.accept.title"><value>Stel je wachtwoord in</value></data>
+  <data name="invite.accept.lede"><value>Je bent uitgenodigd voor NimShare als</value></data>
+  <data name="invite.accept.button"><value>Account aanmaken &amp; aanmelden</value></data>
+  <data name="invite.invalid.title"><value>Ongeldige uitnodiging</value></data>
+  <data name="invite.invalid.body"><value>De link is verlopen, al gebruikt of ingetrokken. Vraag de afzender om een nieuwe uitnodiging.</value></data>
+
+  <data name="email_gateway.title"><value>E-mailgateway</value></data>
+  <data name="email_gateway.lede"><value>Kies hoe NimShare uitgaande e-mail verstuurt — meldingen, delen per e-mail, uitnodigingen. Wachtwoorden worden versleuteld opgeslagen.</value></data>
+  <data name="email_gateway.provider"><value>Provider</value></data>
+  <data name="email_gateway.provider.disabled"><value>Uitgeschakeld (alleen loggen)</value></data>
+  <data name="email_gateway.from_name"><value>Afzendernaam</value></data>
+  <data name="email_gateway.from_address"><value>Afzenderadres</value></data>
+  <data name="email_gateway.smtp_host"><value>SMTP-server</value></data>
+  <data name="email_gateway.smtp_port"><value>Poort</value></data>
+  <data name="email_gateway.smtp_starttls"><value>STARTTLS gebruiken</value></data>
+  <data name="email_gateway.smtp_user"><value>Gebruikersnaam</value></data>
+  <data name="email_gateway.smtp_pass"><value>Wachtwoord</value></data>
+  <data name="email_gateway.resend_key"><value>Resend API-sleutel</value></data>
+  <data name="email_gateway.leave_blank"><value>Leeg laten om de huidige waarde te behouden.</value></data>
+  <data name="email_gateway.save"><value>Gateway opslaan</value></data>
+  <data name="email_gateway.test"><value>Test-e-mail versturen</value></data>
+  <data name="email_gateway.test_recipient"><value>Adres ontvanger</value></data>
+  <data name="email_gateway.test_send"><value>Test versturen</value></data>
+</root>

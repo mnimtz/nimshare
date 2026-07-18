@@ -2,11 +2,12 @@
 @{ ViewData["Title"] = @T["setup.title"]; Layout = "_Layout"; }
 <div class="landing-shell">
     <div class="landing-card" style="max-width: 560px">
-        <div class="landing-brand">
-            <span class="logo-tile">NIMSHARE</span>
-            <small>@T["setup.subtitle"]</small>
+        <div style="text-align:center;margin-bottom:var(--sp-4)">
+            <img src="~/img/logo-400.png" srcset="~/img/logo-400.png 1x, ~/img/logo-800.png 2x"
+                 alt="NimShare" style="max-width:280px;width:100%;height:auto;margin:0 auto"/>
+            <div class="muted" style="font-size:.8rem;margin-top:var(--sp-1)">@T["setup.subtitle"]</div>
         </div>
-        <h1>@T["setup.title"]</h1>
+        <h1 style="text-align:center">@T["setup.title"]</h1>
         <p class="landing-meta">@T["setup.lede"]</p>
 
         <form method="post" class="stack" style="margin-top: var(--sp-6)">

@@ -16,6 +16,8 @@ public class NimShareDbContext : DbContext
     public DbSet<UploadRequestLink> UploadRequests => Set<UploadRequestLink>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<EmailGatewaySettings> EmailGateways => Set<EmailGatewaySettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -86,6 +88,27 @@ public class NimShareDbContext : DbContext
             e.HasKey(x => new { x.GroupId, x.UserId });
             e.HasOne(x => x.Group).WithMany(g => g.Members).HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.User).WithMany(u => u.Groups).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Invitation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Email);
+            e.HasIndex(x => x.TokenHash);
+            e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
+        });
+
+        b.Entity<EmailGatewaySettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.FromAddress).HasMaxLength(320).IsRequired();
+            e.Property(x => x.FromName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.SmtpHost).HasMaxLength(253);
+            e.Property(x => x.SmtpUsername).HasMaxLength(200);
+            e.Property(x => x.SmtpPasswordEncrypted).HasMaxLength(2000);
+            e.Property(x => x.ResendApiKeyEncrypted).HasMaxLength(2000);
         });
 
         b.Entity<ShareLink>(e =>

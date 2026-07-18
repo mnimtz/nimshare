@@ -40,6 +40,9 @@
     <EmbeddedResource Update="Resources\SharedResources.es.resx">
       <LogicalName>NimShare.Api.Resources.SharedResources.es.resources</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Update="Resources\SharedResources.nl.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.nl.resources</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

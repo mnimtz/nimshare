@@ -98,6 +98,47 @@
   <data name="links.email.message"><value>Message facultatif :</value></data>
   <data name="links.email.sent"><value>E-mail envoyé.</value></data>
 
+  <data name="nav.profile"><value>Profil</value></data>
+  <data name="nav.email_gateway"><value>Passerelle e-mail</value></data>
+  <data name="nav.domains"><value>Domaines</value></data>
+
+  <data name="profile.title"><value>Votre profil</value></data>
+  <data name="profile.lede"><value>Nom, e-mail et photo de profil facultative. Et vous pouvez changer votre mot de passe.</value></data>
+  <data name="profile.identity"><value>Identité</value></data>
+  <data name="profile.email_note"><value>Contactez un administrateur pour changer votre e-mail.</value></data>
+  <data name="profile.avatar_url"><value>URL de la photo de profil (optionnel)</value></data>
+  <data name="profile.avatar_helper"><value>Coller une URL d'image publique. À défaut, vos initiales apparaissent dans la barre latérale.</value></data>
+  <data name="profile.save"><value>Enregistrer le profil</value></data>
+
+  <data name="users.invite"><value>Inviter un utilisateur</value></data>
+  <data name="users.invite.lede"><value>Le destinataire reçoit un lien à usage unique, choisit son mot de passe et arrive directement dans NimShare.</value></data>
+  <data name="users.invite.send"><value>Envoyer l'invitation</value></data>
+  <data name="users.create_new.lede"><value>Vous préférez définir le mot de passe vous-même ? Utilisez le formulaire classique ci-dessous.</value></data>
+
+  <data name="invite.accept.title"><value>Définissez votre mot de passe</value></data>
+  <data name="invite.accept.lede"><value>Vous avez été invité(e) sur NimShare en tant que</value></data>
+  <data name="invite.accept.button"><value>Créer le compte et se connecter</value></data>
+  <data name="invite.invalid.title"><value>Invitation invalide</value></data>
+  <data name="invite.invalid.body"><value>Le lien est expiré, déjà utilisé ou révoqué. Demandez une nouvelle invitation à l'expéditeur.</value></data>
+
+  <data name="email_gateway.title"><value>Passerelle e-mail</value></data>
+  <data name="email_gateway.lede"><value>Choisissez comment NimShare envoie les e-mails sortants — notifications, envoi par e-mail, invitations. Les secrets sont chiffrés au repos.</value></data>
+  <data name="email_gateway.provider"><value>Fournisseur</value></data>
+  <data name="email_gateway.provider.disabled"><value>Désactivé (log uniquement)</value></data>
+  <data name="email_gateway.from_name"><value>Nom d'expéditeur</value></data>
+  <data name="email_gateway.from_address"><value>Adresse d'expéditeur</value></data>
+  <data name="email_gateway.smtp_host"><value>Serveur SMTP</value></data>
+  <data name="email_gateway.smtp_port"><value>Port</value></data>
+  <data name="email_gateway.smtp_starttls"><value>Utiliser STARTTLS</value></data>
+  <data name="email_gateway.smtp_user"><value>Utilisateur</value></data>
+  <data name="email_gateway.smtp_pass"><value>Mot de passe</value></data>
+  <data name="email_gateway.resend_key"><value>Clé API Resend</value></data>
+  <data name="email_gateway.leave_blank"><value>Laisser vide pour conserver la valeur actuelle.</value></data>
+  <data name="email_gateway.save"><value>Enregistrer la passerelle</value></data>
+  <data name="email_gateway.test"><value>Envoyer un e-mail de test</value></data>
+  <data name="email_gateway.test_recipient"><value>Adresse du destinataire</value></data>
+  <data name="email_gateway.test_send"><value>Envoyer le test</value></data>
+
   <data name="welcome.title"><value>Bienvenue sur NimShare</value></data>
   <data name="welcome.headline"><value>Partagez des fichiers sans friction.</value></data>
   <data name="welcome.subhead"><value>Un seul envoi, puis un lien personnalisé avec expiration, mot de passe et plafond de téléchargements — sur votre propre locataire Azure.</value></data>

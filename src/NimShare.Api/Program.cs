@@ -107,16 +107,21 @@ builder.Services.AddAuthorization(options =>
 // when a cookie session is present).
 builder.Services.AddAntiforgery();
 
-// ── Localization (EFIGS) ────────────────────────────────────────────────────
-var supportedCultures = new[] { "en", "de", "fr", "it", "es" }
+// ── Localization (EFIGS + Dutch) ────────────────────────────────────────────
+var supportedCultures = new[] { "en", "de", "fr", "it", "es", "nl" }
     .Select(c => new CultureInfo(c))
     .ToArray();
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.Configure<RequestLocalizationOptions>(o =>
 {
+    // Falls back to English if the browser advertises a culture we don't ship.
     o.DefaultRequestCulture = new RequestCulture("en");
     o.SupportedCultures = supportedCultures;
     o.SupportedUICultures = supportedCultures;
+    // Priority: 1) ?ui-culture=xx query, 2) cookie the user picked, 3) Accept-Language
+    // header from the browser. QueryString + Cookie are already inserted at 0 and 1
+    // by AddRequestLocalization; the built-in AcceptLanguageHeader provider handles
+    // step 3 and stays the last resort before DefaultRequestCulture.
     o.RequestCultureProviders.Insert(0, new QueryStringRequestCultureProvider());
     o.RequestCultureProviders.Insert(1, new CookieRequestCultureProvider());
 });
@@ -171,7 +176,12 @@ builder.Services.AddScoped<ILinkAccessService, LinkAccessService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
-builder.Services.AddScoped<INotificationService, SmtpNotificationService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
+// The old SmtpNotificationService is replaced by the gateway-backed adapter so
+// existing callers (link download/upload notifications, "send by email" button)
+// route through the persisted, per-tenant email configuration.
+builder.Services.AddScoped<INotificationService, GatewayBackedNotificationService>();
 
 builder.Services.AddHttpContextAccessor();
 

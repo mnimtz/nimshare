@@ -1,0 +1,30 @@
+@model NimShare.Api.Controllers.AcceptInviteViewModel
+@{ ViewData["Title"] = @T["invite.accept.title"]; Layout = "_Layout"; }
+<div class="landing-shell">
+    <div class="landing-card" style="max-width:520px">
+        <div style="text-align:center;margin-bottom:var(--sp-4)">
+            <img src="~/img/logo-400.png" srcset="~/img/logo-400.png 1x, ~/img/logo-800.png 2x" alt="NimShare" style="max-width:280px;width:100%;height:auto;margin:0 auto"/>
+        </div>
+        <h1 style="text-align:center">@T["invite.accept.title"]</h1>
+        <p class="landing-meta" style="text-align:center">@T["invite.accept.lede"] <strong>@Model.Email</strong></p>
+
+        <form method="post" class="stack" style="margin-top:var(--sp-6)">
+            <div asp-validation-summary="All" class="helper" style="color:var(--status-critical)"></div>
+            <input type="hidden" name="t" value="@Model.Token"/>
+            <div class="field">
+                <label>@T["auth.display_name"]</label>
+                <input type="text" name="displayName" required value="@Model.DisplayName"/>
+            </div>
+            <div class="field">
+                <label>@T["auth.password"]</label>
+                <input type="password" name="password" required minlength="8" autocomplete="new-password"/>
+                <div class="helper">@T["auth.password_helper"]</div>
+            </div>
+            <div class="field">
+                <label>@T["auth.password_confirm"]</label>
+                <input type="password" name="passwordConfirm" required minlength="8" autocomplete="new-password"/>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["invite.accept.button"]</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,52 @@
+@model NimShare.Core.Entities.User
+@{ ViewData["Title"] = @T["profile.title"]; Layout = "_AppShell"; }
+<div class="page-header">
+    <div>
+        <h1>@T["profile.title"]</h1>
+        <p class="lede">@T["profile.lede"]</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n)
+{
+    <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+<form method="post" action="/settings/profile" class="card" style="max-width:640px">
+    <h2 class="card-title">@T["profile.identity"]</h2>
+    <div class="field">
+        <label for="DisplayName">@T["auth.display_name"]</label>
+        <input type="text" name="DisplayName" id="DisplayName" required value="@Model.DisplayName"/>
+    </div>
+    <div class="field">
+        <label>@T["auth.email"]</label>
+        <input type="text" readonly value="@Model.Email" style="background:var(--tw-gray-200)"/>
+        <div class="helper">@T["profile.email_note"]</div>
+    </div>
+    <div class="field">
+        <label for="AvatarUrl">@T["profile.avatar_url"]</label>
+        <input type="url" name="AvatarUrl" id="AvatarUrl" placeholder="https://…" value="@Model.AvatarUrl"/>
+        <div class="helper">@T["profile.avatar_helper"]</div>
+    </div>
+
+    <h2 class="card-title" style="margin-top:var(--sp-6)">@T["password.title"]</h2>
+    <div class="field">
+        <label for="CurrentPassword">@T["password.current"]</label>
+        <input type="password" name="CurrentPassword" id="CurrentPassword" autocomplete="current-password"/>
+    </div>
+    <div class="field">
+        <label for="NewPassword">@T["password.new"]</label>
+        <input type="password" name="NewPassword" id="NewPassword" autocomplete="new-password" minlength="8"/>
+        <div class="helper">@T["auth.password_helper"]</div>
+    </div>
+    <div class="field">
+        <label for="NewPasswordConfirm">@T["auth.password_confirm"]</label>
+        <input type="password" name="NewPasswordConfirm" id="NewPasswordConfirm" autocomplete="new-password" minlength="8"/>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@T["profile.save"]</button>
+</form>

@@ -17,8 +17,32 @@
 }
 
 <div class="card">
-    <h2 class="card-title">@T["users.create_new"]</h2>
-    <form method="post" action="/settings/users/create" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap">
+    <h2 class="card-title">@T["users.invite"]</h2>
+    <p class="muted">@T["users.invite.lede"]</p>
+    <form method="post" action="/settings/users/invite" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-2)">
+        <div class="field" style="flex:2;min-width:220px">
+            <label>@T["auth.email"]</label>
+            <input type="email" name="email" required placeholder="new.user@example.com"/>
+        </div>
+        <div class="field" style="flex:2;min-width:180px">
+            <label>@T["auth.display_name"]</label>
+            <input type="text" name="displayName"/>
+        </div>
+        <div class="field" style="width:140px">
+            <label>@T["users.role"]</label>
+            <select name="role">
+                <option value="User">@T["users.role.user"]</option>
+                <option value="Admin">@T["users.role.admin"]</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">@T["users.invite.send"]</button>
+    </form>
+</div>
+
+<details class="card">
+    <summary style="cursor:pointer;font-weight:700;color:var(--tw-primary)">@T["users.create_new"]</summary>
+    <p class="muted" style="margin-top:var(--sp-3)">@T["users.create_new.lede"]</p>
+    <form method="post" action="/settings/users/create" class="row" style="align-items:flex-end;gap:var(--sp-4);flex-wrap:wrap;margin-top:var(--sp-3)">
         <div class="field" style="flex:1;min-width:200px">
             <label>@T["auth.email"]</label>
             <input type="email" name="email" required/>
@@ -38,9 +62,9 @@
                 <option value="Admin">@T["users.role.admin"]</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary">@T["users.create"]</button>
+        <button type="submit" class="btn btn-ghost">@T["users.create"]</button>
     </form>
-</div>
+</details>
 
 <table class="table">
     <thead>

@@ -1,11 +1,11 @@
 @{ ViewData["Title"] = @T["welcome.title"]; Layout = "_Layout"; }
 <div class="landing-shell">
     <div class="landing-card" style="max-width: 640px">
-        <div class="landing-brand">
-            <span class="logo-tile">NIMSHARE</span>
-            <small>by Tungsten Automation</small>
+        <div style="text-align:center;margin-bottom:var(--sp-6)">
+            <img src="~/img/logo-400.png" srcset="~/img/logo-400.png 1x, ~/img/logo-800.png 2x"
+                 alt="NimShare" style="max-width:320px;width:100%;height:auto;margin:0 auto"/>
         </div>
-        <h1>@T["welcome.headline"]</h1>
+        <h1 style="text-align:center">@T["welcome.headline"]</h1>
         <p class="landing-meta">@T["welcome.subhead"]</p>
         <ul style="margin: var(--sp-6) 0; padding-left: var(--sp-6); color: var(--tw-primary); line-height: 2">
             <li>@T["welcome.bullet1"]</li>

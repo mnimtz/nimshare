@@ -22,6 +22,9 @@ public class User
     /// <summary>Disabled users cannot sign in and their links are hidden from public resolution.</summary>
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Optional public URL for a profile picture (avatar). Falls back to initials on the sidebar.</summary>
+    public string? AvatarUrl { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     /// <summary>Per-user storage quota in bytes.</summary>

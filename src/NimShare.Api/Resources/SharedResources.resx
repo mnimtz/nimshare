@@ -98,6 +98,47 @@
   <data name="links.email.message"><value>Optional message to include:</value></data>
   <data name="links.email.sent"><value>Email queued.</value></data>
 
+  <data name="nav.profile"><value>Profile</value></data>
+  <data name="nav.email_gateway"><value>Email gateway</value></data>
+  <data name="nav.domains"><value>Domains</value></data>
+
+  <data name="profile.title"><value>Your profile</value></data>
+  <data name="profile.lede"><value>Your name, email and optional profile picture. Change your password too.</value></data>
+  <data name="profile.identity"><value>Identity</value></data>
+  <data name="profile.email_note"><value>Contact an administrator to change your email.</value></data>
+  <data name="profile.avatar_url"><value>Profile picture URL (optional)</value></data>
+  <data name="profile.avatar_helper"><value>Paste a public image URL. Falls back to your initials on the sidebar.</value></data>
+  <data name="profile.save"><value>Save profile</value></data>
+
+  <data name="users.invite"><value>Invite a user</value></data>
+  <data name="users.invite.lede"><value>The recipient gets a one-time link, sets their own password, and lands directly in NimShare.</value></data>
+  <data name="users.invite.send"><value>Send invite</value></data>
+  <data name="users.create_new.lede"><value>Prefer to set a password yourself and share it out-of-band? Use the classic create form instead.</value></data>
+
+  <data name="invite.accept.title"><value>Set your password</value></data>
+  <data name="invite.accept.lede"><value>You've been invited to NimShare as</value></data>
+  <data name="invite.accept.button"><value>Create account &amp; sign in</value></data>
+  <data name="invite.invalid.title"><value>Invitation invalid</value></data>
+  <data name="invite.invalid.body"><value>The link is expired, already used, or was revoked. Ask the sender for a fresh invite.</value></data>
+
+  <data name="email_gateway.title"><value>Email gateway</value></data>
+  <data name="email_gateway.lede"><value>Choose how NimShare sends outbound email — download notifications, share-by-email, invitations. Secrets are encrypted at rest.</value></data>
+  <data name="email_gateway.provider"><value>Provider</value></data>
+  <data name="email_gateway.provider.disabled"><value>Disabled (log only)</value></data>
+  <data name="email_gateway.from_name"><value>From name</value></data>
+  <data name="email_gateway.from_address"><value>From address</value></data>
+  <data name="email_gateway.smtp_host"><value>SMTP host</value></data>
+  <data name="email_gateway.smtp_port"><value>Port</value></data>
+  <data name="email_gateway.smtp_starttls"><value>Use STARTTLS</value></data>
+  <data name="email_gateway.smtp_user"><value>Username</value></data>
+  <data name="email_gateway.smtp_pass"><value>Password</value></data>
+  <data name="email_gateway.resend_key"><value>Resend API key</value></data>
+  <data name="email_gateway.leave_blank"><value>Leave blank to keep the current value.</value></data>
+  <data name="email_gateway.save"><value>Save gateway</value></data>
+  <data name="email_gateway.test"><value>Send a test email</value></data>
+  <data name="email_gateway.test_recipient"><value>Recipient address</value></data>
+  <data name="email_gateway.test_send"><value>Send test</value></data>
+
   <data name="welcome.title"><value>Welcome to NimShare</value></data>
   <data name="welcome.headline"><value>Share files without the friction.</value></data>
   <data name="welcome.subhead"><value>Upload once, share via personalised links with expiry, password, download limits — on your own Azure tenant.</value></data>
