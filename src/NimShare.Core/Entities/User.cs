@@ -25,6 +25,9 @@ public class User
     /// <summary>Optional public URL for a profile picture (avatar). Falls back to initials on the sidebar.</summary>
     public string? AvatarUrl { get; set; }
 
+    /// <summary>Blob path of the user's uploaded avatar; served via /avatars/{userId}.</summary>
+    public string? AvatarBlobPath { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     /// <summary>Per-user storage quota in bytes.</summary>

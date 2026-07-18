@@ -280,4 +280,12 @@
   <data name="users.action.manage"><value>Manage</value></data>
   <data name="links.folder_target"><value>(folder share)</value></data>
 
+  <data name="profile.picture"><value>Foto de perfil</value></data>
+  <data name="profile.picture.lede"><value>Haz clic en el círculo para elegir una imagen desde tu dispositivo. Puedes hacer zoom y arrastrar para centrar tu cara.</value></data>
+  <data name="profile.picture.change"><value>Cambiar</value></data>
+  <data name="profile.picture.remove"><value>Eliminar imagen</value></data>
+  <data name="profile.crop.title"><value>Ajusta tu foto</value></data>
+  <data name="profile.crop.lede"><value>Arrastra para mover, usa el deslizador para hacer zoom. El círculo muestra lo que verán los demás.</value></data>
+  <data name="profile.crop.zoom"><value>Zoom</value></data>
+  <data name="profile.crop.save"><value>Guardar</value></data>
 </root>

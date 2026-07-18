@@ -278,4 +278,12 @@
   <data name="upload.notfound.body"><value>The link either doesn't exist or has been revoked.</value></data>
   <data name="upload.expired.title"><value>This upload link has expired</value></data>
   <data name="upload.expired.body"><value>Ask the sender for a fresh link.</value></data>
+  <data name="profile.picture"><value>Profile picture</value></data>
+  <data name="profile.picture.lede"><value>Click the circle to pick a new picture from your device. You can zoom and drag to fit your face.</value></data>
+  <data name="profile.picture.change"><value>Change</value></data>
+  <data name="profile.picture.remove"><value>Remove picture</value></data>
+  <data name="profile.crop.title"><value>Adjust your picture</value></data>
+  <data name="profile.crop.lede"><value>Drag to move, use the slider to zoom. The circle preview matches what others will see.</value></data>
+  <data name="profile.crop.zoom"><value>Zoom</value></data>
+  <data name="profile.crop.save"><value>Save picture</value></data>
 </root>

@@ -303,19 +303,23 @@ input:focus, select:focus, textarea:focus {
 /* ── Language switcher ─────────────────────────────────────────── */
 .lang-switcher {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    width: 100%;
 }
 .lang-switcher a {
-    padding: 4px 10px;
+    flex: 1;
+    padding: 4px 0;
     border-radius: 6px;
-    font-size: .78rem;
+    font-size: .7rem;
     font-weight: 700;
     letter-spacing: .06em;
-    color: rgba(255, 255, 255, .78);
+    color: rgba(255, 255, 255, .70);
     background: rgba(255, 255, 255, .06);
     border: 1px solid rgba(255, 255, 255, .08);
     text-decoration: none;
+    text-align: center;
     transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
 }
 .lang-switcher a:hover {
@@ -326,6 +330,22 @@ input:focus, select:focus, textarea:focus {
     background: rgba(0, 160, 251, .30);
     color: var(--tw-white);
     border-color: rgba(0, 160, 251, .55);
+}
+
+/* Light-domain variant, used on public / landing / login pages */
+.lang-switcher.light a {
+    color: var(--tw-muted-blue);
+    background: var(--tw-gray-100);
+    border-color: var(--tw-gray-300);
+}
+.lang-switcher.light a:hover {
+    background: var(--tw-gray-200);
+    color: var(--tw-primary);
+}
+.lang-switcher.light a.active {
+    background: rgba(0, 160, 251, .15);
+    color: var(--tw-primary);
+    border-color: var(--tw-accent);
 }
 
 /* ── Sidebar user card ─────────────────────────────────────────── */

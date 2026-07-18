@@ -38,41 +38,61 @@
         </div>
     </div>
 
-    <h3 style="margin-top:var(--sp-6);color:var(--tw-primary)">SMTP</h3>
-    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-        <div class="field" style="flex:2;min-width:240px">
-            <label for="SmtpHost">@T["email_gateway.smtp_host"]</label>
-            <input type="text" name="SmtpHost" id="SmtpHost" value="@Model.SmtpHost" placeholder="smtp.example.com"/>
+    <div id="smtpSection" style="display:none">
+        <h3 style="margin-top:var(--sp-6);color:var(--tw-primary)">SMTP</h3>
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:2;min-width:240px">
+                <label for="SmtpHost">@T["email_gateway.smtp_host"]</label>
+                <input type="text" name="SmtpHost" id="SmtpHost" value="@Model.SmtpHost" placeholder="smtp.example.com"/>
+            </div>
+            <div class="field" style="width:130px">
+                <label for="SmtpPort">@T["email_gateway.smtp_port"]</label>
+                <input type="number" name="SmtpPort" id="SmtpPort" min="1" max="65535" value="@Model.SmtpPort"/>
+            </div>
         </div>
-        <div class="field" style="width:130px">
-            <label for="SmtpPort">@T["email_gateway.smtp_port"]</label>
-            <input type="number" name="SmtpPort" id="SmtpPort" min="1" max="65535" value="@Model.SmtpPort"/>
+        <div class="field">
+            <label><input type="checkbox" name="SmtpUseStartTls" value="true" checked="@Model.SmtpUseStartTls"/> @T["email_gateway.smtp_starttls"]</label>
+        </div>
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:220px">
+                <label for="SmtpUsername">@T["email_gateway.smtp_user"]</label>
+                <input type="text" name="SmtpUsername" id="SmtpUsername" value="@Model.SmtpUsername"/>
+            </div>
+            <div class="field" style="flex:1;min-width:220px">
+                <label for="SmtpPassword">@T["email_gateway.smtp_pass"]</label>
+                <input type="password" name="SmtpPassword" id="SmtpPassword" placeholder="@(string.IsNullOrEmpty(Model.SmtpPasswordEncrypted) ? "" : T["email_gateway.leave_blank"].Value)"/>
+                <div class="helper">@T["email_gateway.leave_blank"]</div>
+            </div>
         </div>
     </div>
-    <div class="field">
-        <label><input type="checkbox" name="SmtpUseStartTls" value="true" checked="@Model.SmtpUseStartTls"/> @T["email_gateway.smtp_starttls"]</label>
-    </div>
-    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:220px">
-            <label for="SmtpUsername">@T["email_gateway.smtp_user"]</label>
-            <input type="text" name="SmtpUsername" id="SmtpUsername" value="@Model.SmtpUsername"/>
-        </div>
-        <div class="field" style="flex:1;min-width:220px">
-            <label for="SmtpPassword">@T["email_gateway.smtp_pass"]</label>
-            <input type="password" name="SmtpPassword" id="SmtpPassword" placeholder="@(string.IsNullOrEmpty(Model.SmtpPasswordEncrypted) ? "" : T["email_gateway.leave_blank"].Value)"/>
+
+    <div id="resendSection" style="display:none">
+        <h3 style="margin-top:var(--sp-6);color:var(--tw-primary)">Resend</h3>
+        <div class="field">
+            <label for="ResendApiKey">@T["email_gateway.resend_key"]</label>
+            <input type="password" name="ResendApiKey" id="ResendApiKey" placeholder="@(string.IsNullOrEmpty(Model.ResendApiKeyEncrypted) ? "re_xxx…" : T["email_gateway.leave_blank"].Value)"/>
             <div class="helper">@T["email_gateway.leave_blank"]</div>
         </div>
     </div>
 
-    <h3 style="margin-top:var(--sp-6);color:var(--tw-primary)">Resend</h3>
-    <div class="field">
-        <label for="ResendApiKey">@T["email_gateway.resend_key"]</label>
-        <input type="password" name="ResendApiKey" id="ResendApiKey" placeholder="re_xxx…"/>
-        <div class="helper">@T["email_gateway.leave_blank"]</div>
+    <div style="margin-top:var(--sp-6)">
+        <button type="submit" class="btn btn-primary">@T["email_gateway.save"]</button>
     </div>
-
-    <button type="submit" class="btn btn-primary">@T["email_gateway.save"]</button>
 </form>
+<script>
+(function () {
+    const providerEl = document.getElementById('Provider');
+    const smtp = document.getElementById('smtpSection');
+    const resend = document.getElementById('resendSection');
+    function apply() {
+        const p = providerEl.value;
+        smtp.style.display = p === 'Smtp' ? '' : 'none';
+        resend.style.display = p === 'Resend' ? '' : 'none';
+    }
+    providerEl.addEventListener('change', apply);
+    apply();
+})();
+</script>
 
 <form method="post" action="/settings/email/test" class="card" style="max-width:720px">
     @Html.AntiForgeryToken()

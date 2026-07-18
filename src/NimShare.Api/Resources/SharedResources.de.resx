@@ -278,4 +278,12 @@
   <data name="upload.notfound.body"><value>Der Link existiert nicht oder wurde widerrufen.</value></data>
   <data name="upload.expired.title"><value>Dieser Upload-Link ist abgelaufen</value></data>
   <data name="upload.expired.body"><value>Bitte einen frischen Link vom Absender anfordern.</value></data>
+  <data name="profile.picture"><value>Profilbild</value></data>
+  <data name="profile.picture.lede"><value>Klicke auf den Kreis, um ein Bild von deinem Gerät auszuwählen. Du kannst zoomen und verschieben, damit dein Gesicht mittig sitzt.</value></data>
+  <data name="profile.picture.change"><value>Ändern</value></data>
+  <data name="profile.picture.remove"><value>Bild entfernen</value></data>
+  <data name="profile.crop.title"><value>Bild zuschneiden</value></data>
+  <data name="profile.crop.lede"><value>Ziehen zum Verschieben, Regler zum Zoomen. Der Kreis zeigt, was andere sehen.</value></data>
+  <data name="profile.crop.zoom"><value>Zoom</value></data>
+  <data name="profile.crop.save"><value>Bild speichern</value></data>
 </root>

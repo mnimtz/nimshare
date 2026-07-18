@@ -279,4 +279,12 @@
   <data name="users.action.manage"><value>Manage</value></data>
   <data name="links.folder_target"><value>(folder share)</value></data>
 
+  <data name="profile.picture"><value>Profielfoto</value></data>
+  <data name="profile.picture.lede"><value>Klik op de cirkel om een afbeelding van je apparaat te kiezen. Je kunt zoomen en slepen om je gezicht te centreren.</value></data>
+  <data name="profile.picture.change"><value>Wijzigen</value></data>
+  <data name="profile.picture.remove"><value>Foto verwijderen</value></data>
+  <data name="profile.crop.title"><value>Pas je foto aan</value></data>
+  <data name="profile.crop.lede"><value>Sleep om te verplaatsen, gebruik de schuif om te zoomen. De cirkel toont wat anderen zien.</value></data>
+  <data name="profile.crop.zoom"><value>Zoom</value></data>
+  <data name="profile.crop.save"><value>Opslaan</value></data>
 </root>

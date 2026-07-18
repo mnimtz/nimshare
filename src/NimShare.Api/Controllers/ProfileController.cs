@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 
@@ -19,7 +20,7 @@ public class ProfileController : Controller
         _hasher = hasher;
     }
 
-    public record ProfileFormModel(string DisplayName, string? AvatarUrl,
+    public record ProfileFormModel(string DisplayName,
         string? CurrentPassword, string? NewPassword, string? NewPasswordConfirm);
 
     [HttpGet("/settings/profile")]
@@ -36,7 +37,6 @@ public class ProfileController : Controller
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (!string.IsNullOrWhiteSpace(form.DisplayName))
             me.DisplayName = form.DisplayName.Trim();
-        me.AvatarUrl = string.IsNullOrWhiteSpace(form.AvatarUrl) ? null : form.AvatarUrl.Trim();
 
         // Optional password change: only apply if all three password fields are filled.
         if (!string.IsNullOrEmpty(form.NewPassword) || !string.IsNullOrEmpty(form.CurrentPassword))
@@ -66,6 +66,64 @@ public class ProfileController : Controller
 
         await _db.SaveChangesAsync(ct);
         TempData["Notice"] = "Profile saved.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ── Avatar upload: multipart with a client-cropped PNG (256×256) ───────
+
+    [HttpPost("/settings/profile/avatar")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(4 * 1024 * 1024)] // 4 MiB is more than enough for a 256px PNG
+    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file,
+        [FromServices] IBlobStorageService blobs, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (file is null || file.Length == 0)
+        {
+            TempData["Error"] = "No image received.";
+            return RedirectToAction(nameof(Index));
+        }
+        if (file.Length > 3 * 1024 * 1024)
+        {
+            TempData["Error"] = "Avatar image is too large (max 3 MiB after cropping).";
+            return RedirectToAction(nameof(Index));
+        }
+        // Store as a single fixed blob path per user; overwrite on re-upload.
+        var path = $"users/{me.Id:N}/avatar.png";
+        var ticket = blobs.CreateUploadTicket(path);
+        // Upload from the server (simpler than another round-trip to Blob).
+        using (var http = new HttpClient())
+        using (var content = new StreamContent(file.OpenReadStream()))
+        {
+            content.Headers.Add("x-ms-blob-type", "BlockBlob");
+            content.Headers.Add("x-ms-blob-content-type", file.ContentType ?? "image/png");
+            var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                TempData["Error"] = "Upload failed. Try again.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+        me.AvatarBlobPath = path;
+        me.AvatarUrl = $"/avatars/{me.Id}?v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+        await _db.SaveChangesAsync(ct);
+        TempData["Notice"] = "Avatar updated.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/settings/profile/avatar/remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveAvatar([FromServices] IBlobStorageService blobs, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (!string.IsNullOrEmpty(me.AvatarBlobPath))
+        {
+            try { await blobs.DeleteAsync(me.AvatarBlobPath, ct); } catch { /* best effort */ }
+        }
+        me.AvatarBlobPath = null;
+        me.AvatarUrl = null;
+        await _db.SaveChangesAsync(ct);
+        TempData["Notice"] = "Avatar removed.";
         return RedirectToAction(nameof(Index));
     }
 }

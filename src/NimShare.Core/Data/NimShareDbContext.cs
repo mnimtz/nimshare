@@ -58,6 +58,7 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Email).HasMaxLength(320).IsRequired();
             e.Property(x => x.PasswordHash).HasMaxLength(120);
             e.Property(x => x.PreferredCulture).HasMaxLength(5).IsRequired();
+            e.Property(x => x.AvatarBlobPath).HasMaxLength(400);
         });
 
         b.Entity<StorageFile>(e =>

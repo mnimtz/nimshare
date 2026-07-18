@@ -280,4 +280,12 @@
   <data name="users.action.manage"><value>Manage</value></data>
   <data name="links.folder_target"><value>(folder share)</value></data>
 
+  <data name="profile.picture"><value>Photo de profil</value></data>
+  <data name="profile.picture.lede"><value>Cliquez sur le cercle pour choisir une image depuis votre appareil. Zoomez et déplacez pour cadrer votre visage.</value></data>
+  <data name="profile.picture.change"><value>Modifier</value></data>
+  <data name="profile.picture.remove"><value>Supprimer l'image</value></data>
+  <data name="profile.crop.title"><value>Ajustez votre photo</value></data>
+  <data name="profile.crop.lede"><value>Faites glisser pour déplacer, utilisez le curseur pour zoomer. Le cercle correspond à ce que les autres verront.</value></data>
+  <data name="profile.crop.zoom"><value>Zoom</value></data>
+  <data name="profile.crop.save"><value>Enregistrer</value></data>
 </root>

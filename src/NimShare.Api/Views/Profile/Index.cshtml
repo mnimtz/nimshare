@@ -1,5 +1,16 @@
 @model NimShare.Core.Entities.User
-@{ ViewData["Title"] = @T["profile.title"]; Layout = "_AppShell"; }
+@{
+    ViewData["Title"] = @T["profile.title"];
+    Layout = "_AppShell";
+    string initials;
+    var parts = Model.DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    initials = parts.Length switch
+    {
+        >= 2 => $"{parts[0][0]}{parts[^1][0]}".ToUpper(),
+        1 => (parts[0].Length > 1 ? parts[0][..2] : parts[0]).ToUpper(),
+        _ => "?"
+    };
+}
 <div class="page-header">
     <div>
         <h1>@T["profile.title"]</h1>
@@ -16,6 +27,33 @@
     <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
 }
 
+<div class="card" style="max-width:640px">
+    <h2 class="card-title">@T["profile.picture"]</h2>
+    <div style="display:flex;align-items:center;gap:var(--sp-6);flex-wrap:wrap">
+        <div id="avatarBig" title="@T["profile.picture.change"]" style="cursor:pointer;width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--tw-accent),var(--tw-green));display:grid;place-items:center;color:var(--tw-white);font-weight:900;font-size:2rem;letter-spacing:.05em;overflow:hidden;position:relative;box-shadow:var(--shadow)">
+            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+            {
+                <img src="@Model.AvatarUrl" style="width:100%;height:100%;object-fit:cover" alt="avatar"/>
+            }
+            else
+            {
+                <span>@initials</span>
+            }
+            <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:.7rem;padding:6px;text-align:center;letter-spacing:.03em">📷 @T["profile.picture.change"]</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+            <p class="muted">@T["profile.picture.lede"]</p>
+            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+            {
+                <form method="post" action="/settings/profile/avatar/remove" style="margin-top:var(--sp-3)">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-ghost btn-sm">@T["profile.picture.remove"]</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
 <form method="post" action="/settings/profile" class="card" style="max-width:640px">
     @Html.AntiForgeryToken()
     <h2 class="card-title">@T["profile.identity"]</h2>
@@ -28,13 +66,8 @@
         <input type="text" readonly value="@Model.Email" style="background:var(--tw-gray-200)"/>
         <div class="helper">@T["profile.email_note"]</div>
     </div>
-    <div class="field">
-        <label for="AvatarUrl">@T["profile.avatar_url"]</label>
-        <input type="url" name="AvatarUrl" id="AvatarUrl" placeholder="https://…" value="@Model.AvatarUrl"/>
-        <div class="helper">@T["profile.avatar_helper"]</div>
-    </div>
 
-    <h2 class="card-title" style="margin-top:var(--sp-6)">@T["password.title"]</h2>
+    <h2 class="card-title" style="margin-top:var(--sp-8)">@T["password.title"]</h2>
     <div class="field">
         <label for="CurrentPassword">@T["password.current"]</label>
         <input type="password" name="CurrentPassword" id="CurrentPassword" autocomplete="current-password"/>
@@ -49,5 +82,136 @@
         <input type="password" name="NewPasswordConfirm" id="NewPasswordConfirm" autocomplete="new-password" minlength="8"/>
     </div>
 
-    <button type="submit" class="btn btn-primary">@T["profile.save"]</button>
+    <div style="margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--tw-gray-200)">
+        <button type="submit" class="btn btn-primary">@T["profile.save"]</button>
+    </div>
 </form>
+
+<!-- Hidden file input driven by clicking the big avatar -->
+<input type="file" id="avatarPick" accept="image/png,image/jpeg,image/webp" style="display:none"/>
+
+<!-- Crop modal -->
+<div class="modal-backdrop" id="modalCrop" onclick="if(event.target===this)closeCropModal()">
+    <div class="modal-panel" style="max-width:520px">
+        <h2>@T["profile.crop.title"]</h2>
+        <p class="muted">@T["profile.crop.lede"]</p>
+        <div style="position:relative;width:100%;padding-top:100%;background:var(--tw-gray-200);border-radius:var(--r);overflow:hidden;margin:var(--sp-4) 0">
+            <canvas id="cropCanvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab"></canvas>
+        </div>
+        <div class="field">
+            <label for="cropZoom">@T["profile.crop.zoom"]</label>
+            <input type="range" id="cropZoom" min="1" max="4" step="0.02" value="1" style="width:100%"/>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeCropModal()">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="uploadCrop()">@T["profile.crop.save"]</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const avatarBig = document.getElementById('avatarBig');
+const pick = document.getElementById('avatarPick');
+const modal = document.getElementById('modalCrop');
+const canvas = document.getElementById('cropCanvas');
+const zoom = document.getElementById('cropZoom');
+const ctx = canvas.getContext('2d');
+let img = null;
+let baseScale = 1;    // scale so the SHORT side fits the canvas
+let userZoom = 1;     // extra zoom multiplier from the slider
+let offsetX = 0, offsetY = 0;
+let dragging = false, lastX = 0, lastY = 0;
+
+avatarBig.addEventListener('click', () => pick.click());
+
+pick.addEventListener('change', (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+        img = new Image();
+        img.onload = () => {
+            openCropModal();
+        };
+        img.src = r.result;
+    };
+    r.readAsDataURL(f);
+});
+
+function openCropModal() {
+    modal.classList.add('open');
+    // Match canvas backing store to CSS size for crisp rendering.
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width);
+    canvas.height = Math.round(rect.height);
+    baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+    userZoom = 1;
+    zoom.value = 1;
+    offsetX = 0; offsetY = 0;
+    draw();
+}
+function closeCropModal() {
+    modal.classList.remove('open');
+    pick.value = '';
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const s = baseScale * userZoom;
+    const drawW = img.width * s;
+    const drawH = img.height * s;
+    // Keep image inside canvas by clamping offsets.
+    const maxX = (drawW - canvas.width) / 2;
+    const maxY = (drawH - canvas.height) / 2;
+    offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+    offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+    ctx.drawImage(img,
+        (canvas.width - drawW) / 2 + offsetX,
+        (canvas.height - drawH) / 2 + offsetY,
+        drawW, drawH);
+    // Round mask preview
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); canvas.style.cursor='grabbing'; });
+canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    offsetX += e.clientX - lastX;
+    offsetY += e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    draw();
+});
+canvas.addEventListener('pointerup', () => { dragging = false; canvas.style.cursor='grab'; });
+zoom.addEventListener('input', () => { userZoom = parseFloat(zoom.value); draw(); });
+
+async function uploadCrop() {
+    if (!img) return;
+    // Export at fixed 256×256, preserving whatever the user sees in the round mask.
+    const out = document.createElement('canvas');
+    out.width = 256; out.height = 256;
+    const octx = out.getContext('2d');
+    const s = baseScale * userZoom;
+    const drawW = img.width * s;
+    const drawH = img.height * s;
+    const scaleFactor = 256 / canvas.width;
+    octx.drawImage(img,
+        (canvas.width - drawW) / 2 * scaleFactor + offsetX * scaleFactor,
+        (canvas.height - drawH) / 2 * scaleFactor + offsetY * scaleFactor,
+        drawW * scaleFactor, drawH * scaleFactor);
+    const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png', 0.92));
+
+    const fd = new FormData();
+    fd.append('file', blob, 'avatar.png');
+    // Attach antiforgery token from the profile form on the page.
+    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    if (tokenInput) fd.append('__RequestVerificationToken', tokenInput.value);
+    const r = await fetch('/settings/profile/avatar', { method: 'POST', body: fd, credentials: 'same-origin' });
+    if (r.ok) { location.reload(); }
+    else alert('Upload failed: ' + r.status);
+}
+</script>
