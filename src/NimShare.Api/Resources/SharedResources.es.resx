@@ -374,4 +374,5 @@
   <data name="links.email.placeholder"><value>Add a short note or click 'Draft with AI' to auto-generate one.</value></data>
   <data name="browse.tree.folders"><value>Carpetas</value></data>
   <data name="browse.libraries.title"><value>Bibliotecas</value></data>
+  <data name="nav.menu"><value>Menú</value></data>
 </root>

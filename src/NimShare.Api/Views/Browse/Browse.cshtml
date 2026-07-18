@@ -502,6 +502,6 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
             apply();
         });
     });
-    apply();
+    // Server already returns name-sorted — no initial reflow needed.
 })();
 </script>

@@ -372,4 +372,5 @@
   <data name="links.email.placeholder"><value>Kurze Nachricht oder 'Mit KI entwerfen' klicken.</value></data>
   <data name="browse.tree.folders"><value>Ordner</value></data>
   <data name="browse.libraries.title"><value>Bibliotheken</value></data>
+  <data name="nav.menu"><value>Menü</value></data>
 </root>

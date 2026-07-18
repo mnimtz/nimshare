@@ -45,7 +45,7 @@
             .Where(m => m.UserId == myId)
             .OrderBy(m => m.Group.Name)
             .Select(m => new ValueTuple<Guid, string>(m.GroupId, m.Group.Name))
-            .ToListAsync();
+            .ToListAsync(Context.RequestAborted);
     }
 
     var settingsOpen = currentPath.StartsWith("/settings", StringComparison.OrdinalIgnoreCase)
@@ -69,7 +69,7 @@
 <div class="app-shell">
     <!-- Mobile top-bar with hamburger — only shown on narrow screens -->
     <header class="mobile-topbar">
-        <button class="mobile-menu-btn" aria-label="Menu" onclick="document.body.classList.toggle('nav-open')">
+        <button class="mobile-menu-btn" aria-label="@T["nav.menu"]" onclick="document.body.classList.toggle('nav-open')">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <a class="mobile-brand" href="/dashboard">
@@ -120,7 +120,7 @@
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
             <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
 
-            <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="this.classList.toggle('collapsed')">
+            <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
                 <span>@T["nav.settings"]</span><span class="chevron">▾</span>
             </div>
             <div class="nav-section-body">

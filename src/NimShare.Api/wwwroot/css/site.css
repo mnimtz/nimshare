@@ -1136,9 +1136,7 @@ input:focus, select:focus, textarea:focus {
     }
     /* When the workspace hosts the file-manager on mobile, keep the whole
        thing scrollable and don't force flex-height. */
-    .workspace:has(.fm) { padding: 0; }
-    .fm { grid-template-columns: 1fr !important; }
-    .fm-sidebar { display: none !important; }
+    /* .fm is display:block globally — no grid override needed. */
     .fm-main { padding: 14px 14px 40px !important; }
     .fm-header { flex-direction: column; align-items: stretch; gap: 10px; }
     .fm-toolbar { flex-wrap: wrap; }
@@ -1165,96 +1163,7 @@ body.nav-open { position: relative; }
     background: var(--tw-white);
 }
 
-/* ── Left sidebar ────────────────────────────────────────────────── */
-.fm-sidebar {
-    background: #f7f9fb;
-    border-right: 1px solid var(--tw-gray-300);
-    padding: 12px 8px;
-    overflow-y: auto;
-    max-height: 100vh;
-    position: sticky;
-    top: 0;
-}
-.fm-sidebar-head {
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--tw-muted-blue);
-    padding: 4px 10px 10px;
-    font-weight: 700;
-}
-
-.fm-tree { font-size: .92rem; }
-.fm-tree-branch { margin: 1px 0; }
-.fm-tree-branch summary,
-.fm-tree-leaf {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    color: var(--tw-primary);
-    padding-left: calc(8px + var(--depth, 0) * 14px);
-    list-style: none;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.fm-tree-branch summary::-webkit-details-marker { display: none; }
-.fm-tree-branch summary::marker { display: none; }
-.fm-tree-branch summary:hover,
-.fm-tree-leaf:hover { background: var(--tw-gray-200); }
-.fm-tree-caret {
-    display: inline-block;
-    width: 12px;
-    font-size: .65rem;
-    color: var(--tw-muted-blue);
-    transition: transform .12s ease;
-}
-.fm-tree-branch[open] > summary > .fm-tree-caret { transform: rotate(90deg); }
-.fm-tree-leaf .fm-tree-caret,
-.fm-tree-leaf::before {
-    content: "";
-    display: inline-block;
-    width: 12px;
-}
-.fm-tree-icon { font-size: .95rem; flex-shrink: 0; }
-.fm-tree-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.fm-tree-branch summary a,
-.fm-tree-leaf a,
-.fm-tree-linkinline {
-    color: inherit;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.fm-tree-active > a,
-.fm-tree-branch > summary.fm-tree-active {
-    background: rgba(0,160,251,.15);
-    font-weight: 700;
-    border-radius: 5px;
-}
-.fm-tree-lib > summary,
-.fm-tree-lib.fm-tree-leaf {
-    font-weight: 700;
-    margin-top: 8px;
-}
-.fm-tree-lib > summary .fm-tree-icon {
-    font-size: 1.05rem;
-}
-.fm-tree-children { display: block; }
-
-/* ── Right pane ─────────────────────────────────────────────────── */
+/* ── Main file pane ────────────────────────────────────────────── */
 .fm-main {
     padding: 18px 24px 40px;
     overflow-x: hidden;
@@ -1510,15 +1419,5 @@ body.nav-open { position: relative; }
 .fm-empty-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; color: var(--tw-primary); }
 .fm-empty-hint { font-size: .85rem; }
 
-/* ── Responsive ─────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-    .fm { grid-template-columns: 1fr; }
-    .fm-sidebar {
-        position: relative;
-        max-height: 200px;
-        border-right: 0;
-        border-bottom: 1px solid var(--tw-gray-300);
-    }
-    .fm-list .col-date,
-    .fm-list .col-owner { display: none; }
-}
+/* Mobile column-hide + fm sidebar override are handled in the app-shell
+   mobile media block above — nothing more needed here. */
