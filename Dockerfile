@@ -33,13 +33,14 @@ RUN dotnet publish src/NimShare.Api/NimShare.Api.csproj \
 # ---------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
 
-# Non-root user, curl for the healthcheck.
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r app && useradd -r -g app -m -d /home/app app
+# ca-certificates is already current in the ASP.NET base image; installing curl
+# on top has been known to break with dpkg conflicts on libcurl4. App Service
+# does its own external HTTP health probe against "/", so we skip HEALTHCHECK.
+RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 
 WORKDIR /app
 COPY --from=build /app ./
+RUN chown -R app:app /app
 
 # App Service reads WEBSITES_PORT; the ASP.NET Core listener follows ASPNETCORE_URLS.
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
@@ -51,10 +52,6 @@ ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
 
 # /data is mounted from Azure Files by the App Service azureStorageAccounts config.
 VOLUME ["/data"]
-
-# App Service pings root; use a lightweight endpoint that's always OK.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -fsS http://localhost:8080/ || exit 1
 
 USER app
 EXPOSE 8080
