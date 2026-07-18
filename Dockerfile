@@ -33,14 +33,15 @@ RUN dotnet publish src/NimShare.Api/NimShare.Api.csproj \
 # ---------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
 
-# ca-certificates is already current in the ASP.NET base image; installing curl
-# on top has been known to break with dpkg conflicts on libcurl4. App Service
-# does its own external HTTP health probe against "/", so we skip HEALTHCHECK.
-RUN groupadd -r app && useradd -r -g app -m -d /home/app app
+# The aspnet:8.0 image already ships with a non-root "app" user (UID 1654),
+# exposed via the $APP_UID build arg. Reuse it — do NOT try to add users;
+# groupadd/useradd fail with SIGKILL (exit 9) under buildx here, and any
+# custom apt install has been observed to conflict with the base's libs.
+ARG APP_UID=1654
 
 WORKDIR /app
 COPY --from=build /app ./
-RUN chown -R app:app /app
+RUN chown -R ${APP_UID}:${APP_UID} /app
 
 # App Service reads WEBSITES_PORT; the ASP.NET Core listener follows ASPNETCORE_URLS.
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
@@ -53,7 +54,7 @@ ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
 # /data is mounted from Azure Files by the App Service azureStorageAccounts config.
 VOLUME ["/data"]
 
-USER app
+USER ${APP_UID}
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "NimShare.Api.dll"]
