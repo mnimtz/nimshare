@@ -1,7 +1,6 @@
 @model IEnumerable<NimShare.Core.Entities.StorageFile>
 @{ ViewData["Title"] = @T["dashboard.title"]; }
-@Html.Partial("_AppShell")
-@section _ { <!-- unused --> }
+<partial name="_AppShell"/>
 @{
     var usedBytes = (long)ViewData["UsedBytes"]!;
     var quotaBytes = (long)ViewData["QuotaBytes"]!;

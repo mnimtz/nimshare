@@ -64,22 +64,16 @@ public class CustomDomainsController : ControllerBase
         var domain = await _db.CustomDomains.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == user.Id, ct);
         if (domain is null) return NotFound();
 
+        // DNS TXT verification is not implemented yet — we deliberately do NOT
+        // mark the domain as Failed on every call (that led to a permanent
+        // "Failed" chip in the UI). Return 501 so the UI can render an
+        // "install a DNS resolver first" hint instead.
         domain.LastVerificationAttemptAt = DateTimeOffset.UtcNow;
-        var ok = await CheckTxtAsync(domain.Hostname, domain.VerificationToken, ct);
-        if (ok)
-        {
-            domain.VerificationStatus = CustomDomainVerificationStatus.Verified;
-            domain.VerifiedAt = DateTimeOffset.UtcNow;
-            domain.CertificateStatus = CustomDomainCertificateStatus.Provisioning;
-            // TODO: call App Service management API to bind hostname + request managed cert.
-            //       Requires either a Managed Identity + role assignment, or a service principal.
-        }
-        else
-        {
-            domain.VerificationStatus = CustomDomainVerificationStatus.Failed;
-        }
         await _db.SaveChangesAsync(ct);
-        return Ok(new { domain.VerificationStatus, domain.CertificateStatus });
+        return Problem(
+            statusCode: 501,
+            title: "Domain verification not implemented",
+            detail: "TXT-record verification is a scaffolded stub. Wire DnsClient.NET into CheckTxtAsync to enable it. See docs/CUSTOM_DOMAINS.md.");
     }
 
     [HttpGet]

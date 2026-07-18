@@ -52,7 +52,12 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Slug).HasMaxLength(64).IsRequired();
             e.Property(x => x.PasswordHash).HasMaxLength(120);
             e.Property(x => x.Message).HasMaxLength(2000);
-            e.HasOne(x => x.File).WithMany(f => f.ShareLinks).HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Cascade);
+            // Single cascade path: User -> Files -> ShareLinks. Setting either
+            // relationship to Cascade on top would create a "multiple cascade
+            // paths" conflict on SQL Server. Both are Restrict; the code path
+            // that deletes a User is expected to soft-delete or explicitly
+            // clean up files/links first.
+            e.HasOne(x => x.File).WithMany(f => f.ShareLinks).HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Owner).WithMany(u => u.ShareLinks).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
 

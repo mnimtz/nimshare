@@ -80,12 +80,13 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var items = await _db.ShareLinks
+        // Materialize first so we can build absolute URLs from the current
+        // HttpContext.Request — same shape as Get/Create.
+        var rows = await _db.ShareLinks
             .Where(l => l.OwnerId == user.Id)
             .OrderByDescending(l => l.CreatedAt)
-            .Select(l => ToDtoDb(l))
             .ToListAsync(ct);
-        return Ok(items);
+        return Ok(rows.Select(ToDto));
     }
 
     [HttpGet("{id:guid}")]
@@ -112,10 +113,13 @@ public class LinksController : ControllerBase
     }
 
     [HttpGet("{id:guid}/qr.svg")]
-    [AllowAnonymous]
     public async Task<IActionResult> Qr(Guid id, CancellationToken ct)
     {
-        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id, ct);
+        // Auth required — otherwise anyone with a link.Id could learn the slug
+        // behind it and check whether that id exists.
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var link = await _db.ShareLinks
+            .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
         var url = BuildPublicUrl(link.Slug);
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
@@ -151,12 +155,6 @@ public class LinksController : ControllerBase
 
     private LinkDto ToDto(ShareLink l) => new(
         l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
-        l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
-        l.PasswordHash != null, l.IsRevoked, l.CreatedAt);
-
-    // Projection variant safe for EF Core translation.
-    private static LinkDto ToDtoDb(ShareLink l) => new(
-        l.Id, l.Slug, "/s/" + l.Slug, "/api/v1/links/" + l.Id + "/qr.svg",
         l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
         l.PasswordHash != null, l.IsRevoked, l.CreatedAt);
 

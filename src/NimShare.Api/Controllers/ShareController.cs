@@ -1,10 +1,10 @@
 using Markdig;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using NimShare.Api.Services;
-using NimShare.Core;
 using NimShare.Core.Entities;
 
 namespace NimShare.Api.Controllers;
@@ -15,6 +15,7 @@ namespace NimShare.Api.Controllers;
 /// </summary>
 [AllowAnonymous]
 [Route("s")]
+[EnableRateLimiting("public-share")]
 public class ShareController : Controller
 {
     private readonly ILinkAccessService _access;

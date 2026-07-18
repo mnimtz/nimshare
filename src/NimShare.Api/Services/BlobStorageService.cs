@@ -113,19 +113,21 @@ public class BlobStorageService : IBlobStorageService
 
     private Uri BuildSasUri(BlobClient blob, BlobSasBuilder sas)
     {
+        string sasQuery;
         if (_sharedKey is not null)
         {
-            var query = sas.ToSasQueryParameters(_sharedKey).ToString();
-            return new UriBuilder(blob.Uri) { Query = query }.Uri;
+            sasQuery = sas.ToSasQueryParameters(_sharedKey).ToString();
         }
-
-        // Managed-identity path: use a user-delegation key. Delegation keys must be short-lived (max 7d).
-        // For simplicity here, we synchronously fetch one per SAS. In production, cache it for its TTL.
-        var udk = _serviceClient.GetUserDelegationKey(
-            startsOn: DateTimeOffset.UtcNow.AddMinutes(-1),
-            expiresOn: sas.ExpiresOn.AddMinutes(1)).Value;
-        var query = sas.ToSasQueryParameters(udk, _serviceClient.AccountName).ToString();
-        return new UriBuilder(blob.Uri) { Query = query }.Uri;
+        else
+        {
+            // Managed-identity path: use a user-delegation key. Delegation keys must be short-lived (max 7d).
+            // For simplicity here, we synchronously fetch one per SAS. In production, cache it for its TTL.
+            var udk = _serviceClient.GetUserDelegationKey(
+                startsOn: DateTimeOffset.UtcNow.AddMinutes(-1),
+                expiresOn: sas.ExpiresOn.AddMinutes(1)).Value;
+            sasQuery = sas.ToSasQueryParameters(udk, _serviceClient.AccountName).ToString();
+        }
+        return new UriBuilder(blob.Uri) { Query = sasQuery }.Uri;
     }
 
     private static StorageSharedKeyCredential? TryExtractSharedKey(string connectionString)

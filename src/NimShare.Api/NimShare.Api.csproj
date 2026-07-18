@@ -12,14 +12,39 @@
     <ProjectReference Include="..\NimShare.Core\NimShare.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    Force the embedded resource names to include the "Resources" folder segment.
+    Without this override, MSBuild strips the folder and produces
+    "NimShare.Api.SharedResources.resources" — but IStringLocalizer with
+    ResourcesPath="Resources" and the SharedResources marker in namespace
+    NimShare.Api expects "NimShare.Api.Resources.SharedResources.resources".
+  -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\SharedResources.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\SharedResources.de.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.de.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\SharedResources.fr.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.fr.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\SharedResources.it.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.it.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\SharedResources.es.resx">
+      <LogicalName>NimShare.Api.Resources.SharedResources.es.resources</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <!-- Azure SDKs -->
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="Azure.Identity" Version="1.13.1" />
 
     <!-- Auth -->
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.5.0" />
-    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.5.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.7.1" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.7.1" />
 
     <!-- Data -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
@@ -34,7 +59,7 @@
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
-    <PackageReference Include="MailKit" Version="4.8.0" />
+    <PackageReference Include="MailKit" Version="4.10.0" />
   </ItemGroup>
 
 </Project>

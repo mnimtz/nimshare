@@ -66,6 +66,14 @@
   <data name="links.active"><value>Attivo</value></data>
   <data name="links.revoked"><value>Revocato</value></data>
   <data name="links.expired"><value>Scaduto</value></data>
+  <data name="links.action.revoke"><value>Revoca</value></data>
+  <data name="links.action.delete"><value>Elimina</value></data>
+  <data name="links.confirm.revoke"><value>Revocare questo link? Il file rimane; l'URL smette di funzionare.</value></data>
+  <data name="links.confirm.delete"><value>Eliminare definitivamente questo link? Il file rimane.</value></data>
+  <data name="email.download.subject"><value>Il tuo link "{0}" è stato scaricato</value></data>
+  <data name="email.download.body"><value>Ciao {0},&#10;&#10;Il tuo link di condivisione "{1}" è stato appena scaricato.&#10;&#10;- Download totali: {2}&#10;- Destinatario (hash IP, salato): {3}...&#10;- Ora (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.upload.subject"><value>Qualcuno ha caricato "{0}" sul tuo link</value></data>
+  <data name="email.upload.body"><value>Ciao {0},&#10;&#10;Un file è stato caricato tramite il tuo link di richiesta upload "{1}":&#10;&#10;- Nome file: {2}&#10;- Cartella di destinazione: {3}&#10;- Ora (UTC): {4}&#10;&#10;— NimShare</value></data>
 
   <data name="settings.title"><value>Impostazioni</value></data>
   <data name="settings.lede"><value>Il tuo profilo, la lingua e i domini di condivisione personalizzati.</value></data>

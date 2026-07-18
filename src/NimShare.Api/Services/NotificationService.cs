@@ -1,6 +1,9 @@
+using System.Globalization;
 using MailKit.Net.Smtp;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using NimShare.Api;
 using NimShare.Core.Entities;
 
 namespace NimShare.Api.Services;
@@ -28,47 +31,63 @@ public class SmtpNotificationService : INotificationService
 {
     private readonly SmtpOptions _options;
     private readonly ILogger<SmtpNotificationService> _logger;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
-    public SmtpNotificationService(IOptions<SmtpOptions> options, ILogger<SmtpNotificationService> logger)
+    public SmtpNotificationService(
+        IOptions<SmtpOptions> options,
+        ILogger<SmtpNotificationService> logger,
+        IStringLocalizerFactory localizerFactory)
     {
         _options = options.Value;
         _logger = logger;
+        _localizerFactory = localizerFactory;
     }
 
     public Task NotifyDownloadAsync(ShareLink link, string ipHash, CancellationToken ct = default)
     {
         if (!_options.Enabled || !link.NotifyOnAccess) return Task.CompletedTask;
-        var subject = $"[NimShare] Your link '{link.Slug}' was downloaded";
-        var body = $"""
-                    Hello {link.Owner.DisplayName},
-
-                    Your share link {link.Slug} was just downloaded.
-
-                    - Total downloads: {link.DownloadCount + 1}
-                    - Recipient (IP hash, salted): {ipHash[..12]}…
-                    - Time (UTC): {DateTimeOffset.UtcNow:u}
-
-                    — NimShare
-                    """;
+        using var _ = WithCulture(link.Owner.PreferredCulture);
+        var t = _localizerFactory.Create(typeof(SharedResources));
+        var subject = t["email.download.subject", link.Slug].Value;
+        var body = t["email.download.body",
+            link.Owner.DisplayName,
+            link.Slug,
+            link.DownloadCount + 1,
+            ipHash.Length >= 12 ? ipHash[..12] : ipHash,
+            DateTimeOffset.UtcNow.ToString("u")].Value;
         return SendAsync(link.Owner.Email, subject, body, ct);
     }
 
     public Task NotifyUploadAsync(UploadRequestLink request, string filename, CancellationToken ct = default)
     {
         if (!_options.Enabled || !request.NotifyOnUpload) return Task.CompletedTask;
-        var subject = $"[NimShare] Someone uploaded '{filename}' to your inbox link";
-        var body = $"""
-                    Hello {request.Owner.DisplayName},
-
-                    A file has just been uploaded via your upload-request link '{request.Slug}':
-
-                    - Filename: {filename}
-                    - Target folder: {request.TargetFolder}
-                    - Time (UTC): {DateTimeOffset.UtcNow:u}
-
-                    — NimShare
-                    """;
+        using var _ = WithCulture(request.Owner.PreferredCulture);
+        var t = _localizerFactory.Create(typeof(SharedResources));
+        var subject = t["email.upload.subject", filename].Value;
+        var body = t["email.upload.body",
+            request.Owner.DisplayName,
+            request.Slug,
+            filename,
+            request.TargetFolder,
+            DateTimeOffset.UtcNow.ToString("u")].Value;
         return SendAsync(request.Owner.Email, subject, body, ct);
+    }
+
+    private static CultureScope WithCulture(string cultureName)
+    {
+        try
+        {
+            var c = CultureInfo.GetCultureInfo(string.IsNullOrWhiteSpace(cultureName) ? "en" : cultureName);
+            return new CultureScope(c);
+        }
+        catch { return new CultureScope(CultureInfo.GetCultureInfo("en")); }
+    }
+
+    private readonly struct CultureScope : IDisposable
+    {
+        private readonly CultureInfo _prev;
+        public CultureScope(CultureInfo c) { _prev = CultureInfo.CurrentUICulture; CultureInfo.CurrentUICulture = c; }
+        public void Dispose() { CultureInfo.CurrentUICulture = _prev; }
     }
 
     private async Task SendAsync(string to, string subject, string body, CancellationToken ct)

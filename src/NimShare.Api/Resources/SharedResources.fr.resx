@@ -66,6 +66,14 @@
   <data name="links.active"><value>Actif</value></data>
   <data name="links.revoked"><value>Révoqué</value></data>
   <data name="links.expired"><value>Expiré</value></data>
+  <data name="links.action.revoke"><value>Révoquer</value></data>
+  <data name="links.action.delete"><value>Supprimer</value></data>
+  <data name="links.confirm.revoke"><value>Révoquer ce lien ? Le fichier reste ; l'URL cesse de fonctionner.</value></data>
+  <data name="links.confirm.delete"><value>Supprimer ce lien définitivement ? Le fichier reste.</value></data>
+  <data name="email.download.subject"><value>Votre lien « {0} » a été téléchargé</value></data>
+  <data name="email.download.body"><value>Bonjour {0},&#10;&#10;Votre lien de partage « {1} » vient d'être téléchargé.&#10;&#10;- Téléchargements totaux : {2}&#10;- Destinataire (empreinte IP, salée) : {3}...&#10;- Heure (UTC) : {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.upload.subject"><value>Quelqu'un a envoyé « {0} » via votre lien</value></data>
+  <data name="email.upload.body"><value>Bonjour {0},&#10;&#10;Un fichier vient d'être envoyé via votre lien de demande d'envoi « {1} » :&#10;&#10;- Nom du fichier : {2}&#10;- Dossier de destination : {3}&#10;- Heure (UTC) : {4}&#10;&#10;— NimShare</value></data>
 
   <data name="settings.title"><value>Paramètres</value></data>
   <data name="settings.lede"><value>Votre profil, votre langue et vos domaines de partage personnalisés.</value></data>

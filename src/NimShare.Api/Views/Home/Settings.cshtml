@@ -3,7 +3,7 @@
     ViewData["Title"] = @T["settings.title"];
     var user = (NimShare.Core.Entities.User)ViewData["User"]!;
 }
-@Html.Partial("_AppShell")
+<partial name="_AppShell"/>
 <div class="page-header">
     <div>
         <h1>@T["settings.title"]</h1>

@@ -66,6 +66,14 @@
   <data name="links.active"><value>Aktiv</value></data>
   <data name="links.revoked"><value>Widerrufen</value></data>
   <data name="links.expired"><value>Abgelaufen</value></data>
+  <data name="links.action.revoke"><value>Widerrufen</value></data>
+  <data name="links.action.delete"><value>Löschen</value></data>
+  <data name="links.confirm.revoke"><value>Diesen Link widerrufen? Die Datei bleibt, die URL wird ungültig.</value></data>
+  <data name="links.confirm.delete"><value>Diesen Link dauerhaft löschen? Die Datei bleibt.</value></data>
+  <data name="email.download.subject"><value>Dein Link „{0}" wurde heruntergeladen</value></data>
+  <data name="email.download.body"><value>Hallo {0},&#10;&#10;Dein Freigabe-Link „{1}" wurde soeben heruntergeladen.&#10;&#10;- Downloads gesamt: {2}&#10;- Empfänger (IP-Hash, gesalzen): {3}...&#10;- Zeit (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.upload.subject"><value>Jemand hat „{0}" in deinen Upload-Link hochgeladen</value></data>
+  <data name="email.upload.body"><value>Hallo {0},&#10;&#10;Eine Datei wurde über deinen Upload-Link „{1}" hochgeladen:&#10;&#10;- Dateiname: {2}&#10;- Zielordner: {3}&#10;- Zeit (UTC): {4}&#10;&#10;— NimShare</value></data>
 
   <data name="settings.title"><value>Einstellungen</value></data>
   <data name="settings.lede"><value>Profil, Sprache und eigene Freigabe-Domains.</value></data>

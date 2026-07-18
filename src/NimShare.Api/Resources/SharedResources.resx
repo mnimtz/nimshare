@@ -66,6 +66,14 @@
   <data name="links.active"><value>Active</value></data>
   <data name="links.revoked"><value>Revoked</value></data>
   <data name="links.expired"><value>Expired</value></data>
+  <data name="links.action.revoke"><value>Revoke</value></data>
+  <data name="links.action.delete"><value>Delete</value></data>
+  <data name="links.confirm.revoke"><value>Revoke this link? The file stays; the URL stops working.</value></data>
+  <data name="links.confirm.delete"><value>Delete this link permanently? The file stays.</value></data>
+  <data name="email.download.subject"><value>Your link '{0}' was downloaded</value></data>
+  <data name="email.download.body"><value>Hello {0},&#10;&#10;Your share link '{1}' was just downloaded.&#10;&#10;- Total downloads: {2}&#10;- Recipient (IP hash, salted): {3}...&#10;- Time (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.upload.subject"><value>Someone uploaded '{0}' to your inbox link</value></data>
+  <data name="email.upload.body"><value>Hello {0},&#10;&#10;A file has just been uploaded via your upload-request link '{1}':&#10;&#10;- Filename: {2}&#10;- Target folder: {3}&#10;- Time (UTC): {4}&#10;&#10;— NimShare</value></data>
 
   <data name="settings.title"><value>Settings</value></data>
   <data name="settings.lede"><value>Your profile, language, and custom share domains.</value></data>

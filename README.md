@@ -112,7 +112,7 @@ dotnet ef database update --project src/NimShare.Api
 dotnet run --project src/NimShare.Api
 ```
 
-Open <http://localhost:5099>. On first run the app seeds a demo user (`demo@nimshare.local` / `Demo123!`) when `ASPNETCORE_ENVIRONMENT=Development`.
+Open <http://localhost:5099>. Sign-in requires a working Entra ID app registration — see `docs/DEV_SETUP.md`. For pure UI/CSS work, the public share landing (`/s/{slug}`) and the welcome page render without auth.
 
 Uploads use an Azurite local Blob emulator by default. Start it with:
 
@@ -133,7 +133,8 @@ Everything is 12-factor-ish — see `src/NimShare.Api/appsettings.json` and the 
 | `Links:DefaultExpiryDays` | `30` | Default expiry when the user doesn't pick one |
 | `Links:AllowCustomSlug` | `true` | Turn off if you want random-only slugs |
 | `Localization:DefaultCulture` | `en` | Falls back to this if `Accept-Language` doesn't match EFIGS |
-| `Auth:Provider` | `EntraId` | Or `EntraIdB2C` for external identities |
+| `AzureAd:TenantId` | *(required)* | Entra ID tenant id or `common` for multi-tenant |
+| `AzureAd:ClientId` | *(required)* | Entra ID app registration client id |
 
 ---
 
