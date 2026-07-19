@@ -103,10 +103,37 @@ public class FileAccessService : IFileAccessService
         if (file.OwnerId == user.Id) return true;
         if (file.Scope == FileScope.Group && file.GroupId is Guid g)
         {
-            if (await IsGroupManagerAsync(user, g, ct)) return true;
+            if (await IsGroupManagerAsync(user, g, ct))
+            {
+                // Even the group manager loses write when a sub-folder
+                // override caps them. Admin explicitly bypasses (handled above).
+                if (file.FolderId is Guid fid && await IsSubtreeReadOnlyForAsync(fid, user, ct))
+                    return false;
+                return true;
+            }
         }
         // Write-grant via direct share also permits deletion.
-        return await HasDirectShareAsync(user, file.Id, DirectSharePermission.Write, ct);
+        if (!await HasDirectShareAsync(user, file.Id, DirectSharePermission.Write, ct)) return false;
+        if (file.FolderId is Guid fid2 && await IsSubtreeReadOnlyForAsync(fid2, user, ct)) return false;
+        return true;
+    }
+
+    private async Task<bool> IsSubtreeReadOnlyForAsync(Guid folderId, User user, CancellationToken ct)
+    {
+        var visited = new HashSet<Guid>();
+        Guid? cursor = folderId;
+        while (cursor is Guid fid && visited.Add(fid) && visited.Count <= 64)
+        {
+            var hasHere = await _db.FolderAccessOverrides.AnyAsync(o =>
+                o.FolderId == fid
+                && o.MaxPermission == DirectSharePermission.Read
+                && (o.TargetUserId == user.Id
+                    || (o.TargetGroupId != null && _db.GroupMemberships.Any(m => m.UserId == user.Id && m.GroupId == o.TargetGroupId))),
+                ct);
+            if (hasHere) return true;
+            cursor = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
+        }
+        return false;
     }
 
     public async Task<bool> CanShareAsync(User user, StorageFile file, CancellationToken ct = default)

@@ -1,0 +1,36 @@
+@model NimShare.Api.Controllers.GateViewModel
+@{
+    ViewData["Title"] = "Zugang bestätigen";
+    Layout = "_Layout";
+}
+<div class="landing-shell">
+    <div class="landing-card" style="max-width:440px;text-align:center">
+        <div style="text-align:center;margin-bottom:12px">
+            <img src="/img/icon-64.png" width="48" height="48" alt="" style="border-radius:8px;margin:0 auto"/>
+        </div>
+        <h1 style="margin-top:0">🔒 Zugang bestätigen</h1>
+        @if (!Model.otpSent)
+        {
+            <p class="muted">Dieser Link ist nur für berechtigte Empfänger. Gib deine E-Mail-Adresse ein.</p>
+            <form method="post" action="/s/@Model.Slug/gate/email" style="margin-top:16px">
+                @Html.AntiForgeryToken()
+                @if (Model.error is string e) { <div class="helper" style="color:var(--status-critical)">@e</div> }
+                <input type="email" name="email" required autofocus placeholder="deine@firma.com"
+                       style="width:100%;padding:12px;font-size:1rem;margin:8px 0"/>
+                <button type="submit" class="btn btn-primary" style="width:100%">Weiter →</button>
+            </form>
+        }
+        else
+        {
+            <p class="muted">Wir haben dir einen 6-stelligen Code per E-Mail geschickt. Bitte gib ihn hier ein — gültig 10 Minuten.</p>
+            <form method="post" action="/s/@Model.Slug/gate/otp" style="margin-top:16px">
+                @Html.AntiForgeryToken()
+                @if (Model.error is string e) { <div class="helper" style="color:var(--status-critical)">@e</div> }
+                <input type="text" name="code" pattern="[0-9]{6}" maxlength="6" required autofocus autocomplete="one-time-code"
+                       inputmode="numeric" placeholder="123456"
+                       style="width:100%;padding:12px;font-size:1.4rem;font-family:var(--font-mono);letter-spacing:.4em;text-align:center;margin:8px 0"/>
+                <button type="submit" class="btn btn-primary" style="width:100%">Bestätigen →</button>
+            </form>
+        }
+    </div>
+</div>

@@ -46,6 +46,25 @@ public class ShareLink
     /// </summary>
     public bool IsPublic { get; set; }
 
+    /// <summary>
+    /// Comma-separated allow-list of email addresses or domain wildcards
+    /// (e.g. "alice@acme.com,*.tungstenautomation.com,*@partner.io"). When
+    /// non-empty, the landing page prompts for an email and only serves the
+    /// download after it matches. Combined with RequireEmailVerify, we also
+    /// OTP-verify the email before the download unlocks.
+    /// </summary>
+    public string? AllowedEmails { get; set; }
+
+    /// <summary>
+    /// When true, in addition to the allow-list check we email the visitor a
+    /// 6-digit code and demand they enter it before the download unlocks.
+    /// This proves the recipient controls the mailbox, not just knows the
+    /// email address — meaningful when Marcus shares to
+    /// finance@customer.com and wants a trail of which human at that shared
+    /// mailbox actually opened it.
+    /// </summary>
+    public bool RequireEmailVerify { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

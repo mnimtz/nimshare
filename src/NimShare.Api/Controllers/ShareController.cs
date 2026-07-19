@@ -76,6 +76,16 @@ public class ShareController : Controller
         if (!link.IsActive(now))
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
+        // Recipient allow-list gate: if the link has AllowedEmails set, block
+        // access until the visitor's email (and optional OTP) has been
+        // verified in this session.
+        if (!string.IsNullOrWhiteSpace(link.AllowedEmails))
+        {
+            var gate = HttpContext.Session.GetString($"gate.{link.Slug}");
+            if (gate != "ok")
+                return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
+        }
+
         // Log the landing hit (fire-and-forget-ish, but awaited so we don't lose it).
         await _access.LogAsync(link, ShareLinkAccessKind.Landing,
             _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
@@ -130,6 +140,71 @@ public class ShareController : Controller
         // directly, no bytes go through the app.
         var sas = _blobs.CreateInlineSas(link.File.BlobPath, link.File.ContentType);
         return Redirect(sas.ToString());
+    }
+
+    // ── Recipient allow-list gate ─────────────────────────────────────
+    [HttpPost("{slug}/gate/email")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GateEmail(string slug, string? email,
+        [FromServices] INotificationService notify, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return View("NotFound");
+        if (string.IsNullOrWhiteSpace(link.AllowedEmails)) return RedirectToAction(nameof(Landing), new { slug });
+        var e = (email ?? "").Trim().ToLowerInvariant();
+        if (!IsEmailAllowed(e, link.AllowedEmails))
+            return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, false, "Diese E-Mail ist für den Download nicht zugelassen."));
+
+        if (link.RequireEmailVerify)
+        {
+            // Draw a 6-digit OTP, stash it in Session + email it.
+            var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1_000_000).ToString();
+            HttpContext.Session.SetString($"gate.{link.Slug}.otp", otp);
+            HttpContext.Session.SetString($"gate.{link.Slug}.email", e);
+            try
+            {
+                await notify.SendShareLinkAsync(e, "NimShare", "Dein Zugangs-Code",
+                    $"Dein Zugangs-Code für den Download: {otp}\n\nGültig für 10 Minuten.", ct);
+            }
+            catch { /* still show the OTP prompt — an admin can look at server logs */ }
+            return View("Gate", new GateViewModel(slug, true, otpSent: true, error: null));
+        }
+        HttpContext.Session.SetString($"gate.{link.Slug}", "ok");
+        return RedirectToAction(nameof(Landing), new { slug });
+    }
+
+    [HttpPost("{slug}/gate/otp")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GateOtp(string slug, string? code, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return View("NotFound");
+        var expected = HttpContext.Session.GetString($"gate.{link.Slug}.otp");
+        var email = HttpContext.Session.GetString($"gate.{link.Slug}.email");
+        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(email))
+            return RedirectToAction(nameof(Landing), new { slug });
+        if ((code ?? "").Trim() != expected)
+            return View("Gate", new GateViewModel(slug, true, otpSent: true, error: "Falscher Code."));
+        HttpContext.Session.Remove($"gate.{link.Slug}.otp");
+        HttpContext.Session.SetString($"gate.{link.Slug}", "ok");
+        return RedirectToAction(nameof(Landing), new { slug });
+    }
+
+    private static bool IsEmailAllowed(string email, string allowed)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return false;
+        var domain = email.Split('@')[1];
+        foreach (var raw in allowed.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pat = raw.Trim().ToLowerInvariant();
+            if (pat.Length == 0) continue;
+            if (pat == email) return true;
+            // "*.acme.com" or "@acme.com" or "*@acme.com" all mean "any @acme.com".
+            if (pat.StartsWith("@") && domain == pat[1..]) return true;
+            if (pat.StartsWith("*@") && domain == pat[2..]) return true;
+            if (pat.StartsWith("*.") && domain == pat[2..]) return true;
+        }
+        return false;
     }
 
     [HttpPost("{slug}")]
@@ -225,5 +300,7 @@ public record LandingViewModel(
     DateTimeOffset? ExpiresAt,
     string OwnerName,
     LandingTheme Theme);
+
+public record GateViewModel(string Slug, bool RequireOtp, bool otpSent, string? error);
 
 public record ExpiredViewModel(string Slug, DateTimeOffset? ExpiresAt);

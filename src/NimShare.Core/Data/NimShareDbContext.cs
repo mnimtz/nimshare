@@ -27,6 +27,7 @@ public class NimShareDbContext : DbContext
     public DbSet<LandingTemplate> LandingTemplates => Set<LandingTemplate>();
     public DbSet<StorageFileVersion> StorageFileVersions => Set<StorageFileVersion>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<FolderAccessOverride> FolderAccessOverrides => Set<FolderAccessOverride>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -90,6 +91,19 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Href).HasMaxLength(500);
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
+
+        b.Entity<FolderAccessOverride>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.FolderId, x.TargetUserId }).HasFilter("\"TargetUserId\" IS NOT NULL");
+            e.HasIndex(x => new { x.FolderId, x.TargetGroupId }).HasFilter("\"TargetGroupId\" IS NOT NULL");
+            e.HasOne(x => x.Folder).WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.TargetUser).WithMany().HasForeignKey(x => x.TargetUserId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.TargetGroup).WithMany().HasForeignKey(x => x.TargetGroupId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<ShareLink>().Property(x => x.AllowedEmails).HasMaxLength(2000);
 
         b.Entity<StorageFile>(e =>
         {

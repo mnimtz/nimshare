@@ -23,6 +23,11 @@ public interface IFolderService
     Task<bool> CanWriteAsync(Folder folder, User user, CancellationToken ct = default);
     Task<bool> CanManageAsync(Folder folder, User user, CancellationToken ct = default);
 
+    /// <summary>True if this folder subtree has a Read-max override that would
+    /// downgrade the caller's otherwise-granted write access. Used by the
+    /// FilesController.Delete/Rename/Move path to also honour restrictions.</summary>
+    Task<bool> IsFolderReadOnlyForAsync(Guid folderId, User user, CancellationToken ct = default);
+
     /// <summary>Returns the folder's ancestors from root → folder itself (inclusive), for breadcrumbs.</summary>
     Task<List<Folder>> GetAncestryAsync(Folder folder, CancellationToken ct = default);
 }
@@ -37,6 +42,8 @@ public class FolderService : IFolderService
         _db = db;
         _access = access;
     }
+
+    public NimShareDbContext DbContext => _db;
 
     public async Task<Folder> GetOrCreateRootAsync(FileScope scope, Guid? ownerUserId, Guid? ownerGroupId, User createdBy, CancellationToken ct = default)
     {
@@ -155,25 +162,65 @@ public class FolderService : IFolderService
 
     public async Task<bool> CanWriteAsync(Folder folder, User user, CancellationToken ct = default)
     {
-        return folder.Scope switch
+        var baseGrant = folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id || user.Role == UserRole.Admin,
             FileScope.Public => true,
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupMemberAsync(user, g, ct),
             _ => false,
         };
+        if (!baseGrant) return false;
+
+        // Sub-folder permission override: if the caller (or any of their groups)
+        // has a Read-max cap on this folder or any of its ancestors, they lose
+        // Write. Admins skip the check by design — they need a full override.
+        if (user.Role == UserRole.Admin) return true;
+        return !await HasReadOnlyOverrideAsync(folder, user, ct);
     }
 
     public async Task<bool> CanManageAsync(Folder folder, User user, CancellationToken ct = default)
     {
         if (user.Role == UserRole.Admin) return true;
-        return folder.Scope switch
+        var baseGrant = folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id,
             FileScope.Public => false, // only admins manage public roots
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupManagerAsync(user, g, ct),
             _ => false,
         };
+        if (!baseGrant) return false;
+        return !await HasReadOnlyOverrideAsync(folder, user, ct);
+    }
+
+    public async Task<bool> IsFolderReadOnlyForAsync(Guid folderId, User user, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin) return false;
+        var folder = await _db.Folders.FindAsync(new object[] { folderId }, ct);
+        if (folder is null) return false;
+        return await HasReadOnlyOverrideAsync(folder, user, ct);
+    }
+
+    /// <summary>
+    /// Walk the ancestor chain and return true if any FolderAccessOverride with
+    /// MaxPermission=Read matches either the caller directly or one of their
+    /// groups. Cycle-guarded via visited-set, capped at 64 levels.
+    /// </summary>
+    private async Task<bool> HasReadOnlyOverrideAsync(Folder folder, User user, CancellationToken ct)
+    {
+        var visited = new HashSet<Guid>();
+        Guid? cursor = folder.Id;
+        while (cursor is Guid fid && visited.Add(fid) && visited.Count <= 64)
+        {
+            var hasHere = await _db.FolderAccessOverrides.AnyAsync(o =>
+                o.FolderId == fid
+                && o.MaxPermission == DirectSharePermission.Read
+                && (o.TargetUserId == user.Id
+                    || (o.TargetGroupId != null && _db.GroupMemberships.Any(m => m.UserId == user.Id && m.GroupId == o.TargetGroupId))),
+                ct);
+            if (hasHere) return true;
+            cursor = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
+        }
+        return false;
     }
 
     public async Task<List<Folder>> GetAncestryAsync(Folder folder, CancellationToken ct = default)

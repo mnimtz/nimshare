@@ -142,7 +142,7 @@ public class LinksController : ControllerBase
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
     }
 
-    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic);
+    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic, string? AllowedEmails, bool? RequireEmailVerify);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -159,6 +159,9 @@ public class LinksController : ControllerBase
         // set it just gets silently ignored — no 403 to avoid a leaky UX.
         if (req.IsPublic is not null && user.Role == UserRole.Admin)
             link.IsPublic = req.IsPublic.Value;
+        if (req.AllowedEmails is not null)
+            link.AllowedEmails = string.IsNullOrWhiteSpace(req.AllowedEmails) ? null : req.AllowedEmails.Trim();
+        if (req.RequireEmailVerify is not null) link.RequireEmailVerify = req.RequireEmailVerify.Value;
         await _db.SaveChangesAsync(ct);
         return Ok(ToDto(link));
     }

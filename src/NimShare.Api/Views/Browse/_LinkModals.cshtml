@@ -86,6 +86,16 @@
             <textarea id="shareMsg" rows="2" placeholder="@T["upload.message_placeholder"]"></textarea>
         </div>
         <label style="font-weight:400"><input type="checkbox" id="shareNotify"/> @T["upload.notify_me"]</label>
+
+        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+            <summary style="cursor:pointer;font-weight:500">🔒 Empfänger einschränken (optional)</summary>
+            <div class="field" style="margin-top:8px">
+                <label>Erlaubte E-Mails</label>
+                <input type="text" id="shareAllowedEmails" placeholder="alice@@acme.com, @@tungstenautomation.com, *.gmail.com"/>
+                <div class="helper">Komma-getrennt. Wildcards: <code>@@firma.com</code>, <code>*.firma.com</code>, oder komplette E-Mail.</div>
+            </div>
+            <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> Empfänger muss E-Mail per 6-stelligem Code bestätigen</label>
+        </details>
         <div id="shareResult" style="display:none">
             <div class="modal-result">
                 <input id="shareUrl" readonly/>
@@ -210,6 +220,19 @@ async function createShareLink() {
     });
     if (!r.ok) { alert('Failed: ' + r.status + ' ' + await r.text()); return; }
     const link = await r.json();
+
+    // If the user filled in the allow-list details, PATCH them onto the fresh
+    // link. Doing it as a follow-up keeps the Create payload / DTO stable.
+    const allowed = document.getElementById('shareAllowedEmails').value.trim();
+    const otp = document.getElementById('shareOtp').checked;
+    if (allowed || otp) {
+        await fetch('/api/v1/links/' + link.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ allowedEmails: allowed || null, requireEmailVerify: otp }),
+        });
+    }
     document.getElementById('shareUrl').value = link.url;
     document.getElementById('shareResult').style.display = 'block';
 }
