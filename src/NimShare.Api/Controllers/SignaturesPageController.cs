@@ -34,7 +34,7 @@ public class SignaturesPageController : Controller
     }
 
     [HttpGet("/signatures/new")]
-    public async Task<IActionResult> NewRequest(CancellationToken ct)
+    public async Task<IActionResult> NewRequest(Guid? fileId, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         // Only the user's own PDFs are pickable in the MVP.
@@ -45,6 +45,9 @@ public class SignaturesPageController : Controller
             .Take(50)
             .ToListAsync(ct);
         ViewData["Pdfs"] = pdfs;
+        // Preselect via ?fileId=… (used by the Browse right-click "Signatur"
+        // action). Only pre-select if the file actually is a PDF the user owns.
+        ViewData["PreselectFileId"] = fileId is Guid pf && pdfs.Any(p => p.Id == pf) ? (Guid?)pf : null;
         return View();
     }
 }

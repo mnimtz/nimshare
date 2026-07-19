@@ -100,7 +100,13 @@
             });
             if (r.status === 503) { out.textContent = @Json.Serialize(T["landing.ai_summary.disabled"].Value); btn.style.display='none'; return; }
             if (r.status === 415) { out.textContent = @Json.Serialize(T["landing.ai_summary.unsupported"].Value); return; }
-            if (!r.ok) { out.textContent = @Json.Serialize(T["landing.ai_summary.error"].Value); btn.disabled=false; return; }
+            if (!r.ok) {
+                let extra = '';
+                try { const p = await r.json(); if (p.detail) extra = ' (' + p.detail + ')'; } catch {}
+                out.textContent = @Json.Serialize(T["landing.ai_summary.error"].Value) + extra;
+                btn.disabled = false;
+                return;
+            }
             const d = await r.json();
             out.textContent = d.summary || '';
             btn.style.display='none';

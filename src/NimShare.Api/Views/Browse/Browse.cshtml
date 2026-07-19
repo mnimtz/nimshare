@@ -165,7 +165,7 @@
                     }
                     @foreach (var f in files)
                     {
-                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-date="@f.CreatedAt.ToUnixTimeSeconds()" ondblclick="openPreview('@f.Id')">
+                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-content-type="@f.ContentType" data-date="@f.CreatedAt.ToUnixTimeSeconds()" ondblclick="openPreview('@f.Id')">
                             <td class="col-check"><input type="checkbox" class="row-check" value="@f.Id" onclick="event.stopPropagation()"/></td>
                             <td class="col-name">
                                 <div class="fm-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
@@ -217,6 +217,7 @@
     <button data-act="preview" style="display:none">👁 Preview</button>
     <button data-act="share">🔗 @T["actions.share_link"]</button>
     <button data-act="directShare">🤝 @T["share.direct"]</button>
+    <button data-act="sign" style="display:none">✍ @T["nav.signatures"]</button>
     <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
     <button data-act="favorite">⭐ @T["actions.star"]</button>
     <div class="divider"></div>
@@ -334,8 +335,10 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         e.preventDefault();
         ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name };
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
+        const isSignable = ctxTarget.kind === 'file' && (tr.dataset.contentType || '').toLowerCase() === 'application/pdf';
         showFor('open',        ctxTarget.kind === 'folder');
         showFor('preview',     ctxTarget.kind === 'file');
+        showFor('sign',        isSignable);
         showFor('uploadReq',   ctxTarget.kind === 'folder');
         showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE);
@@ -369,6 +372,9 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         }
         if (act === 'directShare') openDirectShare(ctxTarget);
         if (act === 'favorite') toggleFavorite(ctxTarget);
+        if (act === 'sign' && ctxTarget.kind === 'file') {
+            location.href = '/signatures/new?fileId=' + ctxTarget.id;
+        }
         if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);

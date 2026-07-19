@@ -87,8 +87,11 @@ public class AiController : ControllerBase
             var bytes = ms.ToArray();
             summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
-                return Problem(statusCode: 502, title: "Vision returned no result.",
-                    detail: "The configured AI model may not support image input.");
+            {
+                var detail = (provider as OpenAiProvider)?.LastError
+                    ?? "The configured AI model may not support image input.";
+                return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
+            }
         }
         else
         {

@@ -46,6 +46,7 @@ public class OpenAiProvider : IAiProvider
     private readonly HttpClient _http;
     private readonly string _model;
     private readonly string _endpoint;
+    public string? LastError { get; private set; }
     private readonly bool _isAzure;
 
     public OpenAiProvider(HttpClient http, string apiKey, string model, string? azureEndpoint)
@@ -167,12 +168,16 @@ public class OpenAiProvider : IAiProvider
         try
         {
             var resp = await _http.PostAsync(_endpoint, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                LastError = $"OpenAI vision {(int)resp.StatusCode}: {text[..Math.Min(400, text.Length)]}";
+                return null;
+            }
             var doc = JsonDocument.Parse(text);
             return doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
         }
-        catch { return null; }
+        catch (Exception ex) { LastError = "vision exception: " + ex.Message; return null; }
     }
 
     private async Task<string?> ChatAsync(string system, string user, double temperature, CancellationToken ct)

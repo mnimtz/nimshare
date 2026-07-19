@@ -103,12 +103,19 @@ h4 { font-size: 1rem;    font-weight: 500; }
     color: var(--tw-white);
     display: flex; flex-direction: column;
     position: sticky; top: 0;
-    height: 100vh; max-height: 100vh;
-    overflow-y: auto; overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
     box-shadow: var(--shadow-side);
     border-right: 1px solid rgba(255,255,255,.05);
-    position: relative;
 }
+.sidebar-brand { flex: 0 0 auto; }
+.sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sidebar-footer { flex: 0 0 auto; }
 .sidebar::-webkit-scrollbar { width: 6px; }
 .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.10); border-radius: 6px; }
 
@@ -1067,21 +1074,24 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 900px) {
     .app-shell { grid-template-columns: 1fr; }
 
-    /* Compact top-bar — hamburger + tiny logo + brand text. Height ~44 px
-       so it doesn't eat the viewport like the old 110 px hero. */
+    /* Compact top-bar — hamburger + tiny logo + brand text. Hard-limited to
+       48 px so it never blows up under browser chrome or long titles. */
     .mobile-topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 6px;
-        padding: 4px 10px;
-        min-height: 44px;
+        padding: 0 10px;
+        height: 48px;
+        min-height: 48px;
+        max-height: 48px;
         background: var(--tw-primary);
         color: #fff;
         position: sticky;
         top: 0;
         z-index: 20;
         box-shadow: 0 2px 6px rgba(0,0,0,.14);
+        overflow: hidden;
     }
     .mobile-menu-btn {
         background: transparent;
@@ -1091,6 +1101,7 @@ input:focus, select:focus, textarea:focus {
         border-radius: 6px;
         cursor: pointer;
         display: flex;
+        flex: 0 0 auto;
     }
     .mobile-menu-btn svg { width: 22px; height: 22px; }
     .mobile-menu-btn:active { background: rgba(255,255,255,.14); }
@@ -1098,8 +1109,16 @@ input:focus, select:focus, textarea:focus {
         display: flex; align-items: center; gap: 6px;
         color: #fff; text-decoration: none;
         font-weight: 700; font-size: .95rem;
+        line-height: 1;
+        flex: 0 1 auto;
+        min-width: 0;
     }
-    .mobile-brand img { width: 22px; height: 22px; border-radius: 5px; background: #fff; padding: 1px; }
+    .mobile-brand img {
+        width: 24px !important; height: 24px !important;
+        max-width: 24px; max-height: 24px;
+        border-radius: 5px; background: #fff; padding: 1px;
+        flex: 0 0 24px;
+    }
 
     /* Sidebar: off-canvas drawer */
     .sidebar {

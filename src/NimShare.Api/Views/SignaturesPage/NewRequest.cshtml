@@ -3,6 +3,7 @@
     ViewData["Title"] = @T["sig.new.title"];
     Layout = "_AppShell";
     var pdfs = (List<StorageFile>)ViewData["Pdfs"]!;
+    var preselectId = (Guid?)ViewData["PreselectFileId"];
 }
 <div class="page-header">
     <div>
@@ -44,7 +45,15 @@
             }
             @foreach (var f in pdfs)
             {
-                <option value="@f.Id" data-name="@f.Name">@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
+                var isSel = preselectId == f.Id;
+                if (isSel)
+                {
+                    <option value="@f.Id" data-name="@f.Name" selected>@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
+                }
+                else
+                {
+                    <option value="@f.Id" data-name="@f.Name">@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
+                }
             }
         </select>
         <div class="helper" style="margin-top:6px">@T["sig.new.hint_upload_tab"]</div>
