@@ -34,6 +34,8 @@ public class NimShareDbContext : DbContext
     public DbSet<SignatureAudit> SignatureAudits => Set<SignatureAudit>();
     public DbSet<OfficeSettings> OfficeSettings => Set<OfficeSettings>();
     public DbSet<WikiPage> WikiPages => Set<WikiPage>();
+    public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+    public DbSet<Webhook> Webhooks => Set<Webhook>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -245,6 +247,27 @@ public class NimShareDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.DocumentServerUrl).HasMaxLength(400);
             e.Property(x => x.JwtSecretEncrypted).HasMaxLength(2000);
+        });
+
+        b.Entity<ApiToken>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.TokenHash);
+            e.HasIndex(x => x.OwnerUserId);
+            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
+            e.Property(x => x.TokenPrefix).HasMaxLength(12).IsRequired();
+            e.Property(x => x.Scopes).HasMaxLength(500);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<Webhook>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OwnerUserId);
+            e.Property(x => x.Url).HasMaxLength(500).IsRequired();
+            e.Property(x => x.SecretEncrypted).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.Events).HasMaxLength(500);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<WikiPage>(e =>

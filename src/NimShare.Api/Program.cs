@@ -99,7 +99,9 @@ builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
         {
             o.TokenValidationParameters = jwt.ValidationParameters;
             o.SaveToken = true;
-        });
+        })
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiTokenAuthHandler>(
+            ApiTokenAuthHandler.SchemeName, _ => { });
 }
 
 builder.Services.AddAuthorization(options =>
@@ -110,8 +112,8 @@ builder.Services.AddAuthorization(options =>
     // Cookie-authenticated state-changing calls need antiforgery — see the
     // [AutoValidateAntiforgeryToken] filter registered on controllers below.
     var schemes = entraConfigured
-        ? new[] { "Bearer", JwtTokenService.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme }
-        : new[] { JwtTokenService.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme };
+        ? new[] { "Bearer", JwtTokenService.SchemeName, ApiTokenAuthHandler.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme }
+        : new[] { JwtTokenService.SchemeName, ApiTokenAuthHandler.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme };
     options.AddPolicy("ApiUser", p =>
         p.RequireAuthenticatedUser().AddAuthenticationSchemes(schemes));
     options.AddPolicy("WebUser", p =>
@@ -201,6 +203,7 @@ builder.Services.AddSingleton<ITotpService, TotpService>();
 builder.Services.AddSingleton<ITotpChallengeStore, TotpChallengeStore>();
 builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 builder.Services.AddHostedService<SignatureReminderService>();
+builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.
 builder.Services.AddDistributedMemoryCache();

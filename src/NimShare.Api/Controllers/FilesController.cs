@@ -95,7 +95,8 @@ public class FilesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai, CancellationToken ct)
+    public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai,
+        [FromServices] IWebhookDispatcher hooks, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id && f.OwnerId == user.Id, ct);
@@ -113,6 +114,8 @@ public class FilesController : ControllerBase
         // Fire-and-forget AI post-processing (tags, risk flag, embedding) when
         // enabled in the gateway. Never blocks the uploader's response.
         ai.QueueForFile(file.Id);
+        hooks.QueueEvent(user.Id, WebhookEvent.FileUploaded,
+            new { fileId = file.Id, name = file.Name, sizeBytes = file.SizeBytes, folder = file.Folder });
         return NoContent();
     }
 

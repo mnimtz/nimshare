@@ -1,0 +1,97 @@
+@{
+    ViewData["Title"] = "Entwickler";
+    Layout = "_AppShell";
+}
+<div class="page-header">
+    <div>
+        <a href="/dashboard" class="muted" style="text-decoration:none">← Dashboard</a>
+        <h1 style="margin-top:6px">🔧 Entwickler-Zugriff</h1>
+        <p class="lede">Persönliche API-Tokens und Webhooks für externe Automatisierung.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="card-title">API-Tokens</h2>
+    <p class="muted">Nutze Tokens für iOS-App, CI-Skripte oder Automationen. Header: <code>Authorization: NimShare-Token &lt;token&gt;</code>.</p>
+    <div class="actions" style="margin:8px 0">
+        <button class="btn btn-primary" onclick="showCreateToken()">➕ Neuen Token erstellen</button>
+    </div>
+    <div id="tokens-list" class="muted">Lade …</div>
+</div>
+
+<div class="card" style="margin-top:12px">
+    <h2 class="card-title">Webhooks</h2>
+    <p class="muted">Empfange POST-Callbacks bei Events (Upload, Download, Signatur). Header <code>X-NimShare-Signature: sha256=…</code> = HMAC(secret, body).</p>
+    <div class="actions" style="margin:8px 0">
+        <button class="btn btn-primary" onclick="showCreateHook()">➕ Neuer Webhook</button>
+    </div>
+    <div id="webhooks-list" class="muted">Lade …</div>
+</div>
+
+<dialog id="create-token-dlg" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
+    <form method="dialog" style="padding:20px" onsubmit="return submitToken(event)">
+        <h3 style="margin-top:0">Neuen Token erstellen</h3>
+        <div class="field"><label>Name</label><input name="name" required placeholder="iOS App auf iPhone 15"/></div>
+        <div class="field"><label>Scopes (kommagetrennt, leer = alle)</label><input name="scopes" placeholder="files:read,links:manage"/></div>
+        <div class="field"><label>Läuft ab (optional)</label><input name="expiresAt" type="date"/></div>
+        <div class="actions"><button type="button" class="btn" onclick="document.getElementById('create-token-dlg').close()">Abbrechen</button><button class="btn btn-primary">Erstellen</button></div>
+    </form>
+</dialog>
+
+<dialog id="show-token-dlg" style="border:0;border-radius:12px;padding:0;max-width:600px;width:92%">
+    <div style="padding:20px">
+        <h3 style="margin-top:0">Dein neuer Token</h3>
+        <p class="muted">Bitte jetzt kopieren — er wird nur einmal angezeigt.</p>
+        <textarea id="new-token" readonly style="width:100%;font-family:monospace;font-size:12px;height:70px"></textarea>
+        <div class="actions"><button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('new-token').value);this.textContent='✓ Kopiert'">📋 Kopieren</button><button class="btn" onclick="document.getElementById('show-token-dlg').close()">Fertig</button></div>
+    </div>
+</dialog>
+
+<dialog id="create-hook-dlg" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
+    <form method="dialog" style="padding:20px" onsubmit="return submitHook(event)">
+        <h3 style="margin-top:0">Neuer Webhook</h3>
+        <div class="field"><label>Ziel-URL</label><input name="url" type="url" required placeholder="https://hooks.deine-firma.com/nimshare"/></div>
+        <div class="field"><label>Signing-Secret</label><input name="secret" required placeholder="mindestens 32 Zeichen"/></div>
+        <div class="field"><label>Events (kommagetrennt, leer = alle)</label><input name="events" placeholder="FileUploaded,LinkDownloaded,SignatureRequestCompleted"/></div>
+        <div class="actions"><button type="button" class="btn" onclick="document.getElementById('create-hook-dlg').close()">Abbrechen</button><button class="btn btn-primary">Erstellen</button></div>
+    </form>
+</dialog>
+
+@section Scripts {
+<script>
+async function api(m,u,b){const o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}
+    const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmt(d){return d?new Date(d).toLocaleString():'—'}
+
+async function loadTokens(){
+    try{const rows=await api('GET','/api/v1/dev/tokens')
+        const el=document.getElementById('tokens-list')
+        if(rows.length===0){el.textContent='Noch keine Tokens.';return}
+        el.innerHTML='<table style="width:100%;font-size:14px"><thead><tr><th style="text-align:left">Name</th><th>Prefix</th><th>Scopes</th><th>Erstellt</th><th>Zuletzt genutzt</th><th></th></tr></thead><tbody>'+
+          rows.map(t=>{const revoked=t.revokedAt!=null;const expired=t.expiresAt&&new Date(t.expiresAt)<new Date();
+            return `<tr style="opacity:${revoked||expired?0.5:1}"><td>${esc(t.name)}${revoked?' <span class="badge">widerrufen</span>':''}${expired?' <span class="badge">abgelaufen</span>':''}</td><td><code>${esc(t.prefix)}…</code></td><td>${esc(t.scopes||'alle')}</td><td>${fmt(t.createdAt)}</td><td>${fmt(t.lastUsedAt)}</td><td>${revoked?'':`<button class="btn btn-small" onclick="revokeToken('${t.id}')">Widerrufen</button>`}</td></tr>`}).join('')+'</tbody></table>'
+    }catch(e){document.getElementById('tokens-list').textContent='Fehler: '+e.message}
+}
+async function loadHooks(){
+    try{const rows=await api('GET','/api/v1/dev/webhooks')
+        const el=document.getElementById('webhooks-list')
+        if(rows.length===0){el.textContent='Noch keine Webhooks.';return}
+        el.innerHTML='<table style="width:100%;font-size:14px"><thead><tr><th style="text-align:left">URL</th><th>Events</th><th>Letzte Lieferung</th><th>Fehler</th><th></th></tr></thead><tbody>'+
+          rows.map(w=>`<tr style="opacity:${w.isActive?1:0.5}"><td style="word-break:break-all">${esc(w.url)}${w.isActive?'':' <span class="badge">deaktiviert</span>'}</td><td>${esc(w.events||'alle')}</td><td>${fmt(w.lastDeliveredAt)}</td><td>${w.failureCount}</td><td><button class="btn btn-small" onclick="deleteHook('${w.id}')">Löschen</button></td></tr>`).join('')+'</tbody></table>'
+    }catch(e){document.getElementById('webhooks-list').textContent='Fehler: '+e.message}
+}
+function showCreateToken(){document.getElementById('create-token-dlg').showModal()}
+function showCreateHook(){document.getElementById('create-hook-dlg').showModal()}
+async function submitToken(ev){ev.preventDefault();const f=ev.target;const body={name:f.name.value,scopes:f.scopes.value||null,expiresAt:f.expiresAt.value||null}
+    try{const r=await api('POST','/api/v1/dev/tokens',body);document.getElementById('create-token-dlg').close();f.reset();
+        document.getElementById('new-token').value=r.rawToken;document.getElementById('show-token-dlg').showModal();loadTokens()}
+    catch(e){alert('Fehler: '+e.message)}return false}
+async function submitHook(ev){ev.preventDefault();const f=ev.target;const body={url:f.url.value,secret:f.secret.value,events:f.events.value||null}
+    try{await api('POST','/api/v1/dev/webhooks',body);document.getElementById('create-hook-dlg').close();f.reset();loadHooks()}
+    catch(e){alert('Fehler: '+e.message)}return false}
+async function revokeToken(id){if(!confirm('Wirklich widerrufen?'))return;try{await api('DELETE','/api/v1/dev/tokens/'+id);loadTokens()}catch(e){alert(e.message)}}
+async function deleteHook(id){if(!confirm('Wirklich löschen?'))return;try{await api('DELETE','/api/v1/dev/webhooks/'+id);loadHooks()}catch(e){alert(e.message)}}
+loadTokens();loadHooks()
+</script>
+}

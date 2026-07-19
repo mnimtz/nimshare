@@ -153,6 +153,9 @@ public class SignController : Controller
             Note = reason,
         });
         await _db.SaveChangesAsync(ct);
+        HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
+            .QueueEvent(req.InitiatorUserId, WebhookEvent.SignatureRequestDeclined,
+                new { requestId = req.Id, title = req.Title, declinedBy = p.Email, reason });
         // Ping the initiator.
         await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
             $"{p.Name} hat die Signatur abgelehnt: {req.Title}", body: reason,
@@ -269,6 +272,9 @@ public class SignController : Controller
         await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
             $"Signatur-Anforderung {quoted} abgeschlossen", body: "Das signierte PDF liegt in deiner Ablage.",
             href: "/signatures", fileId: final.Id, ct: ct);
+        HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
+            .QueueEvent(req.InitiatorUserId, WebhookEvent.SignatureRequestCompleted,
+                new { requestId = req.Id, title = req.Title, finalFileId = final.Id });
     }
 }
 

@@ -90,6 +90,9 @@ public class LinksController : ControllerBase
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
 
+        HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
+            .QueueEvent(user.Id, WebhookEvent.LinkCreated,
+                new { linkId = link.Id, slug = link.Slug, fileId = link.FileId, folderId = link.FolderId });
         return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link));
     }
 

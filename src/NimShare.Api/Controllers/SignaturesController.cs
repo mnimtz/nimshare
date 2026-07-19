@@ -216,6 +216,9 @@ public class SignaturesController : ControllerBase
             p.DeclinedReason = null;
         }
         await _db.SaveChangesAsync(ct);
+        HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
+            .QueueEvent(me.Id, WebhookEvent.SignatureRequestSent,
+                new { requestId = r.Id, title = r.Title, participantCount = r.Participants.Count });
         return Ok(ToDto(r));
     }
 
