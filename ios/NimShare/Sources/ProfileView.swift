@@ -26,6 +26,12 @@ struct ProfileView: View {
                 }
             }
 
+            Section("Sicherheit") {
+                NavigationLink { TwoFactorSetupView() } label: {
+                    Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield")
+                }
+            }
+
             Section("Server") {
                 LabeledContent("URL", value: auth.serverURL?.absoluteString ?? "")
                 Button("Change server", action: auth.changeServer)

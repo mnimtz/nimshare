@@ -51,13 +51,36 @@ final class AuthStore: ObservableObject {
         state = .needsLogin
     }
 
+    /// Returned by `login` when the server demanded a TOTP code. The caller
+    /// shows the 2FA challenge screen and eventually calls `completeTotpLogin`.
+    @Published var pendingTotpChallenge: String?
+
     func login(email: String, password: String) async throws {
         guard let api else { throw ApiError.network("No server") }
-        let resp = try await api.login(email: email, password: password)
+        let result = try await api.login(email: email, password: password)
+        switch result {
+        case .success(let resp):
+            Keychain.set(resp.token, forKey: tokenKey)
+            api.setToken(resp.token)
+            user = resp.user
+            state = .signedIn
+        case .totpRequired(let challenge):
+            pendingTotpChallenge = challenge
+        }
+    }
+
+    func completeTotpLogin(code: String) async throws {
+        guard let api, let ch = pendingTotpChallenge else { throw ApiError.network("No challenge in flight") }
+        let resp = try await api.loginTotp(challengeToken: ch, code: code)
         Keychain.set(resp.token, forKey: tokenKey)
         api.setToken(resp.token)
         user = resp.user
+        pendingTotpChallenge = nil
         state = .signedIn
+    }
+
+    func cancelTotpChallenge() {
+        pendingTotpChallenge = nil
     }
 
     func signOut() {

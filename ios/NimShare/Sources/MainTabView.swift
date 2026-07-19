@@ -9,8 +9,8 @@ struct MainTabView: View {
                 .tabItem { Label("Suche", systemImage: "sparkle.magnifyingglass") }
             NavigationStack { ChatView() }
                 .tabItem { Label("Chat", systemImage: "message.badge.filled.fill") }
-            NavigationStack { ActivityView() }
-                .tabItem { Label("Aktivität", systemImage: "clock.fill") }
+            NavigationStack { NotificationsView() }
+                .tabItem { Label("Meldungen", systemImage: "bell.fill") }
             NavigationStack { ProfileView() }
                 .tabItem { Label("Profil", systemImage: "person.crop.circle") }
         }

@@ -77,11 +77,78 @@ final class NimShareAPI: ObservableObject {
     // MARK: - Endpoints
 
     struct LoginBody: Encodable { let email: String; let password: String }
-    func login(email: String, password: String) async throws -> LoginResponse {
+    /// Two-shot response — either a full LoginResponse or a TOTP challenge.
+    func login(email: String, password: String) async throws -> LoginResult {
         let body = try Self.jsonEncoder.encode(LoginBody(email: email, password: password))
         let req = request("POST", "api/v1/auth/login", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
+        // Try challenge first — the JSON discriminator is cheap.
+        if let ch = try? Self.jsonDecoder.decode(TotpChallengeResponse.self, from: data), ch.requiresTotp {
+            return .totpRequired(ch.challengeToken)
+        }
+        return .success(try decode(LoginResponse.self, data))
+    }
+
+    struct TotpSubmitBody: Encodable { let challengeToken: String; let code: String }
+    func loginTotp(challengeToken: String, code: String) async throws -> LoginResponse {
+        let body = try Self.jsonEncoder.encode(TotpSubmitBody(challengeToken: challengeToken, code: code))
+        let req = request("POST", "api/v1/auth/login/totp", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
         return try decode(LoginResponse.self, data)
+    }
+
+    // MARK: - 2FA
+    func totpStatus() async throws -> TotpStatus {
+        let req = request("GET", "api/v1/2fa/status")
+        let (data, _) = try await perform(req)
+        return try decode(TotpStatus.self, data)
+    }
+
+    func totpInit() async throws -> TotpInitResponse {
+        let req = request("POST", "api/v1/2fa/setup/init")
+        let (data, _) = try await perform(req)
+        return try decode(TotpInitResponse.self, data)
+    }
+
+    struct TotpVerifyBody: Encodable { let secret: String; let code: String }
+    func totpVerify(secret: String, code: String) async throws {
+        let body = try Self.jsonEncoder.encode(TotpVerifyBody(secret: secret, code: code))
+        let req = request("POST", "api/v1/2fa/setup/verify", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    struct TotpDisableBody: Encodable { let code: String }
+    func totpDisable(code: String) async throws {
+        let body = try Self.jsonEncoder.encode(TotpDisableBody(code: code))
+        let req = request("POST", "api/v1/2fa/disable", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    // MARK: - Notifications list
+    func listNotifications(onlyUnread: Bool = false, limit: Int = 100) async throws -> [NotifyDto] {
+        let req = request("GET", "api/v1/notifications", query: [
+            .init(name: "onlyUnread", value: onlyUnread ? "true" : "false"),
+            .init(name: "limit", value: String(limit)),
+        ])
+        let (data, _) = try await perform(req)
+        return try decode([NotifyDto].self, data)
+    }
+
+    func markNotificationRead(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/notifications/\(id)/read")
+        _ = try await perform(req)
+    }
+
+    func markAllNotificationsRead() async throws {
+        let req = request("POST", "api/v1/notifications/read-all")
+        _ = try await perform(req)
+    }
+
+    func unreadNotificationCount() async throws -> Int {
+        let req = request("GET", "api/v1/notifications/unread-count")
+        let (data, _) = try await perform(req)
+        struct R: Decodable { let unread: Int }
+        return try decode(R.self, data).unread
     }
 
     func me() async throws -> UserDto {

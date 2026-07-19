@@ -49,6 +49,9 @@ struct BrowseRootView: View {
                 NavigationLink { LinksView() } label: {
                     Label("Meine Links", systemImage: "link").foregroundStyle(Theme.tungstenBlue)
                 }
+                NavigationLink { ActivityView() } label: {
+                    Label("Aktivität", systemImage: "clock.fill").foregroundStyle(Theme.tungstenBlue)
+                }
                 NavigationLink { TrashView() } label: {
                     Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
                 }

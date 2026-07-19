@@ -43,4 +43,44 @@ public class NotificationsController : Controller
         var n = await notif.UnreadCountAsync(me.Id, ct);
         return Ok(new { unread = n });
     }
+
+    public record NotifyDto(Guid Id, string Kind, string Title, string? Body, string? Href,
+        Guid? FileId, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt);
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("/api/v1/notifications")]
+    public async Task<IActionResult> ApiList(bool onlyUnread = false, int limit = 100, CancellationToken ct = default)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var q = _db.UserNotifications.Where(n => n.UserId == me.Id);
+        if (onlyUnread) q = q.Where(n => n.ReadAt == null);
+        var items = await q.OrderByDescending(n => n.CreatedAt)
+            .Take(Math.Clamp(limit, 1, 500))
+            .Select(n => new NotifyDto(n.Id, n.Kind.ToString(), n.Title, n.Body, n.Href, n.FileId, n.CreatedAt, n.ReadAt))
+            .ToListAsync(ct);
+        return Ok(items);
+    }
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("/api/v1/notifications/{id:guid}/read")]
+    public async Task<IActionResult> ApiMarkRead(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var n = await _db.UserNotifications.SingleOrDefaultAsync(x => x.Id == id && x.UserId == me.Id, ct);
+        if (n is null) return NotFound();
+        if (n.ReadAt is null) { n.ReadAt = DateTimeOffset.UtcNow; await _db.SaveChangesAsync(ct); }
+        return NoContent();
+    }
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("/api/v1/notifications/read-all")]
+    public async Task<IActionResult> ApiMarkAllRead(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var now = DateTimeOffset.UtcNow;
+        var unread = await _db.UserNotifications.Where(n => n.UserId == me.Id && n.ReadAt == null).ToListAsync(ct);
+        foreach (var n in unread) n.ReadAt = now;
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
 }

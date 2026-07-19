@@ -24,7 +24,11 @@ struct RootView: View {
             case .needsServer:
                 ServerConfigView()
             case .needsLogin:
-                LoginView()
+                if auth.pendingTotpChallenge != nil {
+                    TotpChallengeView()
+                } else {
+                    LoginView()
+                }
             case .signedIn:
                 MainTabView()
             }

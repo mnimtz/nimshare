@@ -7,6 +7,56 @@ struct LoginResponse: Codable {
     let user: UserDto
 }
 
+/// Envelope returned by /api/v1/auth/login when the user has 2FA enrolled.
+struct TotpChallengeResponse: Codable {
+    let requiresTotp: Bool
+    let challengeToken: String
+}
+
+/// Server login response is *either* the LoginResponse or the challenge.
+/// Both cases share a HTTP 200 status; the client discriminates on
+/// `requiresTotp`.
+enum LoginResult {
+    case success(LoginResponse)
+    case totpRequired(String)  // challenge token
+}
+
+// MARK: - 2FA
+struct TotpStatus: Codable {
+    let enabled: Bool
+    let enrolledAt: Date?
+}
+
+struct TotpInitResponse: Codable {
+    let secret: String
+    let otpAuthUri: String
+}
+
+// MARK: - Notifications
+struct NotifyDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let kind: String
+    let title: String
+    let body: String?
+    let href: String?
+    let fileId: UUID?
+    let createdAt: Date
+    let readAt: Date?
+
+    var isUnread: Bool { readAt == nil }
+
+    var iconName: String {
+        switch kind {
+        case "DirectShareGranted": return "person.crop.circle.badge.plus"
+        case "LinkDownloaded": return "arrow.down.circle.fill"
+        case "InviteAccepted": return "checkmark.seal.fill"
+        case "QuotaWarning": return "exclamationmark.triangle.fill"
+        case "SystemAnnouncement": return "megaphone.fill"
+        default: return "bell.fill"
+        }
+    }
+}
+
 struct UserDto: Codable, Identifiable, Equatable {
     let id: UUID
     let email: String
