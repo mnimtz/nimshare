@@ -1,0 +1,272 @@
+@model NimShare.Core.Entities.SignatureRequest
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "_AppShell";
+    var fields = (List<SignatureField>)ViewData["Fields"]!;
+    var audits = (List<SignatureAudit>)ViewData["Audits"]!;
+    var latestInvite = (Dictionary<Guid, SignatureAudit>)ViewData["LatestInvite"]!;
+
+    (string cls, string label) StatusChip(SignatureRequestStatus s) => s switch
+    {
+        SignatureRequestStatus.Completed => ("chip-ok", @T["sig.status.completed"].Value),
+        SignatureRequestStatus.Sent => ("chip-warn", @T["sig.status.sent"].Value),
+        SignatureRequestStatus.Declined => ("chip-critical", @T["sig.status.declined"].Value),
+        SignatureRequestStatus.Cancelled => ("chip", @T["sig.status.cancelled"].Value),
+        _ => ("chip", @T["sig.status.draft"].Value),
+    };
+    var chip = StatusChip(Model.Status);
+    var doneCount = Model.Participants.Count(p =>
+        p.Status == SignatureParticipantStatus.Signed
+        || (p.Role == SignatureParticipantRole.Viewer && p.Status == SignatureParticipantStatus.Viewed));
+}
+<div class="page-header">
+    <div>
+        <a href="/signatures" class="muted" style="text-decoration:none">← @T["nav.signatures"]</a>
+        <h1 style="margin-top:6px">✍ @Model.Title</h1>
+        <div class="row" style="gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap">
+            <span class="chip @chip.cls">@chip.label</span>
+            <span class="muted">@doneCount / @Model.Participants.Count</span>
+            <span class="muted">·</span>
+            <span class="muted">@T["sig.col.created"]: @Model.CreatedAt.ToString("yyyy-MM-dd HH:mm 'UTC'")</span>
+            @if (Model.SentAt is not null)
+            {
+                <span class="muted">·</span>
+                <span class="muted">@T["sig.detail.sent_at"]: @Model.SentAt.Value.ToString("yyyy-MM-dd HH:mm 'UTC'")</span>
+            }
+            @if (Model.CompletedAt is not null)
+            {
+                <span class="muted">·</span>
+                <span class="muted">@T["sig.status.completed"]: @Model.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm 'UTC'")</span>
+            }
+        </div>
+    </div>
+    <div class="row" style="gap:6px">
+        @if (Model.Status == SignatureRequestStatus.Sent)
+        {
+            <button class="btn btn-secondary" onclick="remindAll()">🔔 @T["sig.detail.remind_all"]</button>
+            <button class="btn btn-ghost" style="color:var(--status-critical)" onclick="cancelReq()">✕ @T["sig.detail.cancel"]</button>
+        }
+        @if (Model.FinalFileId is Guid ff)
+        {
+            <a class="btn btn-primary" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+        }
+    </div>
+</div>
+
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <!-- Participants + delivery -->
+    <div class="card" style="flex:1;min-width:320px">
+        <h2 class="card-title">@T["sig.col.recipients"]</h2>
+        <table class="fm-list" style="margin-top:6px">
+            <thead>
+                <tr>
+                    <th>@T["common.name"]</th>
+                    <th>@T["sig.detail.role"]</th>
+                    <th>@T["sig.detail.state"]</th>
+                    <th>@T["sig.detail.email_status"]</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Participants.OrderBy(p => p.Order))
+                {
+                    (string cls, string label) partChip = p.Status switch
+                    {
+                        SignatureParticipantStatus.Signed => ("chip-ok", @T["sig.detail.state_signed"].Value),
+                        SignatureParticipantStatus.Declined => ("chip-critical", @T["sig.detail.state_declined"].Value),
+                        SignatureParticipantStatus.Viewed => ("chip-warn", @T["sig.detail.state_viewed"].Value),
+                        _ => ("chip", @T["sig.detail.state_pending"].Value),
+                    };
+                    string? emailError = null;
+                    string emailBadge = "—";
+                    string emailBadgeCls = "chip";
+                    if (latestInvite.TryGetValue(p.Id, out var inv))
+                    {
+                        if (inv.Note == "invited")
+                        {
+                            emailBadge = "✉ " + @T["sig.detail.email_sent"].Value;
+                            emailBadgeCls = "chip-ok";
+                        }
+                        else if (inv.Note != null && inv.Note.StartsWith("email-failed:"))
+                        {
+                            emailError = inv.Note["email-failed:".Length..].Trim();
+                            emailBadge = "⚠ " + @T["sig.email_failed_short"].Value;
+                            emailBadgeCls = "chip-critical";
+                        }
+                        else if (inv.Note != null && inv.Note.Contains("reminder"))
+                        {
+                            emailBadge = "🔔 " + @T["sig.detail.reminder_sent"].Value;
+                            emailBadgeCls = "chip-warn";
+                        }
+                    }
+                    <tr>
+                        <td>
+                            <strong>@p.Name</strong><br/>
+                            <span class="muted mono" style="font-size:12px">@p.Email</span>
+                        </td>
+                        <td>
+                            @if (p.Role == SignatureParticipantRole.Signer)
+                            {
+                                <span>✍ @T["sig.new.chip_signer"]</span>
+                            }
+                            else
+                            {
+                                <span>👁 @T["sig.new.chip_viewer"]</span>
+                            }
+                        </td>
+                        <td><span class="chip @partChip.cls">@partChip.label</span></td>
+                        <td>
+                            <span class="chip @emailBadgeCls" @(emailError is null ? "" : $"title=\"{emailError}\" style=\"cursor:help\"")>@emailBadge</span>
+                        </td>
+                        <td>
+                            @if (Model.Status == SignatureRequestStatus.Sent && p.Status != SignatureParticipantStatus.Signed && p.Status != SignatureParticipantStatus.Declined)
+                            {
+                                <button class="btn btn-ghost btn-sm" onclick="remindOne('@p.Id')">🔔 @T["sig.detail.remind"]</button>
+                            }
+                        </td>
+                    </tr>
+                    @if (emailError is not null)
+                    {
+                        <tr>
+                            <td colspan="5" class="muted" style="padding:6px 12px;font-family:var(--font-mono);font-size:12px;color:var(--status-critical)">
+                                @emailError
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Fields + Audit log -->
+    <div style="flex:1;min-width:320px;display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+            <h2 class="card-title">@T["sig.detail.fields"]</h2>
+            @if (fields.Count == 0)
+            {
+                <p class="muted">@T["sig.detail.no_fields"]</p>
+            }
+            else
+            {
+                <table class="fm-list" style="margin-top:6px;font-size:14px">
+                    <thead><tr>
+                        <th>@T["sig.new.type_label"]</th>
+                        <th>@T["sig.col.recipients"]</th>
+                        <th>@T["sig.detail.page"]</th>
+                        <th>@T["sig.detail.status"]</th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach (var f in fields.OrderBy(f => f.Page).ThenBy(f => f.Y))
+                    {
+                        var p = Model.Participants.FirstOrDefault(x => x.Id == f.ParticipantId);
+                        var typeLabel = f.Type switch
+                        {
+                            SignatureFieldType.Signature => "✍ " + @T["sig.new.type_signature"].Value.Replace("✍ ", ""),
+                            SignatureFieldType.Text => @T["sig.new.type_text"].Value,
+                            SignatureFieldType.Date => @T["sig.new.type_date"].Value,
+                            SignatureFieldType.Checkbox => @T["sig.new.type_checkbox"].Value,
+                            _ => f.Type.ToString(),
+                        };
+                        <tr>
+                            <td>@typeLabel</td>
+                            <td>@(p?.Name ?? "—")</td>
+                            <td>@f.Page</td>
+                            <td>
+                                @if (f.FilledAt is not null)
+                                {
+                                    <span class="chip chip-ok">✓</span>
+                                }
+                                else
+                                {
+                                    <span class="chip">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">@T["sig.detail.audit"]</h2>
+            @if (audits.Count == 0)
+            {
+                <p class="muted">—</p>
+            }
+            else
+            {
+                <div style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto">
+                @foreach (var a in audits)
+                {
+                    var pName = a.ParticipantId is Guid pid
+                        ? Model.Participants.FirstOrDefault(x => x.Id == pid)?.Name
+                        : null;
+                    var kindLabel = a.Kind switch
+                    {
+                        SignatureAuditKind.Invited => @T["sig.detail.audit.invited"].Value,
+                        SignatureAuditKind.Viewed => @T["sig.detail.audit.viewed"].Value,
+                        SignatureAuditKind.Signed => @T["sig.detail.audit.signed"].Value,
+                        SignatureAuditKind.Declined => @T["sig.detail.audit.declined"].Value,
+                        SignatureAuditKind.Cancelled => @T["sig.detail.audit.cancelled"].Value,
+                        SignatureAuditKind.Finalized => @T["sig.detail.audit.finalized"].Value,
+                        _ => a.Kind.ToString(),
+                    };
+                    <div style="border-left:3px solid var(--tw-gray-300);padding:6px 10px">
+                        <div style="font-weight:500">
+                            @kindLabel
+                            @if (!string.IsNullOrEmpty(pName)) { <span class="muted"> · @pName</span> }
+                        </div>
+                        <div class="muted" style="font-size:12px">
+                            @a.At.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+                            @if (!string.IsNullOrEmpty(a.Note)) { <span> · <code>@a.Note</code></span> }
+                        </div>
+                    </div>
+                }
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">📄 @T["sig.detail.document"]</h2>
+            <p class="muted">@Model.SourceFile?.Name (@((Model.SourceFile?.SizeBytes ?? 0) / 1024) KB)</p>
+            <div class="actions">
+                <a class="btn btn-secondary" href="/api/v1/signatures/@Model.Id/source-pdf" target="_blank">📄 @T["sig.detail.view_source"]</a>
+                @if (Model.FinalFileId is Guid finalId)
+                {
+                    <a class="btn btn-primary" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function remindOne(pid) {
+    // Use the request-level remind endpoint; server will re-issue tokens for
+    // pending participants and email them individually.
+    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
+    const r = await fetch('/api/v1/signatures/@Model.Id/remind', {
+        method: 'POST', credentials: 'same-origin'
+    });
+    if (r.ok) location.reload();
+    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+}
+async function remindAll() {
+    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
+    const r = await fetch('/api/v1/signatures/@Model.Id/remind', {
+        method: 'POST', credentials: 'same-origin'
+    });
+    if (r.ok) location.reload();
+    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+}
+async function cancelReq() {
+    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_cancel"].Value))) return;
+    const r = await fetch('/api/v1/signatures/@Model.Id/cancel', {
+        method: 'POST', credentials: 'same-origin'
+    });
+    if (r.ok) location.reload();
+    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+}
+</script>
