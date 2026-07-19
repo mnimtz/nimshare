@@ -45,12 +45,19 @@ public class SqliteRecoveryMiddleware
             // an already-consumed request body (empty on the retry ⇒ 400 or
             // silent no-op) and could double-write anything a half-succeeded
             // SaveChanges already committed. GET/HEAD/OPTIONS are safe with
-            // ONE more exception: side-effectful GETs like /sign/{pid}
-            // (records ViewedAt + inserts an audit row) can double-insert if
-            // the first attempt half-succeeded — skip those too.
+            // one more exception: side-effectful GETs also skip retry
+            // because a half-succeeded write could double up on the retry:
+            //   /sign/{pid}     — records ViewedAt + audit row
+            //   /s/{slug}       — inserts ShareLinkAccess + notification
+            //   /u/{slug}       — same shape for upload links
+            //   /r/{token}      — audit + hit-counter on reset links
             var m = ctx.Request.Method;
             var path = ctx.Request.Path.Value ?? "";
-            var sideEffectingGet = path.StartsWith("/sign/", StringComparison.OrdinalIgnoreCase);
+            var sideEffectingGet =
+                path.StartsWith("/sign/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/s/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/u/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/r/", StringComparison.OrdinalIgnoreCase);
             var safe = (HttpMethods.IsGet(m) || HttpMethods.IsHead(m) || HttpMethods.IsOptions(m))
                        && !sideEffectingGet;
             if (!safe || ctx.Response.HasStarted)

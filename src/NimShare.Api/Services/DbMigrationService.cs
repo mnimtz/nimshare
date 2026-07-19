@@ -176,7 +176,6 @@ public class DbMigrationService : IDbMigrationService
             for (int i = tables.Count - 1; i >= 0; i--)
             {
                 var wipeName = tables[i].Name;
-                var entityType = target.Model.FindEntityType(wipeName)?.ClrType ?? typeof(object);
                 // Skip the wipe if the table doesn't exist yet — first-time
                 // switch to a fresh DB has nothing to remove.
                 try

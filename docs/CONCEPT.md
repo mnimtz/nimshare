@@ -1,5 +1,7 @@
 # NimShare — Concept
 
+> **Status:** v1.9.0 shipped. Everything in the MVP catalogue below is live plus the entire Signature, Wiki, File-Locking, Webhooks, API-Tokens, 2FA, Recurring Uploads, DB-Provider-Wizard, and Zertifikate stack. Roadmap for what's *not* yet shipped lives in [ROADMAP.md](./ROADMAP.md).
+
 > A Seafile-style file-sharing service, purpose-built for the Tungsten/Printix internal ecosystem: minimal to operate, generous in features, brand-consistent.
 
 ## Goals

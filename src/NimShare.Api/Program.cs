@@ -333,6 +333,17 @@ using (var scope = app.Services.CreateScope())
             // lives in NimShare.Migrations.SqlServer, Sqlite's in
             // NimShare.Core/Migrations. MigrateAsync is idempotent and
             // handles schema evolution correctly on both sides.
+            if (isSqlServer)
+            {
+                // Rescue path for admins who flipped to Azure SQL on
+                // v1.8.0-v1.8.4 (which used EnsureCreatedAsync, no history
+                // table). The tables exist but __EFMigrationsHistory is
+                // empty — MigrateAsync would re-play InitialSqlServer and
+                // die on "object already exists". If we detect that state,
+                // baseline-stamp the history row so MigrateAsync sees "up
+                // to date".
+                await BaselineSqlServerIfNeededAsync(db, scope.ServiceProvider);
+            }
             await db.Database.MigrateAsync();
             break;
         }
@@ -440,5 +451,72 @@ app.MapControllers();
 app.MapRazorPages();
 
 app.Run();
+
+/// <summary>
+/// Rescue for v1.8.0-v1.8.4 upgraders: those versions provisioned Azure SQL
+/// with EnsureCreatedAsync, so every table exists but __EFMigrationsHistory
+/// is empty. v1.8.5 introduced real migrations, and MigrateAsync on that
+/// state re-plays InitialSqlServer → dies on "object already exists" and
+/// bricks the upgrade. Detect the mismatch (Users table exists AND history
+/// row is missing) and INSERT the InitialSqlServer row so MigrateAsync sees
+/// "up to date". Fresh installs skip the branch because Users doesn't exist
+/// yet. Safe to leave in indefinitely — the fingerprint check is cheap.
+/// </summary>
+static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceProvider services)
+{
+    try
+    {
+        // Does the schema look already populated?
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        bool usersExists = false;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT COUNT(1) FROM sys.tables WHERE name = 'Users'";
+            usersExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+        }
+        if (!usersExists) return; // fresh DB — regular MigrateAsync will apply everything
+        // Is __EFMigrationsHistory present?
+        bool historyExists;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT COUNT(1) FROM sys.tables WHERE name = '__EFMigrationsHistory'";
+            historyExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+        }
+        if (!historyExists)
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"CREATE TABLE [__EFMigrationsHistory] (
+                [MigrationId] nvarchar(150) NOT NULL,
+                [ProductVersion] nvarchar(32) NOT NULL,
+                CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+            )";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // Already stamped? Nothing to do.
+        long stamped;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT COUNT(1) FROM [__EFMigrationsHistory]";
+            stamped = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+        if (stamped > 0) return;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (@id, @v)";
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "@id"; p1.Value = "20260719180245_InitialSqlServer"; cmd.Parameters.Add(p1);
+            var p2 = cmd.CreateParameter(); p2.ParameterName = "@v"; p2.Value = "8.0.10"; cmd.Parameters.Add(p2);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        var logger = services.GetService<ILoggerFactory>()?.CreateLogger("Startup");
+        logger?.LogWarning("SqlServer __EFMigrationsHistory was empty on an already-populated schema. Baseline-stamped InitialSqlServer so MigrateAsync can proceed. This is the v1.8.0-1.8.4 → v1.8.5 upgrade path.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] Baseline-stamp for SqlServer failed: " + ex.Message);
+        // Fall through — MigrateAsync will either succeed on a fresh DB or
+        // fail loudly, which is the pre-fix behaviour.
+    }
+}
 
 public partial class Program { }
