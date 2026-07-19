@@ -85,10 +85,18 @@ public class DbMigrationService : IDbMigrationService
         try
         {
             var opts = new DbContextOptionsBuilder<NimShareDbContext>()
-                .UseSqlServer(targetConnectionString, o => o.CommandTimeout(120))
+                .UseSqlServer(targetConnectionString, o =>
+                {
+                    o.CommandTimeout(120);
+                    // Same MigrationsAssembly as the runtime app so this
+                    // context can Migrate() with the SqlServer-specific set.
+                    o.MigrationsAssembly("NimShare.Migrations.SqlServer");
+                })
                 .Options;
             await using var target = new NimShareDbContext(opts);
-            await target.Database.EnsureCreatedAsync(ct);
+            // Real migrations — evolves schema across app upgrades, unlike the
+            // one-shot EnsureCreated we used in v1.8.0.
+            await target.Database.MigrateAsync(ct);
             sw.Stop();
             return new CopyResult(true, 0, 0, sw.Elapsed, null);
         }
@@ -150,7 +158,11 @@ public class DbMigrationService : IDbMigrationService
             using var scope = _services.CreateScope();
             var source = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
             var opts = new DbContextOptionsBuilder<NimShareDbContext>()
-                .UseSqlServer(targetConnectionString, o => o.CommandTimeout(180))
+                .UseSqlServer(targetConnectionString, o =>
+                {
+                    o.CommandTimeout(180);
+                    o.MigrationsAssembly("NimShare.Migrations.SqlServer");
+                })
                 .Options;
             await using var target = new NimShareDbContext(opts);
             // Bulk inserts don't need change tracking.

@@ -779,7 +779,7 @@ Open the link:
   <data name="dbset.confirm.switch"><value>This will restart the app and switch it to the new database. Continue?</value></data>
 
   <data name="dbset.warn.title"><value>Before you switch</value></data>
-  <data name="dbset.warn.migration"><value>The schema is built via EnsureCreated on the target — future schema changes still need code updates.</value></data>
+  <data name="dbset.warn.migration"><value>The schema is applied via proper EF migrations — future upgrades run MigrateAsync at startup on both providers.</value></data>
   <data name="dbset.warn.firewall"><value>Make sure the Azure SQL firewall allows the App Service's outbound IP (or turn on "Allow Azure services").</value></data>
   <data name="dbset.warn.restart"><value>The app restarts after switching. Ongoing sessions stay logged in; in-flight uploads are aborted.</value></data>
 

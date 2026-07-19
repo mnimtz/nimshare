@@ -22,6 +22,7 @@ COPY NimShare.sln ./
 COPY VERSION ./
 COPY src/NimShare.Api/NimShare.Api.csproj src/NimShare.Api/
 COPY src/NimShare.Core/NimShare.Core.csproj src/NimShare.Core/
+COPY src/NimShare.Migrations.SqlServer/NimShare.Migrations.SqlServer.csproj src/NimShare.Migrations.SqlServer/
 RUN dotnet restore src/NimShare.Api/NimShare.Api.csproj
 
 # Now the source tree.

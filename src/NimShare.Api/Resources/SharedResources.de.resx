@@ -785,7 +785,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="dbset.confirm.switch"><value>Das startet die App neu und schaltet sie auf die neue Datenbank um. Fortfahren?</value></data>
 
   <data name="dbset.warn.title"><value>Vor dem Umstellen</value></data>
-  <data name="dbset.warn.migration"><value>Das Schema wird per EnsureCreated auf der Ziel-DB gebaut — spätere Schema-Änderungen brauchen weiter Code-Updates.</value></data>
+  <data name="dbset.warn.migration"><value>Das Schema wird per echter EF-Migration angelegt — spätere Updates laufen MigrateAsync auf beiden Providern.</value></data>
   <data name="dbset.warn.firewall"><value>Prüfe dass die Azure-SQL-Firewall die ausgehende IP des App Services zulässt (oder "Azure-Dienste zulassen" aktivieren).</value></data>
   <data name="dbset.warn.restart"><value>Die App startet nach dem Umschalten neu. Laufende Sessions bleiben eingeloggt; laufende Uploads werden abgebrochen.</value></data>
 

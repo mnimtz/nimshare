@@ -1,10 +1,14 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NimShare.Api", "src\NimShare.Api\NimShare.Api.csproj", "{A1A1A1A1-1111-1111-1111-111111111111}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NimShare.Core", "src\NimShare.Core\NimShare.Core.csproj", "{B2B2B2B2-2222-2222-2222-222222222222}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BBE1F732-E49B-4251-A9D0-8201183A954F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NimShare.Migrations.SqlServer", "src\NimShare.Migrations.SqlServer\NimShare.Migrations.SqlServer.csproj", "{354738D6-1E78-4EC7-AEAB-E2A37C683CF4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,8 +24,15 @@ Global
 		{B2B2B2B2-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2B2B2B2-2222-2222-2222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2B2B2B2-2222-2222-2222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{354738D6-1E78-4EC7-AEAB-E2A37C683CF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{354738D6-1E78-4EC7-AEAB-E2A37C683CF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{354738D6-1E78-4EC7-AEAB-E2A37C683CF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{354738D6-1E78-4EC7-AEAB-E2A37C683CF4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{354738D6-1E78-4EC7-AEAB-E2A37C683CF4} = {BBE1F732-E49B-4251-A9D0-8201183A954F}
 	EndGlobalSection
 EndGlobal

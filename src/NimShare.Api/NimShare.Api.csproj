@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NimShare.Core\NimShare.Core.csproj" />
+    <ProjectReference Include="..\NimShare.Migrations.SqlServer\NimShare.Migrations.SqlServer.csproj" />
   </ItemGroup>
 
   <!-- Ship VERSION next to the app so BuildInfo can read it at runtime. -->

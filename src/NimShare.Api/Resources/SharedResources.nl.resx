@@ -780,7 +780,7 @@ Open de link:
   <data name="dbset.confirm.switch"><value>De app herstart en schakelt naar de nieuwe database. Doorgaan?</value></data>
 
   <data name="dbset.warn.title"><value>Voordat je overschakelt</value></data>
-  <data name="dbset.warn.migration"><value>Het schema wordt via EnsureCreated gebouwd — toekomstige wijzigingen vragen nog code-updates.</value></data>
+  <data name="dbset.warn.migration"><value>Het schema wordt toegepast via echte EF-migraties — MigrateAsync draait bij het opstarten op beide providers.</value></data>
   <data name="dbset.warn.firewall"><value>Zorg dat de Azure SQL-firewall het uitgaande IP van App Service toestaat (of zet "Azure-services toestaan" aan).</value></data>
   <data name="dbset.warn.restart"><value>De app herstart. Sessies blijven ingelogd; lopende uploads worden afgebroken.</value></data>
 

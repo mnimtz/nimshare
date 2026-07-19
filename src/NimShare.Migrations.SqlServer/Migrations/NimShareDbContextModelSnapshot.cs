@@ -8,7 +8,7 @@ using NimShare.Core.Data;
 
 #nullable disable
 
-namespace NimShare.Api.Migrations
+namespace NimShare.Migrations.SqlServer.Migrations
 {
     [DbContext(typeof(NimShareDbContext))]
     partial class NimShareDbContextModelSnapshot : ModelSnapshot

@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NimShare.Core.Data;
 
 #nullable disable
 
-namespace NimShare.Api.Migrations
+namespace NimShare.Migrations.SqlServer.Migrations
 {
     [DbContext(typeof(NimShareDbContext))]
-    partial class NimShareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719180245_InitialSqlServer")]
+    partial class InitialSqlServer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

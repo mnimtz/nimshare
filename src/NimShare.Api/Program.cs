@@ -54,17 +54,31 @@ if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 builder.Services.AddDbContext<NimShareDbContext>(o =>
 {
     if (string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
-        o.UseSqlServer(connString, b => b.MigrationsAssembly("NimShare.Api"));
+    {
+        // SqlServer migrations live in a dedicated assembly (kept separate so
+        // provider-specific SQL — nvarchar / IX names / etc. — doesn't collide
+        // with the Sqlite migration set that ships in NimShare.Api itself).
+        o.UseSqlServer(connString, b =>
+        {
+            b.MigrationsAssembly("NimShare.Migrations.SqlServer");
+            b.CommandTimeout(45);
+            // Built-in transient-error retry — the SqlServer provider knows
+            // its own error codes (deadlocks, throttling, connection resets).
+            b.EnableRetryOnFailure(maxRetryCount: 4, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
+        });
+    }
     else
+    {
         // Sqlite on Azure Files (SMB mount) sees transient "unable to open
         // database file" errors when the mount is remounted or throttled. Two
         // guards: (1) enable WAL + a 15 s busy_timeout so brief locks don't
-        // fault, (2) let EF's execution strategy retry the query itself.
+        // fault, (2) SqliteRecoveryMiddleware clears the pool + retries GETs.
         o.UseSqlite(connString, b =>
         {
             b.MigrationsAssembly("NimShare.Api");
             b.CommandTimeout(45);
         });
+    }
 });
 
 // ── Auth ───────────────────────────────────────────────────────────────────
@@ -315,21 +329,11 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            if (isSqlServer)
-            {
-                // We don't ship SqlServer-specific EF migrations (the whole
-                // migration set was authored against Sqlite). Instead, let EF
-                // build the schema from the current model in one shot on the
-                // freshly created Azure SQL database. Idempotent: if the
-                // schema already exists it's a no-op. Future schema changes
-                // will need a proper SqlServer migration set — noted in
-                // docs/DB-BACKEND.md.
-                await db.Database.EnsureCreatedAsync();
-            }
-            else
-            {
-                await db.Database.MigrateAsync();
-            }
+            // Both providers now have a proper migration set — SqlServer's
+            // lives in NimShare.Migrations.SqlServer, Sqlite's in
+            // NimShare.Core/Migrations. MigrateAsync is idempotent and
+            // handles schema evolution correctly on both sides.
+            await db.Database.MigrateAsync();
             break;
         }
         catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)

@@ -781,7 +781,7 @@ Abre el enlace:
   <data name="dbset.confirm.switch"><value>La app se reiniciará y pasará a la nueva base. ¿Continuar?</value></data>
 
   <data name="dbset.warn.title"><value>Antes de cambiar</value></data>
-  <data name="dbset.warn.migration"><value>El esquema se crea con EnsureCreated — cambios futuros aún requieren actualizaciones de código.</value></data>
+  <data name="dbset.warn.migration"><value>El esquema se aplica con migraciones EF reales — MigrateAsync corre al inicio en ambos providers.</value></data>
   <data name="dbset.warn.firewall"><value>Asegúrate que el firewall de Azure SQL permite la IP del App Service (o habilita "Permitir servicios de Azure").</value></data>
   <data name="dbset.warn.restart"><value>La app se reinicia. Las sesiones se mantienen; las subidas en curso se abortan.</value></data>
 
