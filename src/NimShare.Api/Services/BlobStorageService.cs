@@ -13,7 +13,10 @@ public class StorageOptions
     public string ConnectionString { get; set; } = "UseDevelopmentStorage=true";
     public string ContainerName { get; set; } = "files";
     public int DownloadSasTtlSeconds { get; set; } = 60;
-    public int UploadSasTtlMinutes { get; set; } = 30;
+    // Uploaders on slow home connections regularly hit the 30-min ceiling on
+    // multi-gigabyte files; bumping to 2 h absorbs the tail without becoming
+    // a security risk (the SAS still targets one exact blob path).
+    public int UploadSasTtlMinutes { get; set; } = 120;
 
     /// <summary>Account name — required when using OAuth (Managed Identity) instead of connection string.</summary>
     public string? AccountName { get; set; }

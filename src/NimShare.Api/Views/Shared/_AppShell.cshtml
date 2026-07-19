@@ -146,6 +146,9 @@
                     <a href="/signatures/contacts" class="nav-sub @(currentPath.StartsWith("/signatures/contacts", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
                         <span class="nav-sub-ic">👥</span>@T["nav.sig.contacts"]
                     </a>
+                    <a href="/signatures/certificates" class="nav-sub @(currentPath.StartsWith("/signatures/certificates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">🔐</span>@T["nav.sig.certificates"]
+                    </a>
                 </div>
             </div>
 
@@ -233,5 +236,36 @@
     document.querySelectorAll('.sidebar-nav a, .sidebar-brand').forEach(a => {
         a.addEventListener('click', () => document.body.classList.remove('nav-open'));
     });
+
+    // ── Robust modal close ─────────────────────────────────────
+    // Historically every .modal-backdrop had `onclick="if(event.target===this)
+    // closeModal(id)"`. That closes when a drag starts INSIDE the panel (say,
+    // selecting text in an input) and ends OUTSIDE it — the mouseup lands on
+    // the backdrop and fires a click there. Track mousedown target too, and
+    // only close when BOTH ends of the click were on the backdrop itself.
+    (function robustModalClose() {
+        let startedOnBackdrop = false;
+        document.addEventListener('mousedown', e => {
+            const bd = e.target.closest && e.target.closest('.modal-backdrop');
+            startedOnBackdrop = !!(bd && e.target === bd);
+        }, true);
+        document.addEventListener('click', e => {
+            const bd = e.target.classList && e.target.classList.contains('modal-backdrop') ? e.target : null;
+            if (!bd) return;
+            if (!startedOnBackdrop) { e.stopPropagation(); return; }
+            // Backdrop click → close. The existing inline `onclick` on many
+            // modals still fires afterwards; that's a no-op because we've
+            // already closed. Guard for pages without a global closeModal.
+            bd.classList.remove('open');
+            if (typeof window.closeModal === 'function') try { window.closeModal(bd.id); } catch {}
+        }, true);
+        // Escape closes the top-most open modal.
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            const open = Array.from(document.querySelectorAll('.modal-backdrop.open'));
+            if (!open.length) return;
+            open[open.length - 1].classList.remove('open');
+        });
+    })();
 </script>
 @await RenderSectionAsync("Scripts", required: false)

@@ -614,17 +614,66 @@ function upSetDone(row, ok, msg) {
     row.classList.add(ok ? 'up-row-ok' : 'up-row-err');
     if (msg) row.querySelector('.up-row-status').title = msg;
 }
-function xhrPut(url, blob, contentType, onProgress) {
+function xhrPut(url, blob, contentType, onProgress, extraHeaders) {
     return new Promise((resolve, reject) => {
         const x = new XMLHttpRequest();
         x.open('PUT', url);
-        x.setRequestHeader('x-ms-blob-type', 'BlockBlob');
         x.setRequestHeader('Content-Type', contentType);
-        x.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded / e.total * 100); };
+        (extraHeaders || []).forEach(h => x.setRequestHeader(h[0], h[1]));
+        x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total * 100); };
         x.onload = () => (x.status >= 200 && x.status < 300) ? resolve(x) : reject(new Error('HTTP ' + x.status));
         x.onerror = () => reject(new Error('Netzwerkfehler'));
         x.send(blob);
     });
+}
+async function putWithRetry(url, blob, contentType, onProgress, extraHeaders) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+            return await xhrPut(url, blob, contentType, onProgress, extraHeaders || [['x-ms-blob-type', 'BlockBlob']]);
+        } catch (e) {
+            lastErr = e;
+            const s = String(e && e.message || e);
+            // Retry only on transient 5xx / network drops. 4xx = client error, stop.
+            if (!/50\d|Netz|Timeout|502|503|504/.test(s)) throw e;
+            await new Promise(r => setTimeout(r, 800 * attempt));
+        }
+    }
+    throw lastErr;
+}
+// Chunked upload for large files. Splits into 4 MB blocks, PUTs each with a
+// short-lived block ID, then commits with Put Block List. Each chunk retries
+// on 5xx — a proxy blip in the middle of a 500 MB upload no longer aborts
+// the whole file.
+async function chunkedBlockUpload(baseUrl, file, onProgress) {
+    const BLOCK = 4 * 1024 * 1024;
+    const total = file.size;
+    const blockIds = [];
+    let uploaded = 0;
+    for (let start = 0, idx = 0; start < total; start += BLOCK, idx++) {
+        const end = Math.min(start + BLOCK, total);
+        const chunk = file.slice(start, end);
+        // Block IDs must be same length base64. Pad the ordinal, then encode.
+        const raw = 'block-' + String(idx).padStart(8, '0');
+        const id = btoa(raw);
+        blockIds.push(id);
+        const putUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') +
+            'comp=block&blockid=' + encodeURIComponent(id);
+        await putWithRetry(putUrl, chunk, 'application/octet-stream', pct => {
+            const chunkPct = uploaded + (end - start) * (pct / 100);
+            onProgress(chunkPct / total * 100);
+        }, []);
+        uploaded += (end - start);
+        onProgress(uploaded / total * 100);
+    }
+    // Commit
+    const listUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'comp=blocklist';
+    const xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>' +
+        blockIds.map(b => '<Latest>' + b + '</Latest>').join('') +
+        '</BlockList>';
+    await putWithRetry(listUrl, new Blob([xml], {type: 'application/xml'}),
+        'application/xml', null,
+        [['x-ms-blob-content-type', file.type || 'application/octet-stream']]);
 }
 async function uploadFiles(fileList) {
     if (!fileList || !fileList.length) return;
@@ -649,8 +698,16 @@ async function uploadFiles(fileList) {
                 continue;
             }
             const { fileId, uploadUrl } = await initR.json();
-            await xhrPut(uploadUrl, file, file.type || 'application/octet-stream',
-                pct => upSetProgress(row, pct));
+            // Files > 32 MB use block-blob upload (4 MB chunks with per-block
+            // retry). A single monolithic PUT of a 500 MB ZIP through a slow
+            // uplink gets killed by every proxy along the way; splitting it
+            // keeps each request short and lets us retry individual failures.
+            if (file.size > 32 * 1024 * 1024) {
+                await chunkedBlockUpload(uploadUrl, file, pct => upSetProgress(row, pct));
+            } else {
+                await putWithRetry(uploadUrl, file, file.type || 'application/octet-stream',
+                    pct => upSetProgress(row, pct));
+            }
             upSetProgress(row, 99, 'finalisieren…');
             const cR = await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
             if (!cR.ok) {

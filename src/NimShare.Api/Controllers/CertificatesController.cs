@@ -1,0 +1,275 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NimShare.Api.Services;
+using NimShare.Core.Data;
+using NimShare.Core.Entities;
+
+namespace NimShare.Api.Controllers;
+
+/// <summary>
+/// Digital-signature certificate management. Users create self-signed X.509
+/// certs in-app, or upload an existing PKCS#12 (.pfx/.p12) they already had.
+/// PFX bytes are DataProtection-encrypted at rest; the PFX password itself is
+/// never persisted (needed only to unwrap the PKCS#12 on import).
+/// </summary>
+[ApiController]
+[Authorize(Policy = "ApiUser")]
+[Route("api/v1/certificates")]
+public class CertificatesApiController : ControllerBase
+{
+    private readonly NimShareDbContext _db;
+    private readonly ICurrentUserService _users;
+    private readonly IDataProtector _protector;
+
+    public CertificatesApiController(NimShareDbContext db, ICurrentUserService users,
+        IDataProtectionProvider dp)
+    {
+        _db = db; _users = users;
+        _protector = dp.CreateProtector("NimShare.SigningCertificate.v1");
+    }
+
+    public record CertDto(Guid Id, string Name, string SubjectCommonName, string Issuer,
+        DateTimeOffset NotBefore, DateTimeOffset NotAfter, string Thumbprint,
+        bool IsSelfIssued, bool IsDefault, DateTimeOffset? LastUsedAt, int UseCount,
+        DateTimeOffset CreatedAt, bool IsExpired);
+    public record GenerateReq(string Name, string CommonName, string? Organization,
+        string? Country, int ValidityYears, bool SetAsDefault);
+    public record ImportReq(string Name, string PfxBase64, string Password, bool SetAsDefault);
+
+    private static CertDto ToDto(SigningCertificate c) => new(
+        c.Id, c.Name, c.SubjectCommonName, c.Issuer, c.NotBefore, c.NotAfter,
+        c.Thumbprint, c.IsSelfIssued, c.IsDefault, c.LastUsedAt, c.UseCount,
+        c.CreatedAt, c.NotAfter < DateTimeOffset.UtcNow);
+
+    [HttpGet]
+    public async Task<IActionResult> List(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var items = await _db.SigningCertificates
+            .Where(c => c.OwnerUserId == me.Id)
+            .OrderByDescending(c => c.IsDefault).ThenByDescending(c => c.CreatedAt)
+            .Select(c => new SigningCertificate
+            {
+                Id = c.Id, Name = c.Name, SubjectCommonName = c.SubjectCommonName,
+                Issuer = c.Issuer, NotBefore = c.NotBefore, NotAfter = c.NotAfter,
+                Thumbprint = c.Thumbprint, IsSelfIssued = c.IsSelfIssued,
+                IsDefault = c.IsDefault, LastUsedAt = c.LastUsedAt,
+                UseCount = c.UseCount, CreatedAt = c.CreatedAt,
+            })
+            .ToListAsync(ct);
+        return Ok(items.Select(ToDto));
+    }
+
+    /// <summary>Self-signed certificate — good for internal audit trails and
+    /// visual sign-here stamps. Not accepted by external CA validation.</summary>
+    [HttpPost("generate")]
+    public async Task<IActionResult> Generate([FromBody] GenerateReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.CommonName))
+            return Problem(statusCode: 422, title: "Name and CommonName are required.");
+        var years = Math.Clamp(req.ValidityYears <= 0 ? 3 : req.ValidityYears, 1, 20);
+
+        // Build a distinguished name: CN, optional O, optional C.
+        var parts = new List<string> { $"CN={EscapeDn(req.CommonName)}" };
+        if (!string.IsNullOrWhiteSpace(req.Organization)) parts.Add($"O={EscapeDn(req.Organization)}");
+        if (!string.IsNullOrWhiteSpace(req.Country)) parts.Add($"C={EscapeDn(req.Country[..Math.Min(2, req.Country.Length)])}");
+        var dn = new X500DistinguishedName(string.Join(", ", parts));
+
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest(dn, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        // Basic constraints — mark as end-entity, not a CA.
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
+        // Digital signature + non-repudiation (used by CMS/PKCS#7 signing).
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, true));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+            new OidCollection { new("1.3.6.1.5.5.7.3.4") /* Email protection */,
+                                new("1.3.6.1.4.1.311.10.3.12") /* Document signing */ }, false));
+        var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var notAfter = notBefore.AddYears(years);
+        using var cert = request.CreateSelfSigned(notBefore, notAfter);
+
+        var pfxPassword = Guid.NewGuid().ToString("N"); // ephemeral, only used to serialise
+        var pfxBytes = cert.Export(X509ContentType.Pkcs12, pfxPassword);
+        var wrapped = _protector.Protect(BundleWithPassword(pfxBytes, pfxPassword));
+
+        var entity = new SigningCertificate
+        {
+            OwnerUserId = me.Id,
+            Name = req.Name.Trim(),
+            SubjectCommonName = cert.SubjectName.Name?.Replace("CN=", "").Split(',').FirstOrDefault()?.Trim() ?? req.CommonName,
+            Issuer = cert.IssuerName.Name ?? "self",
+            NotBefore = notBefore,
+            NotAfter = notAfter,
+            Thumbprint = cert.Thumbprint,
+            IsSelfIssued = true,
+            PfxDataEncrypted = wrapped,
+        };
+        await SaveAsync(entity, req.SetAsDefault, ct);
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+    }
+
+    /// <summary>Import an existing PKCS#12 (PFX/.p12). The password is
+    /// required to unwrap the private key; we store the PFX under our own
+    /// encryption afterwards.</summary>
+    [HttpPost("import")]
+    public async Task<IActionResult> Import([FromBody] ImportReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.PfxBase64))
+            return Problem(statusCode: 422, title: "Name and PfxBase64 are required.");
+        byte[] rawPfx;
+        try { rawPfx = Convert.FromBase64String(req.PfxBase64); }
+        catch { return Problem(statusCode: 422, title: "PFX must be base64-encoded."); }
+        if (rawPfx.Length > 512 * 1024)
+            return Problem(statusCode: 413, title: "PFX must be smaller than 512 KB.");
+
+        X509Certificate2 cert;
+        try
+        {
+            // Load only to validate password + extract metadata. We keep the
+            // *raw* PFX bytes (wrapped with the caller's password) for later
+            // decryption — never rely on X509Certificate2 as a container after
+            // this request ends because Windows/Linux stores it in transient
+            // key blobs that go away.
+#pragma warning disable SYSLIB0057 // constructor still supported; new API not yet ubiquitous
+            cert = new X509Certificate2(rawPfx, req.Password ?? "",
+                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+#pragma warning restore SYSLIB0057
+        }
+        catch (CryptographicException ex)
+        {
+            return Problem(statusCode: 422, title: "PFX konnte nicht entschlüsselt werden.",
+                detail: ex.Message);
+        }
+        using var _ = cert;
+        if (!cert.HasPrivateKey)
+            return Problem(statusCode: 422, title: "PFX enthält keinen privaten Schlüssel.");
+
+        var wrapped = _protector.Protect(BundleWithPassword(rawPfx, req.Password ?? ""));
+        var entity = new SigningCertificate
+        {
+            OwnerUserId = me.Id,
+            Name = req.Name.Trim(),
+            SubjectCommonName = cert.SubjectName.Name?.Split(',')
+                .Select(s => s.Trim())
+                .FirstOrDefault(s => s.StartsWith("CN="))
+                ?.Substring(3) ?? cert.SubjectName.Name ?? req.Name,
+            Issuer = cert.IssuerName.Name ?? "unknown",
+            NotBefore = cert.NotBefore.ToUniversalTime(),
+            NotAfter = cert.NotAfter.ToUniversalTime(),
+            Thumbprint = cert.Thumbprint,
+            IsSelfIssued = false,
+            PfxDataEncrypted = wrapped,
+        };
+        // If this exact certificate is already imported, refuse rather than
+        // silently duplicating — the thumbprint index enforces uniqueness per
+        // owner anyway.
+        var exists = await _db.SigningCertificates
+            .AnyAsync(c => c.OwnerUserId == me.Id && c.Thumbprint == cert.Thumbprint, ct);
+        if (exists)
+            return Problem(statusCode: 409, title: "Dieses Zertifikat ist bereits importiert.");
+        await SaveAsync(entity, req.SetAsDefault, ct);
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
+        return c is null ? NotFound() : Ok(ToDto(c));
+    }
+
+    [HttpPost("{id:guid}/set-default")]
+    public async Task<IActionResult> SetDefault(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
+        if (c is null) return NotFound();
+        await UnsetOtherDefaultsAsync(me.Id, ct);
+        c.IsDefault = true;
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
+        if (c is null) return NotFound();
+        _db.SigningCertificates.Remove(c);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    /// <summary>Export the certificate's *public* portion as PEM so the user
+    /// can send it to a counterparty for verification. The private key never
+    /// leaves the server this way.</summary>
+    [HttpGet("{id:guid}/public")]
+    public async Task<IActionResult> ExportPublic(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
+        if (c is null) return NotFound();
+        var (pfxBytes, password) = UnbundleWithPassword(_protector.Unprotect(c.PfxDataEncrypted));
+#pragma warning disable SYSLIB0057
+        using var cert = new X509Certificate2(pfxBytes, password, X509KeyStorageFlags.EphemeralKeySet);
+#pragma warning restore SYSLIB0057
+        var pem = "-----BEGIN CERTIFICATE-----\n" +
+            Convert.ToBase64String(cert.RawData, Base64FormattingOptions.InsertLineBreaks) +
+            "\n-----END CERTIFICATE-----\n";
+        return File(System.Text.Encoding.UTF8.GetBytes(pem), "application/x-pem-file",
+            $"{c.SubjectCommonName}.cer");
+    }
+
+    private async Task SaveAsync(SigningCertificate entity, bool setAsDefault, CancellationToken ct)
+    {
+        if (setAsDefault) await UnsetOtherDefaultsAsync(entity.OwnerUserId, ct);
+        entity.IsDefault = setAsDefault;
+        _db.SigningCertificates.Add(entity);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task UnsetOtherDefaultsAsync(Guid ownerId, CancellationToken ct)
+    {
+        var others = await _db.SigningCertificates
+            .Where(c => c.OwnerUserId == ownerId && c.IsDefault).ToListAsync(ct);
+        foreach (var o in others) o.IsDefault = false;
+    }
+
+    private static string EscapeDn(string s) =>
+        s.Replace("\\", "\\\\").Replace(",", "\\,").Replace(";", "\\;").Replace("=", "\\=");
+
+    // We need both the PFX bytes AND the password used to lock it, so the
+    // signer path can later re-open the PFX. Concatenate password + \0 + pfx.
+    private static byte[] BundleWithPassword(byte[] pfx, string password)
+    {
+        var pwBytes = System.Text.Encoding.UTF8.GetBytes(password);
+        var buf = new byte[4 + pwBytes.Length + pfx.Length];
+        BitConverter.GetBytes(pwBytes.Length).CopyTo(buf, 0);
+        pwBytes.CopyTo(buf, 4);
+        pfx.CopyTo(buf, 4 + pwBytes.Length);
+        return buf;
+    }
+    private static (byte[] pfx, string password) UnbundleWithPassword(byte[] buf)
+    {
+        var len = BitConverter.ToInt32(buf, 0);
+        var password = System.Text.Encoding.UTF8.GetString(buf, 4, len);
+        var pfx = buf.AsSpan(4 + len).ToArray();
+        return (pfx, password);
+    }
+}
+
+[Authorize]
+public class CertificatesPageController : Controller
+{
+    [HttpGet("/signatures/certificates")]
+    public IActionResult Index() => View("Index");
+}

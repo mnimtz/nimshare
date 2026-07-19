@@ -38,6 +38,7 @@ public class NimShareDbContext : DbContext
     public DbSet<Webhook> Webhooks => Set<Webhook>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<SigningCertificate> SigningCertificates => Set<SigningCertificate>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -296,6 +297,18 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Notes).HasMaxLength(2000);
             e.Property(x => x.Tags).HasMaxLength(500);
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<SigningCertificate>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OwnerUserId, x.NotAfter });
+            e.HasIndex(x => new { x.OwnerUserId, x.Thumbprint }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.SubjectCommonName).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Issuer).HasMaxLength(240);
+            e.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
+            e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<WikiPage>(e =>

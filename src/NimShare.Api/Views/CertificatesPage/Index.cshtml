@@ -1,0 +1,195 @@
+@{
+    ViewData["Title"] = T["certs.title"].Value;
+    Layout = "_AppShell";
+}
+<div class="workspace-inner" style="max-width:1000px;margin:0 auto">
+    <div class="page-head">
+        <h1>🔐 @T["certs.title"]</h1>
+        <p class="muted">@T["certs.lede"]</p>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="openGen()">✨ @T["certs.new_self"]</button>
+            <button class="btn btn-ghost" onclick="openImport()">📥 @T["certs.import"]</button>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+        <table class="table" id="certList">
+            <thead>
+                <tr>
+                    <th>@T["certs.col.name"]</th>
+                    <th>@T["certs.col.subject"]</th>
+                    <th>@T["certs.col.valid"]</th>
+                    <th>@T["certs.col.origin"]</th>
+                    <th>@T["certs.col.default"]</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody><tr><td colspan="6" class="muted">@T["certs.loading"]</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Generate self-signed -->
+<div class="modal-backdrop" id="modalGen">
+    <div class="modal-panel" style="max-width:560px">
+        <h2>✨ @T["certs.new_self"]</h2>
+        <p class="muted">@T["certs.new_self.hint"]</p>
+        <div class="field">
+            <label>@T["certs.field.name"]</label>
+            <input type="text" id="genName" placeholder="Mein Vertrags-Zertifikat" required autocomplete="off"/>
+        </div>
+        <div class="field">
+            <label>@T["certs.field.cn"]</label>
+            <input type="text" id="genCn" placeholder="Marcus Nimtz" required autocomplete="off"/>
+        </div>
+        <div class="row" style="gap:12px">
+            <div class="field" style="flex:2">
+                <label>@T["certs.field.org"]</label>
+                <input type="text" id="genOrg" placeholder="Tungsten Automation" autocomplete="off"/>
+            </div>
+            <div class="field" style="flex:1">
+                <label>@T["certs.field.country"]</label>
+                <input type="text" id="genCountry" maxlength="2" placeholder="DE" autocomplete="off"/>
+            </div>
+        </div>
+        <div class="row" style="gap:12px;align-items:flex-end">
+            <div class="field" style="flex:1">
+                <label>@T["certs.field.validity"]</label>
+                <select id="genYears">
+                    <option value="1">1 @T["certs.year"]</option>
+                    <option value="3" selected>3 @T["certs.years"]</option>
+                    <option value="5">5 @T["certs.years"]</option>
+                    <option value="10">10 @T["certs.years"]</option>
+                </select>
+            </div>
+            <label style="flex:1;display:flex;gap:6px;align-items:center;margin-bottom:8px">
+                <input type="checkbox" id="genDefault" checked/> <span>@T["certs.field.set_default"]</span>
+            </label>
+        </div>
+        <div class="actions" style="justify-content:flex-end;gap:8px">
+            <button class="btn btn-ghost" onclick="closeModal('modalGen')">@T["modal.cancel"]</button>
+            <button class="btn btn-primary" onclick="doGenerate()">@T["certs.generate"]</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import PFX -->
+<div class="modal-backdrop" id="modalImp">
+    <div class="modal-panel" style="max-width:560px">
+        <h2>📥 @T["certs.import"]</h2>
+        <p class="muted">@T["certs.import.hint"]</p>
+        <div class="field">
+            <label>@T["certs.field.name"]</label>
+            <input type="text" id="impName" placeholder="D-Trust Signaturkarte" required autocomplete="off"/>
+        </div>
+        <div class="field">
+            <label>@T["certs.field.pfxfile"]</label>
+            <input type="file" id="impFile" accept=".pfx,.p12"/>
+        </div>
+        <div class="field">
+            <label>@T["certs.field.pfxpw"]</label>
+            <input type="password" id="impPw" autocomplete="new-password"/>
+            <div class="helper">@T["certs.field.pfxpw_hint"]</div>
+        </div>
+        <label style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" id="impDefault" checked/> <span>@T["certs.field.set_default"]</span>
+        </label>
+        <div class="actions" style="justify-content:flex-end;gap:8px;margin-top:12px">
+            <button class="btn btn-ghost" onclick="closeModal('modalImp')">@T["modal.cancel"]</button>
+            <button class="btn btn-primary" onclick="doImport()">@T["certs.upload"]</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openGen() { ['genName','genCn','genOrg','genCountry'].forEach(i => document.getElementById(i).value = ''); document.getElementById('genYears').value = '3'; document.getElementById('genDefault').checked = true; openModal('modalGen'); }
+function openImport() { ['impName','impPw'].forEach(i => document.getElementById(i).value = ''); document.getElementById('impFile').value = ''; document.getElementById('impDefault').checked = true; openModal('modalImp'); }
+
+async function reload() {
+    const r = await fetch('/api/v1/certificates', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const items = await r.json();
+    const tb = document.querySelector('#certList tbody');
+    if (!items.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="muted">' + @Json.Serialize(T["certs.empty"].Value) + '</td></tr>';
+        return;
+    }
+    tb.innerHTML = items.map(c => {
+        const badge = c.isExpired ? ' <span class="ai-risk">⚠ ' + @Json.Serialize(T["certs.expired"].Value) + '</span>'
+                    : (isSoon(c.notAfter) ? ' <span class="ai-tag">⏰ ' + @Json.Serialize(T["certs.expires_soon"].Value) + '</span>' : '');
+        const origin = c.isSelfIssued ? @Json.Serialize(T["certs.origin.self"].Value) : @Json.Serialize(T["certs.origin.import"].Value);
+        return '<tr>' +
+            '<td><strong>' + esc(c.name) + '</strong>' + badge + '</td>' +
+            '<td class="muted">' + esc(c.subjectCommonName) + '</td>' +
+            '<td class="muted">' + fmt(c.notBefore) + ' → ' + fmt(c.notAfter) + '</td>' +
+            '<td>' + origin + '</td>' +
+            '<td>' + (c.isDefault ? '★' : '<button class="btn btn-ghost" onclick="setDefault(\'' + c.id + '\')">' + @Json.Serialize(T["certs.set_default"].Value) + '</button>') + '</td>' +
+            '<td style="text-align:right"><button class="btn btn-ghost" onclick="dlPublic(\'' + c.id + '\')" title="' + @Json.Serialize(T["certs.export_public"].Value) + '">⬇ .cer</button> ' +
+                '<button class="btn btn-ghost" onclick="delCert(\'' + c.id + '\')">🗑</button></td>' +
+            '</tr>';
+    }).join('');
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function fmt(iso) { return new Date(iso).toLocaleDateString(); }
+function isSoon(iso) { return (new Date(iso) - Date.now()) < 30 * 24 * 3600 * 1000; }
+
+async function doGenerate() {
+    const body = {
+        name: document.getElementById('genName').value.trim(),
+        commonName: document.getElementById('genCn').value.trim(),
+        organization: document.getElementById('genOrg').value.trim() || null,
+        country: document.getElementById('genCountry').value.trim() || null,
+        validityYears: parseInt(document.getElementById('genYears').value, 10) || 3,
+        setAsDefault: document.getElementById('genDefault').checked,
+    };
+    if (!body.name || !body.commonName) { alert(@Json.Serialize(T["certs.err.missing"].Value)); return; }
+    const r = await fetch('/api/v1/certificates/generate', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) { const p = await r.json().catch(() => ({})); alert('Fehler: ' + (p.detail || p.title || r.status)); return; }
+    closeModal('modalGen'); reload();
+}
+
+async function doImport() {
+    const f = document.getElementById('impFile').files[0];
+    const name = document.getElementById('impName').value.trim();
+    if (!f) { alert(@Json.Serialize(T["certs.err.no_file"].Value)); return; }
+    if (!name) { alert(@Json.Serialize(T["certs.err.missing"].Value)); return; }
+    if (f.size > 512 * 1024) { alert('PFX > 512 KB'); return; }
+    const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(f);
+    });
+    const r = await fetch('/api/v1/certificates/import', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({
+            name, pfxBase64: b64,
+            password: document.getElementById('impPw').value,
+            setAsDefault: document.getElementById('impDefault').checked,
+        }),
+    });
+    if (!r.ok) { const p = await r.json().catch(() => ({})); alert('Fehler: ' + (p.detail || p.title || r.status)); return; }
+    closeModal('modalImp'); reload();
+}
+
+async function setDefault(id) {
+    const r = await fetch('/api/v1/certificates/' + id + '/set-default', { method: 'POST', credentials: 'same-origin' });
+    if (r.ok) reload();
+}
+async function delCert(id) {
+    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
+    const r = await fetch('/api/v1/certificates/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok) reload();
+}
+function dlPublic(id) {
+    window.location.href = '/api/v1/certificates/' + id + '/public';
+}
+reload();
+</script>
+}

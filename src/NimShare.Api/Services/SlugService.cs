@@ -46,12 +46,40 @@ public class SlugService : ISlugService
         return !taken;
     }
 
+    /// <summary>
+    /// Normalise a user-supplied slug candidate so obvious "wrong shape" input
+    /// (mixed case, spaces, dots, umlauts) becomes a valid slug automatically
+    /// instead of a 422. Callers pass this through <see cref="ResolveOrGenerateAsync"/>.
+    /// </summary>
+    public static string Normalise(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        var s = input.Trim().ToLowerInvariant();
+        // Cheap transliteration for the common Western-European letters we care
+        // about; anything else falls through to the regex strip below.
+        s = s.Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("ß", "ss");
+        // Swap any run of non-[a-z0-9] for a single "-".
+        s = Regex.Replace(s, "[^a-z0-9]+", "-");
+        s = s.Trim('-', '_');
+        if (s.Length > 64) s = s.Substring(0, 64).TrimEnd('-', '_');
+        return s;
+    }
+
     public async Task<string> ResolveOrGenerateAsync(string? requested, CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(requested))
         {
+            // Try the raw value first (preserves an already-valid slug); on
+            // failure, normalise once and try again — that catches "PowerPDF",
+            // "My Folder", "Rechnung 2025.03" etc. and turns them into
+            // "powerpdf", "my-folder", "rechnung-2025-03".
             if (!IsValid(requested))
-                throw new ArgumentException($"Slug '{requested}' is not valid.", nameof(requested));
+            {
+                var normalised = Normalise(requested);
+                if (!IsValid(normalised))
+                    throw new ArgumentException($"Slug '{requested}' is not valid.", nameof(requested));
+                requested = normalised;
+            }
             if (!await IsAvailableAsync(requested, ct))
                 throw new InvalidOperationException($"Slug '{requested}' is already taken.");
             return requested;
