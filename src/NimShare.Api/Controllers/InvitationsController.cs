@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,15 +16,17 @@ public class InvitationsController : Controller
     private readonly ICurrentUserService _users;
     private readonly ILocalAuthService _auth;
     private readonly IEmailGatewayService _gateway;
+    private readonly IStringLocalizer<SharedResources> _l;
 
     public InvitationsController(NimShareDbContext db, IPasswordHasher hasher, ICurrentUserService users,
-        ILocalAuthService auth, IEmailGatewayService gateway)
+        ILocalAuthService auth, IEmailGatewayService gateway, IStringLocalizer<SharedResources> l)
     {
         _db = db;
         _hasher = hasher;
         _users = users;
         _auth = auth;
         _gateway = gateway;
+        _l = l;
     }
 
     // ── Admin: send invite ─────────────────────────────────────────────────
@@ -37,12 +40,12 @@ public class InvitationsController : Controller
         email = (email ?? "").Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(email) || !email.Contains('@'))
         {
-            TempData["Error"] = "Invalid email.";
+            TempData["Error"] = _l["err.invalid_email"].Value;
             return RedirectToAction("List", "Users");
         }
         if (await _db.Users.AnyAsync(u => u.Email == email, ct))
         {
-            TempData["Error"] = "A user with that email already exists.";
+            TempData["Error"] = _l["err.user_exists"].Value;
             return RedirectToAction("List", "Users");
         }
 
@@ -69,7 +72,7 @@ public class InvitationsController : Controller
         try
         {
             await _gateway.SendAsync(email, subject, body, ct);
-            TempData["Notice"] = $"Invite sent to {email}.";
+            TempData["Notice"] = string.Format(_l["notice.invite_sent"].Value, email);
         }
         catch (Exception ex)
         {

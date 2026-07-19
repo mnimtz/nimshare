@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +13,14 @@ public class ProfileController : Controller
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IPasswordHasher _hasher;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public ProfileController(NimShareDbContext db, ICurrentUserService users, IPasswordHasher hasher)
+    public ProfileController(NimShareDbContext db, ICurrentUserService users, IPasswordHasher hasher, IStringLocalizer<SharedResources> l)
     {
         _db = db;
         _users = users;
         _hasher = hasher;
+        _l = l;
     }
 
     public record ProfileFormModel(string DisplayName,
@@ -43,29 +46,29 @@ public class ProfileController : Controller
         {
             if (string.IsNullOrEmpty(me.PasswordHash))
             {
-                TempData["Error"] = "This account uses Entra sign-in only; there is no local password to change.";
+                TempData["Error"] = _l["err.entra_only"].Value;
                 return RedirectToAction(nameof(Index));
             }
             if (string.IsNullOrEmpty(form.CurrentPassword) || !_hasher.Verify(form.CurrentPassword, me.PasswordHash))
             {
-                TempData["Error"] = "Current password is wrong.";
+                TempData["Error"] = _l["err.wrong_password"].Value;
                 return RedirectToAction(nameof(Index));
             }
             if (form.NewPassword != form.NewPasswordConfirm)
             {
-                TempData["Error"] = "New passwords do not match.";
+                TempData["Error"] = _l["err.password_mismatch"].Value;
                 return RedirectToAction(nameof(Index));
             }
             if ((form.NewPassword ?? "").Length < 8)
             {
-                TempData["Error"] = "New password must be at least 8 characters.";
+                TempData["Error"] = _l["err.password_too_short"].Value;
                 return RedirectToAction(nameof(Index));
             }
             me.PasswordHash = _hasher.Hash(form.NewPassword!);
         }
 
         await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = "Profile saved.";
+        TempData["Notice"] = _l["notice.profile_saved"].Value;
         return RedirectToAction(nameof(Index));
     }
 
@@ -80,12 +83,12 @@ public class ProfileController : Controller
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (file is null || file.Length == 0)
         {
-            TempData["Error"] = "No image received.";
+            TempData["Error"] = _l["err.no_image"].Value;
             return RedirectToAction(nameof(Index));
         }
         if (file.Length > 3 * 1024 * 1024)
         {
-            TempData["Error"] = "Avatar image is too large (max 3 MiB after cropping).";
+            TempData["Error"] = _l["err.image_too_large"].Value;
             return RedirectToAction(nameof(Index));
         }
         // Store as a single fixed blob path per user; overwrite on re-upload.
@@ -100,14 +103,14 @@ public class ProfileController : Controller
             var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
             if (!resp.IsSuccessStatusCode)
             {
-                TempData["Error"] = "Upload failed. Try again.";
+                TempData["Error"] = _l["err.upload_failed"].Value;
                 return RedirectToAction(nameof(Index));
             }
         }
         me.AvatarBlobPath = path;
         me.AvatarUrl = $"/avatars/{me.Id}?v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = "Avatar updated.";
+        TempData["Notice"] = _l["notice.avatar_updated"].Value;
         return RedirectToAction(nameof(Index));
     }
 
@@ -123,7 +126,7 @@ public class ProfileController : Controller
         me.AvatarBlobPath = null;
         me.AvatarUrl = null;
         await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = "Avatar removed.";
+        TempData["Notice"] = _l["notice.avatar_removed"].Value;
         return RedirectToAction(nameof(Index));
     }
 }

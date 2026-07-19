@@ -101,13 +101,9 @@
             <td class="mono">@u.Email</td>
             <td>@u.DisplayName</td>
             <td>
-                <form method="post" action="/settings/users/@u.Id/set-role" style="display:inline">
-    @Html.AntiForgeryToken()
-                    <select name="role" onchange="this.form.submit()">
-                        <option value="User" selected="@(u.Role.ToString()=="User")">@T["users.role.user"]</option>
-                        <option value="Admin" selected="@(u.Role.ToString()=="Admin")">@T["users.role.admin"]</option>
-                    </select>
-                </form>
+                <span class="chip @(u.Role.ToString() == "Admin" ? "chip-warn" : "")">
+                    @T[u.Role.ToString() == "Admin" ? "users.role.admin" : "users.role.user"]
+                </span>
             </td>
             <td>
                 <form method="post" action="/settings/users/@u.Id/set-quota" class="row" style="gap:4px;align-items:center">
@@ -153,13 +149,14 @@
                 }
             </td>
             <td>
+                <a class="btn btn-secondary btn-sm" href="/settings/users/@u.Id">✎ @T["users.edit"]</a>
                 <form method="post" action="/settings/users/@u.Id/toggle-active" style="display:inline">
     @Html.AntiForgeryToken()
                     <button class="btn btn-ghost btn-sm">@(u.IsActive ? @T["users.action.disable"] : @T["users.action.enable"])</button>
                 </form>
                 <form method="post" action="/settings/users/@u.Id/delete" style="display:inline" onsubmit="return confirm('@T["users.confirm.delete"]')">
     @Html.AntiForgeryToken()
-                    <button class="btn btn-ghost btn-sm">@T["users.action.delete"]</button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑</button>
                 </form>
             </td>
         </tr>

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,13 @@ public class GroupsController : Controller
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IFileAccessService _access;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public GroupsController(NimShareDbContext db, ICurrentUserService users, IFileAccessService access)
+    public GroupsController(NimShareDbContext db, ICurrentUserService users, IFileAccessService access,
+        IStringLocalizer<SharedResources> l)
     {
         _db = db;
+        _l = l;
         _users = users;
         _access = access;
     }
@@ -43,7 +47,7 @@ public class GroupsController : Controller
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (me.Role != UserRole.Admin) return Forbid();
-        if (string.IsNullOrWhiteSpace(name)) { TempData["Error"] = "Group name is required."; return RedirectToAction(nameof(List)); }
+        if (string.IsNullOrWhiteSpace(name)) { TempData["Error"] = _l["err.group_name_required"].Value; return RedirectToAction(nameof(List)); }
         var g = new Group
         {
             Name = name.Trim(),
@@ -129,7 +133,7 @@ public class GroupsController : Controller
         if (mgr.Role == GroupRole.Manager)
         {
             var otherMgrs = await _db.GroupMemberships.CountAsync(m => m.GroupId == id && m.UserId != userId && m.Role == GroupRole.Manager, ct);
-            if (otherMgrs == 0) { TempData["Error"] = "Cannot remove the last manager."; return RedirectToAction(nameof(Detail), new { id }); }
+            if (otherMgrs == 0) { TempData["Error"] = _l["err.last_manager"].Value; return RedirectToAction(nameof(Detail), new { id }); }
         }
         _db.GroupMemberships.Remove(mgr);
         await _db.SaveChangesAsync(ct);
@@ -148,7 +152,7 @@ public class GroupsController : Controller
         if (m.Role == GroupRole.Manager && newRole == GroupRole.Member)
         {
             var otherMgrs = await _db.GroupMemberships.CountAsync(x => x.GroupId == id && x.UserId != userId && x.Role == GroupRole.Manager, ct);
-            if (otherMgrs == 0) { TempData["Error"] = "Cannot demote the last manager."; return RedirectToAction(nameof(Detail), new { id }); }
+            if (otherMgrs == 0) { TempData["Error"] = _l["err.last_manager"].Value; return RedirectToAction(nameof(Detail), new { id }); }
         }
         m.Role = newRole;
         await _db.SaveChangesAsync(ct);

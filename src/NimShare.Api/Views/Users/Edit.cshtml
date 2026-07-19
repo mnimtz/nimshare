@@ -1,0 +1,112 @@
+@model NimShare.Core.Entities.User
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = @T["users.edit"];
+    Layout = "_AppShell";
+    var groups = (List<Group>)(ViewData["Groups"] ?? new List<Group>());
+    var memberIds = (HashSet<Guid>)(ViewData["MemberIds"] ?? new HashSet<Guid>());
+    var managerIds = (HashSet<Guid>)(ViewData["ManagerIds"] ?? new HashSet<Guid>());
+    var quotaGb = Model.QuotaBytes / 1024 / 1024 / 1024;
+    var isEntra = !string.IsNullOrEmpty(Model.EntraOid);
+}
+<div class="page-header">
+    <div>
+        <a href="/settings/users" class="muted" style="text-decoration:none">← @T["actions.back"]</a>
+        <h1 style="margin-top:6px;display:flex;align-items:center;gap:12px">
+            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+            {
+                <img src="@Model.AvatarUrl" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover"/>
+            }
+            else
+            {
+                var init = (Model.DisplayName?.Length > 0 ? Model.DisplayName[0].ToString() : "?").ToUpperInvariant();
+                <span style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0f5db5,#0a3e7c);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700">@init</span>
+            }
+            @Model.DisplayName
+        </h1>
+        <p class="lede">@Model.Email @if (isEntra) { <span class="chip">Entra</span> }</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06);margin-bottom:16px">@n</div> }
+@if (TempData["Error"] is string err) { <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06);margin-bottom:16px">@err</div> }
+
+<form method="post" action="/settings/users/@Model.Id/update">
+@Html.AntiForgeryToken()
+
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">@T["users.tab.basics"]</h2>
+    <div class="row" style="gap:16px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:220px">
+            <label>@T["auth.display_name"]</label>
+            <input type="text" name="displayName" value="@Model.DisplayName" required/>
+        </div>
+        <div class="field" style="flex:1;min-width:220px">
+            <label>@T["auth.email"]</label>
+            <input type="email" name="email" value="@Model.Email" required @(isEntra ? "readonly" : "")/>
+        </div>
+    </div>
+    <div class="row" style="gap:16px;flex-wrap:wrap;margin-top:12px">
+        <div class="field" style="flex:1;min-width:180px">
+            <label>@T["users.role"]</label>
+            <select name="role">
+                <option value="User" selected="@(Model.Role == UserRole.User)">@T["users.role.user"]</option>
+                <option value="Admin" selected="@(Model.Role == UserRole.Admin)">@T["users.role.admin"]</option>
+            </select>
+        </div>
+        <div class="field" style="flex:1;min-width:180px">
+            <label>@T["users.quota"] (GB)</label>
+            <input type="number" name="quotaGb" value="@quotaGb" min="1" max="10240"/>
+        </div>
+        <div class="field" style="flex:1;min-width:180px;display:flex;align-items:flex-end">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" name="isActive" value="true" @(Model.IsActive ? "checked" : "")/>
+                <span>@T["users.active"]</span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">@T["users.tab.groups"]</h2>
+    @if (!groups.Any())
+    {
+        <p class="muted">@T["users.no_groups"]</p>
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">
+            @foreach (var g in groups)
+            {
+                var isMember = memberIds.Contains(g.Id);
+                var isManager = managerIds.Contains(g.Id);
+                <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--tw-gray-300);border-radius:6px;cursor:pointer;background:@(isMember ? "rgba(0,160,251,.08)" : "transparent")">
+                    <input type="checkbox" name="groupIds" value="@g.Id" @(isMember ? "checked" : "") @(isManager ? "disabled" : "")/>
+                    <span style="flex:1">
+                        <span style="font-weight:500">@g.Name</span>
+                        @if (isManager) { <span class="chip chip-warn" style="margin-left:4px">Manager</span> }
+                    </span>
+                </label>
+            }
+        </div>
+        <p class="muted" style="margin-top:8px;font-size:.8rem">Manager-Zuweisungen kannst du in der Gruppen-Detailansicht ändern.</p>
+    }
+</div>
+
+@if (!isEntra)
+{
+    <div class="card" style="margin-bottom:16px">
+        <h2 class="card-title">@T["users.tab.security"]</h2>
+        <div class="field" style="max-width:400px">
+            <label>@T["users.new_password"]</label>
+            <input type="password" name="newPassword" autocomplete="new-password" placeholder="Leer lassen, um nicht zu ändern"/>
+            <div class="helper">@T["users.reset_password.helper"]</div>
+        </div>
+    </div>
+}
+
+<div class="row" style="justify-content:space-between;margin-top:16px">
+    <a class="btn btn-ghost" href="/settings/users">@T["actions.cancel"]</a>
+    <button type="submit" class="btn btn-primary">💾 @T["actions.save"]</button>
+</div>
+</form>

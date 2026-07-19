@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NimShare.Api.Services;
@@ -10,11 +11,13 @@ public class EmailGatewayController : Controller
 {
     private readonly IEmailGatewayService _gateway;
     private readonly ICurrentUserService _users;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public EmailGatewayController(IEmailGatewayService gateway, ICurrentUserService users)
+    public EmailGatewayController(IEmailGatewayService gateway, ICurrentUserService users, IStringLocalizer<SharedResources> l)
     {
         _gateway = gateway;
         _users = users;
+        _l = l;
     }
 
     private async Task<bool> IsAdmin(CancellationToken ct)
@@ -52,7 +55,7 @@ public class EmailGatewayController : Controller
             SmtpUsername = form.SmtpUsername,
         };
         await _gateway.SaveAsync(incoming, form.SmtpPassword, form.ResendApiKey, me.Id, ct);
-        TempData["Notice"] = "Email gateway saved.";
+        TempData["Notice"] = _l["notice.email_saved"].Value;
         return RedirectToAction(nameof(Index));
     }
 
@@ -62,7 +65,10 @@ public class EmailGatewayController : Controller
     {
         if (!await IsAdmin(ct)) return Forbid();
         var (ok, msg) = await _gateway.SendTestAsync(toEmail, ct);
-        TempData[ok ? "Notice" : "Error"] = msg;
+        // If the gateway returned a stock "queued/sent" success, localize it;
+        // real error messages from the SMTP/Resend layer stay as-is for
+        // diagnostic value.
+        TempData[ok ? "Notice" : "Error"] = ok ? _l["notice.email_test_queued"].Value : msg;
         return RedirectToAction(nameof(Index));
     }
 }

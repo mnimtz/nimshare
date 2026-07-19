@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,10 +18,12 @@ public class TrashController : Controller
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IBlobStorageService _blobs;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public TrashController(NimShareDbContext db, ICurrentUserService users, IBlobStorageService blobs)
+    public TrashController(NimShareDbContext db, ICurrentUserService users, IBlobStorageService blobs,
+        IStringLocalizer<SharedResources> l)
     {
-        _db = db; _users = users; _blobs = blobs;
+        _db = db; _users = users; _blobs = blobs; _l = l;
     }
 
     [HttpGet("/trash")]
@@ -51,7 +54,7 @@ public class TrashController : Controller
         file.Status = StorageFileStatus.Ready;
         file.DeletedAt = null;
         await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = "Restored " + file.Name;
+        TempData["Notice"] = string.Format(_l["notice.file_restored"].Value, file.Name);
         return RedirectToAction(nameof(Index));
     }
 
@@ -73,7 +76,7 @@ public class TrashController : Controller
         _db.Files.Remove(file);
         await _db.SaveChangesAsync(ct);
         try { await _blobs.DeleteAsync(path, ct); } catch { /* orphaned bytes, ignore */ }
-        TempData["Notice"] = "Purged permanently";
+        TempData["Notice"] = _l["notice.purged_one"].Value;
         return RedirectToAction(nameof(Index));
     }
 
@@ -99,7 +102,7 @@ public class TrashController : Controller
         {
             try { await _blobs.DeleteAsync(p, ct); } catch { /* ignore */ }
         }
-        TempData["Notice"] = files.Count + " permanently deleted";
+        TempData["Notice"] = string.Format(_l["notice.purged_many"].Value, files.Count);
         return RedirectToAction(nameof(Index));
     }
 

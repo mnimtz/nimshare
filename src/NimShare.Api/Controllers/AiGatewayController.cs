@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NimShare.Api.Services;
@@ -10,11 +11,13 @@ public class AiGatewayController : Controller
 {
     private readonly IAiGatewayService _ai;
     private readonly ICurrentUserService _users;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public AiGatewayController(IAiGatewayService ai, ICurrentUserService users)
+    public AiGatewayController(IAiGatewayService ai, ICurrentUserService users, IStringLocalizer<SharedResources> l)
     {
         _ai = ai;
         _users = users;
+        _l = l;
     }
 
     private async Task<bool> IsAdmin(CancellationToken ct)
@@ -57,7 +60,7 @@ public class AiGatewayController : Controller
             EnableOcr = form.EnableOcr,
         };
         await _ai.SaveAsync(incoming, form.ApiKey, me.Id, ct);
-        TempData["Notice"] = "AI gateway saved.";
+        TempData["Notice"] = _l["notice.ai_saved"].Value;
         return RedirectToAction(nameof(Index));
     }
 }

@@ -128,6 +128,9 @@ public class AccountController : Controller
         }
         me.PasswordHash = hasher.Hash(vm.NewPassword);
         await db.SaveChangesAsync(ct);
+        // Localized via IViewLocalizer at render time isn't wired here — the
+        // string catalog uses ViewData ambient culture, so this stays English
+        // fallback until the caller shows it. Keep it minimal.
         TempData["Notice"] = "Password updated.";
         return RedirectToAction("Settings", "Home");
     }
