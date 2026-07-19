@@ -53,6 +53,19 @@ public class FilesController : ControllerBase
         if (folder is null && !await access.CanUploadIntoAsync(user, scope, groupId, ct))
             return Problem(statusCode: 403, title: "Cannot upload into this scope");
 
+        // No FolderId given? Anchor the file to the scope's root folder so it
+        // shows up in the file browser. Legacy uploads used to land with
+        // FolderId=null and were invisible to the tree navigation — this is
+        // the fix.
+        if (folder is null)
+        {
+            folder = await folders.GetOrCreateRootAsync(
+                scope,
+                scope == FileScope.Personal ? user.Id : null,
+                scope == FileScope.Group ? groupId : null,
+                user, ct);
+        }
+
         var usedBytes = await _db.Files
             .Where(f => f.OwnerId == user.Id && f.Status != StorageFileStatus.Deleted)
             .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
@@ -65,7 +78,7 @@ public class FilesController : ControllerBase
             OwnerId = user.Id,
             Scope = scope,
             GroupId = scope == FileScope.Group ? groupId : null,
-            FolderId = folder?.Id,
+            FolderId = folder.Id,
             Name = req.Name,
             SizeBytes = req.SizeBytes,
             ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,

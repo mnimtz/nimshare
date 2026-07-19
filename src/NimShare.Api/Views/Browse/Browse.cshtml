@@ -490,18 +490,32 @@ async function uploadFiles(fileList) {
     if (!fileList || !fileList.length) return;
     for (const file of fileList) {
         try {
-            const initR = await fetch('/api/v1/files/init', {
+            // Endpoint is POST /api/v1/files — the old draft used /init which
+            // never existed. Server is idempotent on retry; a wrong path was
+            // the source of every "Init failed" complaint.
+            const initR = await fetch('/api/v1/files', {
                 method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
                 body: JSON.stringify({ folderId: FOLDER_ID, name: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size }),
             });
-            if (!initR.ok) { alert('Init failed for ' + file.name); continue; }
+            if (!initR.ok) {
+                // Surface the actual server message (Problem-details JSON).
+                let msg = 'HTTP ' + initR.status;
+                try { const p = await initR.json(); msg = p.title || p.detail || msg; } catch {}
+                alert('Upload failed for ' + file.name + ': ' + msg);
+                continue;
+            }
             const { fileId, uploadUrl } = await initR.json();
             const putR = await fetch(uploadUrl, {
                 method: 'PUT', headers: {'x-ms-blob-type':'BlockBlob','Content-Type': file.type || 'application/octet-stream'},
                 body: file,
             });
-            if (!putR.ok) { alert('Upload failed for ' + file.name); continue; }
-            await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
+            if (!putR.ok) { alert('Blob PUT failed for ' + file.name + ': HTTP ' + putR.status); continue; }
+            const cR = await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
+            if (!cR.ok) {
+                let msg = 'HTTP ' + cR.status;
+                try { const p = await cR.json(); msg = p.title || p.detail || msg; } catch {}
+                alert('Complete failed for ' + file.name + ': ' + msg);
+            }
         } catch (e) { alert('Error uploading ' + file.name + ': ' + e); }
     }
     location.reload();

@@ -81,7 +81,12 @@ btn.addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: f.type })
     });
-    if (!init.ok) { status.textContent = 'Rejected: ' + init.status; btn.disabled = false; return; }
+    if (!init.ok) {
+        let msg = 'HTTP ' + init.status;
+        try { const p = await init.json(); msg = p.title || p.detail || msg; } catch {}
+        status.textContent = msg;
+        btn.disabled = false; return;
+    }
     const { fileId, uploadUrl } = await init.json();
     currentFileId = fileId;
     status.textContent = 'Uploading directly to Azure Blob Storage…';

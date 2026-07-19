@@ -64,6 +64,26 @@ public class BrowseController : Controller
             scope == FileScope.Personal ? me.Id : null,
             scope == FileScope.Group ? groupId : null,
             me, ct);
+
+        // One-shot migration: pre-v0.6 files were written with FolderId=null
+        // (before folders existed). They belong to the caller's Personal scope
+        // and were invisible in the folder browser — attach any of ours to the
+        // Personal root on first open.
+        if (scope == FileScope.Personal)
+        {
+            var orphans = await _db.Files
+                .Where(f => f.OwnerId == me.Id
+                    && f.FolderId == null
+                    && f.Status != StorageFileStatus.Deleted
+                    && f.Scope == FileScope.Personal)
+                .ToListAsync(ct);
+            if (orphans.Count > 0)
+            {
+                foreach (var o in orphans) o.FolderId = root.Id;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
         var segments = string.IsNullOrEmpty(path)
             ? Array.Empty<string>()
             : path.Split('/', StringSplitOptions.RemoveEmptyEntries);
