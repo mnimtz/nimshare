@@ -22,6 +22,8 @@ public interface IAiProvider
     Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default);
     /// <summary>Personalise an upload-request cover email for a specific recipient.</summary>
     Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default);
+    /// <summary>Describe an image (Vision). Returns null if the provider or the configured model doesn't support vision.</summary>
+    Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default);
 }
 
 public class NullAiProvider : IAiProvider
@@ -32,6 +34,7 @@ public class NullAiProvider : IAiProvider
     public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null);
     public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    public Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
 }
 
 /// <summary>
@@ -133,6 +136,42 @@ public class OpenAiProvider : IAiProvider
         catch { return null; }
     }
 
+    public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
+    {
+        // OpenAI Chat Completions supports vision via "image_url" content parts
+        // with a data: URL. gpt-4o and gpt-4o-mini handle it; older models don't.
+        var dataUrl = "data:" + mimeType + ";base64," + Convert.ToBase64String(imageBytes);
+        var payload = new
+        {
+            model = _isAzure ? (object?)null : _model,
+            messages = new object[]
+            {
+                new { role = "system", content = $"Describe what is visible in the image in 2-4 short sentences. Reply in the language whose ISO code is '{language}'. No preamble." },
+                new
+                {
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "text", text = "Beschreibe das Bild." },
+                        new { type = "image_url", image_url = new { url = dataUrl } },
+                    }
+                }
+            },
+            temperature = 0.3,
+            max_tokens = 400,
+        };
+        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        try
+        {
+            var resp = await _http.PostAsync(_endpoint, body, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            var doc = JsonDocument.Parse(text);
+            return doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+        }
+        catch { return null; }
+    }
+
     private async Task<string?> ChatAsync(string system, string user, double temperature, CancellationToken ct)
     {
         var payload = new
@@ -215,6 +254,38 @@ public class GeminiProvider : IAiProvider
         return GenerateAsync(
             $"Answer using ONLY these passages. Reply in ISO '{language}'. Cite passage numbers like [1] where helpful.\n\nPassages:\n{joined}\n\nQuestion: {question}",
             0.2, ct);
+    }
+
+    public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
+    {
+        // Gemini generateContent accepts inline_data with base64. gemini-2.0-*
+        // family handles vision natively.
+        var payload = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new { text = $"Describe what is visible in the image in 2-4 sentences. Reply in the language whose ISO code is '{language}'. No preamble." },
+                        new { inline_data = new { mime_type = mimeType, data = Convert.ToBase64String(imageBytes) } },
+                    }
+                }
+            },
+            generationConfig = new { temperature = 0.3, maxOutputTokens = 400 },
+        };
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        try
+        {
+            var resp = await _http.PostAsync(url, body, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            var doc = JsonDocument.Parse(text);
+            return doc.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
+        }
+        catch { return null; }
     }
 
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
@@ -319,6 +390,40 @@ public class AnthropicProvider : IAiProvider
     }
 
     public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null); // Anthropic doesn't ship embeddings — semantic search falls back to null
+
+    public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
+    {
+        // Claude Messages API accepts image blocks with base64.
+        var payload = new
+        {
+            model = _model,
+            max_tokens = 400,
+            temperature = 0.3,
+            system = $"Describe what is visible in the image in 2-4 sentences. Reply in the language whose ISO code is '{language}'. No preamble.",
+            messages = new object[]
+            {
+                new
+                {
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "image", source = new { type = "base64", media_type = mimeType, data = Convert.ToBase64String(imageBytes) } },
+                        new { type = "text", text = "Beschreibe das Bild." },
+                    }
+                }
+            },
+        };
+        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        try
+        {
+            var resp = await _http.PostAsync("https://api.anthropic.com/v1/messages", body, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            var doc = JsonDocument.Parse(text);
+            return doc.RootElement.GetProperty("content")[0].GetProperty("text").GetString();
+        }
+        catch { return null; }
+    }
 
     private async Task<string?> MessagesAsync(string system, string user, double temperature, CancellationToken ct)
     {

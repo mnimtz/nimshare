@@ -114,6 +114,24 @@ public class ShareController : Controller
             t?.PrimaryColor, t?.LogoUrl, t?.HeroUrl);
     }
 
+    /// <summary>Inline preview stream (image or pdf). Only for password-less links —
+    /// otherwise the download page still gates the file behind the password prompt.</summary>
+    [HttpGet("{slug}/preview")]
+    public async Task<IActionResult> Preview(string slug, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return NotFound();
+        if (link.PasswordHash is not null) return Forbid();
+        var now = DateTimeOffset.UtcNow;
+        if (!link.IsActive(now)) return NotFound();
+        var ct2 = (link.File.ContentType ?? "").ToLowerInvariant();
+        if (!ct2.StartsWith("image/") && ct2 != "application/pdf") return BadRequest();
+        // Redirect to a short-lived SAS with inline disposition — Azure serves it
+        // directly, no bytes go through the app.
+        var sas = _blobs.CreateInlineSas(link.File.BlobPath, link.File.ContentType);
+        return Redirect(sas.ToString());
+    }
+
     [HttpPost("{slug}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(string slug, string? password, CancellationToken ct)

@@ -468,4 +468,6 @@
   <data name="actions.save"><value>Save</value></data>
   <data name="actions.cancel"><value>Cancel</value></data>
   <data name="actions.back"><value>Back</value></data>
+  <data name="links.action.report"><value>Report</value></data>
+  <data name="landing.preview_after_password"><value>Preview available after password.</value></data>
 </root>

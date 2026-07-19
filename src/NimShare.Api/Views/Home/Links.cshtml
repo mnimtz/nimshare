@@ -40,6 +40,7 @@ else
                 <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
                 <td><span class="chip @state.Item1">@state.Item2</span></td>
                 <td>
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@Url.RouteUrl(new{controller="Share",action="Landing",slug=l.Slug}) ?? $"/s/{l.Slug}">@T["links.action.copy"]</button>
                     <button class="btn btn-ghost btn-sm" data-email="@l.Id">@T["links.action.email"]</button>
                     @if (!l.IsRevoked)

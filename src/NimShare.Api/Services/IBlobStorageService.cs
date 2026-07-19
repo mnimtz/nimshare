@@ -19,6 +19,9 @@ public interface IBlobStorageService
     /// </summary>
     Uri CreateDownloadSas(string blobPath, string originalFilename, string contentType, TimeSpan? ttl = null);
 
+    /// <summary>Read-SAS with Content-Disposition: inline (browser renders, doesn't force download).</summary>
+    Uri CreateInlineSas(string blobPath, string contentType, TimeSpan? ttl = null);
+
     /// <summary>Returns true if the blob exists and its size in bytes. Used at upload completion.</summary>
     Task<(bool Exists, long SizeBytes, string? ContentType)> ProbeAsync(string blobPath, CancellationToken ct = default);
 

@@ -59,6 +59,30 @@
             </div>
         </div>
 
+        @{
+            var ct = (Model.ContentType ?? "").ToLowerInvariant();
+            var previewable = ct.StartsWith("image/") || ct == "application/pdf";
+        }
+        @if (previewable && !Model.HasPassword)
+        {
+            <div style="margin-top:var(--sp-4);border:1px solid var(--tw-gray-200);border-radius:8px;overflow:hidden;background:var(--tw-gray-100)">
+                @if (ct.StartsWith("image/"))
+                {
+                    <img src="/s/@Model.Slug/preview" alt="@Model.FileName"
+                         style="display:block;max-width:100%;max-height:60vh;margin:0 auto;background:#fff"/>
+                }
+                else
+                {
+                    <iframe src="/s/@Model.Slug/preview" title="@Model.FileName"
+                            style="width:100%;height:60vh;border:0;background:#fff"></iframe>
+                }
+            </div>
+        }
+        else if (previewable && Model.HasPassword)
+        {
+            <div class="muted" style="margin-top:var(--sp-3);font-size:.85rem">🔒 @T["landing.preview_after_password"]</div>
+        }
+
         <div id="aiSummaryBlock" style="margin-top:var(--sp-4)">
             <button type="button" class="btn btn-ghost btn-sm" id="aiSummaryBtn" onclick="loadAiSummary()">✨ @T["landing.ai_summary"]</button>
             <div id="aiSummaryOut" class="muted" style="margin-top:var(--sp-3);font-style:italic;line-height:1.5"></div>

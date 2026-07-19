@@ -468,4 +468,6 @@
   <data name="actions.save"><value>Opslaan</value></data>
   <data name="actions.cancel"><value>Annuleren</value></data>
   <data name="actions.back"><value>Terug</value></data>
+  <data name="links.action.report"><value>Auswertung</value></data>
+  <data name="landing.preview_after_password"><value>Vorschau nach Passwort-Eingabe verfügbar.</value></data>
 </root>

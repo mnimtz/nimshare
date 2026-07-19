@@ -470,4 +470,6 @@
   <data name="actions.save"><value>Save</value></data>
   <data name="actions.cancel"><value>Cancel</value></data>
   <data name="actions.back"><value>Back</value></data>
+  <data name="links.action.report"><value>Analisi</value></data>
+  <data name="landing.preview_after_password"><value>Anteprima disponibile dopo la password.</value></data>
 </root>

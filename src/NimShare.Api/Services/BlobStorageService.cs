@@ -68,6 +68,24 @@ public class BlobStorageService : IBlobStorageService
         return new UploadTicket(uri, "PUT", expires);
     }
 
+    public Uri CreateInlineSas(string blobPath, string contentType, TimeSpan? ttl = null)
+    {
+        var container = _serviceClient.GetBlobContainerClient(_options.ContainerName);
+        var blob = container.GetBlobClient(blobPath);
+        var expires = DateTimeOffset.UtcNow.Add(ttl ?? TimeSpan.FromSeconds(_options.DownloadSasTtlSeconds));
+        var sas = new BlobSasBuilder
+        {
+            BlobContainerName = _options.ContainerName,
+            BlobName = blobPath,
+            Resource = "b",
+            ExpiresOn = expires,
+            ContentDisposition = "inline",
+            ContentType = contentType,
+        };
+        sas.SetPermissions(BlobSasPermissions.Read);
+        return BuildSasUri(blob, sas);
+    }
+
     public Uri CreateDownloadSas(string blobPath, string originalFilename, string contentType, TimeSpan? ttl = null)
     {
         var container = _serviceClient.GetBlobContainerClient(_options.ContainerName);

@@ -51,14 +51,31 @@ public class AiController : ControllerBase
         if (!string.IsNullOrEmpty(file.AiSummary))
             return Ok(new { summary = file.AiSummary, cached = true });
 
-        var text = await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct);
-        if (string.IsNullOrWhiteSpace(text))
-            return Problem(statusCode: 415, title: "Cannot summarise this file type",
-                detail: "Text extraction is currently available for text and PDF files.");
-
         var provider = await _ai.CreateProviderAsync(ct);
         var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en";
-        var summary = await provider.SummarizeAsync(text, lang, ct);
+
+        // Image files go through the vision endpoint of the provider — text
+        // extraction returns nothing useful for them.
+        string? summary;
+        var contentTypeLower = (file.ContentType ?? "").ToLowerInvariant();
+        if (contentTypeLower.StartsWith("image/"))
+        {
+            using var ms = new MemoryStream();
+            await _blobs.DownloadToAsync(file.BlobPath, ms, ct);
+            var bytes = ms.ToArray();
+            summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
+            if (string.IsNullOrWhiteSpace(summary))
+                return Problem(statusCode: 502, title: "Vision returned no result.",
+                    detail: "The configured AI model may not support image input.");
+        }
+        else
+        {
+            var text = await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct);
+            if (string.IsNullOrWhiteSpace(text))
+                return Problem(statusCode: 415, title: "Cannot summarise this file type",
+                    detail: "Text extraction is currently available for text and PDF files.");
+            summary = await provider.SummarizeAsync(text, lang, ct);
+        }
         if (string.IsNullOrWhiteSpace(summary))
             return Problem(statusCode: 502, title: "Summariser returned no result.");
 
