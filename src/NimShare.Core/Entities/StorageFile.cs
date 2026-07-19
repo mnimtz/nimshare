@@ -71,6 +71,21 @@ public class StorageFile
     /// <summary>Content risk classification result (e.g. "clean", "pii", "credit-card"). Set on public uploads.</summary>
     public string? AiRiskFlag { get; set; }
 
+    /// <summary>
+    /// Extracted plain text of the file (PDF, docx, txt…) for classic keyword
+    /// search. Written by the same AI post-processor that populates the
+    /// semantic embedding, so the two search flavours share a single
+    /// extraction pass. Truncated to 200 KB — bigger than most invoices,
+    /// smaller than a full book.
+    /// </summary>
+    public string? ExtractedText { get; set; }
+
+    /// <summary>Current version pointer — starts at 1 with the first upload, bumped on every re-upload.</summary>
+    public int VersionNumber { get; set; } = 1;
+
+    /// <summary>How many past versions to retain. 0 = infinite (retention job may still archive).</summary>
+    public int KeepVersions { get; set; } = 10;
+
     public StorageFileStatus Status { get; set; } = StorageFileStatus.Pending;
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

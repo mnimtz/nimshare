@@ -75,7 +75,50 @@ public class AccountController : Controller
             ModelState.AddModelError("", "Incorrect email or password.");
             return View(vm);
         }
+        // If 2FA is enrolled, hand off to the code-verification step. Password
+        // verify succeeded already, so we stash just the user-id + return-url
+        // in the session and skip SignIn until the code checks out.
+        if (user.TotpEnabled)
+        {
+            HttpContext.Session.SetString("2fa.awaiting", user.Id.ToString());
+            HttpContext.Session.SetInt32("2fa.persist", vm.RememberMe ? 1 : 0);
+            if (!string.IsNullOrEmpty(returnUrl)) HttpContext.Session.SetString("2fa.return", returnUrl);
+            return RedirectToAction(nameof(TwoFactorChallenge));
+        }
         await _auth.SignInAsync(HttpContext, user, vm.RememberMe);
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+        return RedirectToAction("Dashboard", "Home");
+    }
+
+    [HttpGet("/login/2fa")]
+    public IActionResult TwoFactorChallenge()
+    {
+        if (string.IsNullOrEmpty(HttpContext.Session.GetString("2fa.awaiting")))
+            return RedirectToAction(nameof(Login));
+        return View("TwoFactorChallenge");
+    }
+
+    [HttpPost("/login/2fa")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TwoFactorSubmit(string code, [FromServices] ITotpService totp, [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var pending = HttpContext.Session.GetString("2fa.awaiting");
+        if (string.IsNullOrEmpty(pending) || !Guid.TryParse(pending, out var uid))
+            return RedirectToAction(nameof(Login));
+        var user = await db.Users.FindAsync(new object[] { uid }, ct);
+        if (user is null || !user.TotpEnabled || string.IsNullOrEmpty(user.TotpSecret))
+            return RedirectToAction(nameof(Login));
+        if (!totp.Verify(user.TotpSecret, code ?? ""))
+        {
+            ModelState.AddModelError("", "Der Code stimmt nicht.");
+            return View("TwoFactorChallenge");
+        }
+        var persist = HttpContext.Session.GetInt32("2fa.persist") == 1;
+        var returnUrl = HttpContext.Session.GetString("2fa.return");
+        HttpContext.Session.Remove("2fa.awaiting");
+        HttpContext.Session.Remove("2fa.persist");
+        HttpContext.Session.Remove("2fa.return");
+        await _auth.SignInAsync(HttpContext, user, persist);
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
         return RedirectToAction("Dashboard", "Home");
     }

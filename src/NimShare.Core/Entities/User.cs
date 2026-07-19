@@ -36,6 +36,12 @@ public class User
     /// <summary>Preferred UI language — one of en/fr/it/de/es.</summary>
     public string PreferredCulture { get; set; } = "en";
 
+    /// <summary>TOTP secret (base32) — null when 2FA isn't enrolled. When set,
+    /// login demands a valid 6-digit code after password verification.</summary>
+    public string? TotpSecret { get; set; }
+    public bool TotpEnabled { get; set; }
+    public DateTimeOffset? TotpEnrolledAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastSeenAt { get; set; }
 

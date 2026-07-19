@@ -177,6 +177,31 @@ public class DirectSharesController : ControllerBase
         await _log.LogAsync(ActivityKind.DirectShareGranted, me,
             $"granted {perm} on {(req.FileId is null ? "folder" : "file")} to {(req.UserId is null ? "group" : "user")}",
             fileId: req.FileId, folderId: req.FolderId, groupId: req.GroupId, targetUserId: req.UserId, ct: ct);
+
+        // Ping the recipient(s) so the tray badge lights up right away.
+        var notifier = HttpContext.RequestServices.GetService(typeof(IUserNotifier)) as IUserNotifier;
+        if (notifier is not null)
+        {
+            var itemName = req.FileId is Guid ff
+                ? (await _db.Files.FindAsync(new object[] { ff }, ct))?.Name
+                : (await _db.Folders.FindAsync(new object[] { req.FolderId!.Value }, ct))?.Name;
+            var quoted = "„" + itemName + "“";
+            var title = perm == DirectSharePermission.Write
+                ? $"{me.DisplayName} hat dir Schreibrechte auf {quoted} gegeben"
+                : $"{me.DisplayName} hat {quoted} mit dir geteilt";
+            if (req.UserId is Guid u)
+            {
+                await notifier.NotifyAsync(u, NotificationKind.DirectShareGranted, title,
+                    href: "/shared-with-me", fileId: req.FileId, ct: ct);
+            }
+            else if (req.GroupId is Guid g)
+            {
+                var memberIds = await _db.GroupMemberships.Where(m => m.GroupId == g && m.UserId != me.Id).Select(m => m.UserId).ToListAsync(ct);
+                foreach (var uid in memberIds)
+                    await notifier.NotifyAsync(uid, NotificationKind.DirectShareGranted, title,
+                        href: "/shared-with-me", fileId: req.FileId, ct: ct);
+            }
+        }
         return Ok(new { id = share.Id });
     }
 

@@ -50,6 +50,15 @@ public class AiPostProcessor : IAiPostProcessor
 
             var provider = await gateway.CreateProviderAsync();
             var text = await gateway.ExtractTextAsync(file.BlobPath, file.ContentType, blobs);
+
+            // Persist the extracted text for classic keyword search — same
+            // pass, no extra download. Truncated to match the column length.
+            if (!string.IsNullOrEmpty(text))
+            {
+                file.ExtractedText = text.Length > 200_000 ? text[..200_000] : text;
+                await db.SaveChangesAsync();
+            }
+
             if (string.IsNullOrEmpty(text))
             {
                 // Even without extracted content we can still embed the filename for search.

@@ -127,6 +127,7 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
+            <a href="/notifications" class="@Exact("/notifications")">🔔 Benachrichtigungen</a>
             <a href="/activity"  class="@Exact("/activity")">🕐 @T["nav.activity"]</a>
             <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
 
@@ -135,6 +136,7 @@
             </div>
             <div class="nav-section-body">
                 <a href="/settings/profile" class="@Active("/settings/profile")">@T["nav.profile"]</a>
+                <a href="/settings/2fa" class="@Exact("/settings/2fa")">🔐 2FA</a>
                 <a href="/settings/landing/mine" class="@Exact("/settings/landing/mine")">🎨 Download-Seite</a>
                 @if (isAdmin)
                 {

@@ -30,6 +30,9 @@ public interface IBlobStorageService
 
     /// <summary>Streams the blob content to <paramref name="destination"/> — used for the ZIP folder download.</summary>
     Task DownloadToAsync(string blobPath, Stream destination, CancellationToken ct = default);
+
+    /// <summary>Server-side copy from one blob path to another within the same container.</summary>
+    Task CopyAsync(string sourcePath, string destPath, CancellationToken ct = default);
 }
 
 public record UploadTicket(Uri UploadUrl, string Method, DateTimeOffset ExpiresAt);

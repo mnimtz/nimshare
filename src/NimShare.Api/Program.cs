@@ -196,6 +196,18 @@ builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<IFolderService, FolderService>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
+builder.Services.AddScoped<IUserNotifier, UserNotifier>();
+builder.Services.AddSingleton<ITotpService, TotpService>();
+
+// Session cookie backs the 2FA setup + login-challenge stashes.
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(o =>
+{
+    o.IdleTimeout = TimeSpan.FromMinutes(10);
+    o.Cookie.HttpOnly = true;
+    o.Cookie.IsEssential = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+});
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 builder.Services.AddScoped<IAiGatewayService, AiGatewayService>();
@@ -283,6 +295,7 @@ app.UseMiddleware<CustomDomainMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSession();
 
 // Make "is Entra configured?" available to any Razor view.
 app.Use((ctx, next) =>

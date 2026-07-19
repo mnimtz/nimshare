@@ -137,6 +137,58 @@ public class AiController : ControllerBase
     public record SearchReq(string Query, string Scope, Guid? GroupId, int Limit);
     public record SearchHit(Guid Id, string Name, double Score, string? Snippet, Guid? FolderId);
 
+    /// <summary>
+    /// Classic keyword search — runs a case-insensitive LIKE over the
+    /// extracted-text column populated by the AI post-processor, plus the
+    /// filename. Complements the semantic search — you find "invoice
+    /// 47829" reliably even without a semantic model configured.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("keyword-search")]
+    public async Task<IActionResult> KeywordSearch([FromBody] SearchReq req,
+        [FromServices] ICurrentUserService users, [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Query) || req.Query.Trim().Length < 2)
+            return Ok(Array.Empty<SearchHit>());
+        var me = await users.GetOrProvisionAsync(User, ct);
+        var q = req.Query.Trim();
+        var escaped = q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+        var like = "%" + escaped + "%";
+
+        var readable = access.ApplyReadFilter(
+            _db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me);
+        if (Enum.TryParse<NimShare.Core.Entities.FileScope>(req.Scope, true, out var sc))
+        {
+            readable = sc == NimShare.Core.Entities.FileScope.Group && req.GroupId is Guid g
+                ? readable.Where(f => f.Scope == sc && f.GroupId == g)
+                : readable.Where(f => f.Scope == sc);
+        }
+        var rows = await readable
+            .Where(f => EF.Functions.Like(f.Name, like, "\\")
+                || (f.ExtractedText != null && EF.Functions.Like(f.ExtractedText, like, "\\")))
+            .OrderByDescending(f => f.CreatedAt)
+            .Take(Math.Clamp(req.Limit, 1, 50))
+            .Select(f => new { f.Id, f.Name, f.FolderId, f.ExtractedText })
+            .ToListAsync(ct);
+        var hits = rows.Select(r =>
+        {
+            var snippet = SnippetAround(r.ExtractedText, q, 160);
+            return new SearchHit(r.Id, r.Name, 1.0, snippet, r.FolderId);
+        }).ToList();
+        return Ok(hits);
+    }
+
+    private static string? SnippetAround(string? text, string query, int radius)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var idx = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return text.Length > radius * 2 ? text[..(radius * 2)] : text;
+        var start = Math.Max(0, idx - radius);
+        var end = Math.Min(text.Length, idx + query.Length + radius);
+        var s = text[start..end];
+        return (start > 0 ? "…" : "") + s + (end < text.Length ? "…" : "");
+    }
+
     [Authorize(Policy = "ApiUser")]
     [HttpPost("search")]
     public async Task<IActionResult> Search([FromBody] SearchReq req,

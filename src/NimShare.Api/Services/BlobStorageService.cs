@@ -123,6 +123,26 @@ public class BlobStorageService : IBlobStorageService
         await blob.DeleteIfExistsAsync(cancellationToken: ct);
     }
 
+    public async Task CopyAsync(string sourcePath, string destPath, CancellationToken ct = default)
+    {
+        var container = _serviceClient.GetBlobContainerClient(_options.ContainerName);
+        var src = container.GetBlobClient(sourcePath);
+        var dst = container.GetBlobClient(destPath);
+        // Use a read-SAS on the source so the copy operation doesn't need
+        // extra identity plumbing on the destination side.
+        var srcSas = new Azure.Storage.Sas.BlobSasBuilder
+        {
+            BlobContainerName = _options.ContainerName,
+            BlobName = sourcePath,
+            Resource = "b",
+            ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(5),
+        };
+        srcSas.SetPermissions(Azure.Storage.Sas.BlobSasPermissions.Read);
+        var srcUri = BuildSasUri(src, srcSas);
+        var op = await dst.StartCopyFromUriAsync(srcUri, cancellationToken: ct);
+        await op.WaitForCompletionAsync(ct);
+    }
+
     public async Task DownloadToAsync(string blobPath, Stream destination, CancellationToken ct = default)
     {
         var blob = _serviceClient.GetBlobContainerClient(_options.ContainerName).GetBlobClient(blobPath);

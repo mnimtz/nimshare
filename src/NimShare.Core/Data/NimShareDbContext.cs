@@ -25,6 +25,8 @@ public class NimShareDbContext : DbContext
     public DbSet<UserFavorite> UserFavorites => Set<UserFavorite>();
     public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
     public DbSet<LandingTemplate> LandingTemplates => Set<LandingTemplate>();
+    public DbSet<StorageFileVersion> StorageFileVersions => Set<StorageFileVersion>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -65,6 +67,28 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.PasswordHash).HasMaxLength(120);
             e.Property(x => x.PreferredCulture).HasMaxLength(5).IsRequired();
             e.Property(x => x.AvatarBlobPath).HasMaxLength(400);
+            e.Property(x => x.TotpSecret).HasMaxLength(64);
+        });
+
+        b.Entity<StorageFileVersion>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.FileId, x.VersionNumber }).IsUnique();
+            e.Property(x => x.BlobPath).HasMaxLength(400).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<UserNotification>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.ReadAt, x.CreatedAt });
+            e.Property(x => x.Title).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Body).HasMaxLength(1000);
+            e.Property(x => x.Href).HasMaxLength(500);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<StorageFile>(e =>
@@ -81,6 +105,7 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.Property(x => x.AiSummary).HasMaxLength(2000);
             e.Property(x => x.AiSummaryLang).HasMaxLength(5);
+            e.Property(x => x.ExtractedText).HasMaxLength(200_000);
             e.Property(x => x.AiTags).HasMaxLength(500);
             e.Property(x => x.AiRiskFlag).HasMaxLength(120);
             e.HasOne(x => x.Owner).WithMany(u => u.Files).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);

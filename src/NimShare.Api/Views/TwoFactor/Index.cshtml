@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "Zwei-Faktor-Anmeldung";
+    Layout = "_AppShell";
+    var isEnrolled = (bool)(ViewData["IsEnrolled"] ?? false);
+    var secret = ViewData["Secret"] as string;
+    var uri = ViewData["OtpAuthUri"] as string;
+}
+<div class="page-header">
+    <div>
+        <a href="/settings/profile" class="muted" style="text-decoration:none">← Profil</a>
+        <h1 style="margin-top:6px">🔐 Zwei-Faktor-Anmeldung</h1>
+        <p class="lede">Zusätzliche Sicherheit — bei Anmeldung wird ein 6-stelliger Code aus deiner Authenticator-App verlangt.</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06);margin-bottom:16px">@n</div> }
+@if (TempData["Error"] is string err) { <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06);margin-bottom:16px">@err</div> }
+
+@if (isEnrolled)
+{
+    <div class="card">
+        <h2 class="card-title">Status: <span class="chip chip-ok">Aktiv</span></h2>
+        <p class="muted">2FA ist für deinen Account aktiviert. Zum Deaktivieren gib einen aktuellen Code deiner Authenticator-App ein.</p>
+        <form method="post" action="/settings/2fa/disable" class="row" style="gap:8px;margin-top:12px">
+            @Html.AntiForgeryToken()
+            <input type="text" name="code" pattern="[0-9]{6}" maxlength="6" required autofocus placeholder="123456" style="width:120px;font-family:var(--font-mono);letter-spacing:.3em"/>
+            <button class="btn btn-secondary" style="color:var(--status-critical);border-color:var(--status-critical)">🚫 Deaktivieren</button>
+        </form>
+    </div>
+}
+else
+{
+    <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div class="card" style="flex:1;min-width:280px">
+            <h2 class="card-title">1️⃣ QR-Code scannen</h2>
+            <p class="muted">Öffne deine Authenticator-App (z. B. Google Authenticator, Authy, Microsoft Authenticator, 1Password) und scanne diesen Code:</p>
+            <div style="text-align:center;background:#fff;padding:12px;border-radius:8px;margin:12px 0">
+                <img src="/settings/2fa/qr?data=@Uri.EscapeDataString(uri ?? "")" alt="QR" style="max-width:220px"/>
+            </div>
+            <details>
+                <summary class="muted" style="cursor:pointer">Manuell eingeben (Base32)</summary>
+                <div class="mono" style="margin-top:6px;background:var(--tw-gray-100);padding:8px;border-radius:4px;word-break:break-all">@secret</div>
+            </details>
+        </div>
+
+        <div class="card" style="flex:1;min-width:280px">
+            <h2 class="card-title">2️⃣ Code bestätigen</h2>
+            <p class="muted">Gib den 6-stelligen Code ein, den deine App anzeigt.</p>
+            <form method="post" action="/settings/2fa/enable" style="margin-top:12px">
+                @Html.AntiForgeryToken()
+                <input type="text" name="code" pattern="[0-9]{6}" maxlength="6" required autofocus autocomplete="one-time-code" inputmode="numeric" placeholder="123456" style="width:100%;font-size:1.5rem;font-family:var(--font-mono);letter-spacing:.4em;text-align:center;padding:10px"/>
+                <button class="btn btn-primary" style="width:100%;margin-top:12px">✅ 2FA aktivieren</button>
+            </form>
+        </div>
+    </div>
+}
