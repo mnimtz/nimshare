@@ -592,26 +592,79 @@ function upEnsurePanel() {
     document.body.appendChild(panel);
     return panel;
 }
-function upAddRow(name) {
+function upFmtBytes(b) {
+    if (!isFinite(b) || b < 0) return '';
+    const u = ['B','KB','MB','GB','TB']; let i = 0;
+    while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return b.toFixed(b < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+function upFmtEta(sec) {
+    if (!isFinite(sec) || sec < 0) return '';
+    if (sec < 60) return Math.ceil(sec) + ' s';
+    if (sec < 3600) return Math.floor(sec/60) + ' min ' + Math.round(sec%60) + ' s';
+    return Math.floor(sec/3600) + ' h ' + Math.floor((sec%3600)/60) + ' min';
+}
+function upAddRow(name, sizeBytes) {
     upEnsurePanel();
     const body = document.getElementById('upBody');
     const row = document.createElement('div');
     row.className = 'up-row';
-    row.innerHTML = '<div class="up-row-name" title="' + name.replace(/"/g,'&quot;') + '">' + name + '</div>' +
+    row.dataset.startedAt = String(performance.now());
+    row.dataset.size = String(sizeBytes || 0);
+    row.innerHTML = '<div class="up-row-head">' +
+            '<div class="up-row-name" title="' + name.replace(/"/g,'&quot;') + '">' + name + '</div>' +
+            '<div class="up-row-status">0%</div>' +
+        '</div>' +
         '<div class="up-row-bar"><div class="up-row-bar-fill"></div></div>' +
-        '<div class="up-row-status">0%</div>';
+        '<div class="up-row-meta">' +
+            '<span class="up-row-bytes">0 / ' + upFmtBytes(sizeBytes) + '</span>' +
+            '<span class="up-row-speed"></span>' +
+            '<span class="up-row-eta"></span>' +
+        '</div>';
     body.appendChild(row);
     return row;
 }
 function upSetProgress(row, pct, label) {
+    const p = Math.max(0, Math.min(100, pct));
     const fill = row.querySelector('.up-row-bar-fill');
     const st = row.querySelector('.up-row-status');
-    if (fill) fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
-    if (st) st.textContent = label || (Math.round(pct) + '%');
+    if (fill) fill.style.width = p + '%';
+    if (st) st.textContent = label || (Math.round(p) + '%');
+    // Speed + ETA — computed from elapsed time and the row's known size.
+    const size = parseInt(row.dataset.size, 10) || 0;
+    if (size > 0 && !label) {
+        const started = parseFloat(row.dataset.startedAt) || performance.now();
+        const elapsed = (performance.now() - started) / 1000;
+        const doneBytes = size * (p / 100);
+        const bytesEl = row.querySelector('.up-row-bytes');
+        const speedEl = row.querySelector('.up-row-speed');
+        const etaEl = row.querySelector('.up-row-eta');
+        if (bytesEl) bytesEl.textContent = upFmtBytes(doneBytes) + ' / ' + upFmtBytes(size);
+        if (elapsed > 0.5 && p > 0.5 && p < 100) {
+            const speed = doneBytes / elapsed;                 // bytes/sec
+            const remaining = (size - doneBytes) / speed;      // seconds
+            if (speedEl) speedEl.textContent = upFmtBytes(speed) + '/s';
+            if (etaEl) etaEl.textContent = '⏱ ' + upFmtEta(remaining);
+        }
+    }
 }
 function upSetDone(row, ok, msg) {
     upSetProgress(row, 100, ok ? '✓' : '✕');
     row.classList.add(ok ? 'up-row-ok' : 'up-row-err');
+    const speedEl = row.querySelector('.up-row-speed');
+    const etaEl = row.querySelector('.up-row-eta');
+    const bytesEl = row.querySelector('.up-row-bytes');
+    if (ok) {
+        const size = parseInt(row.dataset.size, 10) || 0;
+        const started = parseFloat(row.dataset.startedAt) || performance.now();
+        const elapsed = (performance.now() - started) / 1000;
+        if (bytesEl) bytesEl.textContent = upFmtBytes(size) + ' — ' + upFmtEta(elapsed);
+        if (speedEl) speedEl.textContent = elapsed > 0 ? '⌀ ' + upFmtBytes(size / elapsed) + '/s' : '';
+        if (etaEl) etaEl.textContent = '';
+    } else {
+        if (speedEl) speedEl.textContent = '';
+        if (etaEl) etaEl.textContent = '';
+    }
     if (msg) row.querySelector('.up-row-status').title = msg;
 }
 function xhrPut(url, blob, contentType, onProgress, extraHeaders) {
@@ -682,7 +735,7 @@ async function uploadFiles(fileList) {
     let done = 0, failed = 0;
     document.getElementById('upTitle').textContent = '↑ 0 / ' + total;
     for (const file of fileList) {
-        const row = upAddRow(file.name);
+        const row = upAddRow(file.name, file.size);
         try {
             upSetProgress(row, 0, 'vorbereiten…');
             const initR = await fetch('/api/v1/files', {
