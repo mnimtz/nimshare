@@ -266,6 +266,61 @@ public class SignaturesController : ControllerBase
         return NoContent();
     }
 
+    public record UploadSourceReq(string Name, long SizeBytes, string? ContentType);
+    public record UploadSourceResp(Guid FileId, string UploadUrl, string UploadMethod, DateTimeOffset ExpiresAt);
+
+    /// <summary>
+    /// Fast-path upload for the signature wizard: creates the file directly
+    /// inside a "Signatures" subfolder of the caller's Personal library, so
+    /// the requester doesn't have to leave the wizard to upload beforehand.
+    /// Client then PUTs bytes to UploadUrl and calls /api/v1/files/{id}/complete
+    /// exactly like the normal upload flow.
+    /// </summary>
+    [HttpPost("upload-source")]
+    public async Task<IActionResult> UploadSource([FromBody] UploadSourceReq req,
+        [FromServices] IFolderService folders, [FromServices] IBlobStorageService blobs,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name) || req.SizeBytes <= 0) return BadRequest();
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var used = await _db.Files.Where(f => f.OwnerId == me.Id && f.Status != StorageFileStatus.Deleted)
+            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+        if (used + req.SizeBytes > me.QuotaBytes)
+            return Problem(statusCode: 413, title: "Quota überschritten");
+
+        var root = await folders.GetOrCreateRootAsync(FileScope.Personal, me.Id, null, me, ct);
+        var target = await _db.Folders.SingleOrDefaultAsync(
+            f => f.ParentFolderId == root.Id && f.Name == "Signatures", ct);
+        if (target is null)
+        {
+            try { target = await folders.CreateChildAsync(root, "Signatures", me, ct); }
+            catch (InvalidOperationException)
+            {
+                target = await _db.Folders.SingleAsync(
+                    f => f.ParentFolderId == root.Id && f.Name == "Signatures", ct);
+            }
+        }
+
+        var ct2 = string.IsNullOrWhiteSpace(req.ContentType) ? "application/pdf" : req.ContentType!;
+        var file = new StorageFile
+        {
+            OwnerId = me.Id,
+            Scope = FileScope.Personal,
+            FolderId = target.Id,
+            Name = req.Name,
+            SizeBytes = req.SizeBytes,
+            ContentType = ct2,
+            Folder = "Signatures",
+            Status = StorageFileStatus.Pending,
+        };
+        file.BlobPath = $"users/{me.Id:N}/{file.Id:N}/{req.Name.Replace('/', '_').Replace('\\', '_')}";
+        _db.Files.Add(file);
+        await _db.SaveChangesAsync(ct);
+
+        var ticket = blobs.CreateUploadTicket(file.BlobPath);
+        return Ok(new UploadSourceResp(file.Id, ticket.UploadUrl.ToString(), ticket.Method, ticket.ExpiresAt));
+    }
+
     /// <summary>Server-side proxy that streams the source PDF from Blob to the
     /// requester's browser — same-origin, so pdf.js can render it without
     /// cross-origin restrictions.</summary>

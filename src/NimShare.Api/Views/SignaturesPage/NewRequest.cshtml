@@ -11,26 +11,37 @@
     </div>
 </div>
 
-@if (!pdfs.Any())
-{
-    <div class="card">
-        <p>Du hast noch keine PDFs in deiner Ablage. Lade eine PDF hoch, dann komm hier wieder her.</p>
-        <a class="btn btn-primary" href="/browse/personal">Zur Ablage →</a>
-    </div>
-    return;
-}
-
 <!-- Step 1: PDF + Metadaten -->
 <div id="wizStep1" class="card">
     <h2 class="card-title">1. Dokument & Metadaten</h2>
-    <div class="field">
+    <div class="tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--tw-gray-300);margin-bottom:12px">
+        <button type="button" id="tabExisting" class="tab-btn active" onclick="switchTab('existing')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid var(--tw-blue);font-weight:500;cursor:pointer">Aus Ablage</button>
+        <button type="button" id="tabUpload" class="tab-btn" onclick="switchTab('upload')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid transparent;font-weight:500;cursor:pointer;color:var(--tw-gray-600)">Neu hochladen</button>
+    </div>
+    <div id="paneExisting" class="field">
         <label>PDF auswählen</label>
         <select id="pdf">
+            @if (!pdfs.Any())
+            {
+                <option value="">— keine PDFs in deiner Ablage —</option>
+            }
             @foreach (var f in pdfs)
             {
                 <option value="@f.Id" data-name="@f.Name">@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
             }
         </select>
+        <div class="helper" style="margin-top:6px">Neue Datei? Wechsle oben zu "Neu hochladen".</div>
+    </div>
+    <div id="paneUpload" class="field" style="display:none">
+        <label>PDF-Datei hochladen</label>
+        <input type="file" id="uploadFile" accept="application/pdf,.pdf"/>
+        <div class="helper" style="margin-top:6px">Landet automatisch in <strong>Meine Ablage → Signatures</strong>.</div>
+        <div id="uploadProgress" class="muted" style="display:none;margin-top:6px">
+            <span id="uploadStatus">Lädt hoch …</span>
+            <div style="height:4px;background:var(--tw-gray-200);border-radius:2px;overflow:hidden;margin-top:4px">
+                <div id="uploadBar" style="height:100%;width:0%;background:var(--tw-blue);transition:width 0.2s"></div>
+            </div>
+        </div>
     </div>
     <div class="field">
         <label>Titel</label>
@@ -111,13 +122,76 @@ function show(n) {
     for (const i of [1,2,3]) document.getElementById('wizStep' + i).style.display = i === n ? '' : 'none';
 }
 
+let uploadMode = 'existing';
+function switchTab(m) {
+    uploadMode = m;
+    document.getElementById('paneExisting').style.display = m === 'existing' ? '' : 'none';
+    document.getElementById('paneUpload').style.display = m === 'upload' ? '' : 'none';
+    for (const [id, tab] of [['tabExisting','existing'],['tabUpload','upload']]) {
+        const el = document.getElementById(id);
+        el.style.borderBottomColor = m === tab ? 'var(--tw-blue)' : 'transparent';
+        el.style.color = m === tab ? '' : 'var(--tw-gray-600)';
+    }
+}
+
+async function ensureUploadedSourceId() {
+    if (uploadMode === 'existing') {
+        const sel = document.getElementById('pdf');
+        if (!sel.value) { alert('Bitte ein PDF wählen.'); return null; }
+        return sel.value;
+    }
+    // Upload path.
+    const f = document.getElementById('uploadFile').files[0];
+    if (!f) { alert('Bitte eine PDF-Datei wählen.'); return null; }
+    if (!f.name.toLowerCase().endsWith('.pdf') && f.type !== 'application/pdf') {
+        alert('Nur PDF-Dateien sind erlaubt.'); return null;
+    }
+    document.getElementById('uploadProgress').style.display = '';
+    document.getElementById('uploadStatus').textContent = 'Bereite Upload vor …';
+    document.getElementById('uploadBar').style.width = '10%';
+
+    const init = await fetch('/api/v1/signatures/upload-source', {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+        body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: 'application/pdf' })
+    });
+    if (!init.ok) { alert('Upload-Init fehlgeschlagen: ' + await init.text()); return null; }
+    const iData = await init.json();
+
+    document.getElementById('uploadStatus').textContent = 'Lädt hoch …';
+    await new Promise((res, rej) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open(iData.uploadMethod || 'PUT', iData.uploadUrl, true);
+        xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+        xhr.setRequestHeader('Content-Type', 'application/pdf');
+        xhr.upload.onprogress = e => {
+            if (e.lengthComputable) {
+                const pct = 10 + Math.round(80 * e.loaded / e.total);
+                document.getElementById('uploadBar').style.width = pct + '%';
+            }
+        };
+        xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? res() : rej(new Error('HTTP ' + xhr.status));
+        xhr.onerror = () => rej(new Error('Netzwerkfehler'));
+        xhr.send(f);
+    });
+
+    document.getElementById('uploadStatus').textContent = 'Wird verarbeitet …';
+    document.getElementById('uploadBar').style.width = '95%';
+    const done = await fetch('/api/v1/files/' + iData.fileId + '/complete', {
+        method:'POST', credentials:'same-origin',
+    });
+    if (!done.ok) { alert('Upload-Abschluss fehlgeschlagen'); return null; }
+    document.getElementById('uploadBar').style.width = '100%';
+    document.getElementById('uploadStatus').textContent = '✓ Hochgeladen';
+    return iData.fileId;
+}
+
 async function goStep2() {
-    const sel = document.getElementById('pdf');
-    if (!sel.value) { alert('Bitte ein PDF wählen.'); return; }
+    const sourceId = await ensureUploadedSourceId();
+    if (!sourceId) return;
     const r = await fetch('/api/v1/signatures', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({
-            sourceFileId: sel.value,
+            sourceFileId: sourceId,
             title: document.getElementById('reqTitle').value || null,
             message: document.getElementById('reqMsg').value || null,
             deliveryOrder: 'Parallel',
