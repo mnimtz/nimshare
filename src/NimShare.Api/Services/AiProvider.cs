@@ -171,13 +171,33 @@ public class OpenAiProvider : IAiProvider
             var text = await resp.Content.ReadAsStringAsync(ct);
             if (!resp.IsSuccessStatusCode)
             {
-                LastError = $"OpenAI vision {(int)resp.StatusCode}: {text[..Math.Min(400, text.Length)]}";
+                LastError = $"OpenAI {(int)resp.StatusCode} calling {_model}: {text[..Math.Min(400, text.Length)]}";
                 return null;
             }
             var doc = JsonDocument.Parse(text);
-            return doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+            var msg = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
+            // Guardrails / content-policy refusals surface as "refusal" instead
+            // of "content"; expose that so the operator sees WHY the summary
+            // came back empty.
+            if (msg.TryGetProperty("refusal", out var refusal) && refusal.ValueKind == JsonValueKind.String)
+            {
+                LastError = "Model refused: " + refusal.GetString();
+                return null;
+            }
+            if (!msg.TryGetProperty("content", out var content) || content.ValueKind == JsonValueKind.Null)
+            {
+                LastError = "Model returned no content — likely the current model does not support vision. Configured model: " + _model;
+                return null;
+            }
+            var result = content.GetString();
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                LastError = "Model returned empty content. Configured model: " + _model;
+                return null;
+            }
+            return result;
         }
-        catch (Exception ex) { LastError = "vision exception: " + ex.Message; return null; }
+        catch (Exception ex) { LastError = "vision exception (" + _model + "): " + ex.Message; return null; }
     }
 
     private async Task<string?> ChatAsync(string system, string user, double temperature, CancellationToken ct)

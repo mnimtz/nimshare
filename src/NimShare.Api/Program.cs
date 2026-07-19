@@ -273,6 +273,7 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
         var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
         logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");
+        NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
     }
 }
 
