@@ -472,4 +472,13 @@
   <data name="actions.back"><value>Back</value></data>
   <data name="links.action.report"><value>Análisis</value></data>
   <data name="landing.preview_after_password"><value>Vista previa disponible tras la contraseña.</value></data>
+  <data name="links.mine.section"><value>Mis enlaces</value></data>
+  <data name="links.public.section"><value>Enlaces públicos</value></data>
+  <data name="links.public.lede"><value>Enlaces proporcionados por el administrador. Puedes usarlos y compartirlos, no modificarlos.</value></data>
+  <data name="links.public.by"><value>Publicado por</value></data>
+  <data name="links.public.badge"><value>Público</value></data>
+  <data name="links.public.hint"><value>Visible para todos los usuarios</value></data>
+  <data name="links.public.share"><value>Hacer público</value></data>
+  <data name="links.public.unshare"><value>Hacer privado</value></data>
+  <data name="links.action.open"><value>Abrir</value></data>
 </root>

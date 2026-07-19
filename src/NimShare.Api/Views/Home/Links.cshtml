@@ -1,5 +1,10 @@
 @model IEnumerable<NimShare.Core.Entities.ShareLink>
-@{ ViewData["Title"] = @T["links.title"]; Layout = "_AppShell"; }
+@{
+    ViewData["Title"] = @T["links.title"];
+    Layout = "_AppShell";
+    var publicLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["PublicLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
+    var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+}
 <div class="page-header">
     <div>
         <h1>@T["links.title"]</h1>
@@ -7,6 +12,8 @@
     </div>
     <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
 </div>
+
+<h2 style="margin-top:8px">🔗 @T["links.mine.section"]</h2>
 
 @if (!Model.Any())
 {
@@ -40,14 +47,63 @@ else
                 <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
                 <td><span class="chip @state.Item1">@state.Item2</span></td>
                 <td>
+                    @if (l.IsPublic)
+                    {
+                        <span class="chip chip-warn" title="@T["links.public.hint"]">🌐 @T["links.public.badge"]</span>
+                    }
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@Url.RouteUrl(new{controller="Share",action="Landing",slug=l.Slug}) ?? $"/s/{l.Slug}">@T["links.action.copy"]</button>
                     <button class="btn btn-ghost btn-sm" data-email="@l.Id">@T["links.action.email"]</button>
+                    @if (isAdmin)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-toggle-public="@l.Id" data-current="@(l.IsPublic ? "true" : "false")">
+                            @(l.IsPublic ? "🔒 " + @T["links.public.unshare"].Value : "🌐 " + @T["links.public.share"].Value)
+                        </button>
+                    }
                     @if (!l.IsRevoked)
                     {
                         <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
                     }
                     <button class="btn btn-ghost btn-sm" data-delete="@l.Id">@T["links.action.delete"]</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@if (publicLinks.Any())
+{
+    <h2 style="margin-top:32px">🌐 @T["links.public.section"]</h2>
+    <p class="muted" style="margin-bottom:8px">@T["links.public.lede"]</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>@T["links.slug"]</th>
+                <th>@T["file.name"]</th>
+                <th>@T["links.public.by"]</th>
+                <th>@T["links.downloads"]</th>
+                <th>@T["links.state"]</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var l in publicLinks)
+        {
+            var pstate = l.IsRevoked
+                ? ("chip-critical", @T["links.revoked"].Value)
+                : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
+                    ? ("chip-warn", @T["links.expired"].Value)
+                    : ("chip-ok", @T["links.active"].Value);
+            <tr>
+                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
+                <td class="muted">@l.Owner?.DisplayName</td>
+                <td>@l.DownloadCount @(l.MaxDownloads is int m2 ? $" / {m2}" : "")</td>
+                <td><span class="chip @pstate.Item1">@pstate.Item2</span></td>
+                <td>
+                    <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
+                    <button class="btn btn-ghost btn-sm" data-copy="@Url.RouteUrl(new{controller="Share",action="Landing",slug=l.Slug}) ?? $"/s/{l.Slug}">@T["links.action.copy"]</button>
                 </td>
             </tr>
         }
@@ -69,6 +125,13 @@ document.querySelectorAll('[data-revoke]').forEach(b => {
     b.addEventListener('click', async () => {
         if (!confirm(@Json.Serialize(T["links.confirm.revoke"].Value))) return;
         const r = await api('PATCH', `/api/v1/links/${b.dataset.revoke}`, { isRevoked: true });
+        if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+    });
+});
+document.querySelectorAll('[data-toggle-public]').forEach(b => {
+    b.addEventListener('click', async () => {
+        const currentlyPublic = b.dataset.current === 'true';
+        const r = await api('PATCH', `/api/v1/links/${b.dataset.togglePublic}`, { isPublic: !currentlyPublic });
         if (r.ok) location.reload(); else alert('Failed: ' + r.status);
     });
 });

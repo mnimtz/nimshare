@@ -470,4 +470,13 @@
   <data name="actions.back"><value>Back</value></data>
   <data name="links.action.report"><value>Report</value></data>
   <data name="landing.preview_after_password"><value>Preview available after password.</value></data>
+  <data name="links.mine.section"><value>My links</value></data>
+  <data name="links.public.section"><value>Public links</value></data>
+  <data name="links.public.lede"><value>Links provided by the administrator. You can use and share them, but not modify or delete.</value></data>
+  <data name="links.public.by"><value>Provided by</value></data>
+  <data name="links.public.badge"><value>Public</value></data>
+  <data name="links.public.hint"><value>Visible to all users</value></data>
+  <data name="links.public.share"><value>Make public</value></data>
+  <data name="links.public.unshare"><value>Make private</value></data>
+  <data name="links.action.open"><value>Open</value></data>
 </root>

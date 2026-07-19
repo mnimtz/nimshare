@@ -471,4 +471,13 @@
   <data name="actions.back"><value>Back</value></data>
   <data name="links.action.report"><value>Rapport</value></data>
   <data name="landing.preview_after_password"><value>Voorbeeld beschikbaar na wachtwoord.</value></data>
+  <data name="links.mine.section"><value>Mijn links</value></data>
+  <data name="links.public.section"><value>Openbare links</value></data>
+  <data name="links.public.lede"><value>Links van de beheerder. Je kunt ze gebruiken en delen, maar niet bewerken of verwijderen.</value></data>
+  <data name="links.public.by"><value>Aangeboden door</value></data>
+  <data name="links.public.badge"><value>Openbaar</value></data>
+  <data name="links.public.hint"><value>Zichtbaar voor alle gebruikers</value></data>
+  <data name="links.public.share"><value>Openbaar maken</value></data>
+  <data name="links.public.unshare"><value>Privé maken</value></data>
+  <data name="links.action.open"><value>Openen</value></data>
 </root>

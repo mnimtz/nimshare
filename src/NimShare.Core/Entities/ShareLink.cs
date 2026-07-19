@@ -37,6 +37,15 @@ public class ShareLink
 
     public bool IsRevoked { get; set; }
 
+    /// <summary>
+    /// When true, this link surfaces in the "Öffentliche Links" section of the
+    /// links page for every signed-in user — read-only for non-owners; only
+    /// the owner and admins can revoke, delete, or edit it. Intended for
+    /// admin-curated download bundles (installer downloads, form templates,
+    /// company brand kit, etc.).
+    /// </summary>
+    public bool IsPublic { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

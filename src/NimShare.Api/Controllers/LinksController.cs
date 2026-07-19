@@ -142,7 +142,7 @@ public class LinksController : ControllerBase
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
     }
 
-    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess);
+    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -155,6 +155,10 @@ public class LinksController : ControllerBase
         if (req.Message is not null) link.Message = req.Message;
         if (req.IsRevoked is not null) link.IsRevoked = req.IsRevoked.Value;
         if (req.NotifyOnAccess is not null) link.NotifyOnAccess = req.NotifyOnAccess.Value;
+        // "Public for everyone" is admin-only. Any other user attempting to
+        // set it just gets silently ignored — no 403 to avoid a leaky UX.
+        if (req.IsPublic is not null && user.Role == UserRole.Admin)
+            link.IsPublic = req.IsPublic.Value;
         await _db.SaveChangesAsync(ct);
         return Ok(ToDto(link));
     }

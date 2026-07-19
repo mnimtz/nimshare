@@ -59,12 +59,23 @@ public class HomeController : Controller
     public async Task<IActionResult> Links(CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var items = await _db.ShareLinks
+        var mine = await _db.ShareLinks
             .Include(l => l.File)
             .Where(l => l.OwnerId == user.Id)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
-        return View(items);
+        // Admin-curated links that everyone can see and use, but only the
+        // owner (or an admin) can revoke/delete/edit. Filter mine out so
+        // they don't appear twice for the owner.
+        var publicLinks = await _db.ShareLinks
+            .Include(l => l.File)
+            .Include(l => l.Owner)
+            .Where(l => l.IsPublic && l.OwnerId != user.Id)
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(ct);
+        ViewData["PublicLinks"] = publicLinks;
+        ViewData["IsAdmin"] = user.Role == UserRole.Admin;
+        return View(mine);
     }
 
     [Authorize]

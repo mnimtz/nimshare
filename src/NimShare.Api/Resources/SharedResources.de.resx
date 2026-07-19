@@ -470,4 +470,13 @@
   <data name="actions.back"><value>Terug</value></data>
   <data name="links.action.report"><value>Auswertung</value></data>
   <data name="landing.preview_after_password"><value>Vorschau nach Passwort-Eingabe verfügbar.</value></data>
+  <data name="links.mine.section"><value>Meine Links</value></data>
+  <data name="links.public.section"><value>Öffentliche Links</value></data>
+  <data name="links.public.lede"><value>Vom Administrator bereitgestellte Links. Du kannst sie nutzen und teilen, aber nicht ändern oder löschen.</value></data>
+  <data name="links.public.by"><value>Bereitgestellt von</value></data>
+  <data name="links.public.badge"><value>Öffentlich</value></data>
+  <data name="links.public.hint"><value>Für alle Nutzer sichtbar</value></data>
+  <data name="links.public.share"><value>Öffentlich machen</value></data>
+  <data name="links.public.unshare"><value>Privat machen</value></data>
+  <data name="links.action.open"><value>Öffnen</value></data>
 </root>
