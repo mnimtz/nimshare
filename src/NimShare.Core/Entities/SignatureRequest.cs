@@ -108,6 +108,14 @@ public class SignatureField
     public int Page { get; set; } = 1;
     public SignatureFieldAnchor Anchor { get; set; } = SignatureFieldAnchor.BottomCenter;
 
+    /// <summary>Precise position and size in *PDF points* (72 dpi, origin
+    /// bottom-left). Populated when the requester used the visual editor.
+    /// When all four are zero the merger falls back to the Anchor preset.</summary>
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+
     public string? Label { get; set; }
 
     /// <summary>Text/date value entered by the participant.</summary>

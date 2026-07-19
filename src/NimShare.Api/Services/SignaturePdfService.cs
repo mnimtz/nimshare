@@ -31,7 +31,17 @@ public class SignaturePdfService : ISignaturePdfService
             if (field.Page < 1 || field.Page > doc.PageCount) continue;
             var page = doc.Pages[field.Page - 1];
             using var gfx = XGraphics.FromPdfPage(page);
-            var (x, y, w, h) = AnchorRect(page, field.Anchor);
+            // Prefer the exact coordinates from the visual editor when any
+            // dimension is > 0; otherwise fall back to the anchor preset.
+            double x, y, w, h;
+            if (field.Width > 0 && field.Height > 0)
+            {
+                x = field.X; y = field.Y; w = field.Width; h = field.Height;
+            }
+            else
+            {
+                (x, y, w, h) = AnchorRect(page, field.Anchor);
+            }
             switch (field.Type)
             {
                 case SignatureFieldType.Signature:

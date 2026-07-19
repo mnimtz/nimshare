@@ -35,10 +35,12 @@ public class SignaturesController : ControllerBase
         List<ParticipantDto> Participants, List<FieldDto> Fields);
     public record ParticipantDto(Guid Id, string Email, string Name, string Role, int Order, string Status,
         DateTimeOffset? ViewedAt, DateTimeOffset? SignedAt);
-    public record FieldDto(Guid Id, Guid ParticipantId, string Type, int Page, string Anchor, string? Label, string? Value);
+    public record FieldDto(Guid Id, Guid ParticipantId, string Type, int Page, string Anchor,
+        double X, double Y, double Width, double Height, string? Label, string? Value);
     public record CreateReq(Guid SourceFileId, string? Title, string? Message, string? DeliveryOrder, DateTimeOffset? Deadline);
     public record AddParticipantReq(string Email, string Name, string Role, int Order);
-    public record AddFieldReq(Guid ParticipantId, string Type, int Page, string Anchor, string? Label);
+    public record AddFieldReq(Guid ParticipantId, string Type, int Page, string Anchor, string? Label,
+        double? X, double? Y, double? Width, double? Height);
 
     [HttpGet]
     public async Task<IActionResult> ListMine(CancellationToken ct)
@@ -160,6 +162,8 @@ public class SignaturesController : ControllerBase
             Type = type,
             Page = Math.Max(1, req.Page),
             Anchor = anchor,
+            X = req.X ?? 0, Y = req.Y ?? 0,
+            Width = req.Width ?? 0, Height = req.Height ?? 0,
             Label = req.Label,
         };
         _db.SignatureFields.Add(f);
@@ -200,6 +204,23 @@ public class SignaturesController : ControllerBase
         return Ok(ToDto(r));
     }
 
+    /// <summary>Server-side proxy that streams the source PDF from Blob to the
+    /// requester's browser — same-origin, so pdf.js can render it without
+    /// cross-origin restrictions.</summary>
+    [HttpGet("{id:guid}/source-pdf")]
+    public async Task<IActionResult> SourcePdf(Guid id, [FromServices] IBlobStorageService blobs, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests.Include(x => x.SourceFile)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r?.SourceFile is null) return NotFound();
+        if (r.InitiatorUserId != me.Id && me.Role != UserRole.Admin) return Forbid();
+        var ms = new MemoryStream();
+        await blobs.DownloadToAsync(r.SourceFile.BlobPath, ms, ct);
+        ms.Position = 0;
+        return File(ms, "application/pdf");
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
@@ -231,5 +252,5 @@ public class SignaturesController : ControllerBase
             p.Id, p.Email, p.Name, p.Role.ToString(), p.Order, p.Status.ToString(),
             p.ViewedAt, p.SignedAt)).ToList(),
         r.Fields.Select(f => new FieldDto(f.Id, f.ParticipantId, f.Type.ToString(),
-            f.Page, f.Anchor.ToString(), f.Label, f.Value)).ToList());
+            f.Page, f.Anchor.ToString(), f.X, f.Y, f.Width, f.Height, f.Label, f.Value)).ToList());
 }

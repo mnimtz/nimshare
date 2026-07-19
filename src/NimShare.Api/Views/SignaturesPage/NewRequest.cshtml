@@ -17,140 +17,249 @@
         <p>Du hast noch keine PDFs in deiner Ablage. Lade eine PDF hoch, dann komm hier wieder her.</p>
         <a class="btn btn-primary" href="/browse/personal">Zur Ablage →</a>
     </div>
+    return;
 }
-else
-{
-    <div id="wizardStep1" class="card">
-        <h2 class="card-title">1. Dokument wählen</h2>
-        <div style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto">
+
+<!-- Step 1: PDF + Metadaten -->
+<div id="wizStep1" class="card">
+    <h2 class="card-title">1. Dokument & Metadaten</h2>
+    <div class="field">
+        <label>PDF auswählen</label>
+        <select id="pdf">
             @foreach (var f in pdfs)
             {
-                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--tw-gray-300);border-radius:6px;cursor:pointer">
-                    <input type="radio" name="pdf" value="@f.Id" data-name="@f.Name"/>
-                    <span>📄 <strong>@f.Name</strong> <span class="muted">· @((f.SizeBytes / 1024).ToString("N0")) KB</span></span>
-                </label>
+                <option value="@f.Id" data-name="@f.Name">@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
             }
-        </div>
-        <div class="field" style="margin-top:12px">
-            <label>Titel (optional)</label>
-            <input type="text" id="reqTitle" placeholder="Standard: Dateiname"/>
-        </div>
-        <div class="field">
-            <label>Nachricht an die Empfänger (optional)</label>
-            <textarea id="reqMsg" rows="2" placeholder="Kurzer Kontext, warum du sie um Unterschrift bittest."></textarea>
-        </div>
-        <div class="row" style="justify-content:flex-end">
-            <button class="btn btn-primary" onclick="createRequest()">Weiter →</button>
-        </div>
+        </select>
     </div>
-
-    <div id="wizardStep2" class="card" style="display:none">
-        <h2 class="card-title">2. Empfänger hinzufügen</h2>
-        <p class="muted">Für jede Person: E-Mail + Name + Rolle. Bei „Unterschrift" landet automatisch ein Signatur-Feld unten auf Seite 1.</p>
-        <div id="participants" style="display:flex;flex-direction:column;gap:8px"></div>
-        <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
-            <input type="email" id="pEmail" placeholder="alice@firma.com" style="flex:1;min-width:180px"/>
-            <input type="text" id="pName" placeholder="Alice Kunde" style="flex:1;min-width:180px"/>
-            <select id="pRole">
-                <option value="Signer">✍ Unterschreiber</option>
-                <option value="Viewer">👁 Nur lesen</option>
-            </select>
-            <select id="pPage" title="PDF-Seite für die Unterschrift">
-                <option value="1">Seite 1</option>
-                <option value="2">Seite 2</option>
-                <option value="3">Seite 3</option>
-                <option value="4">Seite 4</option>
-                <option value="5">Seite 5</option>
-            </select>
-            <select id="pAnchor" title="Wo unterschreiben">
-                <option value="BottomCenter">Unten mittig</option>
-                <option value="BottomLeft">Unten links</option>
-                <option value="BottomRight">Unten rechts</option>
-                <option value="TopCenter">Oben mittig</option>
-                <option value="TopLeft">Oben links</option>
-                <option value="TopRight">Oben rechts</option>
-            </select>
-            <button class="btn btn-secondary" onclick="addParticipant()">+ Hinzufügen</button>
-        </div>
-        <div class="row" style="justify-content:space-between;margin-top:16px">
-            <button class="btn btn-ghost" onclick="wizardStep(1)">← Zurück</button>
-            <button class="btn btn-primary" onclick="sendRequest()">📨 Absenden</button>
-        </div>
+    <div class="field">
+        <label>Titel</label>
+        <input type="text" id="reqTitle" placeholder="Standard: Dateiname"/>
     </div>
-}
+    <div class="field">
+        <label>Nachricht an die Empfänger</label>
+        <textarea id="reqMsg" rows="2"></textarea>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+        <button class="btn btn-primary" onclick="goStep2()">Weiter →</button>
+    </div>
+</div>
 
+<!-- Step 2: Teilnehmer -->
+<div id="wizStep2" class="card" style="display:none">
+    <h2 class="card-title">2. Teilnehmer</h2>
+    <p class="muted">Jede Person mit E-Mail + Name + Rolle. Signaturfelder werden im nächsten Schritt visuell platziert.</p>
+    <div id="pList" style="display:flex;flex-direction:column;gap:6px;margin:12px 0"></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap">
+        <input type="email" id="pEmail" placeholder="alice@firma.com" style="flex:1;min-width:200px"/>
+        <input type="text" id="pName" placeholder="Alice Kunde" style="flex:1;min-width:180px"/>
+        <select id="pRole">
+            <option value="Signer">✍ Unterschreiber</option>
+            <option value="Viewer">👁 Nur lesen</option>
+        </select>
+        <button class="btn btn-secondary" onclick="addP()">+</button>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+        <button class="btn btn-ghost" onclick="show(1)">← Zurück</button>
+        <button class="btn btn-primary" onclick="goStep3()">Weiter: Felder platzieren →</button>
+    </div>
+</div>
+
+<!-- Step 3: Visual field placement -->
+<div id="wizStep3" class="card" style="display:none">
+    <h2 class="card-title">3. Felder platzieren</h2>
+    <p class="muted">Wähle Empfänger + Feldtyp, dann ziehe auf der PDF eine Fläche für das Feld auf. Enter → gespeichert. Rechtsklick auf ein Feld = löschen.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <label>Für:</label>
+        <select id="fParticipant"></select>
+        <label>Typ:</label>
+        <select id="fType">
+            <option value="Signature">✍ Signatur</option>
+            <option value="Text">Text</option>
+            <option value="Date">Datum</option>
+            <option value="Checkbox">Checkbox</option>
+        </select>
+        <span class="muted" style="margin-left:auto" id="pageInfo"></span>
+    </div>
+    <div id="pdfWrap" style="border:1px solid var(--tw-gray-300);border-radius:6px;overflow:hidden;background:#eee;user-select:none;position:relative"></div>
+    <div class="row" style="gap:6px;margin-top:8px;justify-content:center">
+        <button class="btn btn-ghost btn-sm" onclick="prevPage()">◀</button>
+        <span id="pgLabel" class="muted"></span>
+        <button class="btn btn-ghost btn-sm" onclick="nextPage()">▶</button>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+        <button class="btn btn-ghost" onclick="show(2)">← Zurück</button>
+        <button class="btn btn-primary" onclick="sendReq()">📨 Absenden</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs";
+window.pdfjsLib = pdfjsLib;
+</script>
 <script>
 let requestId = null;
-let participants = [];
+let participants = [];  // { id, email, name, role }
+let fields = [];         // { id, participantId, type, page, x, y, w, h }
+let pdfDoc = null;
+let curPage = 1;
+let pageViewport = null;
 
-async function createRequest() {
-    const pdf = document.querySelector('input[name=pdf]:checked');
-    if (!pdf) { alert('Bitte ein PDF auswählen.'); return; }
+function show(n) {
+    for (const i of [1,2,3]) document.getElementById('wizStep' + i).style.display = i === n ? '' : 'none';
+}
+
+async function goStep2() {
+    const sel = document.getElementById('pdf');
+    if (!sel.value) { alert('Bitte ein PDF wählen.'); return; }
     const r = await fetch('/api/v1/signatures', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        credentials: 'same-origin',
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({
-            sourceFileId: pdf.value,
+            sourceFileId: sel.value,
             title: document.getElementById('reqTitle').value || null,
             message: document.getElementById('reqMsg').value || null,
             deliveryOrder: 'Parallel',
         })
     });
-    if (!r.ok) { alert('Fehler: ' + r.status + ' ' + await r.text()); return; }
+    if (!r.ok) { alert('Fehler: ' + r.status); return; }
     const d = await r.json();
     requestId = d.id;
-    wizardStep(2);
+    show(2);
 }
 
-function wizardStep(n) {
-    document.getElementById('wizardStep1').style.display = n === 1 ? '' : 'none';
-    document.getElementById('wizardStep2').style.display = n === 2 ? '' : 'none';
-}
-
-async function addParticipant() {
+async function addP() {
     const email = document.getElementById('pEmail').value.trim();
     const name = document.getElementById('pName').value.trim();
     const role = document.getElementById('pRole').value;
-    const page = parseInt(document.getElementById('pPage').value);
-    const anchor = document.getElementById('pAnchor').value;
-    if (!email || !name) { alert('E-Mail und Name sind Pflicht.'); return; }
-
+    if (!email || !name) { alert('E-Mail + Name Pflicht.'); return; }
     const r = await fetch('/api/v1/signatures/' + requestId + '/participants', {
-        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-        body: JSON.stringify({ email, name, role, order: participants.length })
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
+        body: JSON.stringify({ email, name, role, order: participants.length }),
     });
-    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    if (!r.ok) return alert('Fehler: ' + r.status);
     const p = await r.json();
-    // For signers auto-add a signature field.
-    if (role === 'Signer') {
-        await fetch('/api/v1/signatures/' + requestId + '/fields', {
-            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-            body: JSON.stringify({ participantId: p.id, type: 'Signature', page, anchor })
-        });
-    }
-    participants.push({ email, name, role });
-    renderParticipants();
+    participants.push({ id: p.id, email, name, role });
     document.getElementById('pEmail').value = '';
     document.getElementById('pName').value = '';
+    renderPList();
 }
 
-function renderParticipants() {
-    document.getElementById('participants').innerHTML = participants.map(p =>
-        `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--tw-gray-100);border-radius:6px">
+function renderPList() {
+    document.getElementById('pList').innerHTML = participants.map(p =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--tw-gray-100);border-radius:6px">
             <span style="flex:1">${p.role === 'Signer' ? '✍' : '👁'} <strong>${p.name}</strong> · ${p.email}</span>
             <span class="chip">${p.role === 'Signer' ? 'Unterzeichner' : 'Leser'}</span>
         </div>`).join('');
+    const fp = document.getElementById('fParticipant');
+    fp.innerHTML = participants.filter(p => p.role === 'Signer' || document.getElementById('fType').value !== 'Signature')
+        .map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 }
 
-async function sendRequest() {
-    if (participants.filter(p => p.role === 'Signer').length === 0) {
-        alert('Mindestens ein Unterzeichner ist erforderlich.'); return;
+async function goStep3() {
+    if (participants.filter(p => p.role === 'Signer').length === 0) return alert('Mindestens ein Unterzeichner.');
+    show(3);
+    // Load the PDF via same-origin proxy.
+    const src = '/api/v1/signatures/' + requestId + '/source-pdf';
+    pdfDoc = await pdfjsLib.getDocument(src).promise;
+    curPage = 1;
+    await renderPage();
+}
+
+async function renderPage() {
+    document.getElementById('pgLabel').textContent = `Seite ${curPage} / ${pdfDoc.numPages}`;
+    document.getElementById('pageInfo').textContent = `Klicken + ziehen auf Seite ${curPage}`;
+    const page = await pdfDoc.getPage(curPage);
+    const viewport = page.getViewport({ scale: 1.4 });
+    pageViewport = viewport;
+    const wrap = document.getElementById('pdfWrap');
+    wrap.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    canvas.style.display = 'block'; canvas.style.margin = '0 auto';
+    wrap.appendChild(canvas);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;margin:auto;cursor:crosshair`;
+    overlay.id = 'ovl';
+    wrap.appendChild(overlay);
+    wrap.style.height = viewport.height + 'px';
+    // Center the overlay above the canvas.
+    overlay.style.left = ((wrap.clientWidth - viewport.width) / 2) + 'px';
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    setupDrag(overlay);
+    redrawFields(overlay);
+}
+
+function setupDrag(overlay) {
+    let start = null, box = null;
+    overlay.addEventListener('mousedown', e => {
+        start = { x: e.offsetX, y: e.offsetY };
+        box = document.createElement('div');
+        box.style.cssText = 'position:absolute;border:2px dashed #002854;background:rgba(0,160,251,.12)';
+        overlay.appendChild(box);
+    });
+    overlay.addEventListener('mousemove', e => {
+        if (!start) return;
+        const x = Math.min(start.x, e.offsetX), y = Math.min(start.y, e.offsetY);
+        const w = Math.abs(e.offsetX - start.x), h = Math.abs(e.offsetY - start.y);
+        Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    });
+    overlay.addEventListener('mouseup', async e => {
+        if (!start) return;
+        const x = Math.min(start.x, e.offsetX), y = Math.min(start.y, e.offsetY);
+        const w = Math.abs(e.offsetX - start.x), h = Math.abs(e.offsetY - start.y);
+        start = null;
+        if (w < 20 || h < 15) { box.remove(); return; }
+        // Convert canvas coords to PDF points (canvas is scale 1.4 of PDF viewport).
+        const pdfX = x / pageViewport.scale;
+        // PDF Y origin is bottom-left; canvas is top-left.
+        const pdfY = (pageViewport.height - (y + h)) / pageViewport.scale;
+        const pdfW = w / pageViewport.scale, pdfH = h / pageViewport.scale;
+        const participantId = document.getElementById('fParticipant').value;
+        const type = document.getElementById('fType').value;
+        const r = await fetch('/api/v1/signatures/' + requestId + '/fields', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
+            body: JSON.stringify({ participantId, type, page: curPage, anchor: 'BottomCenter',
+                x: pdfX, y: pdfY, width: pdfW, height: pdfH })
+        });
+        if (!r.ok) { alert('Fehler: ' + r.status); box.remove(); return; }
+        const d = await r.json();
+        fields.push({ id: d.id, participantId, type, page: curPage, x, y, w, h });
+        box.textContent = type === 'Signature' ? '✍' : (type === 'Text' ? 'Text' : (type === 'Date' ? '📅' : '☑'));
+        box.style.borderStyle = 'solid';
+        box.style.color = '#002854'; box.style.fontWeight = '700';
+        box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.justifyContent = 'center';
+        box.addEventListener('contextmenu', async ev => {
+            ev.preventDefault();
+            // No delete endpoint yet; just drop from UI (server-side cleanup is via Cancel).
+            box.remove();
+        });
+    });
+}
+
+function redrawFields(overlay) {
+    for (const f of fields.filter(x => x.page === curPage)) {
+        const b = document.createElement('div');
+        b.style.cssText = `position:absolute;left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px;border:2px solid #002854;background:rgba(0,160,251,.12);color:#002854;font-weight:700;display:flex;align-items:center;justify-content:center`;
+        b.textContent = f.type === 'Signature' ? '✍' : (f.type === 'Text' ? 'Text' : (f.type === 'Date' ? '📅' : '☑'));
+        overlay.appendChild(b);
+    }
+}
+
+function prevPage() { if (curPage > 1) { curPage--; renderPage(); } }
+function nextPage() { if (curPage < pdfDoc.numPages) { curPage++; renderPage(); } }
+
+async function sendReq() {
+    if (fields.filter(f => f.type === 'Signature').length === 0) {
+        if (!confirm('Kein Signaturfeld platziert — sicher absenden?')) return;
     }
     const r = await fetch('/api/v1/signatures/' + requestId + '/send', {
-        method: 'POST', credentials: 'same-origin'
+        method: 'POST', credentials: 'same-origin',
     });
     if (!r.ok) { alert('Fehler: ' + r.status + ' ' + await r.text()); return; }
     location.href = '/signatures';
 }
+
+document.getElementById('fType').addEventListener('change', renderPList);
 </script>
