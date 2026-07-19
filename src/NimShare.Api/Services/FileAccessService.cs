@@ -99,6 +99,14 @@ public class FileAccessService : IFileAccessService
 
     public async Task<bool> CanDeleteAsync(User user, StorageFile file, CancellationToken ct = default)
     {
+        // A live lock held by someone else blocks writes for everyone but the
+        // owner (they can always break). Admins bypass the whole check anyway.
+        if (file.LockedUntil is DateTimeOffset until && until > DateTimeOffset.UtcNow
+            && file.LockedByUserId != user.Id
+            && user.Role != UserRole.Admin && file.OwnerId != user.Id)
+        {
+            return false;
+        }
         if (user.Role == UserRole.Admin) return true;
         if (file.OwnerId == user.Id) return true;
         if (file.Scope == FileScope.Group && file.GroupId is Guid g)

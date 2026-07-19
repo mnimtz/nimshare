@@ -32,6 +32,7 @@ public class NimShareDbContext : DbContext
     public DbSet<SignatureParticipant> SignatureParticipants => Set<SignatureParticipant>();
     public DbSet<SignatureField> SignatureFields => Set<SignatureField>();
     public DbSet<SignatureAudit> SignatureAudits => Set<SignatureAudit>();
+    public DbSet<OfficeSettings> OfficeSettings => Set<OfficeSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -238,6 +239,21 @@ public class NimShareDbContext : DbContext
 
         // Wire the new StorageFile.FolderId (nullable, restrict on delete — the app
         // moves files out of a folder before allowing folder delete).
+        b.Entity<OfficeSettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DocumentServerUrl).HasMaxLength(400);
+            e.Property(x => x.JwtSecretEncrypted).HasMaxLength(2000);
+        });
+
+        b.Entity<StorageFile>()
+            .HasOne(f => f.LockedByUser)
+            .WithMany()
+            .HasForeignKey(f => f.LockedByUserId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+        b.Entity<StorageFile>().Property(x => x.LockKind).HasMaxLength(20);
+
         b.Entity<StorageFile>()
             .HasOne(f => f.FolderRef)
             .WithMany(fo => fo.Files)

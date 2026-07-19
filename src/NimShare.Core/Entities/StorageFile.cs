@@ -86,6 +86,21 @@ public class StorageFile
     /// <summary>How many past versions to retain. 0 = infinite (retention job may still archive).</summary>
     public int KeepVersions { get; set; } = 10;
 
+    /// <summary>Who currently holds the write lock, if any. Null = unlocked.
+    /// The owner + admins can always break a lock.</summary>
+    public Guid? LockedByUserId { get; set; }
+    public User? LockedByUser { get; set; }
+
+    /// <summary>Auto-unlock timestamp. Set to now + 30 min when acquired; the
+    /// endpoints touching the lock also renew it. Prevents dead-locks when a
+    /// browser tab is closed without releasing.</summary>
+    public DateTimeOffset? LockedUntil { get; set; }
+
+    /// <summary>"manual" (user hit the lock icon) vs "office" (OnlyOffice edit
+    /// session took the lock automatically). Only informational — the enforcer
+    /// treats both the same.</summary>
+    public string? LockKind { get; set; }
+
     public StorageFileStatus Status { get; set; } = StorageFileStatus.Pending;
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
