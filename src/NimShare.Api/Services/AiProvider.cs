@@ -152,7 +152,10 @@ public class OpenAiProvider : IAiProvider
                     role = "user",
                     content = new object[]
                     {
-                        new { type = "text", text = "Beschreibe das Bild." },
+                        // Prompt text stays English so it doesn't bias the
+                        // model's output language — the actual reply language
+                        // is dictated by the system message via ISO code.
+                        new { type = "text", text = "Please describe what is in this image." },
                         new { type = "image_url", image_url = new { url = dataUrl } },
                     }
                 }
@@ -408,7 +411,10 @@ public class AnthropicProvider : IAiProvider
                     content = new object[]
                     {
                         new { type = "image", source = new { type = "base64", media_type = mimeType, data = Convert.ToBase64String(imageBytes) } },
-                        new { type = "text", text = "Beschreibe das Bild." },
+                        // Prompt text stays English so it doesn't bias the
+                        // model's output language — the actual reply language
+                        // is dictated by the system message via ISO code.
+                        new { type = "text", text = "Please describe what is in this image." },
                     }
                 }
             },

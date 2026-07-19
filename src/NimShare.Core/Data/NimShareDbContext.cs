@@ -80,6 +80,7 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Folder).HasMaxLength(400);
             e.Property(x => x.Sha256).HasMaxLength(64);
             e.Property(x => x.AiSummary).HasMaxLength(2000);
+            e.Property(x => x.AiSummaryLang).HasMaxLength(5);
             e.Property(x => x.AiTags).HasMaxLength(500);
             e.Property(x => x.AiRiskFlag).HasMaxLength(120);
             e.HasOne(x => x.Owner).WithMany(u => u.Files).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);

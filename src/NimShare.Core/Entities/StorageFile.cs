@@ -56,6 +56,15 @@ public class StorageFile
     /// <summary>Cached AI-generated 2-3 sentence summary (v0.7.0+). Populated by first landing click.</summary>
     public string? AiSummary { get; set; }
 
+    /// <summary>
+    /// ISO-2 language code the cached AiSummary is in. Lets the summary
+    /// endpoint know it must re-generate when a visitor with a different
+    /// Accept-Language than the previous one asks for a summary — otherwise
+    /// an English visitor would get the German summary a German visitor
+    /// generated moments earlier.
+    /// </summary>
+    public string? AiSummaryLang { get; set; }
+
     /// <summary>Comma-separated AI-generated tags. Set on upload complete when the feature is on.</summary>
     public string? AiTags { get; set; }
 

@@ -27,6 +27,22 @@ public class AiController : ControllerBase
     }
 
     /// <summary>
+    /// Pick the response language for AI calls. Uses CurrentUICulture, which
+    /// the RequestLocalization middleware already populated from (in this
+    /// order): explicit ?ui-culture= override, the .AspNetCore.Culture cookie
+    /// set by the language picker, Accept-Language header from the browser,
+    /// and finally the DefaultRequestCulture ("en"). "iv" (invariant, seen on
+    /// some background threads) collapses to "en" so we never send an empty
+    /// or malformed ISO code to the provider.
+    /// </summary>
+    private static string CurrentLanguageIso()
+    {
+        var code = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        if (string.IsNullOrEmpty(code) || code == "iv") return "en";
+        return code;
+    }
+
+    /// <summary>
     /// Auto-summary for a file. Callable ANONYMOUSLY only if the visitor
     /// has landed via a valid share link (slug provided).
     /// </summary>
@@ -48,11 +64,17 @@ public class AiController : ControllerBase
             return Problem(statusCode: 410, title: "Link expired");
 
         var file = link.File;
-        if (!string.IsNullOrEmpty(file.AiSummary))
+        var lang = CurrentLanguageIso();
+        // Cache hit only when the previously generated summary matches the
+        // visitor's current language. A German summary served to an English
+        // visitor would be jarring — better to spend the second AI call.
+        if (!string.IsNullOrEmpty(file.AiSummary)
+            && string.Equals(file.AiSummaryLang, lang, StringComparison.OrdinalIgnoreCase))
+        {
             return Ok(new { summary = file.AiSummary, cached = true });
+        }
 
         var provider = await _ai.CreateProviderAsync(ct);
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en";
 
         // Image files go through the vision endpoint of the provider — text
         // extraction returns nothing useful for them.
@@ -80,6 +102,7 @@ public class AiController : ControllerBase
             return Problem(statusCode: 502, title: "Summariser returned no result.");
 
         file.AiSummary = summary.Length > 1900 ? summary[..1900] : summary;
+        file.AiSummaryLang = lang;
         await _db.SaveChangesAsync(ct);
         return Ok(new { summary = file.AiSummary, cached = false });
     }
@@ -101,7 +124,7 @@ public class AiController : ControllerBase
         if (link is null || link.File is null) return NotFound();
 
         var provider = await _ai.CreateProviderAsync(ct);
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en";
+        var lang = CurrentLanguageIso();
         var draft = await provider.DraftShareEmailAsync(me.DisplayName, link.File.Name, req.Context, lang, ct);
         if (string.IsNullOrWhiteSpace(draft)) return Problem(statusCode: 502, title: "Draft empty.");
         return Ok(new { draft });
@@ -211,7 +234,7 @@ public class AiController : ControllerBase
             passages.Add($"[{i + 1}] {file.Name}: {(text.Length > 800 ? text[..800] : text)}");
         }
         var provider = await _ai.CreateProviderAsync(ct);
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en";
+        var lang = CurrentLanguageIso();
         var answer = await provider.ChatAnswerAsync(req.Question, passages, lang, ct);
         return Ok(new { answer, citations = hits });
     }
@@ -232,7 +255,7 @@ public class AiController : ControllerBase
         var link = await _db.UploadRequests.SingleOrDefaultAsync(l => l.Id == req.LinkId && l.OwnerId == me.Id, ct);
         if (link is null) return NotFound();
         var provider = await _ai.CreateProviderAsync(ct);
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en";
+        var lang = CurrentLanguageIso();
         var draft = await provider.DraftUploadRequestAsync(me.DisplayName, req.RecipientEmail, req.Context, lang, ct);
         if (string.IsNullOrEmpty(draft)) return Problem(statusCode: 502, title: "Draft empty.");
         return Ok(new { draft });
