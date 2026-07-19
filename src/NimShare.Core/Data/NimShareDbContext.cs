@@ -28,6 +28,10 @@ public class NimShareDbContext : DbContext
     public DbSet<StorageFileVersion> StorageFileVersions => Set<StorageFileVersion>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<FolderAccessOverride> FolderAccessOverrides => Set<FolderAccessOverride>();
+    public DbSet<SignatureRequest> SignatureRequests => Set<SignatureRequest>();
+    public DbSet<SignatureParticipant> SignatureParticipants => Set<SignatureParticipant>();
+    public DbSet<SignatureField> SignatureFields => Set<SignatureField>();
+    public DbSet<SignatureAudit> SignatureAudits => Set<SignatureAudit>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -104,6 +108,50 @@ public class NimShareDbContext : DbContext
         });
 
         b.Entity<ShareLink>().Property(x => x.AllowedEmails).HasMaxLength(2000);
+
+        b.Entity<SignatureRequest>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.InitiatorUserId);
+            e.HasIndex(x => x.SourceFileId);
+            e.Property(x => x.Title).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Message).HasMaxLength(2000);
+            e.HasOne(x => x.SourceFile).WithMany().HasForeignKey(x => x.SourceFileId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.FinalFile).WithMany().HasForeignKey(x => x.FinalFileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
+            e.HasOne(x => x.Initiator).WithMany().HasForeignKey(x => x.InitiatorUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<SignatureParticipant>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.RequestId);
+            e.HasIndex(x => x.TokenHash);
+            e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(120);
+            e.Property(x => x.IpHash).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(300);
+            e.Property(x => x.DeclinedReason).HasMaxLength(500);
+            e.HasOne(x => x.Request).WithMany(r => r.Participants).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<SignatureField>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.RequestId);
+            e.Property(x => x.Label).HasMaxLength(120);
+            e.Property(x => x.Value).HasMaxLength(500);
+            e.Property(x => x.SignatureImagePath).HasMaxLength(400);
+            e.HasOne(x => x.Request).WithMany(r => r.Fields).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Participant).WithMany().HasForeignKey(x => x.ParticipantId).OnDelete(DeleteBehavior.Restrict);
+        });
+        b.Entity<SignatureAudit>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.RequestId, x.At });
+            e.Property(x => x.IpHash).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(300);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne<SignatureRequest>().WithMany(r => r.Audits).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         b.Entity<StorageFile>(e =>
         {

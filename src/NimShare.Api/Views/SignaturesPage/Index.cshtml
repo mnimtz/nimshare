@@ -1,0 +1,67 @@
+@model IEnumerable<NimShare.Core.Entities.SignatureRequest>
+@{
+    ViewData["Title"] = "Signaturen";
+    Layout = "_AppShell";
+}
+<div class="page-header">
+    <div>
+        <h1>✍ Signaturen</h1>
+        <p class="lede">Signatur-Anforderungen an Kollegen, Kunden oder Externe.</p>
+    </div>
+    <a class="btn btn-primary" href="/signatures/new">+ Neue Anforderung</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="fm-empty">
+        <div class="fm-empty-art">✍</div>
+        <div class="fm-empty-title">Noch keine Signatur-Anforderungen</div>
+        <div class="fm-empty-hint">Klick auf „+ Neue Anforderung", um ein PDF zur Unterschrift zu senden.</div>
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Dokument</th>
+                <th>Empfänger</th>
+                <th>Status</th>
+                <th>Erstellt</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var r in Model)
+        {
+            var statusChip = r.Status switch
+            {
+                NimShare.Core.Entities.SignatureRequestStatus.Completed => ("chip-ok", "Fertig"),
+                NimShare.Core.Entities.SignatureRequestStatus.Sent => ("chip-warn", "Läuft"),
+                NimShare.Core.Entities.SignatureRequestStatus.Declined => ("chip-critical", "Abgelehnt"),
+                NimShare.Core.Entities.SignatureRequestStatus.Cancelled => ("chip", "Zurückgezogen"),
+                _ => ("chip", "Entwurf"),
+            };
+            var doneCount = r.Participants.Count(p =>
+                p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Signed
+                || (p.Role == NimShare.Core.Entities.SignatureParticipantRole.Viewer && p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Viewed));
+            <tr>
+                <td>@r.Title</td>
+                <td>@doneCount / @r.Participants.Count fertig</td>
+                <td><span class="chip @statusChip.Item1">@statusChip.Item2</span></td>
+                <td class="muted">@r.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>
+                    @if (r.FinalFileId is Guid ff)
+                    {
+                        <a class="btn btn-secondary btn-sm" href="/browse/personal">📥 Signiertes PDF</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-ghost btn-sm" href="/api/v1/signatures/@r.Id" target="_blank">Details</a>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

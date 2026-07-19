@@ -1,0 +1,156 @@
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = "Neue Signatur-Anforderung";
+    Layout = "_AppShell";
+    var pdfs = (List<StorageFile>)ViewData["Pdfs"]!;
+}
+<div class="page-header">
+    <div>
+        <a href="/signatures" class="muted" style="text-decoration:none">← Signaturen</a>
+        <h1 style="margin-top:6px">✍ Neue Anforderung</h1>
+    </div>
+</div>
+
+@if (!pdfs.Any())
+{
+    <div class="card">
+        <p>Du hast noch keine PDFs in deiner Ablage. Lade eine PDF hoch, dann komm hier wieder her.</p>
+        <a class="btn btn-primary" href="/browse/personal">Zur Ablage →</a>
+    </div>
+}
+else
+{
+    <div id="wizardStep1" class="card">
+        <h2 class="card-title">1. Dokument wählen</h2>
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto">
+            @foreach (var f in pdfs)
+            {
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--tw-gray-300);border-radius:6px;cursor:pointer">
+                    <input type="radio" name="pdf" value="@f.Id" data-name="@f.Name"/>
+                    <span>📄 <strong>@f.Name</strong> <span class="muted">· @((f.SizeBytes / 1024).ToString("N0")) KB</span></span>
+                </label>
+            }
+        </div>
+        <div class="field" style="margin-top:12px">
+            <label>Titel (optional)</label>
+            <input type="text" id="reqTitle" placeholder="Standard: Dateiname"/>
+        </div>
+        <div class="field">
+            <label>Nachricht an die Empfänger (optional)</label>
+            <textarea id="reqMsg" rows="2" placeholder="Kurzer Kontext, warum du sie um Unterschrift bittest."></textarea>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+            <button class="btn btn-primary" onclick="createRequest()">Weiter →</button>
+        </div>
+    </div>
+
+    <div id="wizardStep2" class="card" style="display:none">
+        <h2 class="card-title">2. Empfänger hinzufügen</h2>
+        <p class="muted">Für jede Person: E-Mail + Name + Rolle. Bei „Unterschrift" landet automatisch ein Signatur-Feld unten auf Seite 1.</p>
+        <div id="participants" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+            <input type="email" id="pEmail" placeholder="alice@firma.com" style="flex:1;min-width:180px"/>
+            <input type="text" id="pName" placeholder="Alice Kunde" style="flex:1;min-width:180px"/>
+            <select id="pRole">
+                <option value="Signer">✍ Unterschreiber</option>
+                <option value="Viewer">👁 Nur lesen</option>
+            </select>
+            <select id="pPage" title="PDF-Seite für die Unterschrift">
+                <option value="1">Seite 1</option>
+                <option value="2">Seite 2</option>
+                <option value="3">Seite 3</option>
+                <option value="4">Seite 4</option>
+                <option value="5">Seite 5</option>
+            </select>
+            <select id="pAnchor" title="Wo unterschreiben">
+                <option value="BottomCenter">Unten mittig</option>
+                <option value="BottomLeft">Unten links</option>
+                <option value="BottomRight">Unten rechts</option>
+                <option value="TopCenter">Oben mittig</option>
+                <option value="TopLeft">Oben links</option>
+                <option value="TopRight">Oben rechts</option>
+            </select>
+            <button class="btn btn-secondary" onclick="addParticipant()">+ Hinzufügen</button>
+        </div>
+        <div class="row" style="justify-content:space-between;margin-top:16px">
+            <button class="btn btn-ghost" onclick="wizardStep(1)">← Zurück</button>
+            <button class="btn btn-primary" onclick="sendRequest()">📨 Absenden</button>
+        </div>
+    </div>
+}
+
+<script>
+let requestId = null;
+let participants = [];
+
+async function createRequest() {
+    const pdf = document.querySelector('input[name=pdf]:checked');
+    if (!pdf) { alert('Bitte ein PDF auswählen.'); return; }
+    const r = await fetch('/api/v1/signatures', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            sourceFileId: pdf.value,
+            title: document.getElementById('reqTitle').value || null,
+            message: document.getElementById('reqMsg').value || null,
+            deliveryOrder: 'Parallel',
+        })
+    });
+    if (!r.ok) { alert('Fehler: ' + r.status + ' ' + await r.text()); return; }
+    const d = await r.json();
+    requestId = d.id;
+    wizardStep(2);
+}
+
+function wizardStep(n) {
+    document.getElementById('wizardStep1').style.display = n === 1 ? '' : 'none';
+    document.getElementById('wizardStep2').style.display = n === 2 ? '' : 'none';
+}
+
+async function addParticipant() {
+    const email = document.getElementById('pEmail').value.trim();
+    const name = document.getElementById('pName').value.trim();
+    const role = document.getElementById('pRole').value;
+    const page = parseInt(document.getElementById('pPage').value);
+    const anchor = document.getElementById('pAnchor').value;
+    if (!email || !name) { alert('E-Mail und Name sind Pflicht.'); return; }
+
+    const r = await fetch('/api/v1/signatures/' + requestId + '/participants', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ email, name, role, order: participants.length })
+    });
+    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    const p = await r.json();
+    // For signers auto-add a signature field.
+    if (role === 'Signer') {
+        await fetch('/api/v1/signatures/' + requestId + '/fields', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify({ participantId: p.id, type: 'Signature', page, anchor })
+        });
+    }
+    participants.push({ email, name, role });
+    renderParticipants();
+    document.getElementById('pEmail').value = '';
+    document.getElementById('pName').value = '';
+}
+
+function renderParticipants() {
+    document.getElementById('participants').innerHTML = participants.map(p =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--tw-gray-100);border-radius:6px">
+            <span style="flex:1">${p.role === 'Signer' ? '✍' : '👁'} <strong>${p.name}</strong> · ${p.email}</span>
+            <span class="chip">${p.role === 'Signer' ? 'Unterzeichner' : 'Leser'}</span>
+        </div>`).join('');
+}
+
+async function sendRequest() {
+    if (participants.filter(p => p.role === 'Signer').length === 0) {
+        alert('Mindestens ein Unterzeichner ist erforderlich.'); return;
+    }
+    const r = await fetch('/api/v1/signatures/' + requestId + '/send', {
+        method: 'POST', credentials: 'same-origin'
+    });
+    if (!r.ok) { alert('Fehler: ' + r.status + ' ' + await r.text()); return; }
+    location.href = '/signatures';
+}
+</script>

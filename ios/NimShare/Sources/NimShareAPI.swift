@@ -144,6 +144,68 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // MARK: - Signatures
+    func listMySignatureRequests() async throws -> [SignatureRequestDto] {
+        let req = request("GET", "api/v1/signatures")
+        let (data, _) = try await perform(req)
+        return try decode([SignatureRequestDto].self, data)
+    }
+
+    func signatureRequestDetail(_ id: UUID) async throws -> SignatureRequestDto {
+        let req = request("GET", "api/v1/signatures/\(id)")
+        let (data, _) = try await perform(req)
+        return try decode(SignatureRequestDto.self, data)
+    }
+
+    struct CreateSignatureBody: Encodable {
+        let sourceFileId: UUID
+        let title: String?
+        let message: String?
+        let deliveryOrder: String
+    }
+    func createSignatureRequest(sourceFileId: UUID, title: String? = nil, message: String? = nil,
+                                deliveryOrder: String = "Parallel") async throws -> SignatureRequestDto {
+        let body = try Self.jsonEncoder.encode(CreateSignatureBody(sourceFileId: sourceFileId, title: title, message: message, deliveryOrder: deliveryOrder))
+        let req = request("POST", "api/v1/signatures", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(SignatureRequestDto.self, data)
+    }
+
+    struct AddParticipantBody: Encodable {
+        let email: String; let name: String; let role: String; let order: Int
+    }
+    func addSignatureParticipant(_ requestId: UUID, email: String, name: String,
+                                 role: String = "Signer", order: Int = 0) async throws -> UUID {
+        let body = try Self.jsonEncoder.encode(AddParticipantBody(email: email, name: name, role: role, order: order))
+        let req = request("POST", "api/v1/signatures/\(requestId)/participants", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        struct R: Decodable { let id: UUID }
+        return try decode(R.self, data).id
+    }
+
+    struct AddFieldBody: Encodable {
+        let participantId: UUID; let type: String; let page: Int; let anchor: String; let label: String?
+    }
+    func addSignatureField(_ requestId: UUID, participantId: UUID, type: String = "Signature",
+                           page: Int = 1, anchor: String = "BottomCenter", label: String? = nil) async throws -> UUID {
+        let body = try Self.jsonEncoder.encode(AddFieldBody(participantId: participantId, type: type, page: page, anchor: anchor, label: label))
+        let req = request("POST", "api/v1/signatures/\(requestId)/fields", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        struct R: Decodable { let id: UUID }
+        return try decode(R.self, data).id
+    }
+
+    func sendSignatureRequest(_ id: UUID) async throws -> SignatureRequestDto {
+        let req = request("POST", "api/v1/signatures/\(id)/send")
+        let (data, _) = try await perform(req)
+        return try decode(SignatureRequestDto.self, data)
+    }
+
+    func cancelSignatureRequest(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/signatures/\(id)/cancel")
+        _ = try await perform(req)
+    }
+
     func unreadNotificationCount() async throws -> Int {
         let req = request("GET", "api/v1/notifications/unread-count")
         let (data, _) = try await perform(req)

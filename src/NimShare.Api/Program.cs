@@ -199,6 +199,7 @@ builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddSingleton<ITotpService, TotpService>();
 builder.Services.AddSingleton<ITotpChallengeStore, TotpChallengeStore>();
+builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.
 builder.Services.AddDistributedMemoryCache();

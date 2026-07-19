@@ -1,0 +1,22 @@
+@model NimShare.Api.Controllers.SignDoneViewModel
+@{
+    ViewData["Title"] = "Fertig";
+    Layout = "_Layout";
+}
+<div class="landing-shell">
+    <div class="landing-card" style="max-width:520px;text-align:center">
+        <div style="font-size:4rem;line-height:1;margin-bottom:12px">@(Model.Signed ? "✅" : "✕")</div>
+        <h1 style="margin-top:0">@(Model.Signed ? "Vielen Dank!" : "Anforderung abgelehnt")</h1>
+        <p class="muted">
+            @if (Model.Signed)
+            {
+                <span>Deine Antwort ist bei @Model.Request.Initiator?.DisplayName eingegangen. Nach Abschluss aller Signaturen erhältst du das finale, unterschriebene Dokument.</span>
+            }
+            else
+            {
+                <span>Du hast die Signatur-Anforderung „@Model.Request.Title" abgelehnt. Der Initiator wurde informiert.</span>
+            }
+        </p>
+        <p class="muted" style="font-size:.75rem;margin-top:24px">Powered by <strong>NimShare</strong></p>
+    </div>
+</div>

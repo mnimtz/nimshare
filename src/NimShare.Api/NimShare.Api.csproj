@@ -65,6 +65,7 @@
     <!-- Utilities -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Otp.NET" Version="1.4.0" />
+    <PackageReference Include="PdfSharpCore" Version="1.3.65" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />

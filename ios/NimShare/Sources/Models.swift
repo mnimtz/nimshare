@@ -32,6 +32,44 @@ struct TotpInitResponse: Codable {
     let otpAuthUri: String
 }
 
+// MARK: - Signatures
+struct SignatureRequestDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let sourceFileId: UUID
+    let sourceFileName: String
+    let title: String
+    let message: String?
+    let status: String
+    let deliveryOrder: String
+    let createdAt: Date
+    let sentAt: Date?
+    let completedAt: Date?
+    let finalFileId: UUID?
+    let participants: [SignatureParticipantDto]
+    let fields: [SignatureFieldDto]
+}
+
+struct SignatureParticipantDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let email: String
+    let name: String
+    let role: String
+    let order: Int
+    let status: String
+    let viewedAt: Date?
+    let signedAt: Date?
+}
+
+struct SignatureFieldDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let participantId: UUID
+    let type: String
+    let page: Int
+    let anchor: String
+    let label: String?
+    let value: String?
+}
+
 // MARK: - Notifications
 struct NotifyDto: Codable, Identifiable, Hashable {
     let id: UUID
