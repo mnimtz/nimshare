@@ -52,6 +52,13 @@ public class SignController : Controller
             });
             await _db.SaveChangesAsync(ct);
         }
+        // Load fields ONLY for this participant — the sign view shows visible
+        // "sign here" boxes so the recipient sees where their signature will
+        // be stamped.
+        var myFields = await _db.SignatureFields
+            .Where(f => f.RequestId == req.Id && f.ParticipantId == pid)
+            .ToListAsync(ct);
+        ViewData["MyFields"] = myFields;
         return View("Sign", new SignViewModel(req, p, t));
     }
 
