@@ -417,6 +417,8 @@
   <data name="notice.email_saved"><value>E-Mail-Gateway gespeichert.</value></data>
   <data name="notice.email_test_queued"><value>Test-E-Mail eingereiht.</value></data>
   <data name="notice.password_updated"><value>Passwort aktualisiert.</value></data>
+  <data name="err.bad_credentials"><value>E-Mail oder Passwort falsch.</value></data>
+  <data name="err.2fa_code_wrong"><value>Der Code stimmt nicht.</value></data>
   <data name="notice.profile_saved"><value>Profil gespeichert.</value></data>
   <data name="notice.avatar_updated"><value>Profilbild aktualisiert.</value></data>
   <data name="notice.avatar_removed"><value>Profilbild entfernt.</value></data>

@@ -49,6 +49,7 @@
     <!-- Azure SDKs -->
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="*" />
 
     <!-- Auth -->
     <PackageReference Include="Microsoft.Identity.Web" Version="3.7.1" />

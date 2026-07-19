@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
@@ -127,6 +128,24 @@ builder.Services.AddAuthorization(options =>
 // when a cookie session is present).
 builder.Services.AddAntiforgery(o => o.HeaderName = "X-XSRF-TOKEN");
 
+// DataProtection keys must persist across container restarts — otherwise
+// every existing Webhook.SecretEncrypted and SignatureParticipant token stash
+// becomes undecryptable when Azure App Service recycles the instance.
+// Persist to the shared /home path (backed by Azure Files in production).
+{
+    var keysPath = builder.Configuration["DataProtection:KeysPath"];
+    if (string.IsNullOrWhiteSpace(keysPath))
+    {
+        keysPath = Path.Combine(
+            builder.Environment.ContentRootPath,
+            "..", "..", "data", "dp-keys");
+    }
+    try { Directory.CreateDirectory(keysPath); } catch { }
+    builder.Services.AddDataProtection()
+        .SetApplicationName("NimShare")
+        .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+}
+
 // SameSite=Strict on the auth cookie combined with SameOrigin JSON APIs
 // gives us CSRF protection for API endpoints: a cross-site attacker cannot
 // send the cookie AND cross-origin form-encoded POSTs won't hit our
@@ -154,7 +173,15 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
 
 // ── MVC / Razor Pages / API ────────────────────────────────────────────────
 builder.Services
-    .AddControllersWithViews()
+    .AddControllersWithViews(mvc =>
+    {
+        // Global scope guard for personal API tokens: unsafe HTTP verbs on
+        // any endpoint require the token to have at least one write/manage/*
+        // scope. Cookie / JWT / Entra sessions carry no scope claims and
+        // pass through. This is the ONLY correct way to register a filter
+        // globally — via MvcOptions.Filters, not raw DI.
+        mvc.Filters.Add<NimShare.Api.Services.ApiTokenMethodGuard>();
+    })
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(o =>
     {
@@ -211,14 +238,9 @@ builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 builder.Services.AddHostedService<SignatureReminderService>();
 builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
 
-// NOTE: an earlier version tried to register ApiTokenMethodGuard as
-// IAsyncActionFilter via plain DI. That pattern does NOT auto-apply to MVC
-// (only MvcOptions.Filters does) — the guard is a no-op. Removed here to
-// eliminate a suspicious startup-time DI wiring.
-//
-// TODO(v1.7.8+): apply the guard properly via
-//   .AddControllersWithViews(mvc => mvc.Filters.Add<ApiTokenMethodGuard>())
-// after verifying it doesn't break cookie-based requests.
+// ApiTokenMethodGuard is applied globally via MvcOptions.Filters above (line ~164).
+// It needs to be resolvable from DI as an ActionFilter.
+builder.Services.AddScoped<NimShare.Api.Services.ApiTokenMethodGuard>();
 builder.Services.AddHostedService<RecurringUploadReopenerService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.

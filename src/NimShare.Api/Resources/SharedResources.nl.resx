@@ -417,7 +417,9 @@
   <data name="notice.ai_saved"><value>AI gateway saved.</value></data>
   <data name="notice.email_saved"><value>Email gateway saved.</value></data>
   <data name="notice.email_test_queued"><value>Test email queued.</value></data>
-  <data name="notice.password_updated"><value>Password updated.</value></data>
+  <data name="notice.password_updated"><value>Wachtwoord bijgewerkt.</value></data>
+  <data name="err.bad_credentials"><value>E-mail of wachtwoord onjuist.</value></data>
+  <data name="err.2fa_code_wrong"><value>De code klopt niet.</value></data>
   <data name="notice.profile_saved"><value>Profile saved.</value></data>
   <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
   <data name="notice.avatar_removed"><value>Avatar removed.</value></data>

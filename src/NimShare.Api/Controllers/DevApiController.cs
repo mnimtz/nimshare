@@ -48,6 +48,12 @@ public class DevApiController : ControllerBase
     [HttpPost("tokens")]
     public async Task<IActionResult> CreateToken([FromBody] CreateTokenReq req, CancellationToken ct)
     {
+        // Refuse token creation from other API-token holders: otherwise a
+        // "files:read" scoped token could mint itself a "*" token for the
+        // same user, defeating scoping entirely.
+        if (User.HasClaim(c => c.Type == "nimshare.api_token"))
+            return Problem(statusCode: 403, title: "Not allowed from an API token",
+                detail: "Tokens can only be created from a cookie session in /settings/dev.");
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest();
         // 32-byte random, base64-url-encoded — matches invite tokens.
@@ -100,6 +106,9 @@ public class DevApiController : ControllerBase
     [HttpPost("webhooks")]
     public async Task<IActionResult> CreateWebhook([FromBody] CreateWebhookReq req, CancellationToken ct)
     {
+        if (User.HasClaim(c => c.Type == "nimshare.api_token"))
+            return Problem(statusCode: 403, title: "Not allowed from an API token",
+                detail: "Webhooks can only be created from a cookie session in /settings/dev.");
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (string.IsNullOrWhiteSpace(req.Url) || string.IsNullOrWhiteSpace(req.Secret)) return BadRequest();
         if (!Uri.TryCreate(req.Url, UriKind.Absolute, out var u) || !(u.Scheme == "http" || u.Scheme == "https"))

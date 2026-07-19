@@ -79,8 +79,10 @@ public class SignController : Controller
         if (p.Status == SignatureParticipantStatus.Signed) return RedirectToAction(nameof(Landing), new { pid, t });
         if (p.Role != SignatureParticipantRole.Signer)
         {
-            // Viewer path: just acknowledge.
+            // Viewer path: just acknowledge. Save first so MaybeFinalize can
+            // see the new Viewed status.
             p.Status = SignatureParticipantStatus.Viewed;
+            await _db.SaveChangesAsync(ct);
             await MaybeFinalizeAsync(req, ct);
             await _db.SaveChangesAsync(ct);
             return View("Done", new SignDoneViewModel(req, p, false));
@@ -98,15 +100,30 @@ public class SignController : Controller
                 var bytes = Convert.FromBase64String(b64);
                 var path = $"signatures/{req.Id:N}/{pid:N}.png";
                 using var ms = new MemoryStream(bytes);
-                using var http = new HttpClient();
+                var http = HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient("nimshare-signature");
                 var ticket = _blobs.CreateUploadTicket(path);
                 using var content = new StreamContent(ms);
                 content.Headers.Add("x-ms-blob-type", "BlockBlob");
                 content.Headers.Add("x-ms-blob-content-type", "image/png");
-                await http.PutAsync(ticket.UploadUrl, content, ct);
+                var uploadResp = await http.PutAsync(ticket.UploadUrl, content, ct);
+                if (!uploadResp.IsSuccessStatusCode)
+                {
+                    // Refuse to mark Signed against a missing/failed image — that would
+                    // "silently forge" the participant as done with no signature stored.
+                    return View("Invalid");
+                }
                 sigPath = path;
             }
-            catch { /* fall through to typed */ }
+            catch (OperationCanceledException) { throw; }
+            catch
+            {
+                return View("Invalid");
+            }
+        }
+        else if (string.IsNullOrEmpty(typedName))
+        {
+            // Neither a drawn signature nor a typed name — refuse.
+            return View("Invalid");
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -132,6 +149,11 @@ public class SignController : Controller
             IpHash = p.IpHash, UserAgent = p.UserAgent,
         });
 
+        // Persist the Signed status BEFORE MaybeFinalizeAsync runs — that
+        // method re-queries the DB and needs to see p.Status = Signed,
+        // otherwise the last signer never triggers finalisation.
+        await _db.SaveChangesAsync(ct);
+
         // Sequential chain: trigger the next participant in Order.
         if (req.DeliveryOrder == SignatureDeliveryOrder.Sequential)
             await NotifyNextAsync(req, p, ct);
@@ -149,6 +171,13 @@ public class SignController : Controller
         if (req is null || p is null) return View("Invalid");
         // Only signers can decline the workflow. Viewers can just close the tab.
         if (p.Role != SignatureParticipantRole.Signer) return View("Invalid");
+        // Terminal states are terminal — a signed participant cannot un-sign
+        // by declining, and a completed / cancelled request can't be re-opened.
+        if (p.Status == SignatureParticipantStatus.Signed) return View("Invalid");
+        if (req.Status == SignatureRequestStatus.Completed
+            || req.Status == SignatureRequestStatus.Cancelled
+            || req.Status == SignatureRequestStatus.Declined)
+            return View("Invalid");
         p.Status = SignatureParticipantStatus.Declined;
         p.DeclinedReason = reason;
         req.Status = SignatureRequestStatus.Declined;

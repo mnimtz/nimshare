@@ -245,7 +245,8 @@ public class FileAccessService : IFileAccessService
             cursor = parent;
         }
         // Fall back to scope-based read (group member = read).
-        if (folder.Scope == FileScope.Public) return DirectSharePermission.Read;
+        if (folder.Scope == FileScope.Public && (user.Role == UserRole.Admin || user.PublicCanRead))
+            return user.PublicCanWrite ? DirectSharePermission.Write : DirectSharePermission.Read;
         if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid gm && await IsGroupMemberAsync(user, gm, ct))
             return DirectSharePermission.Read;
         return haveRead ? DirectSharePermission.Read : null;

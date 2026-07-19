@@ -49,6 +49,7 @@ public class WikiController : Controller
                 q = q.Where(p => p.Scope == FileScope.Group && p.OwnerGroupId == groupId);
                 break;
             case FileScope.Public:
+                if (me.Role != UserRole.Admin && !me.PublicCanRead) return Forbid();
                 q = q.Where(p => p.Scope == FileScope.Public);
                 break;
         }

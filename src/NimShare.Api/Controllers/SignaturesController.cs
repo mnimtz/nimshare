@@ -256,13 +256,26 @@ public class SignaturesController : ControllerBase
         var r = await LoadFullAsync(id, ct);
         if (r is null || r.InitiatorUserId != me.Id) return Forbid();
         if (r.Status != SignatureRequestStatus.Sent) return Problem(statusCode: 409);
+        // For SEQUENTIAL delivery only the person currently in turn gets a
+        // reminder — otherwise we'd leak the workflow to downstream signers
+        // who aren't supposed to know they're in the queue yet.
         var stillPending = r.Participants.Where(p =>
             p.Status != SignatureParticipantStatus.Signed
             && p.Status != SignatureParticipantStatus.Declined).ToList();
-        foreach (var p in stillPending)
+        var toRemind = r.DeliveryOrder == SignatureDeliveryOrder.Sequential
+            ? stillPending.OrderBy(p => p.Order).Take(1).ToList()
+            : stillPending;
+        foreach (var p in toRemind)
         {
+            // Mint a fresh token — the original raw was cleared after Send
+            // (only its bcrypt hash is on the row). Update TokenHash so the
+            // new link works; old link is invalidated by the re-hash.
+            var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                .Replace("+", "-").Replace("/", "_").TrimEnd('=');
+            p.TokenHash = _hasher.Hash(raw);
+            var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
             var subject = $"Erinnerung: {r.Title}";
-            var body = $"Hallo {p.Name},\n\n{me.DisplayName} bittet dich erneut, {(p.Role == SignatureParticipantRole.Signer ? "zu unterschreiben" : "zu bestätigen")}: {r.Title}.\n\n— NimShare";
+            var body = $"Hallo {p.Name},\n\n{me.DisplayName} bittet dich erneut, {(p.Role == SignatureParticipantRole.Signer ? "zu unterschreiben" : "zu bestätigen")}: {r.Title}\n\nÖffne den Link:\n{url}\n\n— NimShare";
             try { await _notify.SendShareLinkAsync(p.Email, me.DisplayName, subject, body, ct); } catch { }
             _db.SignatureAudits.Add(new SignatureAudit
             {

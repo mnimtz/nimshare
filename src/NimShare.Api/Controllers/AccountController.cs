@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Entities;
 
@@ -14,8 +15,13 @@ namespace NimShare.Api.Controllers;
 public class AccountController : Controller
 {
     private readonly ILocalAuthService _auth;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public AccountController(ILocalAuthService auth) => _auth = auth;
+    public AccountController(ILocalAuthService auth, IStringLocalizer<SharedResources> localizer)
+    {
+        _auth = auth;
+        _l = localizer;
+    }
 
     // ── First-run setup ────────────────────────────────────────────────────
 
@@ -37,7 +43,7 @@ public class AccountController : Controller
         if (!ModelState.IsValid) return View(vm);
         if (vm.Password != vm.PasswordConfirm)
         {
-            ModelState.AddModelError(nameof(vm.PasswordConfirm), "Passwords do not match.");
+            ModelState.AddModelError(nameof(vm.PasswordConfirm), _l["err.password_mismatch"].Value);
             return View(vm);
         }
 
@@ -72,7 +78,7 @@ public class AccountController : Controller
         var user = await _auth.AuthenticateAsync(vm.Email, vm.Password, ct);
         if (user is null)
         {
-            ModelState.AddModelError("", "Incorrect email or password.");
+            ModelState.AddModelError("", _l["err.bad_credentials"].Value);
             return View(vm);
         }
         // If 2FA is enrolled, hand off to the code-verification step. Password
@@ -110,7 +116,7 @@ public class AccountController : Controller
             return RedirectToAction(nameof(Login));
         if (!totp.Verify(user.TotpSecret, code ?? ""))
         {
-            ModelState.AddModelError("", "Der Code stimmt nicht.");
+            ModelState.AddModelError("", _l["err.2fa_code_wrong"].Value);
             return View("TwoFactorChallenge");
         }
         var persist = HttpContext.Session.GetInt32("2fa.persist") == 1;
@@ -155,26 +161,23 @@ public class AccountController : Controller
         if (!ModelState.IsValid) return View(vm);
         if (vm.NewPassword != vm.NewPasswordConfirm)
         {
-            ModelState.AddModelError(nameof(vm.NewPasswordConfirm), "Passwords do not match.");
+            ModelState.AddModelError(nameof(vm.NewPasswordConfirm), _l["err.password_mismatch"].Value);
             return View(vm);
         }
         var me = await currentUser.GetOrProvisionAsync(User, ct);
         if (string.IsNullOrEmpty(me.PasswordHash) || !hasher.Verify(vm.CurrentPassword, me.PasswordHash))
         {
-            ModelState.AddModelError("", "Current password is wrong.");
+            ModelState.AddModelError("", _l["err.wrong_password"].Value);
             return View(vm);
         }
         if (vm.NewPassword.Length < 8)
         {
-            ModelState.AddModelError(nameof(vm.NewPassword), "Password must be at least 8 characters.");
+            ModelState.AddModelError(nameof(vm.NewPassword), _l["err.password_too_short"].Value);
             return View(vm);
         }
         me.PasswordHash = hasher.Hash(vm.NewPassword);
         await db.SaveChangesAsync(ct);
-        // Localized via IViewLocalizer at render time isn't wired here — the
-        // string catalog uses ViewData ambient culture, so this stays English
-        // fallback until the caller shows it. Keep it minimal.
-        TempData["Notice"] = "Password updated.";
+        TempData["Notice"] = _l["notice.password_updated"].Value;
         return RedirectToAction("Settings", "Home");
     }
 }
