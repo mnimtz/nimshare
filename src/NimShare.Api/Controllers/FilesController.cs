@@ -119,6 +119,69 @@ public class FilesController : ControllerBase
         return NoContent();
     }
 
+    public record BulkZipRequest(Guid[] FileIds, string? ArchiveName);
+
+    /// <summary>
+    /// Streams a ZIP archive containing the requested files. Response is
+    /// chunked (no Content-Length), so the browser shows progress by bytes
+    /// received. Only files the caller can read are included; unauthorized
+    /// ones are silently skipped.
+    /// </summary>
+    [HttpPost("bulk-zip")]
+    public async Task<IActionResult> BulkZip([FromBody] BulkZipRequest req,
+        [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        if (req.FileIds is null || req.FileIds.Length == 0) return BadRequest();
+        if (req.FileIds.Length > 500) return Problem(statusCode: 413, title: "Zu viele Dateien (max. 500).");
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var files = await _db.Files
+            .Where(f => req.FileIds.Contains(f.Id) && f.Status == StorageFileStatus.Ready)
+            .ToListAsync(ct);
+        var allowed = new List<StorageFile>(files.Count);
+        foreach (var f in files)
+            if (await access.CanReadAsync(user, f, ct)) allowed.Add(f);
+        if (allowed.Count == 0) return NotFound();
+
+        var name = string.IsNullOrWhiteSpace(req.ArchiveName)
+            ? $"nimshare-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.zip"
+            : req.ArchiveName!.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                ? req.ArchiveName : req.ArchiveName + ".zip";
+
+        Response.Headers.ContentDisposition = $"attachment; filename=\"{name}\"";
+        Response.ContentType = "application/zip";
+        // Chunked because we don't know the total size upfront.
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        using var zip = new System.IO.Compression.ZipArchive(Response.Body,
+            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true);
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var f in allowed)
+        {
+            ct.ThrowIfCancellationRequested();
+            var entryName = MakeUnique(f.Name, used);
+            var entry = zip.CreateEntry(entryName, System.IO.Compression.CompressionLevel.NoCompression);
+            using var es = entry.Open();
+            try { await _blobs.DownloadToAsync(f.BlobPath, es, ct); }
+            catch (OperationCanceledException) { throw; }
+            catch { /* Skip broken blob; keep archive going. */ }
+        }
+        return new EmptyResult();
+    }
+
+    private static string MakeUnique(string name, HashSet<string> used)
+    {
+        if (used.Add(name)) return name;
+        var dot = name.LastIndexOf('.');
+        var stem = dot > 0 ? name[..dot] : name;
+        var ext = dot > 0 ? name[dot..] : "";
+        for (int i = 2; i < 10000; i++)
+        {
+            var c = $"{stem} ({i}){ext}";
+            if (used.Add(c)) return c;
+        }
+        return $"{Guid.NewGuid():N}{ext}";
+    }
+
     [HttpGet]
     public async Task<IActionResult> List(int page = 1, int pageSize = 50, string? folder = null, string? search = null, CancellationToken ct = default)
     {

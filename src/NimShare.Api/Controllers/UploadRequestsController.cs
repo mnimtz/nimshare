@@ -32,7 +32,9 @@ public class UploadRequestsController : ControllerBase
         int? MaxUploads,
         string? Message,
         string? TargetFolder,
-        bool NotifyOnUpload);
+        bool NotifyOnUpload,
+        string? RecurringDaysOfWeek = null,
+        int? RecurringWindowDays = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRequest req, CancellationToken ct)
@@ -53,6 +55,8 @@ public class UploadRequestsController : ControllerBase
             Message = req.Message,
             TargetFolder = string.IsNullOrWhiteSpace(req.TargetFolder) ? "Received" : req.TargetFolder!,
             NotifyOnUpload = req.NotifyOnUpload,
+            RecurringDaysOfWeek = string.IsNullOrWhiteSpace(req.RecurringDaysOfWeek) ? null : req.RecurringDaysOfWeek!.Trim(),
+            RecurringWindowDays = req.RecurringWindowDays is > 0 ? req.RecurringWindowDays.Value : 7,
         };
         _db.UploadRequests.Add(link);
         await _db.SaveChangesAsync(ct);

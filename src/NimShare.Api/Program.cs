@@ -204,6 +204,7 @@ builder.Services.AddSingleton<ITotpChallengeStore, TotpChallengeStore>();
 builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 builder.Services.AddHostedService<SignatureReminderService>();
 builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
+builder.Services.AddHostedService<RecurringUploadReopenerService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.
 builder.Services.AddDistributedMemoryCache();

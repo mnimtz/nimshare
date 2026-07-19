@@ -31,6 +31,17 @@ public class UploadRequestLink
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastUploadAt { get; set; }
 
+    /// <summary>
+    /// Comma-separated list of ISO weekday numbers (1=Mon..7=Sun) on which the
+    /// request auto-reopens. Null disables recurrence. The reminder service
+    /// resets ExpiresAt+UploadCount at the next matching midnight (owner-local
+    /// UTC).
+    /// </summary>
+    public string? RecurringDaysOfWeek { get; set; }
+
+    /// <summary>How many days after re-opening the reset window stays open.</summary>
+    public int RecurringWindowDays { get; set; } = 7;
+
     public bool IsActive(DateTimeOffset now)
         => !IsRevoked
            && (ExpiresAt is null || ExpiresAt.Value > now)
