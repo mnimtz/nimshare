@@ -1,94 +1,111 @@
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = "Neue Signatur-Anforderung";
+    ViewData["Title"] = @T["sig.new.title"];
     Layout = "_AppShell";
     var pdfs = (List<StorageFile>)ViewData["Pdfs"]!;
 }
 <div class="page-header">
     <div>
-        <a href="/signatures" class="muted" style="text-decoration:none">← Signaturen</a>
-        <h1 style="margin-top:6px">✍ Neue Anforderung</h1>
+        <a href="/signatures" class="muted" style="text-decoration:none">← @T["nav.signatures"]</a>
+        <h1 style="margin-top:6px">✍ @T["sig.new_request"]</h1>
     </div>
 </div>
 
 <!-- Step 1: PDF + Metadaten -->
-<div id="wizStep1" class="card">
-    <h2 class="card-title">1. Dokument & Metadaten</h2>
+<div id="wizStep1" class="card"
+    data-t-pick-pdf="@T["sig.new.err.pick_pdf"]"
+    data-t-pdf-only="@T["sig.new.err.pdf_only"]"
+    data-t-upload-init="@T["sig.new.err.upload_init"]"
+    data-t-upload-finalize="@T["sig.new.err.upload_finalize"]"
+    data-t-upload-prep="@T["sig.new.upload_prep"]"
+    data-t-upload-running="@T["sig.new.upload_running"]"
+    data-t-upload-processing="@T["sig.new.upload_processing"]"
+    data-t-upload-done="@T["sig.new.upload_done"]"
+    data-t-email-name="@T["sig.new.err.email_name"]"
+    data-t-min-signer="@T["sig.new.err.min_signer"]"
+    data-t-no-sigfield="@T["sig.new.err.no_sigfield_confirm"]"
+    data-t-network="@T["sig.new.err.network"]"
+    data-t-chip-signer="@T["sig.new.chip_signer"]"
+    data-t-chip-viewer="@T["sig.new.chip_viewer"]"
+    data-t-click-drag="@T["sig.new.click_drag_hint"]"
+    data-t-page-of="@T["sig.new.page_of"]"
+    data-t-error="@T["common.error"]">
+    <h2 class="card-title">@T["sig.new.step1"]</h2>
     <div class="tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--tw-gray-300);margin-bottom:12px">
-        <button type="button" id="tabExisting" class="tab-btn active" onclick="switchTab('existing')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid var(--tw-blue);font-weight:500;cursor:pointer">Aus Ablage</button>
-        <button type="button" id="tabUpload" class="tab-btn" onclick="switchTab('upload')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid transparent;font-weight:500;cursor:pointer;color:var(--tw-gray-600)">Neu hochladen</button>
+        <button type="button" id="tabExisting" class="tab-btn active" onclick="switchTab('existing')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid var(--tw-blue);font-weight:500;cursor:pointer">@T["sig.new.tab_existing"]</button>
+        <button type="button" id="tabUpload" class="tab-btn" onclick="switchTab('upload')" style="padding:8px 14px;background:none;border:0;border-bottom:2px solid transparent;font-weight:500;cursor:pointer;color:var(--tw-gray-600)">@T["sig.new.tab_upload"]</button>
     </div>
     <div id="paneExisting" class="field">
-        <label>PDF auswählen</label>
+        <label>@T["sig.new.select_pdf"]</label>
         <select id="pdf">
             @if (!pdfs.Any())
             {
-                <option value="">— keine PDFs in deiner Ablage —</option>
+                <option value="">@T["sig.new.no_pdfs_hint"]</option>
             }
             @foreach (var f in pdfs)
             {
                 <option value="@f.Id" data-name="@f.Name">@f.Name (@((f.SizeBytes / 1024).ToString("N0")) KB)</option>
             }
         </select>
-        <div class="helper" style="margin-top:6px">Neue Datei? Wechsle oben zu "Neu hochladen".</div>
+        <div class="helper" style="margin-top:6px">@T["sig.new.hint_upload_tab"]</div>
     </div>
     <div id="paneUpload" class="field" style="display:none">
-        <label>PDF-Datei hochladen</label>
+        <label>@T["sig.new.upload_pdf_label"]</label>
         <input type="file" id="uploadFile" accept="application/pdf,.pdf"/>
-        <div class="helper" style="margin-top:6px">Landet automatisch in <strong>Meine Ablage → Signatures</strong>.</div>
+        <div class="helper" style="margin-top:6px">@T["sig.new.upload_hint"]</div>
         <div id="uploadProgress" class="muted" style="display:none;margin-top:6px">
-            <span id="uploadStatus">Lädt hoch …</span>
+            <span id="uploadStatus">@T["sig.new.upload_running"]</span>
             <div style="height:4px;background:var(--tw-gray-200);border-radius:2px;overflow:hidden;margin-top:4px">
                 <div id="uploadBar" style="height:100%;width:0%;background:var(--tw-blue);transition:width 0.2s"></div>
             </div>
         </div>
     </div>
     <div class="field">
-        <label>Titel</label>
-        <input type="text" id="reqTitle" placeholder="Standard: Dateiname"/>
+        <label>@T["sig.new.title_label"]</label>
+        <input type="text" id="reqTitle" placeholder="@T["sig.new.title_placeholder"]"/>
     </div>
     <div class="field">
-        <label>Nachricht an die Empfänger</label>
+        <label>@T["sig.new.message_label"]</label>
         <textarea id="reqMsg" rows="2"></textarea>
     </div>
     <div class="row" style="justify-content:flex-end">
-        <button class="btn btn-primary" onclick="goStep2()">Weiter →</button>
+        <button class="btn btn-primary" onclick="goStep2()">@T["sig.new.next"]</button>
     </div>
 </div>
 
 <!-- Step 2: Teilnehmer -->
 <div id="wizStep2" class="card" style="display:none">
-    <h2 class="card-title">2. Teilnehmer</h2>
-    <p class="muted">Jede Person mit E-Mail + Name + Rolle. Signaturfelder werden im nächsten Schritt visuell platziert.</p>
+    <h2 class="card-title">@T["sig.new.step2"]</h2>
+    <p class="muted">@T["sig.new.step2_lede"]</p>
     <div id="pList" style="display:flex;flex-direction:column;gap:6px;margin:12px 0"></div>
     <div class="row" style="gap:6px;flex-wrap:wrap">
-        <input type="email" id="pEmail" placeholder="alice@firma.com" style="flex:1;min-width:200px"/>
-        <input type="text" id="pName" placeholder="Alice Kunde" style="flex:1;min-width:180px"/>
+        <input type="email" id="pEmail" placeholder="@T["sig.new.email_ph"]" style="flex:1;min-width:200px"/>
+        <input type="text" id="pName" placeholder="@T["sig.new.name_ph"]" style="flex:1;min-width:180px"/>
         <select id="pRole">
-            <option value="Signer">✍ Unterschreiber</option>
-            <option value="Viewer">👁 Nur lesen</option>
+            <option value="Signer">@T["sig.new.role_signer"]</option>
+            <option value="Viewer">@T["sig.new.role_viewer"]</option>
         </select>
         <button class="btn btn-secondary" onclick="addP()">+</button>
     </div>
     <div class="row" style="justify-content:space-between;margin-top:16px">
-        <button class="btn btn-ghost" onclick="show(1)">← Zurück</button>
-        <button class="btn btn-primary" onclick="goStep3()">Weiter: Felder platzieren →</button>
+        <button class="btn btn-ghost" onclick="show(1)">← @T["common.back"]</button>
+        <button class="btn btn-primary" onclick="goStep3()">@T["sig.new.next_fields"]</button>
     </div>
 </div>
 
 <!-- Step 3: Visual field placement -->
 <div id="wizStep3" class="card" style="display:none">
-    <h2 class="card-title">3. Felder platzieren</h2>
-    <p class="muted">Wähle Empfänger + Feldtyp, dann ziehe auf der PDF eine Fläche für das Feld auf. Enter → gespeichert. Rechtsklick auf ein Feld = löschen.</p>
+    <h2 class="card-title">@T["sig.new.step3"]</h2>
+    <p class="muted">@T["sig.new.step3_lede"]</p>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <label>Für:</label>
+        <label>@T["sig.new.for_label"]</label>
         <select id="fParticipant"></select>
-        <label>Typ:</label>
+        <label>@T["sig.new.type_label"]</label>
         <select id="fType">
-            <option value="Signature">✍ Signatur</option>
-            <option value="Text">Text</option>
-            <option value="Date">Datum</option>
-            <option value="Checkbox">Checkbox</option>
+            <option value="Signature">@T["sig.new.type_signature"]</option>
+            <option value="Text">@T["sig.new.type_text"]</option>
+            <option value="Date">@T["sig.new.type_date"]</option>
+            <option value="Checkbox">@T["sig.new.type_checkbox"]</option>
         </select>
         <span class="muted" style="margin-left:auto" id="pageInfo"></span>
     </div>
@@ -99,8 +116,8 @@
         <button class="btn btn-ghost btn-sm" onclick="nextPage()">▶</button>
     </div>
     <div class="row" style="justify-content:space-between;margin-top:16px">
-        <button class="btn btn-ghost" onclick="show(2)">← Zurück</button>
-        <button class="btn btn-primary" onclick="sendReq()">📨 Absenden</button>
+        <button class="btn btn-ghost" onclick="show(2)">← @T["common.back"]</button>
+        <button class="btn btn-primary" onclick="sendReq()">@T["sig.new.send"]</button>
     </div>
 </div>
 
@@ -111,9 +128,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs
 window.pdfjsLib = pdfjsLib;
 </script>
 <script>
+const T = document.getElementById('wizStep1').dataset;
 let requestId = null;
-let participants = [];  // { id, email, name, role }
-let fields = [];         // { id, participantId, type, page, x, y, w, h }
+let participants = [];
+let fields = [];
 let pdfDoc = null;
 let curPage = 1;
 let pageViewport = null;
@@ -137,27 +155,26 @@ function switchTab(m) {
 async function ensureUploadedSourceId() {
     if (uploadMode === 'existing') {
         const sel = document.getElementById('pdf');
-        if (!sel.value) { alert('Bitte ein PDF wählen.'); return null; }
+        if (!sel.value) { alert(T.tPickPdf); return null; }
         return sel.value;
     }
-    // Upload path.
     const f = document.getElementById('uploadFile').files[0];
-    if (!f) { alert('Bitte eine PDF-Datei wählen.'); return null; }
+    if (!f) { alert(T.tPickPdf); return null; }
     if (!f.name.toLowerCase().endsWith('.pdf') && f.type !== 'application/pdf') {
-        alert('Nur PDF-Dateien sind erlaubt.'); return null;
+        alert(T.tPdfOnly); return null;
     }
     document.getElementById('uploadProgress').style.display = '';
-    document.getElementById('uploadStatus').textContent = 'Bereite Upload vor …';
+    document.getElementById('uploadStatus').textContent = T.tUploadPrep;
     document.getElementById('uploadBar').style.width = '10%';
 
     const init = await fetch('/api/v1/signatures/upload-source', {
         method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: 'application/pdf' })
     });
-    if (!init.ok) { alert('Upload-Init fehlgeschlagen: ' + await init.text()); return null; }
+    if (!init.ok) { alert(T.tUploadInit + await init.text()); return null; }
     const iData = await init.json();
 
-    document.getElementById('uploadStatus').textContent = 'Lädt hoch …';
+    document.getElementById('uploadStatus').textContent = T.tUploadRunning;
     await new Promise((res, rej) => {
         const xhr = new XMLHttpRequest();
         xhr.open(iData.uploadMethod || 'PUT', iData.uploadUrl, true);
@@ -170,18 +187,18 @@ async function ensureUploadedSourceId() {
             }
         };
         xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? res() : rej(new Error('HTTP ' + xhr.status));
-        xhr.onerror = () => rej(new Error('Netzwerkfehler'));
+        xhr.onerror = () => rej(new Error(T.tNetwork));
         xhr.send(f);
     });
 
-    document.getElementById('uploadStatus').textContent = 'Wird verarbeitet …';
+    document.getElementById('uploadStatus').textContent = T.tUploadProcessing;
     document.getElementById('uploadBar').style.width = '95%';
     const done = await fetch('/api/v1/files/' + iData.fileId + '/complete', {
         method:'POST', credentials:'same-origin',
     });
-    if (!done.ok) { alert('Upload-Abschluss fehlgeschlagen'); return null; }
+    if (!done.ok) { alert(T.tUploadFinalize); return null; }
     document.getElementById('uploadBar').style.width = '100%';
-    document.getElementById('uploadStatus').textContent = '✓ Hochgeladen';
+    document.getElementById('uploadStatus').textContent = T.tUploadDone;
     return iData.fileId;
 }
 
@@ -197,7 +214,7 @@ async function goStep2() {
             deliveryOrder: 'Parallel',
         })
     });
-    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    if (!r.ok) { alert(T.tError + ': ' + r.status); return; }
     const d = await r.json();
     requestId = d.id;
     show(2);
@@ -207,12 +224,12 @@ async function addP() {
     const email = document.getElementById('pEmail').value.trim();
     const name = document.getElementById('pName').value.trim();
     const role = document.getElementById('pRole').value;
-    if (!email || !name) { alert('E-Mail + Name Pflicht.'); return; }
+    if (!email || !name) { alert(T.tEmailName); return; }
     const r = await fetch('/api/v1/signatures/' + requestId + '/participants', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({ email, name, role, order: participants.length }),
     });
-    if (!r.ok) return alert('Fehler: ' + r.status);
+    if (!r.ok) return alert(T.tError + ': ' + r.status);
     const p = await r.json();
     participants.push({ id: p.id, email, name, role });
     document.getElementById('pEmail').value = '';
@@ -220,21 +237,22 @@ async function addP() {
     renderPList();
 }
 
+function esc(s){return String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
+
 function renderPList() {
     document.getElementById('pList').innerHTML = participants.map(p =>
         `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--tw-gray-100);border-radius:6px">
-            <span style="flex:1">${p.role === 'Signer' ? '✍' : '👁'} <strong>${p.name}</strong> · ${p.email}</span>
-            <span class="chip">${p.role === 'Signer' ? 'Unterzeichner' : 'Leser'}</span>
+            <span style="flex:1">${p.role === 'Signer' ? '✍' : '👁'} <strong>${esc(p.name)}</strong> · ${esc(p.email)}</span>
+            <span class="chip">${p.role === 'Signer' ? T.tChipSigner : T.tChipViewer}</span>
         </div>`).join('');
     const fp = document.getElementById('fParticipant');
     fp.innerHTML = participants.filter(p => p.role === 'Signer' || document.getElementById('fType').value !== 'Signature')
-        .map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
 
 async function goStep3() {
-    if (participants.filter(p => p.role === 'Signer').length === 0) return alert('Mindestens ein Unterzeichner.');
+    if (participants.filter(p => p.role === 'Signer').length === 0) return alert(T.tMinSigner);
     show(3);
-    // Load the PDF via same-origin proxy.
     const src = '/api/v1/signatures/' + requestId + '/source-pdf';
     pdfDoc = await pdfjsLib.getDocument(src).promise;
     curPage = 1;
@@ -242,8 +260,8 @@ async function goStep3() {
 }
 
 async function renderPage() {
-    document.getElementById('pgLabel').textContent = `Seite ${curPage} / ${pdfDoc.numPages}`;
-    document.getElementById('pageInfo').textContent = `Klicken + ziehen auf Seite ${curPage}`;
+    document.getElementById('pgLabel').textContent = T.tPageOf.replace('{0}', curPage).replace('{1}', pdfDoc.numPages);
+    document.getElementById('pageInfo').textContent = T.tClickDrag.replace('{0}', curPage);
     const page = await pdfDoc.getPage(curPage);
     const viewport = page.getViewport({ scale: 1.4 });
     pageViewport = viewport;
@@ -258,7 +276,6 @@ async function renderPage() {
     overlay.id = 'ovl';
     wrap.appendChild(overlay);
     wrap.style.height = viewport.height + 'px';
-    // Center the overlay above the canvas.
     overlay.style.left = ((wrap.clientWidth - viewport.width) / 2) + 'px';
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     setupDrag(overlay);
@@ -285,9 +302,7 @@ function setupDrag(overlay) {
         const w = Math.abs(e.offsetX - start.x), h = Math.abs(e.offsetY - start.y);
         start = null;
         if (w < 20 || h < 15) { box.remove(); return; }
-        // Convert canvas coords to PDF points (canvas is scale 1.4 of PDF viewport).
         const pdfX = x / pageViewport.scale;
-        // PDF Y origin is bottom-left; canvas is top-left.
         const pdfY = (pageViewport.height - (y + h)) / pageViewport.scale;
         const pdfW = w / pageViewport.scale, pdfH = h / pageViewport.scale;
         const participantId = document.getElementById('fParticipant').value;
@@ -297,18 +312,14 @@ function setupDrag(overlay) {
             body: JSON.stringify({ participantId, type, page: curPage, anchor: 'BottomCenter',
                 x: pdfX, y: pdfY, width: pdfW, height: pdfH })
         });
-        if (!r.ok) { alert('Fehler: ' + r.status); box.remove(); return; }
+        if (!r.ok) { alert(T.tError + ': ' + r.status); box.remove(); return; }
         const d = await r.json();
         fields.push({ id: d.id, participantId, type, page: curPage, x, y, w, h });
         box.textContent = type === 'Signature' ? '✍' : (type === 'Text' ? 'Text' : (type === 'Date' ? '📅' : '☑'));
         box.style.borderStyle = 'solid';
         box.style.color = '#002854'; box.style.fontWeight = '700';
         box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.justifyContent = 'center';
-        box.addEventListener('contextmenu', async ev => {
-            ev.preventDefault();
-            // No delete endpoint yet; just drop from UI (server-side cleanup is via Cancel).
-            box.remove();
-        });
+        box.addEventListener('contextmenu', ev => { ev.preventDefault(); box.remove(); });
     });
 }
 
@@ -326,12 +337,12 @@ function nextPage() { if (curPage < pdfDoc.numPages) { curPage++; renderPage(); 
 
 async function sendReq() {
     if (fields.filter(f => f.type === 'Signature').length === 0) {
-        if (!confirm('Kein Signaturfeld platziert — sicher absenden?')) return;
+        if (!confirm(T.tNoSigfield)) return;
     }
     const r = await fetch('/api/v1/signatures/' + requestId + '/send', {
         method: 'POST', credentials: 'same-origin',
     });
-    if (!r.ok) { alert('Fehler: ' + r.status + ' ' + await r.text()); return; }
+    if (!r.ok) { alert(T.tError + ': ' + r.status + ' ' + await r.text()); return; }
     location.href = '/signatures';
 }
 

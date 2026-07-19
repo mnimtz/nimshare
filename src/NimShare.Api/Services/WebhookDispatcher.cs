@@ -20,11 +20,12 @@ public class WebhookDispatcher : IWebhookDispatcher
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<WebhookDispatcher> _log;
     private readonly IDataProtector _protector;
+    private readonly IHttpClientFactory _httpFactory;
 
     public WebhookDispatcher(IServiceScopeFactory scopes, ILogger<WebhookDispatcher> log,
-        IDataProtectionProvider dp)
+        IDataProtectionProvider dp, IHttpClientFactory httpFactory)
     {
-        _scopes = scopes; _log = log;
+        _scopes = scopes; _log = log; _httpFactory = httpFactory;
         _protector = dp.CreateProtector("NimShare.Webhook.Secret.v1");
     }
 
@@ -54,7 +55,8 @@ public class WebhookDispatcher : IWebhookDispatcher
             data = payload,
         });
         var bodyBytes = Encoding.UTF8.GetBytes(body);
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        var http = _httpFactory.CreateClient("nimshare-webhook");
+        http.Timeout = TimeSpan.FromSeconds(10);
         foreach (var w in subs)
         {
             if (!string.IsNullOrEmpty(w.Events) && !w.Events.Split(',').Contains(name)) continue;

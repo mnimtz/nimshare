@@ -1,22 +1,22 @@
 @model IEnumerable<NimShare.Core.Entities.SignatureRequest>
 @{
-    ViewData["Title"] = "Signaturen";
+    ViewData["Title"] = @T["sig.title"];
     Layout = "_AppShell";
 }
 <div class="page-header">
     <div>
-        <h1>✍ Signaturen</h1>
-        <p class="lede">Signatur-Anforderungen an Kollegen, Kunden oder Externe.</p>
+        <h1>✍ @T["sig.title"]</h1>
+        <p class="lede">@T["sig.lede"]</p>
     </div>
-    <a class="btn btn-primary" href="/signatures/new">+ Neue Anforderung</a>
+    <a class="btn btn-primary" href="/signatures/new">+ @T["sig.new_request"]</a>
 </div>
 
 @if (!Model.Any())
 {
     <div class="fm-empty">
         <div class="fm-empty-art">✍</div>
-        <div class="fm-empty-title">Noch keine Signatur-Anforderungen</div>
-        <div class="fm-empty-hint">Klick auf „+ Neue Anforderung", um ein PDF zur Unterschrift zu senden.</div>
+        <div class="fm-empty-title">@T["sig.none.title"]</div>
+        <div class="fm-empty-hint">@T["sig.none.body"]</div>
     </div>
 }
 else
@@ -24,10 +24,10 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th>Dokument</th>
-                <th>Empfänger</th>
-                <th>Status</th>
-                <th>Erstellt</th>
+                <th>@T["sig.col.document"]</th>
+                <th>@T["sig.col.recipients"]</th>
+                <th>@T["sig.col.status"]</th>
+                <th>@T["sig.col.created"]</th>
                 <th></th>
             </tr>
         </thead>
@@ -36,24 +36,24 @@ else
         {
             var statusChip = r.Status switch
             {
-                NimShare.Core.Entities.SignatureRequestStatus.Completed => ("chip-ok", "Fertig"),
-                NimShare.Core.Entities.SignatureRequestStatus.Sent => ("chip-warn", "Läuft"),
-                NimShare.Core.Entities.SignatureRequestStatus.Declined => ("chip-critical", "Abgelehnt"),
-                NimShare.Core.Entities.SignatureRequestStatus.Cancelled => ("chip", "Zurückgezogen"),
-                _ => ("chip", "Entwurf"),
+                NimShare.Core.Entities.SignatureRequestStatus.Completed => ("chip-ok", @T["sig.status.completed"].Value),
+                NimShare.Core.Entities.SignatureRequestStatus.Sent => ("chip-warn", @T["sig.status.sent"].Value),
+                NimShare.Core.Entities.SignatureRequestStatus.Declined => ("chip-critical", @T["sig.status.declined"].Value),
+                NimShare.Core.Entities.SignatureRequestStatus.Cancelled => ("chip", @T["sig.status.cancelled"].Value),
+                _ => ("chip", @T["sig.status.draft"].Value),
             };
             var doneCount = r.Participants.Count(p =>
                 p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Signed
                 || (p.Role == NimShare.Core.Entities.SignatureParticipantRole.Viewer && p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Viewed));
             <tr>
                 <td>@r.Title</td>
-                <td>@doneCount / @r.Participants.Count fertig</td>
+                <td>@doneCount / @r.Participants.Count</td>
                 <td><span class="chip @statusChip.Item1">@statusChip.Item2</span></td>
-                <td class="muted">@r.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                <td class="muted">@r.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>
                     @if (r.FinalFileId is Guid ff)
                     {
-                        <a class="btn btn-secondary btn-sm" href="/browse/personal">📥 Signiertes PDF</a>
+                        <a class="btn btn-secondary btn-sm" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
                     }
                     else
                     {

@@ -125,7 +125,13 @@ builder.Services.AddAuthorization(options =>
 // by adding [IgnoreAntiforgeryToken] on those specific endpoints or by simply
 // omitting the token header when using JWT (the middleware only enforces
 // when a cookie session is present).
-builder.Services.AddAntiforgery();
+builder.Services.AddAntiforgery(o => o.HeaderName = "X-XSRF-TOKEN");
+
+// SameSite=Strict on the auth cookie combined with SameOrigin JSON APIs
+// gives us CSRF protection for API endpoints: a cross-site attacker cannot
+// send the cookie AND cross-origin form-encoded POSTs won't hit our
+// [FromBody]-only actions. MVC form endpoints still use per-action
+// [ValidateAntiForgeryToken] plus @Html.AntiForgeryToken() in the view.
 
 // ── Localization (EFIGS + Dutch) ────────────────────────────────────────────
 var supportedCultures = new[] { "en", "de", "fr", "it", "es", "nl" }
@@ -155,6 +161,9 @@ builder.Services
         o.DataAnnotationLocalizerProvider = (_, factory) => factory.Create(typeof(SharedResources));
     })
     .AddMicrosoftIdentityUI();
+
+// Reusable HttpClient pool for webhook dispatch, AI providers, etc.
+builder.Services.AddHttpClient();
 
 builder.Services.AddRazorPages()
     .AddViewLocalization()

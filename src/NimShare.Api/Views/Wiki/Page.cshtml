@@ -8,16 +8,16 @@
 }
 <div class="page-header">
     <div>
-        <a href="/wiki" class="muted" style="text-decoration:none">← Wiki</a>
+        <a href="/wiki" class="muted" style="text-decoration:none">← @T["wiki.title"]</a>
         <h1 style="margin-top:6px">📄 @Model.Title</h1>
-        <p class="muted" style="font-size:.85rem">Zuletzt bearbeitet @Model.UpdatedAt.ToString("dd.MM.yyyy HH:mm")@(Model.LastEditedByUser is not null ? " von " + Model.LastEditedByUser.DisplayName : "")</p>
+        <p class="muted" style="font-size:.85rem">@string.Format(@T["wiki.last_edited"].Value, Model.UpdatedAt.ToString("yyyy-MM-dd HH:mm"), Model.LastEditedByUser?.DisplayName ?? "")</p>
     </div>
     @if (canWrite)
     {
         <div class="row" style="gap:6px">
-            <button class="btn btn-secondary" onclick="toggleEdit()">✎ Bearbeiten</button>
+            <button class="btn btn-secondary" onclick="toggleEdit()">✎ @T["common.edit"]</button>
             <form method="post" action="/api/v1/wiki/pages/@Model.Id" style="display:inline">
-                <button type="button" class="btn btn-ghost" style="color:var(--status-critical)" onclick="delPage()">🗑 Löschen</button>
+                <button type="button" class="btn btn-ghost" style="color:var(--status-critical)" onclick="delPage()">🗑 @T["common.delete"]</button>
             </form>
         </div>
     }
@@ -25,7 +25,7 @@
 
 <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
     <aside class="card" style="flex:1;min-width:220px">
-        <div class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Seiten</div>
+        <div class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">@T["wiki.page.pages_heading"]</div>
         <div style="display:flex;flex-direction:column;gap:2px">
         @foreach (var s in siblings)
         {
@@ -38,16 +38,16 @@
         <div id="viewMode" class="wiki-body">@Html.Raw(html)</div>
         <div id="editMode" style="display:none">
             <div class="field">
-                <label>Titel</label>
+                <label>@T["wiki.page.title_label"]</label>
                 <input type="text" id="editTitle" value="@Model.Title"/>
             </div>
             <div class="field">
-                <label>Inhalt (Markdown)</label>
+                <label>@T["wiki.page.content_label"]</label>
                 <textarea id="editContent" rows="20" style="font-family:var(--font-mono);font-size:.9rem">@Model.ContentMarkdown</textarea>
             </div>
             <div class="actions">
-                <button class="btn btn-ghost" onclick="toggleEdit()">Abbrechen</button>
-                <button class="btn btn-primary" onclick="save()">💾 Speichern</button>
+                <button class="btn btn-ghost" onclick="toggleEdit()">@T["common.cancel"]</button>
+                <button class="btn btn-primary" onclick="save()">💾 @T["common.save"]</button>
             </div>
         </div>
     </main>
@@ -79,15 +79,15 @@ async function save() {
             contentMarkdown: document.getElementById('editContent').value,
         })
     });
-    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    if (!r.ok) { alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status); return; }
     location.reload();
 }
 async function delPage() {
-    if (!confirm('Diese Seite löschen?')) return;
+    if (!confirm(@Json.Serialize(@T["wiki.page.confirm_delete"].Value))) return;
     const r = await fetch('/api/v1/wiki/pages/@Model.Id', {
         method: 'DELETE', credentials: 'same-origin'
     });
     if (r.ok) location.href = '/wiki';
-    else alert('Fehler: ' + r.status);
+    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
 }
 </script>
