@@ -790,6 +790,32 @@ Open the link:
   <data name="dbset.confirm.revert"><value>Revert to Sqlite and restart? Any writes since the switch stay on Azure SQL and won't be copied back.</value></data>
   <data name="dbset.err.timeout"><value>Timed out — the server didn't respond. Check the Azure SQL firewall and admin credentials, then try again.</value></data>
 
+  <data name="sig.reassign.subject"><value>[{0}] Signature forwarded: {1}</value></data>
+  <data name="sig.reassign.body"><value>Hello {0},
+
+{1} &lt;{2}&gt; has forwarded the signature request for "{3}" to you.
+
+Please open this link to sign:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.reassign.notif.title"><value>{0} forwarded the signature to {1}</value></data>
+  <data name="sig.reassign.notif.body"><value>"{0}" — {1}</value></data>
+
+  <data name="ai.err.no_key"><value>No API key stored.</value></data>
+  <data name="ai.err.no_listing"><value>Provider does not support model listing.</value></data>
+  <data name="ai.err.azure_no_endpoint"><value>Azure OpenAI endpoint is missing.</value></data>
+  <data name="ai.err.azure_bad_endpoint"><value>Endpoint must be an https://*.openai.azure.com or *.cognitiveservices.azure.com URL.</value></data>
+
+  <data name="certs.err.generate_failed"><value>Certificate generation failed.</value></data>
+  <data name="certs.err.pfx_decrypt"><value>PFX could not be decrypted — check the password.</value></data>
+  <data name="certs.err.no_private_key"><value>PFX does not contain a private key.</value></data>
+  <data name="certs.err.duplicate"><value>This certificate is already imported.</value></data>
+  <data name="certs.err.name_cn_required"><value>Name and Common Name are required.</value></data>
+  <data name="certs.err.name_pfx_required"><value>Name and PFX file are required.</value></data>
+  <data name="certs.err.pfx_too_large"><value>PFX must be smaller than 512 KB.</value></data>
+  <data name="certs.err.pfx_not_base64"><value>PFX must be base64-encoded.</value></data>
+
   <data name="certs.title"><value>Signing certificates</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Create certificate</value></data>

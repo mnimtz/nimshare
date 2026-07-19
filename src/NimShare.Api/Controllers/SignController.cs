@@ -118,6 +118,13 @@ public class SignController : Controller
         // Persist signature PNG to blob if provided; else fall back to typed name.
         var fields = await _db.SignatureFields.Where(f => f.RequestId == req.Id && f.ParticipantId == pid).ToListAsync(ct);
         string? sigPath = null;
+        // Hard cap on the base64 payload — an anti-forgery-protected POST can
+        // still be abused by a legitimate signer to OOM the process with a
+        // multi-hundred-MB base64 blob. 2.5 MB base64 → ~1.9 MB PNG, enough
+        // for the biggest reasonable signature pad drawing.
+        const int MaxSignatureBase64Bytes = 2 * 1024 * 1024 + 512 * 1024;
+        if (signatureData is not null && signatureData.Length > MaxSignatureBase64Bytes)
+            return View("Invalid");
         if (!string.IsNullOrEmpty(signatureData) && signatureData.StartsWith("data:image/"))
         {
             var comma = signatureData.IndexOf(',');
@@ -330,23 +337,48 @@ public class SignController : Controller
 
         var url = $"{Request.Scheme}://{Request.Host}/sign/{delegateP.Id}?t={raw}";
         var initiator = req.Initiator?.DisplayName ?? "NimShare";
-        try
-        {
-            await notif.SendShareLinkAsync(toEmail, initiator,
-                $"[{initiator}] Signatur weitergeleitet: {req.Title}",
-                $"Hallo {toName},\n\n{p.Name} <{p.Email}> hat die Signatur-Anfrage für „{req.Title}\" an dich weitergeleitet.\n\nÖffne den folgenden Link, um zu unterschreiben:\n{url}\n\n— NimShare",
-                ct);
-        }
-        catch { /* delivery failure isn't fatal — audit shows the reassign */ }
 
-        // Ping the initiator so they know the chain took a detour.
+        // Recipient email must be in THEIR language (best-effort default: the
+        // initiator's culture, since we don't know the delegate's yet).
+        var localizer = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<NimShare.Api.SharedResources>>();
+        var prevCulture = System.Globalization.CultureInfo.CurrentUICulture;
         try
         {
-            await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
-                $"{p.Name} hat die Signatur an {toName} weitergeleitet",
-                body: $"„{req.Title}\" — {toEmail}", href: $"/signatures/{req.Id}", ct: ct);
+            var culture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture) ? "en" : req.Initiator!.PreferredCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
         }
-        catch { }
+        catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            var subject = localizer["sig.reassign.subject", initiator, req.Title].Value;
+            var body = localizer["sig.reassign.body", toName, p.Name, p.Email, req.Title, url].Value;
+            try { await notif.SendShareLinkAsync(toEmail, initiator, subject, body, ct); }
+            catch { /* delivery failure isn't fatal — audit shows the reassign */ }
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = prevCulture; }
+
+        // Ping the initiator so they know the chain took a detour — in their
+        // language.
+        prevCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            var culture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture) ? "en" : req.Initiator!.PreferredCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+        }
+        catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            var title = localizer["sig.reassign.notif.title", p.Name, toName].Value;
+            var body = localizer["sig.reassign.notif.body", req.Title, toEmail].Value;
+            try
+            {
+                await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                    title, body: body, href: $"/signatures/{req.Id}", ct: ct);
+            }
+            catch { }
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = prevCulture; }
 
         return View("Done", new SignDoneViewModel(req, p, false));
     }
@@ -448,7 +480,11 @@ public class SignController : Controller
         var finalName = System.IO.Path.GetFileNameWithoutExtension(req.SourceFile.Name) + " (signiert).pdf";
         var finalPath = $"users/{req.InitiatorUserId:N}/signatures/{req.Id:N}.pdf";
         using var upMs = new MemoryStream(finalBytes);
-        using var http = new HttpClient();
+        // IHttpClientFactory reuses sockets; `new HttpClient()` here leaked a
+        // fresh socket per finalisation and eventually starved the ephemeral
+        // port range on busy hosts.
+        var http = HttpContext.RequestServices
+            .GetRequiredService<IHttpClientFactory>().CreateClient("nimshare-signature");
         var ticket = _blobs.CreateUploadTicket(finalPath);
         using var content = new StreamContent(upMs);
         content.Headers.Add("x-ms-blob-type", "BlockBlob");

@@ -44,9 +44,15 @@ public class SqliteRecoveryMiddleware
             // Only retry idempotent HTTP methods. Retrying a POST would replay
             // an already-consumed request body (empty on the retry ⇒ 400 or
             // silent no-op) and could double-write anything a half-succeeded
-            // SaveChanges already committed. GET/HEAD/OPTIONS are safe.
+            // SaveChanges already committed. GET/HEAD/OPTIONS are safe with
+            // ONE more exception: side-effectful GETs like /sign/{pid}
+            // (records ViewedAt + inserts an audit row) can double-insert if
+            // the first attempt half-succeeded — skip those too.
             var m = ctx.Request.Method;
-            var safe = HttpMethods.IsGet(m) || HttpMethods.IsHead(m) || HttpMethods.IsOptions(m);
+            var path = ctx.Request.Path.Value ?? "";
+            var sideEffectingGet = path.StartsWith("/sign/", StringComparison.OrdinalIgnoreCase);
+            var safe = (HttpMethods.IsGet(m) || HttpMethods.IsHead(m) || HttpMethods.IsOptions(m))
+                       && !sideEffectingGet;
             if (!safe || ctx.Response.HasStarted)
             {
                 _log.LogWarning(ex, "Sqlite transient ({Method}) — pool cleared, surfacing to error handler.", m);

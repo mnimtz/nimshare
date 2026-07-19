@@ -10,8 +10,19 @@ namespace NimShare.Api.Controllers;
 [Authorize(Policy = "WebUser")]
 public class DatabaseSettingsPageController : Controller
 {
+    private readonly ICurrentUserService _users;
+
+    public DatabaseSettingsPageController(ICurrentUserService users) { _users = users; }
+
     [HttpGet("/settings/database")]
-    public IActionResult Index() => User.IsInRole("Admin") ? View("Index") : Forbid();
+    public async Task<IActionResult> Index(CancellationToken ct)
+    {
+        // Use the DB role (single source of truth) so a role change takes
+        // effect immediately — cookie-claim IsInRole("Admin") would go stale
+        // until sign-out and match the API's DB-based check.
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        return me.Role == NimShare.Core.Entities.UserRole.Admin ? View("Index") : Forbid();
+    }
 }
 
 [ApiController]
@@ -123,10 +134,14 @@ public class DatabaseSettingsApiController : ControllerBase
         // 3. Persist config
         var me = await _users.GetOrProvisionAsync(User, ct);
         _store.Save(new DbConfigStore.DbConfig("SqlServer", conn, DateTimeOffset.UtcNow, me.Email));
-        // 4. Restart — fire-and-forget so the response reaches the browser first.
+        // 4. Restart — fire-and-forget so the response reaches the browser
+        // first. 5 s gives the slowest mobile connection a comfortable window
+        // to finish flushing the JSON response before Kestrel goes down.
+        // Earlier 1 s cut off users on slow uplinks with ERR_CONNECTION_RESET
+        // instead of the success banner.
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromSeconds(5));
             _lifetime.StopApplication();
         });
         return Ok(new { ok = true, schemaMs = schema.Duration.TotalMilliseconds,
@@ -144,7 +159,7 @@ public class DatabaseSettingsApiController : ControllerBase
         _store.Clear();
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            await Task.Delay(TimeSpan.FromSeconds(5));
             _lifetime.StopApplication();
         });
         return Ok(new { ok = true });

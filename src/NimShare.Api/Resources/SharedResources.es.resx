@@ -792,6 +792,32 @@ Abre el enlace:
   <data name="dbset.confirm.revert"><value>¿Volver a Sqlite y reiniciar? Los cambios desde el cambio quedan en Azure SQL y no se copian de vuelta.</value></data>
   <data name="dbset.err.timeout"><value>Tiempo agotado — el servidor no respondió. Verifica el firewall de Azure SQL y el login admin, e inténtalo de nuevo.</value></data>
 
+  <data name="sig.reassign.subject"><value>[{0}] Firma reenviada: {1}</value></data>
+  <data name="sig.reassign.body"><value>Hola {0},
+
+{1} &lt;{2}&gt; te reenvió la solicitud de firma para «{3}».
+
+Abre este enlace para firmar:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.reassign.notif.title"><value>{0} reenvió la firma a {1}</value></data>
+  <data name="sig.reassign.notif.body"><value>«{0}» — {1}</value></data>
+
+  <data name="ai.err.no_key"><value>No hay API key almacenada.</value></data>
+  <data name="ai.err.no_listing"><value>El proveedor no admite listar modelos.</value></data>
+  <data name="ai.err.azure_no_endpoint"><value>Falta el endpoint de Azure OpenAI.</value></data>
+  <data name="ai.err.azure_bad_endpoint"><value>El endpoint debe ser una URL https://*.openai.azure.com o *.cognitiveservices.azure.com.</value></data>
+
+  <data name="certs.err.generate_failed"><value>Error al generar el certificado.</value></data>
+  <data name="certs.err.pfx_decrypt"><value>No se pudo descifrar el PFX — verifica la contraseña.</value></data>
+  <data name="certs.err.no_private_key"><value>El PFX no contiene clave privada.</value></data>
+  <data name="certs.err.duplicate"><value>Este certificado ya está importado.</value></data>
+  <data name="certs.err.name_cn_required"><value>Nombre y Common Name son obligatorios.</value></data>
+  <data name="certs.err.name_pfx_required"><value>Nombre y archivo PFX son obligatorios.</value></data>
+  <data name="certs.err.pfx_too_large"><value>PFX debe ser menor que 512 KB.</value></data>
+  <data name="certs.err.pfx_not_base64"><value>PFX debe estar en base64.</value></data>
+
   <data name="certs.title"><value>Certificados de firma</value></data>
   <data name="certs.lede"><value>Crea un certificado autofirmado para firmas en NimShare o importa un PKCS#12 (.pfx/.p12) existente.</value></data>
   <data name="certs.new_self"><value>Crear certificado</value></data>

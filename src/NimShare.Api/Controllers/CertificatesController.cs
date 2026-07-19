@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -24,11 +25,14 @@ public class CertificatesApiController : ControllerBase
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IDataProtector _protector;
+    private readonly IStringLocalizer<SharedResources> _l;
+    private readonly ILogger<CertificatesApiController> _log;
 
     public CertificatesApiController(NimShareDbContext db, ICurrentUserService users,
-        IDataProtectionProvider dp)
+        IDataProtectionProvider dp, IStringLocalizer<SharedResources> l,
+        ILogger<CertificatesApiController> log)
     {
-        _db = db; _users = users;
+        _db = db; _users = users; _l = l; _log = log;
         _protector = dp.CreateProtector("NimShare.SigningCertificate.v1");
     }
 
@@ -71,7 +75,7 @@ public class CertificatesApiController : ControllerBase
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.CommonName))
-            return Problem(statusCode: 422, title: "Name and CommonName are required.");
+            return Problem(statusCode: 422, title: _l["certs.err.name_cn_required"].Value);
         var years = Math.Clamp(req.ValidityYears <= 0 ? 3 : req.ValidityYears, 1, 20);
 
         try
@@ -137,13 +141,11 @@ public class CertificatesApiController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Return the actual message so the UI surfaces something useful
-            // instead of the generic "Fehler: 500". Details are safe here —
-            // the endpoint is admin-scoped by cookie auth and the details
-            // don't leak DB rows.
-            return Problem(statusCode: 500,
-                title: "Zertifikat-Erstellung fehlgeschlagen",
-                detail: $"{ex.GetType().Name}: {ex.Message}");
+            // Log the full exception (type + stack) server-side; return only a
+            // localized short message to the client — no exception-type
+            // fingerprint or stack details leaked into the browser.
+            _log.LogError(ex, "Certificate generation failed for user {UserId}", me.Id);
+            return Problem(statusCode: 500, title: _l["certs.err.generate_failed"].Value);
         }
     }
 
@@ -176,12 +178,12 @@ public class CertificatesApiController : ControllerBase
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.PfxBase64))
-            return Problem(statusCode: 422, title: "Name and PfxBase64 are required.");
+            return Problem(statusCode: 422, title: _l["certs.err.name_pfx_required"].Value);
         byte[] rawPfx;
         try { rawPfx = Convert.FromBase64String(req.PfxBase64); }
-        catch { return Problem(statusCode: 422, title: "PFX must be base64-encoded."); }
+        catch { return Problem(statusCode: 422, title: _l["certs.err.pfx_not_base64"].Value); }
         if (rawPfx.Length > 512 * 1024)
-            return Problem(statusCode: 413, title: "PFX must be smaller than 512 KB.");
+            return Problem(statusCode: 413, title: _l["certs.err.pfx_too_large"].Value);
 
         X509Certificate2 cert;
         try
@@ -198,12 +200,12 @@ public class CertificatesApiController : ControllerBase
         }
         catch (CryptographicException ex)
         {
-            return Problem(statusCode: 422, title: "PFX konnte nicht entschlüsselt werden.",
-                detail: ex.Message);
+            _log.LogInformation(ex, "PFX decryption failed for user {UserId}", me.Id);
+            return Problem(statusCode: 422, title: _l["certs.err.pfx_decrypt"].Value);
         }
         using var _ = cert;
         if (!cert.HasPrivateKey)
-            return Problem(statusCode: 422, title: "PFX enthält keinen privaten Schlüssel.");
+            return Problem(statusCode: 422, title: _l["certs.err.no_private_key"].Value);
 
         var wrapped = _protector.Protect(BundleWithPassword(rawPfx, req.Password ?? ""));
         var entity = new SigningCertificate
@@ -227,7 +229,7 @@ public class CertificatesApiController : ControllerBase
         var exists = await _db.SigningCertificates
             .AnyAsync(c => c.OwnerUserId == me.Id && c.Thumbprint == cert.Thumbprint, ct);
         if (exists)
-            return Problem(statusCode: 409, title: "Dieses Zertifikat ist bereits importiert.");
+            return Problem(statusCode: 409, title: _l["certs.err.duplicate"].Value);
         await SaveAsync(entity, req.SetAsDefault, ct);
         return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
     }

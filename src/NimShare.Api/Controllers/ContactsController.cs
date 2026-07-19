@@ -94,7 +94,20 @@ public class ContactsApiController : ControllerBase
         var me = await _users.GetOrProvisionAsync(User, ct);
         var c = await _db.Contacts.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
         if (c is null) return NotFound();
-        if (!string.IsNullOrWhiteSpace(req.Email)) c.Email = req.Email.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(req.Email))
+        {
+            var newEmail = req.Email.Trim().ToLowerInvariant();
+            // Guard the (OwnerUserId, Email) unique index up front — a raw
+            // SaveChanges here would 500 on DbUpdateException and the UI
+            // shows a success toast that turns into an error on next click.
+            if (!string.Equals(c.Email, newEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                var taken = await _db.Contacts.AnyAsync(x =>
+                    x.OwnerUserId == me.Id && x.Id != c.Id && x.Email == newEmail, ct);
+                if (taken) return Conflict(new { error = "email_taken", email = newEmail });
+                c.Email = newEmail;
+            }
+        }
         if (!string.IsNullOrWhiteSpace(req.Name)) c.Name = req.Name.Trim();
         c.Company = req.Company?.Trim();
         c.Notes = req.Notes?.Trim();

@@ -791,6 +791,32 @@ Open de link:
   <data name="dbset.confirm.revert"><value>Terug naar Sqlite en herstarten? Wijzigingen sinds de overschakeling blijven op Azure SQL en worden niet teruggekopieerd.</value></data>
   <data name="dbset.err.timeout"><value>Time-out — de server heeft niet gereageerd. Controleer Azure SQL-firewall en admin-login, probeer opnieuw.</value></data>
 
+  <data name="sig.reassign.subject"><value>[{0}] Handtekening doorgestuurd: {1}</value></data>
+  <data name="sig.reassign.body"><value>Hallo {0},
+
+{1} &lt;{2}&gt; heeft het handtekeningverzoek voor "{3}" naar je doorgestuurd.
+
+Open deze link om te tekenen:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.reassign.notif.title"><value>{0} heeft de handtekening doorgestuurd naar {1}</value></data>
+  <data name="sig.reassign.notif.body"><value>"{0}" — {1}</value></data>
+
+  <data name="ai.err.no_key"><value>Geen API-sleutel opgeslagen.</value></data>
+  <data name="ai.err.no_listing"><value>Provider ondersteunt geen modellenlijst.</value></data>
+  <data name="ai.err.azure_no_endpoint"><value>Azure OpenAI-endpoint ontbreekt.</value></data>
+  <data name="ai.err.azure_bad_endpoint"><value>Endpoint moet een https://*.openai.azure.com of *.cognitiveservices.azure.com URL zijn.</value></data>
+
+  <data name="certs.err.generate_failed"><value>Certificaat aanmaken mislukt.</value></data>
+  <data name="certs.err.pfx_decrypt"><value>PFX kon niet worden ontsleuteld — controleer wachtwoord.</value></data>
+  <data name="certs.err.no_private_key"><value>PFX bevat geen private sleutel.</value></data>
+  <data name="certs.err.duplicate"><value>Dit certificaat is al geïmporteerd.</value></data>
+  <data name="certs.err.name_cn_required"><value>Naam en common name zijn verplicht.</value></data>
+  <data name="certs.err.name_pfx_required"><value>Naam en PFX-bestand zijn verplicht.</value></data>
+  <data name="certs.err.pfx_too_large"><value>PFX moet kleiner zijn dan 512 KB.</value></data>
+  <data name="certs.err.pfx_not_base64"><value>PFX moet base64 zijn.</value></data>
+
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Certificaat maken</value></data>

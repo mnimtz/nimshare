@@ -603,7 +603,14 @@ public class AiGatewayService : IAiGatewayService
         return s.Provider switch
         {
             AiProvider.OpenAi => new OpenAiProvider(http, apiKey, s.Model ?? "gpt-4o-mini", null),
-            AiProvider.AzureOpenAi => new OpenAiProvider(http, apiKey, s.Model ?? "gpt-4o-mini", s.Endpoint),
+            // SSRF guard: reuse the same host-allow-list the ListModels endpoint
+            // uses. If the saved endpoint doesn't clear it, fall back to
+            // NullAiProvider so a bogus / pivot URL can't be used to talk to
+            // internal hosts with the API key attached.
+            AiProvider.AzureOpenAi => NimShare.Api.Controllers.AiGatewayController
+                    .IsValidAzureOpenAiEndpoint(s.Endpoint)
+                ? new OpenAiProvider(http, apiKey, s.Model ?? "gpt-4o-mini", s.Endpoint)
+                : new NullAiProvider(),
             AiProvider.Gemini => new GeminiProvider(http, apiKey, s.Model ?? "gemini-2.0-flash"),
             AiProvider.Anthropic => new AnthropicProvider(http, apiKey, s.Model ?? "claude-3-5-haiku-latest"),
             _ => new NullAiProvider(),

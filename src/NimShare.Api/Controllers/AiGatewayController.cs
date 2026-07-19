@@ -75,11 +75,9 @@ public class AiGatewayController : Controller
     {
         if (!await IsAdmin(ct)) return Forbid();
         var s = await _ai.LoadAsync(ct);
-        // ApiKeyDecrypted is what the provider services use internally, so
-        // this stays in sync with what's actually configured.
         var apiKey = await _ai.GetApiKeyAsync(ct);
         if (string.IsNullOrWhiteSpace(apiKey))
-            return Ok(new ListModelsResp(Array.Empty<string>(), "Kein API-Key gespeichert."));
+            return Ok(new ListModelsResp(Array.Empty<string>(), _l["ai.err.no_key"].Value));
 
         var http = httpFactory.CreateClient("nimshare-ai-listmodels");
         http.Timeout = TimeSpan.FromSeconds(15);
@@ -90,9 +88,9 @@ public class AiGatewayController : Controller
             {
                 AiProvider.Gemini => Ok(new ListModelsResp(await ListGeminiAsync(http, apiKey, ct), null)),
                 AiProvider.OpenAi => Ok(new ListModelsResp(await ListOpenAiAsync(http, apiKey, "https://api.openai.com/v1/models", ct), null)),
-                AiProvider.AzureOpenAi => Ok(new ListModelsResp(await ListAzureAsync(http, apiKey, s.Endpoint, ct), null)),
+                AiProvider.AzureOpenAi => Ok(new ListModelsResp(await ListAzureAsync(http, apiKey, s.Endpoint, _l, ct), null)),
                 AiProvider.Anthropic => Ok(new ListModelsResp(await ListAnthropicAsync(http, apiKey, ct), null)),
-                _ => Ok(new ListModelsResp(Array.Empty<string>(), "Provider unterstützt kein Model-Listing.")),
+                _ => Ok(new ListModelsResp(Array.Empty<string>(), _l["ai.err.no_listing"].Value)),
             };
         }
         catch (Exception ex)
@@ -103,7 +101,13 @@ public class AiGatewayController : Controller
 
     private static async Task<string[]> ListGeminiAsync(HttpClient http, string key, CancellationToken ct)
     {
-        var resp = await http.GetAsync($"https://generativelanguage.googleapis.com/v1beta/models?key={key}&pageSize=200", ct);
+        // Gemini also supports the API key via header, which keeps it out of
+        // access logs / request telemetry. Query-string path is only there
+        // for platforms without header support.
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200");
+        req.Headers.Add("x-goog-api-key", key);
+        var resp = await http.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
         var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
         var names = new List<string>();
@@ -143,18 +147,22 @@ public class AiGatewayController : Controller
         return names.ToArray();
     }
 
-    private static async Task<string[]> ListAzureAsync(HttpClient http, string key, string? endpoint, CancellationToken ct)
+    /// <summary>SSRF guard shared between ListModels and the runtime provider
+    /// factory — admin-supplied endpoint is only allowed to point at real
+    /// Azure OpenAI / Cognitive Services hosts, over https.</summary>
+    public static bool IsValidAzureOpenAiEndpoint(string? endpoint) =>
+        !string.IsNullOrWhiteSpace(endpoint)
+        && Uri.TryCreate(endpoint, UriKind.Absolute, out var u)
+        && u.Scheme == "https"
+        && (u.Host.EndsWith(".openai.azure.com", StringComparison.OrdinalIgnoreCase)
+            || u.Host.EndsWith(".cognitiveservices.azure.com", StringComparison.OrdinalIgnoreCase));
+
+    private static async Task<string[]> ListAzureAsync(HttpClient http, string key, string? endpoint,
+        IStringLocalizer<SharedResources> l, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new InvalidOperationException("Azure OpenAI Endpoint fehlt.");
-        // SSRF guard: the endpoint field is admin-configurable, so a rogue
-        // admin (or a compromised session) could pivot the app-service into
-        // hitting IMDS (169.254.169.254) or any internal host with the saved
-        // API key attached. Restrict to real Azure OpenAI hosts.
-        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var eUri)
-            || eUri.Scheme != "https"
-            || !(eUri.Host.EndsWith(".openai.azure.com", StringComparison.OrdinalIgnoreCase)
-                 || eUri.Host.EndsWith(".cognitiveservices.azure.com", StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidOperationException("Endpoint must be an https://*.openai.azure.com or *.cognitiveservices.azure.com URL.");
+        if (string.IsNullOrWhiteSpace(endpoint)) throw new InvalidOperationException(l["ai.err.azure_no_endpoint"].Value);
+        if (!IsValidAzureOpenAiEndpoint(endpoint))
+            throw new InvalidOperationException(l["ai.err.azure_bad_endpoint"].Value);
         var url = endpoint.TrimEnd('/') + "/openai/deployments?api-version=2023-03-15-preview";
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("api-key", key);

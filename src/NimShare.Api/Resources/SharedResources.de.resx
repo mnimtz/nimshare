@@ -796,6 +796,32 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="dbset.confirm.revert"><value>Auf Sqlite zurück und neu starten? Änderungen seit der Umschaltung bleiben in Azure SQL und werden nicht zurückkopiert.</value></data>
   <data name="dbset.err.timeout"><value>Zeitüberschreitung — der Server hat nicht geantwortet. Bitte Azure-SQL-Firewall und Admin-Login prüfen und erneut versuchen.</value></data>
 
+  <data name="sig.reassign.subject"><value>[{0}] Signatur weitergeleitet: {1}</value></data>
+  <data name="sig.reassign.body"><value>Hallo {0},
+
+{1} &lt;{2}&gt; hat die Signatur-Anfrage für „{3}" an dich weitergeleitet.
+
+Bitte öffne diesen Link, um zu unterschreiben:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.reassign.notif.title"><value>{0} hat die Signatur an {1} weitergeleitet</value></data>
+  <data name="sig.reassign.notif.body"><value>„{0}" — {1}</value></data>
+
+  <data name="ai.err.no_key"><value>Kein API-Key gespeichert.</value></data>
+  <data name="ai.err.no_listing"><value>Provider unterstützt kein Model-Listing.</value></data>
+  <data name="ai.err.azure_no_endpoint"><value>Azure-OpenAI-Endpoint fehlt.</value></data>
+  <data name="ai.err.azure_bad_endpoint"><value>Endpoint muss eine https://*.openai.azure.com- oder *.cognitiveservices.azure.com-URL sein.</value></data>
+
+  <data name="certs.err.generate_failed"><value>Zertifikat-Erstellung fehlgeschlagen.</value></data>
+  <data name="certs.err.pfx_decrypt"><value>PFX konnte nicht entschlüsselt werden — Passwort prüfen.</value></data>
+  <data name="certs.err.no_private_key"><value>PFX enthält keinen privaten Schlüssel.</value></data>
+  <data name="certs.err.duplicate"><value>Dieses Zertifikat ist bereits importiert.</value></data>
+  <data name="certs.err.name_cn_required"><value>Name und Common Name sind Pflicht.</value></data>
+  <data name="certs.err.name_pfx_required"><value>Name und PFX-Datei sind Pflicht.</value></data>
+  <data name="certs.err.pfx_too_large"><value>PFX muss kleiner als 512 KB sein.</value></data>
+  <data name="certs.err.pfx_not_base64"><value>PFX muss Base64-kodiert sein.</value></data>
+
   <data name="certs.title"><value>Signatur-Zertifikate</value></data>
   <data name="certs.lede"><value>Erstelle ein eigenes Zertifikat für digitale Signaturen in NimShare oder importiere eine vorhandene PKCS#12-Datei (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Zertifikat erstellen</value></data>
