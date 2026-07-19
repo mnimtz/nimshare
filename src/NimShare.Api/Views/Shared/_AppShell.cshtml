@@ -97,41 +97,41 @@
             <!-- ── Ablage: expandable with library sub-items ────────────── -->
             <div class="nav-group @(browseOpen ? "" : "collapsed")" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
                 <div class="nav-group-head">
-                    <span>📁 @T["nav.storage"]</span>
+                    <span>@T["nav.storage"]</span>
                     <span class="chevron">▾</span>
                 </div>
                 <div class="nav-group-body">
                     <a href="/browse/personal" class="nav-sub @(browseOpen && browseKind == "personal" ? "active" : "")">
-                        <span class="nav-sub-ic">👤</span>@T["browse.libraries.mine"]
+                        @T["browse.libraries.mine"]
                     </a>
                     <a href="/browse/public" class="nav-sub @(browseOpen && browseKind == "public" ? "active" : "")">
-                        <span class="nav-sub-ic">🌐</span>@T["browse.libraries.shared"]
+                        @T["browse.libraries.shared"]
                     </a>
                     @foreach (var (gId, gName) in myGroups)
                     {
                         var isCur = browseOpen && browseKind == "group" && browseGroupId == gId;
                         <a href="/browse/group/@gId" class="nav-sub @(isCur ? "active" : "")">
-                            <span class="nav-sub-ic">👥</span>@gName
+                            @gName
                         </a>
                     }
                     <a href="/favorites" class="nav-sub @Exact("/favorites")">
-                        <span class="nav-sub-ic">⭐</span>@T["nav.favorites"]
+                        @T["nav.favorites"]
                     </a>
                     <a href="/shared-with-me" class="nav-sub @Exact("/shared-with-me")">
-                        <span class="nav-sub-ic">🤝</span>@T["nav.shared_with_me"]
+                        @T["nav.shared_with_me"]
                     </a>
                     <a href="/trash" class="nav-sub @Exact("/trash")">
-                        <span class="nav-sub-ic">🗑</span>@T["nav.trash"]
+                        @T["nav.trash"]
                     </a>
                 </div>
             </div>
 
-            <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
-            <a href="/signatures" class="@Active("/signatures")">✍ Signaturen</a>
-            <a href="/wiki" class="@Active("/wiki")">📚 Wiki</a>
-            <a href="/notifications" class="@Exact("/notifications")">🔔 Benachrichtigungen</a>
-            <a href="/activity"  class="@Exact("/activity")">🕐 @T["nav.activity"]</a>
-            <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
+            <a href="/links"     class="@Exact("/links")">@T["nav.links"]</a>
+            <a href="/signatures" class="@Active("/signatures")">Signaturen</a>
+            <a href="/wiki" class="@Active("/wiki")">Wiki</a>
+            <a href="/notifications" class="@Exact("/notifications")">Benachrichtigungen</a>
+            <a href="/activity"  class="@Exact("/activity")">@T["nav.activity"]</a>
+            <a href="/ai/chat"   class="@Active("/ai/chat")">@T["nav.chat"]</a>
 
             <div class="nav-section @(settingsOpen ? "" : "collapsed")" style="margin-top:var(--sp-2)" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
                 <span>@T["nav.settings"]</span><span class="chevron">▾</span>
