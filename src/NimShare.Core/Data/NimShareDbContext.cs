@@ -33,6 +33,7 @@ public class NimShareDbContext : DbContext
     public DbSet<SignatureField> SignatureFields => Set<SignatureField>();
     public DbSet<SignatureAudit> SignatureAudits => Set<SignatureAudit>();
     public DbSet<OfficeSettings> OfficeSettings => Set<OfficeSettings>();
+    public DbSet<WikiPage> WikiPages => Set<WikiPage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -244,6 +245,22 @@ public class NimShareDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.DocumentServerUrl).HasMaxLength(400);
             e.Property(x => x.JwtSecretEncrypted).HasMaxLength(2000);
+        });
+
+        b.Entity<WikiPage>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Scope, x.OwnerUserId });
+            e.HasIndex(x => new { x.Scope, x.OwnerGroupId });
+            e.HasIndex(x => x.ParentPageId);
+            e.Property(x => x.Title).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Slug).HasMaxLength(120).IsRequired();
+            e.Property(x => x.ContentMarkdown).HasMaxLength(100_000);
+            e.HasOne(x => x.ParentPage).WithMany().HasForeignKey(x => x.ParentPageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
+            e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.LastEditedByUser).WithMany().HasForeignKey(x => x.LastEditedByUserId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
         });
 
         b.Entity<StorageFile>()

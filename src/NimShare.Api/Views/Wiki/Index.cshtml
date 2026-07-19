@@ -1,0 +1,91 @@
+@using NimShare.Api.Services
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = "Wiki";
+    Layout = "_AppShell";
+    var mine = (List<WikiPage>)(ViewData["Mine"] ?? new List<WikiPage>());
+    var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
+}
+<div class="page-header">
+    <div>
+        <h1>📚 Wiki</h1>
+        <p class="lede">Markdown-Seiten pro Person + pro Gruppe. Ideal für interne Docs, Meeting-Notes, How-Tos.</p>
+    </div>
+    <button class="btn btn-primary" onclick="createPage('Personal', null)">+ Neue Seite</button>
+</div>
+
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div class="card" style="flex:1;min-width:280px">
+        <h2 class="card-title">👤 Meine Seiten</h2>
+        @if (!mine.Any())
+        {
+            <p class="muted">Noch keine persönlichen Seiten.</p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:4px">
+                @foreach (var p in mine)
+                {
+                    <a href="/wiki/@p.Id" style="display:flex;align-items:center;gap:8px;padding:6px 10px;text-decoration:none;color:var(--tw-primary);border-radius:4px" onmouseover="this.style.background='var(--tw-gray-100)'" onmouseout="this.style.background=''">
+                        📄 @p.Title
+                    </a>
+                }
+            </div>
+        }
+    </div>
+    <div class="card" style="flex:1;min-width:280px">
+        <h2 class="card-title">👥 Gruppen-Wikis</h2>
+        @if (!groups.Any())
+        {
+            <p class="muted">Du bist in keiner Gruppe.</p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var g in groups)
+                {
+                    <details>
+                        <summary style="cursor:pointer;padding:6px 10px;border-radius:4px;font-weight:500">@g.Name</summary>
+                        <div id="group-pages-@g.Id" style="padding-left:20px;margin-top:4px">
+                            <p class="muted">Lade…</p>
+                        </div>
+                        <div style="padding-left:20px;margin-top:6px">
+                            <button class="btn btn-ghost btn-sm" onclick="createPage('Group', '@g.Id')">+ Neue Seite</button>
+                        </div>
+                    </details>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+async function createPage(scope, groupId) {
+    const title = prompt('Titel der neuen Seite:');
+    if (!title) return;
+    const body = { scope, ownerGroupId: groupId, parentPageId: null, title, contentMarkdown: '# ' + title + '\n\n' };
+    const r = await fetch('/api/v1/wiki/pages', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(body)
+    });
+    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    const d = await r.json();
+    location.href = '/wiki/' + d.id;
+}
+
+document.querySelectorAll('details').forEach(det => {
+    det.addEventListener('toggle', async () => {
+        if (!det.open) return;
+        const sum = det.querySelector('summary').textContent.trim();
+        const gid = det.querySelector('button')?.getAttribute('onclick').match(/'([^']+)'\)/g)?.slice(-1)[0]?.replace(/[')]/g, '');
+        if (!gid) return;
+        const cont = document.getElementById('group-pages-' + gid);
+        const r = await fetch('/api/v1/wiki/pages?scope=Group&groupId=' + gid, { credentials: 'same-origin' });
+        if (!r.ok) { cont.innerHTML = '<p class="muted">Kein Zugriff.</p>'; return; }
+        const pages = await r.json();
+        cont.innerHTML = pages.length === 0
+            ? '<p class="muted">Noch keine Seiten in dieser Gruppe.</p>'
+            : pages.map(p => `<a href="/wiki/${p.id}" style="display:block;padding:4px 8px;text-decoration:none;color:var(--tw-primary)">📄 ${p.title}</a>`).join('');
+    });
+});
+</script>

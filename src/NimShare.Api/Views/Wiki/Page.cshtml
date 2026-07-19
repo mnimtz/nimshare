@@ -1,0 +1,93 @@
+@model NimShare.Core.Entities.WikiPage
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "_AppShell";
+    var html = (string)(ViewData["HTML"] ?? "");
+    var siblings = (List<NimShare.Core.Entities.WikiPage>)(ViewData["Siblings"] ?? new List<NimShare.Core.Entities.WikiPage>());
+    var canWrite = (bool)(ViewData["CanWrite"] ?? false);
+}
+<div class="page-header">
+    <div>
+        <a href="/wiki" class="muted" style="text-decoration:none">← Wiki</a>
+        <h1 style="margin-top:6px">📄 @Model.Title</h1>
+        <p class="muted" style="font-size:.85rem">Zuletzt bearbeitet @Model.UpdatedAt.ToString("dd.MM.yyyy HH:mm")@(Model.LastEditedByUser is not null ? " von " + Model.LastEditedByUser.DisplayName : "")</p>
+    </div>
+    @if (canWrite)
+    {
+        <div class="row" style="gap:6px">
+            <button class="btn btn-secondary" onclick="toggleEdit()">✎ Bearbeiten</button>
+            <form method="post" action="/api/v1/wiki/pages/@Model.Id" style="display:inline">
+                <button type="button" class="btn btn-ghost" style="color:var(--status-critical)" onclick="delPage()">🗑 Löschen</button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <aside class="card" style="flex:1;min-width:220px">
+        <div class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Seiten</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+        @foreach (var s in siblings)
+        {
+            <a href="/wiki/@s.Id" style="padding:5px 8px;text-decoration:none;color:@(s.Id == Model.Id ? "var(--tw-primary-alt)" : "var(--tw-primary)");background:@(s.Id == Model.Id ? "rgba(0,160,251,.12)" : "transparent");border-radius:4px;font-weight:@(s.Id == Model.Id ? "600" : "400")">📄 @s.Title</a>
+        }
+        </div>
+    </aside>
+
+    <main class="card" style="flex:3;min-width:320px" id="pageContent">
+        <div id="viewMode" class="wiki-body">@Html.Raw(html)</div>
+        <div id="editMode" style="display:none">
+            <div class="field">
+                <label>Titel</label>
+                <input type="text" id="editTitle" value="@Model.Title"/>
+            </div>
+            <div class="field">
+                <label>Inhalt (Markdown)</label>
+                <textarea id="editContent" rows="20" style="font-family:var(--font-mono);font-size:.9rem">@Model.ContentMarkdown</textarea>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" onclick="toggleEdit()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="save()">💾 Speichern</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+.wiki-body { line-height: 1.7; }
+.wiki-body h1 { margin-top: 0; }
+.wiki-body h2 { margin-top: 24px; border-bottom: 1px solid var(--tw-gray-200); padding-bottom: 4px; }
+.wiki-body pre { background: var(--tw-gray-100); padding: 12px; border-radius: 6px; overflow-x: auto; font-family: var(--font-mono); font-size: .88rem; }
+.wiki-body code { background: var(--tw-gray-100); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: .88rem; }
+.wiki-body blockquote { border-left: 3px solid var(--tw-gray-300); padding-left: 12px; color: var(--tw-muted-blue); }
+</style>
+
+<script>
+function toggleEdit() {
+    const v = document.getElementById('viewMode'), e = document.getElementById('editMode');
+    const showEdit = v.style.display !== 'none';
+    v.style.display = showEdit ? 'none' : '';
+    e.style.display = showEdit ? '' : 'none';
+}
+async function save() {
+    const r = await fetch('/api/v1/wiki/pages/@Model.Id', {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            title: document.getElementById('editTitle').value,
+            contentMarkdown: document.getElementById('editContent').value,
+        })
+    });
+    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    location.reload();
+}
+async function delPage() {
+    if (!confirm('Diese Seite löschen?')) return;
+    const r = await fetch('/api/v1/wiki/pages/@Model.Id', {
+        method: 'DELETE', credentials: 'same-origin'
+    });
+    if (r.ok) location.href = '/wiki';
+    else alert('Fehler: ' + r.status);
+}
+</script>
