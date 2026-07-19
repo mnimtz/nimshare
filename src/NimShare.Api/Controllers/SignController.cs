@@ -86,12 +86,23 @@ public class SignController : Controller
         if (p.Status == SignatureParticipantStatus.Signed) return RedirectToAction(nameof(Landing), new { pid, t });
         if (p.Role != SignatureParticipantRole.Signer)
         {
-            // Viewer path: just acknowledge. Save first so MaybeFinalize can
-            // see the new Viewed status.
+            // Viewer path: just acknowledge. Save first, then trigger the
+            // background finalizer (same rationale as the signer path — the
+            // PDF merge shouldn't block the viewer's response).
             p.Status = SignatureParticipantStatus.Viewed;
             await _db.SaveChangesAsync(ct);
-            await MaybeFinalizeAsync(req, ct);
-            await _db.SaveChangesAsync(ct);
+            var scopesV = HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+            var reqIdV = req.Id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = scopesV.CreateScope();
+                    var finalizer = scope.ServiceProvider.GetRequiredService<ISignatureFinalizerService>();
+                    await finalizer.TryFinalizeAsync(reqIdV);
+                }
+                catch { }
+            });
             return View("Done", new SignDoneViewModel(req, p, false));
         }
 
@@ -156,17 +167,38 @@ public class SignController : Controller
             IpHash = p.IpHash, UserAgent = p.UserAgent,
         });
 
-        // Persist the Signed status BEFORE MaybeFinalizeAsync runs — that
-        // method re-queries the DB and needs to see p.Status = Signed,
-        // otherwise the last signer never triggers finalisation.
+        // Persist the Signed status BEFORE any long-running work.
         await _db.SaveChangesAsync(ct);
 
         // Sequential chain: trigger the next participant in Order.
         if (req.DeliveryOrder == SignatureDeliveryOrder.Sequential)
+        {
             await NotifyNextAsync(req, p, ct);
+            await _db.SaveChangesAsync(ct);
+        }
 
-        await MaybeFinalizeAsync(req, ct);
-        await _db.SaveChangesAsync(ct);
+        // Finalisation (PDF merge + upload) is expensive on Azure — 10s+ is
+        // typical for multi-page contracts. Do it out-of-band so the signer
+        // gets the "Done" page immediately instead of watching "Wird
+        // gesendet…" for 30 seconds. The BackgroundFinalizerService picks up
+        // Sent→Completed transitions the same way MaybeFinalizeAsync did.
+        var scopes = HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+        var reqId = req.Id;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                var finalizer = scope.ServiceProvider.GetRequiredService<ISignatureFinalizerService>();
+                await finalizer.TryFinalizeAsync(reqId);
+            }
+            catch (Exception ex)
+            {
+                var logger = HttpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("SignController");
+                logger?.LogWarning(ex, "background finalize failed for {ReqId}", reqId);
+            }
+        });
+
         return View("Done", new SignDoneViewModel(req, p, true));
     }
 

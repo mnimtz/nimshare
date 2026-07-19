@@ -235,6 +235,7 @@ builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddSingleton<ITotpService, TotpService>();
 builder.Services.AddSingleton<ITotpChallengeStore, TotpChallengeStore>();
 builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
+builder.Services.AddScoped<ISignatureFinalizerService, SignatureFinalizerService>();
 builder.Services.AddHostedService<SignatureReminderService>();
 builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
 

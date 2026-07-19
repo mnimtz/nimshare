@@ -19,7 +19,13 @@
      data-error="@T["common.error"]"
      data-no-access="@T["wiki.no_access"]"
      data-no-pages-in-group="@T["wiki.no_pages_in_group"]">
-    <div class="card" style="display:flex;flex-direction:column">
+    <style>
+        /* .card + .card { margin-top } is a global rule that pushes the 2nd
+           grid item down and makes it visually shorter. Reset it so both
+           tiles line up flush. */
+        .wiki-grid-tile { margin-top: 0 !important; height: 100%; }
+    </style>
+    <div class="card wiki-grid-tile" style="display:flex;flex-direction:column;margin-top:0 !important">
         <h2 class="card-title">👤 @T["wiki.mine"]</h2>
         @if (!mine.Any())
         {
@@ -37,7 +43,7 @@
             </div>
         }
     </div>
-    <div class="card" style="display:flex;flex-direction:column">
+    <div class="card wiki-grid-tile" style="display:flex;flex-direction:column;margin-top:0 !important">
         <h2 class="card-title">👥 @T["wiki.groups"]</h2>
         @if (!groups.Any())
         {
