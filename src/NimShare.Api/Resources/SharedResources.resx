@@ -341,7 +341,7 @@
   <data name="landing.ai_summary.error"><value>Couldn't generate a summary. Try again later.</value></data>
   <data name="landing.folder.lede"><value>Files in this folder:</value></data>
   <data name="browse.libraries.mine"><value>My Libraries</value></data>
-  <data name="browse.libraries.shared"><value>Shared with me</value></data>
+  <data name="browse.libraries.shared"><value>Public area</value></data>
   <data name="browse.libraries.groups"><value>Group libraries</value></data>
   <data name="ctx.open"><value>Open</value></data>
   <data name="nav.chat"><value>Chat with files</value></data>

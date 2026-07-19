@@ -65,6 +65,24 @@
             </label>
         </div>
     </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--tw-gray-200)">
+        <div style="font-weight:500;margin-bottom:8px">🌐 Öffentlicher Bereich</div>
+        <div class="muted" style="font-size:13px;margin-bottom:10px">Rechte in der öffentlichen Ablage. Admin-User bekommen alle Rechte automatisch.</div>
+        <div class="row" style="gap:16px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" name="publicCanRead" value="true" @(Model.PublicCanRead ? "checked" : "")/>
+                <span>Lesen</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" name="publicCanWrite" value="true" @(Model.PublicCanWrite ? "checked" : "")/>
+                <span>Hochladen / Ändern</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                <input type="checkbox" name="publicCanDelete" value="true" @(Model.PublicCanDelete ? "checked" : "")/>
+                <span>Löschen</span>
+            </label>
+        </div>
+    </div>
 </div>
 
 <div class="card" style="margin-bottom:16px">

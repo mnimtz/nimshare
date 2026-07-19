@@ -33,6 +33,13 @@ public class User
     /// <summary>Per-user storage quota in bytes.</summary>
     public long QuotaBytes { get; set; } = 10L * 1024 * 1024 * 1024;
 
+    /// <summary>Whether this user may see files in the Public library. Default on.</summary>
+    public bool PublicCanRead { get; set; } = true;
+    /// <summary>Whether this user may upload/modify files in the Public library.</summary>
+    public bool PublicCanWrite { get; set; } = true;
+    /// <summary>Whether this user may delete files from the Public library. Admins always can.</summary>
+    public bool PublicCanDelete { get; set; }
+
     /// <summary>Preferred UI language — one of en/fr/it/de/es.</summary>
     public string PreferredCulture { get; set; } = "en";
 

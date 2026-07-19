@@ -136,6 +136,7 @@ public class UsersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(Guid id, string displayName, string email, string role,
         long quotaGb, bool isActive, Guid[]? groupIds, string? newPassword,
+        bool publicCanRead, bool publicCanWrite, bool publicCanDelete,
         [FromServices] IPasswordHasher hasher, CancellationToken ct)
     {
         if (!await RequireAdmin(ct)) return Forbid();
@@ -171,6 +172,9 @@ public class UsersController : Controller
         u.Role = wantRole;
         u.QuotaBytes = quotaGb * 1024L * 1024L * 1024L;
         u.IsActive = isActive;
+        u.PublicCanRead = publicCanRead;
+        u.PublicCanWrite = publicCanWrite;
+        u.PublicCanDelete = publicCanDelete;
 
         // Optional password reset by admin (only for local accounts).
         if (!string.IsNullOrEmpty(newPassword))

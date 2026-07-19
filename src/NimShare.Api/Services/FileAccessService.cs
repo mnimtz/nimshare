@@ -78,7 +78,7 @@ public class FileAccessService : IFileAccessService
         var byScope = file.Scope switch
         {
             FileScope.Personal => file.OwnerId == user.Id,
-            FileScope.Public => true,
+            FileScope.Public => user.PublicCanRead,
             FileScope.Group => file.GroupId is Guid g && await IsGroupMemberAsync(user, g, ct),
             _ => false
         };
@@ -91,7 +91,7 @@ public class FileAccessService : IFileAccessService
         return scope switch
         {
             FileScope.Personal => true,
-            FileScope.Public => true,
+            FileScope.Public => user.PublicCanWrite || user.Role == UserRole.Admin,
             FileScope.Group => groupId is Guid g && await IsGroupMemberAsync(user, g, ct),
             _ => false
         };
@@ -109,6 +109,7 @@ public class FileAccessService : IFileAccessService
         }
         if (user.Role == UserRole.Admin) return true;
         if (file.OwnerId == user.Id) return true;
+        if (file.Scope == FileScope.Public && user.PublicCanDelete) return true;
         if (file.Scope == FileScope.Group && file.GroupId is Guid g)
         {
             if (await IsGroupManagerAsync(user, g, ct))

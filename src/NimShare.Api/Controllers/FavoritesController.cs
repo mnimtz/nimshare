@@ -42,6 +42,7 @@ public class FavoritesPageController : Controller
             .Where(m => m.UserId == me.Id).Select(m => m.GroupId).ToListAsync(ct);
         var shares = await _db.DirectShares
             .Where(s => (s.TargetUserId == me.Id || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId.Value)))
+                && s.SharedByUserId != me.Id
                 && (s.FileId == null || s.File!.Status != StorageFileStatus.Deleted))
             .Include(s => s.File).Include(s => s.Folder).Include(s => s.SharedByUser).Include(s => s.TargetGroup)
             .OrderByDescending(s => s.CreatedAt)
