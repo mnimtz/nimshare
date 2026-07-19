@@ -287,6 +287,30 @@
   <data name="profile.crop.zoom"><value>Zoom</value></data>
   <data name="profile.crop.save"><value>Save picture</value></data>
   <data name="bulk.selected"><value>selected</value></data>
+  <data name="bulk.download_zip"><value>Download ZIP</value></data>
+  <data name="bulk.zip.preparing"><value>Preparing ZIP…</value></data>
+  <data name="bulk.zip.no_files"><value>Select at least one file.</value></data>
+
+  <data name="links.restrict.legend"><value>Restrict recipients (optional)</value></data>
+  <data name="links.restrict.allowed_label"><value>Allowed emails</value></data>
+  <data name="links.restrict.allowed_hint"><value>Comma-separated. Wildcards: &lt;code&gt;@company.com&lt;/code&gt;, &lt;code&gt;*.company.com&lt;/code&gt;, or a full email address.</value></data>
+  <data name="links.restrict.otp_label"><value>Recipient must verify via 6-digit code sent to their email</value></data>
+
+  <data name="landing_admin.public_scope_note"><value>Shown on every download from the public library. Only the admin can change it.</value></data>
+  <data name="landing_admin.personal_scope_note"><value>Shown on every download from My files (your personal library).</value></data>
+  <data name="landing_admin.section.text"><value>Text</value></data>
+  <data name="landing_admin.title.label"><value>Title</value></data>
+  <data name="landing_admin.title.placeholder"><value>Downloads from ACME</value></data>
+  <data name="landing_admin.subtitle.label"><value>Subtitle</value></data>
+  <data name="landing_admin.subtitle.placeholder"><value>Short introduction sentence</value></data>
+  <data name="landing_admin.body.label"><value>Body text (Markdown allowed)</value></data>
+  <data name="landing_admin.footer.label"><value>Footer</value></data>
+  <data name="landing_admin.footer.placeholder"><value>Legal notice, contact, privacy…</value></data>
+  <data name="landing_admin.accent.label"><value>Accent colour</value></data>
+  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.hero.label"><value>Hero image</value></data>
+  <data name="landing_admin.logo.label"><value>Logo (optional)</value></data>
+  <data name="common.preview"><value>Preview</value></data>
   <data name="bulk.move"><value>Move</value></data>
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
@@ -419,6 +443,74 @@
   <data name="notice.password_updated"><value>Password updated.</value></data>
   <data name="err.bad_credentials"><value>Incorrect email or password.</value></data>
   <data name="err.2fa_code_wrong"><value>The code is incorrect.</value></data>
+
+  <data name="sig.reminder.subject"><value>Reminder: {0} — still pending</value></data>
+  <data name="sig.reminder.body"><value>Hi {0},
+
+this is a reminder — {1} is waiting for your {2} on '{3}'.
+
+Deadline: {4}
+
+— NimShare</value></data>
+  <data name="sig.reminder.role_signer"><value>signature</value></data>
+  <data name="sig.reminder.role_viewer"><value>acknowledgement</value></data>
+  <data name="sig.expired.notif.title"><value>Signature request {0} — deadline expired</value></data>
+  <data name="sig.expired.notif.body"><value>The request was cancelled automatically.</value></data>
+
+  <data name="sig.invite.subject_signer"><value>NimShare — Please sign: {0}</value></data>
+  <data name="sig.invite.subject_viewer"><value>NimShare — Please review: {0}</value></data>
+  <data name="sig.invite.body_signer"><value>Hi {0},
+
+{1} would like you to sign the following document: {2}
+
+Open this link:
+{3}
+
+{4}The link is personalized and intended for you only.
+
+— NimShare</value></data>
+  <data name="sig.invite.body_viewer"><value>Hi {0},
+
+{1} would like you to review the following document: {2}
+
+Open this link:
+{3}
+
+{4}The link is personalized and intended for you only.
+
+— NimShare</value></data>
+  <data name="sig.invite.msg_prefix"><value>Message:
+{0}
+
+</value></data>
+
+  <data name="sig.next.subject_signer"><value>NimShare — Please sign: {0}</value></data>
+  <data name="sig.next.subject_viewer"><value>NimShare — Please review: {0}</value></data>
+  <data name="sig.next.body"><value>Hi {0},
+
+you are next in the sequence. Please {1} the document '{2}'.
+
+{3}
+
+— NimShare</value></data>
+  <data name="sig.next.action_sign"><value>sign</value></data>
+  <data name="sig.next.action_review"><value>acknowledge</value></data>
+
+  <data name="sig.manual_remind.subject"><value>Reminder: {0}</value></data>
+  <data name="sig.manual_remind.body"><value>Hi {0},
+
+{1} is asking you again to {2}: {3}
+
+Open the link:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.manual_remind.action_sign"><value>sign</value></data>
+  <data name="sig.manual_remind.action_review"><value>acknowledge</value></data>
+
+  <data name="sig.declined.notif.title"><value>{0} declined the signature: {1}</value></data>
+  <data name="sig.completed.notif.title"><value>Signature request "{0}" completed</value></data>
+  <data name="sig.completed.notif.body"><value>The signed PDF is now in your library.</value></data>
   <data name="notice.profile_saved"><value>Profile saved.</value></data>
   <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
   <data name="notice.avatar_removed"><value>Avatar removed.</value></data>
@@ -610,6 +702,7 @@
   <data name="wiki.page.title_label"><value>Title</value></data>
   <data name="wiki.page.content_label"><value>Content (Markdown)</value></data>
   <data name="wiki.page.confirm_delete"><value>Delete this page?</value></data>
+  <data name="wiki.page.confirm_discard"><value>Discard unsaved changes?</value></data>
 
   <data name="dev.title"><value>Developer access</value></data>
   <data name="dev.lede"><value>Personal API tokens and webhooks for external automation.</value></data>

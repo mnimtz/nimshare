@@ -88,13 +88,13 @@
         <label style="font-weight:400"><input type="checkbox" id="shareNotify"/> @T["upload.notify_me"]</label>
 
         <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:500">🔒 Empfänger einschränken (optional)</summary>
+            <summary style="cursor:pointer;font-weight:500">🔒 @T["links.restrict.legend"]</summary>
             <div class="field" style="margin-top:8px">
-                <label>Erlaubte E-Mails</label>
+                <label>@T["links.restrict.allowed_label"]</label>
                 <input type="text" id="shareAllowedEmails" placeholder="alice@@acme.com, @@tungstenautomation.com, *.gmail.com"/>
-                <div class="helper">Komma-getrennt. Wildcards: <code>@@firma.com</code>, <code>*.firma.com</code>, oder komplette E-Mail.</div>
+                <div class="helper">@Html.Raw(@T["links.restrict.allowed_hint"].Value)</div>
             </div>
-            <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> Empfänger muss E-Mail per 6-stelligem Code bestätigen</label>
+            <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> @T["links.restrict.otp_label"]</label>
         </details>
         <div id="shareResult" style="display:none">
             <div class="modal-result">

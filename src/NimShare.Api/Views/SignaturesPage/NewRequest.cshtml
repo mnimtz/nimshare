@@ -212,6 +212,10 @@ async function ensureUploadedSourceId() {
 }
 
 async function goStep2() {
+    // If we already POSTed a draft in this session, skip re-creating it —
+    // otherwise a Back → Next in the wizard would spam the DB with orphaned
+    // draft rows and leak the participants across them.
+    if (requestId) { show(2); return; }
     const sourceId = await ensureUploadedSourceId();
     if (!sourceId) return;
     const r = await fetch('/api/v1/signatures', {
@@ -293,22 +297,40 @@ async function renderPage() {
 
 function setupDrag(overlay) {
     let start = null, box = null;
-    overlay.addEventListener('mousedown', e => {
-        start = { x: e.offsetX, y: e.offsetY };
+
+    // Convert mouse OR touch/pointer event to overlay-relative coords.
+    function coords(e) {
+        const rect = overlay.getBoundingClientRect();
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: cx - rect.left, y: cy - rect.top };
+    }
+
+    function begin(e) {
+        e.preventDefault();
+        const c = coords(e);
+        start = c;
         box = document.createElement('div');
-        box.style.cssText = 'position:absolute;border:2px dashed #002854;background:rgba(0,160,251,.12)';
+        box.style.cssText = 'position:absolute;border:2px dashed #002854;background:rgba(0,160,251,.12);touch-action:none';
         overlay.appendChild(box);
-    });
-    overlay.addEventListener('mousemove', e => {
+    }
+    function move(e) {
         if (!start) return;
-        const x = Math.min(start.x, e.offsetX), y = Math.min(start.y, e.offsetY);
-        const w = Math.abs(e.offsetX - start.x), h = Math.abs(e.offsetY - start.y);
+        e.preventDefault();
+        const c = coords(e);
+        const x = Math.min(start.x, c.x), y = Math.min(start.y, c.y);
+        const w = Math.abs(c.x - start.x), h = Math.abs(c.y - start.y);
         Object.assign(box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
-    });
-    overlay.addEventListener('mouseup', async e => {
+    }
+    async function end(e) {
         if (!start) return;
-        const x = Math.min(start.x, e.offsetX), y = Math.min(start.y, e.offsetY);
-        const w = Math.abs(e.offsetX - start.x), h = Math.abs(e.offsetY - start.y);
+        e.preventDefault();
+        // Use last known coords (touch has no coords on touchend).
+        const c = e.changedTouches ? { x: e.changedTouches[0].clientX - overlay.getBoundingClientRect().left,
+                                       y: e.changedTouches[0].clientY - overlay.getBoundingClientRect().top }
+                                    : coords(e);
+        const x = Math.min(start.x, c.x), y = Math.min(start.y, c.y);
+        const w = Math.abs(c.x - start.x), h = Math.abs(c.y - start.y);
         start = null;
         if (w < 20 || h < 15) { box.remove(); return; }
         const pdfX = x / pageViewport.scale;
@@ -328,8 +350,22 @@ function setupDrag(overlay) {
         box.style.borderStyle = 'solid';
         box.style.color = '#002854'; box.style.fontWeight = '700';
         box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.justifyContent = 'center';
+        // Delete affordance: visible × button on top-right + tap/right-click.
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = '×';
+        del.style.cssText = 'position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;background:#c22;color:#fff;border:0;font-size:16px;line-height:1;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.3)';
+        del.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); box.remove(); });
+        box.appendChild(del);
         box.addEventListener('contextmenu', ev => { ev.preventDefault(); box.remove(); });
-    });
+    }
+
+    overlay.addEventListener('mousedown', begin);
+    overlay.addEventListener('mousemove', move);
+    overlay.addEventListener('mouseup', end);
+    overlay.addEventListener('touchstart', begin, { passive: false });
+    overlay.addEventListener('touchmove', move, { passive: false });
+    overlay.addEventListener('touchend', end, { passive: false });
 }
 
 function redrawFields(overlay) {

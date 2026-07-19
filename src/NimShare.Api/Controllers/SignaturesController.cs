@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -24,13 +26,15 @@ public class SignaturesController : ControllerBase
     private readonly INotificationService _notify;
     private readonly IUserNotifier _in;
     private readonly IDataProtector _stash;
+    private readonly IStringLocalizer<SharedResources> _l;
 
     public SignaturesController(NimShareDbContext db, ICurrentUserService users,
         IPasswordHasher hasher, INotificationService notify, IUserNotifier inApp,
-        IDataProtectionProvider dp)
+        IDataProtectionProvider dp, IStringLocalizer<SharedResources> localizer)
     {
         _db = db; _users = users; _hasher = hasher; _notify = notify; _in = inApp;
         _stash = dp.CreateProtector("NimShare.Signature.Chain.v1");
+        _l = localizer;
     }
 
     public record RequestDto(Guid Id, Guid SourceFileId, string SourceFileName, string Title,
@@ -231,10 +235,26 @@ public class SignaturesController : ControllerBase
     {
         var raw = ExtractStashedToken(p);
         var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
-        var subject = $"NimShare — {(p.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {r.Title}";
-        var body = $"Hallo {p.Name},\n\n{initiator.DisplayName} bittet dich, {(p.Role == SignatureParticipantRole.Signer ? "das folgende Dokument zu unterschreiben" : "das folgende Dokument zur Kenntnis zu nehmen")}: {r.Title}\n\nÖffne diesen Link:\n{url}\n\n{(string.IsNullOrEmpty(r.Message) ? "" : "Nachricht:\n" + r.Message + "\n\n")}Der Link ist personalisiert und nur für dich bestimmt.\n\n— NimShare";
-        try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
-        catch { /* audit still records the invite */ }
+        // Localise against the initiator's preferred culture — participants
+        // don't have a user row so we can't look up their own language.
+        var prev = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(
+                string.IsNullOrWhiteSpace(initiator.PreferredCulture) ? "en" : initiator.PreferredCulture);
+        }
+        catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            var isSigner = p.Role == SignatureParticipantRole.Signer;
+            var subject = _l[isSigner ? "sig.invite.subject_signer" : "sig.invite.subject_viewer", r.Title].Value;
+            var msgPrefix = string.IsNullOrEmpty(r.Message) ? "" : _l["sig.invite.msg_prefix", r.Message].Value;
+            var body = _l[isSigner ? "sig.invite.body_signer" : "sig.invite.body_viewer",
+                p.Name, initiator.DisplayName, r.Title, url, msgPrefix].Value;
+            try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
+            catch { /* audit still records the invite */ }
+        }
+        finally { CultureInfo.CurrentUICulture = prev; }
         _db.SignatureAudits.Add(new SignatureAudit
         {
             RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
@@ -265,24 +285,35 @@ public class SignaturesController : ControllerBase
         var toRemind = r.DeliveryOrder == SignatureDeliveryOrder.Sequential
             ? stillPending.OrderBy(p => p.Order).Take(1).ToList()
             : stillPending;
-        foreach (var p in toRemind)
+        var prev = CultureInfo.CurrentUICulture;
+        try
         {
-            // Mint a fresh token — the original raw was cleared after Send
-            // (only its bcrypt hash is on the row). Update TokenHash so the
-            // new link works; old link is invalidated by the re-hash.
-            var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
-                .Replace("+", "-").Replace("/", "_").TrimEnd('=');
-            p.TokenHash = _hasher.Hash(raw);
-            var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
-            var subject = $"Erinnerung: {r.Title}";
-            var body = $"Hallo {p.Name},\n\n{me.DisplayName} bittet dich erneut, {(p.Role == SignatureParticipantRole.Signer ? "zu unterschreiben" : "zu bestätigen")}: {r.Title}\n\nÖffne den Link:\n{url}\n\n— NimShare";
-            try { await _notify.SendShareLinkAsync(p.Email, me.DisplayName, subject, body, ct); } catch { }
-            _db.SignatureAudits.Add(new SignatureAudit
-            {
-                RequestId = r.Id, ParticipantId = p.Id,
-                Kind = SignatureAuditKind.Invited, Note = "manual-reminder",
-            });
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(
+                string.IsNullOrWhiteSpace(me.PreferredCulture) ? "en" : me.PreferredCulture);
         }
+        catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            foreach (var p in toRemind)
+            {
+                var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                    .Replace("+", "-").Replace("/", "_").TrimEnd('=');
+                p.TokenHash = _hasher.Hash(raw);
+                var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
+                var action = _l[p.Role == SignatureParticipantRole.Signer
+                    ? "sig.manual_remind.action_sign" : "sig.manual_remind.action_review"].Value;
+                var subject = _l["sig.manual_remind.subject", r.Title].Value;
+                var body = _l["sig.manual_remind.body",
+                    p.Name, me.DisplayName, action, r.Title, url].Value;
+                try { await _notify.SendShareLinkAsync(p.Email, me.DisplayName, subject, body, ct); } catch { }
+                _db.SignatureAudits.Add(new SignatureAudit
+                {
+                    RequestId = r.Id, ParticipantId = p.Id,
+                    Kind = SignatureAuditKind.Invited, Note = "manual-reminder",
+                });
+            }
+        }
+        finally { CultureInfo.CurrentUICulture = prev; }
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }

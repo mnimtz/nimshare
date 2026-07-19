@@ -63,9 +63,29 @@
 </style>
 
 <script>
+let originalTitle = @Json.Serialize(Model.Title);
+let originalBody  = @Json.Serialize(Model.ContentMarkdown ?? "");
+function isDirty() {
+    const t = document.getElementById('editTitle');
+    const c = document.getElementById('editContent');
+    if (!t || !c) return false;
+    return t.value !== originalTitle || c.value !== originalBody;
+}
+// Warn on page navigation while unsaved changes are in the editor.
+window.addEventListener('beforeunload', ev => {
+    if (isDirty()) { ev.preventDefault(); ev.returnValue = ''; }
+});
 function toggleEdit() {
     const v = document.getElementById('viewMode'), e = document.getElementById('editMode');
     const showEdit = v.style.display !== 'none';
+    // Leaving edit mode with unsaved changes → confirm.
+    if (!showEdit && isDirty()) {
+        const msg = @Json.Serialize(@T["wiki.page.confirm_discard"].Value);
+        if (!confirm(msg)) return;
+        // Discard: reset the textarea state so beforeunload no longer fires.
+        document.getElementById('editTitle').value = originalTitle;
+        document.getElementById('editContent').value = originalBody;
+    }
     v.style.display = showEdit ? 'none' : '';
     e.style.display = showEdit ? '' : 'none';
 }
@@ -80,6 +100,9 @@ async function save() {
         })
     });
     if (!r.ok) { alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status); return; }
+    // Clear the dirty state so beforeunload doesn't block the reload.
+    originalTitle = document.getElementById('editTitle').value;
+    originalBody = document.getElementById('editContent').value;
     location.reload();
 }
 async function delPage() {

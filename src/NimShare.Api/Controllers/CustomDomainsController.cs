@@ -106,13 +106,33 @@ public class CustomDomainsController : ControllerBase
         return Uri.CheckHostName(s) is UriHostNameType.Dns;
     }
 
+    /// <summary>
+    /// Verifies a domain-ownership TXT record by querying Google's public DoH
+    /// (DNS-over-HTTPS) API. No extra NuGet package needed; runs anywhere
+    /// outbound HTTPS to dns.google resolves.
+    /// </summary>
     private static async Task<bool> CheckTxtAsync(string hostname, string expected, CancellationToken ct)
     {
-        // NOTE: .NET doesn't ship a native TXT-record resolver. In production, plug in DnsClient.NET
-        //       or MX Toolbox API. This stub keeps the pipeline shape without pulling that in yet.
-        //       Returning false forces the user to hit "Verify" again after we wire the resolver.
-        await Task.Yield();
-        _ = hostname; _ = expected;
-        return false;
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+            http.DefaultRequestHeaders.Add("Accept", "application/dns-json");
+            var url = $"https://dns.google/resolve?name={Uri.EscapeDataString(hostname)}&type=TXT";
+            using var resp = await http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode) return false;
+            var text = await resp.Content.ReadAsStringAsync(ct);
+            using var doc = System.Text.Json.JsonDocument.Parse(text);
+            if (!doc.RootElement.TryGetProperty("Answer", out var answer)) return false;
+            foreach (var a in answer.EnumerateArray())
+            {
+                if (!a.TryGetProperty("data", out var data)) continue;
+                var raw = data.GetString() ?? "";
+                // DoH returns TXT values wrapped in double quotes.
+                var value = raw.Trim().Trim('"');
+                if (string.Equals(value, expected, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+        catch { return false; }
     }
 }

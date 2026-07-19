@@ -288,7 +288,31 @@
   <data name="profile.crop.lede"><value>Faites glisser pour déplacer, utilisez le curseur pour zoomer. Le cercle correspond à ce que les autres verront.</value></data>
   <data name="profile.crop.zoom"><value>Zoom</value></data>
   <data name="profile.crop.save"><value>Enregistrer</value></data>
-  <data name="bulk.selected"><value>selected</value></data>
+  <data name="bulk.selected"><value>sélectionné(s)</value></data>
+  <data name="bulk.download_zip"><value>Télécharger en ZIP</value></data>
+  <data name="bulk.zip.preparing"><value>Préparation du ZIP…</value></data>
+  <data name="bulk.zip.no_files"><value>Sélectionnez au moins un fichier.</value></data>
+
+  <data name="links.restrict.legend"><value>Restreindre les destinataires (facultatif)</value></data>
+  <data name="links.restrict.allowed_label"><value>E-mails autorisés</value></data>
+  <data name="links.restrict.allowed_hint"><value>Séparés par une virgule. Jokers : &lt;code&gt;@entreprise.com&lt;/code&gt;, &lt;code&gt;*.entreprise.com&lt;/code&gt;, ou une adresse complète.</value></data>
+  <data name="links.restrict.otp_label"><value>Le destinataire doit confirmer par un code à 6 chiffres envoyé par e-mail</value></data>
+
+  <data name="landing_admin.public_scope_note"><value>Affiché sur tous les téléchargements de la bibliothèque publique. Seul l'administrateur peut la modifier.</value></data>
+  <data name="landing_admin.personal_scope_note"><value>Affiché sur tous les téléchargements depuis Mes fichiers (votre bibliothèque personnelle).</value></data>
+  <data name="landing_admin.section.text"><value>Textes</value></data>
+  <data name="landing_admin.title.label"><value>Titre</value></data>
+  <data name="landing_admin.title.placeholder"><value>Téléchargements ACME</value></data>
+  <data name="landing_admin.subtitle.label"><value>Sous-titre</value></data>
+  <data name="landing_admin.subtitle.placeholder"><value>Courte phrase d'introduction</value></data>
+  <data name="landing_admin.body.label"><value>Corps du texte (Markdown autorisé)</value></data>
+  <data name="landing_admin.footer.label"><value>Pied de page</value></data>
+  <data name="landing_admin.footer.placeholder"><value>Mentions légales, contact, confidentialité…</value></data>
+  <data name="landing_admin.accent.label"><value>Couleur d'accent</value></data>
+  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.hero.label"><value>Image d'en-tête</value></data>
+  <data name="landing_admin.logo.label"><value>Logo (facultatif)</value></data>
+  <data name="common.preview"><value>Aperçu</value></data>
   <data name="bulk.move"><value>Move</value></data>
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
@@ -421,6 +445,74 @@
   <data name="notice.password_updated"><value>Mot de passe mis à jour.</value></data>
   <data name="err.bad_credentials"><value>E-mail ou mot de passe incorrect.</value></data>
   <data name="err.2fa_code_wrong"><value>Le code est incorrect.</value></data>
+
+  <data name="sig.reminder.subject"><value>Rappel : {0} — en attente</value></data>
+  <data name="sig.reminder.body"><value>Bonjour {0},
+
+ceci est un rappel — {1} attend votre {2} pour '{3}'.
+
+Échéance : {4}
+
+— NimShare</value></data>
+  <data name="sig.reminder.role_signer"><value>signature</value></data>
+  <data name="sig.reminder.role_viewer"><value>confirmation</value></data>
+  <data name="sig.expired.notif.title"><value>Demande de signature {0} — échéance dépassée</value></data>
+  <data name="sig.expired.notif.body"><value>La demande a été annulée automatiquement.</value></data>
+
+  <data name="sig.invite.subject_signer"><value>NimShare — Veuillez signer : {0}</value></data>
+  <data name="sig.invite.subject_viewer"><value>NimShare — Veuillez lire : {0}</value></data>
+  <data name="sig.invite.body_signer"><value>Bonjour {0},
+
+{1} vous demande de signer le document suivant : {2}
+
+Ouvrez ce lien :
+{3}
+
+{4}Le lien est personnalisé et vous est destiné uniquement.
+
+— NimShare</value></data>
+  <data name="sig.invite.body_viewer"><value>Bonjour {0},
+
+{1} vous demande de prendre connaissance du document suivant : {2}
+
+Ouvrez ce lien :
+{3}
+
+{4}Le lien est personnalisé et vous est destiné uniquement.
+
+— NimShare</value></data>
+  <data name="sig.invite.msg_prefix"><value>Message :
+{0}
+
+</value></data>
+
+  <data name="sig.next.subject_signer"><value>NimShare — Veuillez signer : {0}</value></data>
+  <data name="sig.next.subject_viewer"><value>NimShare — Veuillez lire : {0}</value></data>
+  <data name="sig.next.body"><value>Bonjour {0},
+
+c'est à votre tour. Veuillez {1} le document '{2}'.
+
+{3}
+
+— NimShare</value></data>
+  <data name="sig.next.action_sign"><value>signer</value></data>
+  <data name="sig.next.action_review"><value>confirmer</value></data>
+
+  <data name="sig.manual_remind.subject"><value>Rappel : {0}</value></data>
+  <data name="sig.manual_remind.body"><value>Bonjour {0},
+
+{1} vous demande à nouveau de {2} : {3}
+
+Ouvrez le lien :
+{4}
+
+— NimShare</value></data>
+  <data name="sig.manual_remind.action_sign"><value>signer</value></data>
+  <data name="sig.manual_remind.action_review"><value>confirmer</value></data>
+
+  <data name="sig.declined.notif.title"><value>{0} a refusé la signature : {1}</value></data>
+  <data name="sig.completed.notif.title"><value>Demande de signature « {0} » terminée</value></data>
+  <data name="sig.completed.notif.body"><value>Le PDF signé est dans votre bibliothèque.</value></data>
   <data name="notice.profile_saved"><value>Profile saved.</value></data>
   <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
   <data name="notice.avatar_removed"><value>Avatar removed.</value></data>
@@ -612,6 +704,7 @@
   <data name="wiki.page.title_label"><value>Titre</value></data>
   <data name="wiki.page.content_label"><value>Contenu (Markdown)</value></data>
   <data name="wiki.page.confirm_delete"><value>Supprimer cette page ?</value></data>
+  <data name="wiki.page.confirm_discard"><value>Ignorer les modifications non enregistrées ?</value></data>
 
   <data name="dev.title"><value>Accès développeur</value></data>
   <data name="dev.lede"><value>Jetons d'API personnels et webhooks pour l'automatisation externe.</value></data>

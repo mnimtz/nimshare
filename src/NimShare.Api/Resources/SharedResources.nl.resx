@@ -287,7 +287,31 @@
   <data name="profile.crop.lede"><value>Sleep om te verplaatsen, gebruik de schuif om te zoomen. De cirkel toont wat anderen zien.</value></data>
   <data name="profile.crop.zoom"><value>Zoom</value></data>
   <data name="profile.crop.save"><value>Opslaan</value></data>
-  <data name="bulk.selected"><value>selected</value></data>
+  <data name="bulk.selected"><value>geselecteerd</value></data>
+  <data name="bulk.download_zip"><value>ZIP downloaden</value></data>
+  <data name="bulk.zip.preparing"><value>ZIP wordt voorbereid…</value></data>
+  <data name="bulk.zip.no_files"><value>Selecteer minstens één bestand.</value></data>
+
+  <data name="links.restrict.legend"><value>Ontvangers beperken (optioneel)</value></data>
+  <data name="links.restrict.allowed_label"><value>Toegestane e-mails</value></data>
+  <data name="links.restrict.allowed_hint"><value>Komma-gescheiden. Wildcards: &lt;code&gt;@bedrijf.com&lt;/code&gt;, &lt;code&gt;*.bedrijf.com&lt;/code&gt;, of een volledig e-mailadres.</value></data>
+  <data name="links.restrict.otp_label"><value>Ontvanger moet bevestigen via een 6-cijferige code per e-mail</value></data>
+
+  <data name="landing_admin.public_scope_note"><value>Wordt getoond op alle downloads uit de openbare bibliotheek. Alleen de beheerder kan dit wijzigen.</value></data>
+  <data name="landing_admin.personal_scope_note"><value>Wordt getoond op alle downloads uit Mijn bestanden (jouw persoonlijke bibliotheek).</value></data>
+  <data name="landing_admin.section.text"><value>Teksten</value></data>
+  <data name="landing_admin.title.label"><value>Titel</value></data>
+  <data name="landing_admin.title.placeholder"><value>Downloads van ACME</value></data>
+  <data name="landing_admin.subtitle.label"><value>Ondertitel</value></data>
+  <data name="landing_admin.subtitle.placeholder"><value>Korte introductiezin</value></data>
+  <data name="landing_admin.body.label"><value>Tekst (Markdown toegestaan)</value></data>
+  <data name="landing_admin.footer.label"><value>Voettekst</value></data>
+  <data name="landing_admin.footer.placeholder"><value>Colofon, contact, privacy…</value></data>
+  <data name="landing_admin.accent.label"><value>Accentkleur</value></data>
+  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.hero.label"><value>Header-afbeelding</value></data>
+  <data name="landing_admin.logo.label"><value>Logo (optioneel)</value></data>
+  <data name="common.preview"><value>Voorbeeld</value></data>
   <data name="bulk.move"><value>Move</value></data>
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
@@ -420,6 +444,74 @@
   <data name="notice.password_updated"><value>Wachtwoord bijgewerkt.</value></data>
   <data name="err.bad_credentials"><value>E-mail of wachtwoord onjuist.</value></data>
   <data name="err.2fa_code_wrong"><value>De code klopt niet.</value></data>
+
+  <data name="sig.reminder.subject"><value>Herinnering: {0} — nog open</value></data>
+  <data name="sig.reminder.body"><value>Hallo {0},
+
+dit is een herinnering — {1} wacht op je {2} voor '{3}'.
+
+Deadline: {4}
+
+— NimShare</value></data>
+  <data name="sig.reminder.role_signer"><value>handtekening</value></data>
+  <data name="sig.reminder.role_viewer"><value>bevestiging</value></data>
+  <data name="sig.expired.notif.title"><value>Handtekeningverzoek {0} — deadline verstreken</value></data>
+  <data name="sig.expired.notif.body"><value>Het verzoek is automatisch geannuleerd.</value></data>
+
+  <data name="sig.invite.subject_signer"><value>NimShare — Gelieve te tekenen: {0}</value></data>
+  <data name="sig.invite.subject_viewer"><value>NimShare — Gelieve te lezen: {0}</value></data>
+  <data name="sig.invite.body_signer"><value>Hallo {0},
+
+{1} vraagt je om het volgende document te ondertekenen: {2}
+
+Open deze link:
+{3}
+
+{4}De link is gepersonaliseerd en alleen voor jou bedoeld.
+
+— NimShare</value></data>
+  <data name="sig.invite.body_viewer"><value>Hallo {0},
+
+{1} vraagt je om kennis te nemen van het volgende document: {2}
+
+Open deze link:
+{3}
+
+{4}De link is gepersonaliseerd en alleen voor jou bedoeld.
+
+— NimShare</value></data>
+  <data name="sig.invite.msg_prefix"><value>Bericht:
+{0}
+
+</value></data>
+
+  <data name="sig.next.subject_signer"><value>NimShare — Gelieve te tekenen: {0}</value></data>
+  <data name="sig.next.subject_viewer"><value>NimShare — Gelieve te lezen: {0}</value></data>
+  <data name="sig.next.body"><value>Hallo {0},
+
+je bent aan de beurt. Gelieve het document '{2}' te {1}.
+
+{3}
+
+— NimShare</value></data>
+  <data name="sig.next.action_sign"><value>ondertekenen</value></data>
+  <data name="sig.next.action_review"><value>bevestigen</value></data>
+
+  <data name="sig.manual_remind.subject"><value>Herinnering: {0}</value></data>
+  <data name="sig.manual_remind.body"><value>Hallo {0},
+
+{1} vraagt je opnieuw om te {2}: {3}
+
+Open de link:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.manual_remind.action_sign"><value>ondertekenen</value></data>
+  <data name="sig.manual_remind.action_review"><value>bevestigen</value></data>
+
+  <data name="sig.declined.notif.title"><value>{0} heeft de handtekening geweigerd: {1}</value></data>
+  <data name="sig.completed.notif.title"><value>Handtekeningverzoek "{0}" voltooid</value></data>
+  <data name="sig.completed.notif.body"><value>De ondertekende PDF staat nu in je bibliotheek.</value></data>
   <data name="notice.profile_saved"><value>Profile saved.</value></data>
   <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
   <data name="notice.avatar_removed"><value>Avatar removed.</value></data>
@@ -611,6 +703,7 @@
   <data name="wiki.page.title_label"><value>Titel</value></data>
   <data name="wiki.page.content_label"><value>Inhoud (Markdown)</value></data>
   <data name="wiki.page.confirm_delete"><value>Deze pagina verwijderen?</value></data>
+  <data name="wiki.page.confirm_discard"><value>Niet-opgeslagen wijzigingen negeren?</value></data>
 
   <data name="dev.title"><value>Ontwikkelaarstoegang</value></data>
   <data name="dev.lede"><value>Persoonlijke API-tokens en webhooks voor externe automatisering.</value></data>

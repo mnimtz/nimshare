@@ -190,10 +190,23 @@ public class SignController : Controller
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(req.InitiatorUserId, WebhookEvent.SignatureRequestDeclined,
                 new { requestId = req.Id, title = req.Title, declinedBy = p.Email, reason });
-        // Ping the initiator.
-        await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
-            $"{p.Name} hat die Signatur abgelehnt: {req.Title}", body: reason,
-            href: "/signatures", ct: ct);
+        // Ping the initiator in their own language.
+        var declLocalizer = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<NimShare.Api.SharedResources>>();
+        var declPrev = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            var culture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture) ? "en" : req.Initiator!.PreferredCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+        }
+        catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                declLocalizer["sig.declined.notif.title", p.Name, req.Title].Value,
+                body: reason, href: "/signatures", ct: ct);
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = declPrev; }
         return View("Done", new SignDoneViewModel(req, p, false));
     }
 
@@ -213,14 +226,29 @@ public class SignController : Controller
         catch { return; }
         var url = $"{Request.Scheme}://{Request.Host}/sign/{next.Id}?t={raw}";
         var initiator = req.Initiator?.DisplayName ?? "NimShare";
-        var subject = $"NimShare — {(next.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {req.Title}";
-        var body = $"Hallo {next.Name},\n\ndu bist als Nächste:r an der Reihe. Bitte {(next.Role == SignatureParticipantRole.Signer ? "unterschreibe" : "bestätige")} das Dokument '{req.Title}'.\n\n{url}\n\n— NimShare";
+        var localizer = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<NimShare.Api.SharedResources>>();
+        var prev = System.Globalization.CultureInfo.CurrentUICulture;
         try
         {
-            var notif = HttpContext.RequestServices.GetService(typeof(INotificationService)) as INotificationService;
-            if (notif is not null) await notif.SendShareLinkAsync(next.Email, initiator, subject, body, ct);
+            var culture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture) ? "en" : req.Initiator!.PreferredCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
         }
-        catch { }
+        catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            var isSigner = next.Role == SignatureParticipantRole.Signer;
+            var action = localizer[isSigner ? "sig.next.action_sign" : "sig.next.action_review"].Value;
+            var subject = localizer[isSigner ? "sig.next.subject_signer" : "sig.next.subject_viewer", req.Title].Value;
+            var body = localizer["sig.next.body", next.Name, action, req.Title, url].Value;
+            try
+            {
+                var notif = HttpContext.RequestServices.GetService(typeof(INotificationService)) as INotificationService;
+                if (notif is not null) await notif.SendShareLinkAsync(next.Email, initiator, subject, body, ct);
+            }
+            catch { }
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = prev; }
         next.DeclinedReason = null; // clear stashed token now the email is out
         _db.SignatureAudits.Add(new SignatureAudit
         {
@@ -307,10 +335,23 @@ public class SignController : Controller
         {
             RequestId = req.Id, Kind = SignatureAuditKind.Finalized,
         });
-        var quoted = "„" + req.Title + "“";
-        await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
-            $"Signatur-Anforderung {quoted} abgeschlossen", body: "Das signierte PDF liegt in deiner Ablage.",
-            href: "/signatures", fileId: final.Id, ct: ct);
+        var compLocalizer = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<NimShare.Api.SharedResources>>();
+        var compPrev = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            var culture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture) ? "en" : req.Initiator!.PreferredCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+        }
+        catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
+        try
+        {
+            await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                compLocalizer["sig.completed.notif.title", req.Title].Value,
+                body: compLocalizer["sig.completed.notif.body"].Value,
+                href: "/signatures", fileId: final.Id, ct: ct);
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = compPrev; }
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(req.InitiatorUserId, WebhookEvent.SignatureRequestCompleted,
                 new { requestId = req.Id, title = req.Title, finalFileId = final.Id });

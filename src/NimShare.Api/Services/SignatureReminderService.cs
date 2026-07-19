@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
 
@@ -8,7 +10,7 @@ namespace NimShare.Api.Services;
 /// Nightly-ish sweep that:
 /// - fires reminder emails to still-pending participants 72h before the
 ///   deadline (once per participant),
-/// - marks the request Declined when the deadline passes without all
+/// - marks the request Cancelled when the deadline passes without all
 ///   signatures.
 /// Cheap in-process BackgroundService — fine at the volumes NimShare
 /// targets. Ticks every 6h; interval also configurable via
@@ -48,13 +50,12 @@ public class SignatureReminderService : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
         var notif = scope.ServiceProvider.GetRequiredService<INotificationService>();
         var inApp = scope.ServiceProvider.GetRequiredService<IUserNotifier>();
+        var localizerFactory = scope.ServiceProvider.GetRequiredService<IStringLocalizerFactory>();
+        var localizer = localizerFactory.Create(typeof(NimShare.Api.SharedResources));
 
         var now = DateTimeOffset.UtcNow;
         var soon = now.Add(_remindWindow);
 
-        // Fire reminders for still-pending participants whose deadline is
-        // approaching. We remember which reminders went out via an audit
-        // row (Kind=Invited, Note="reminder-<pid>") so we don't spam.
         var pending = await db.SignatureRequests
             .Where(r => r.Status == SignatureRequestStatus.Sent
                 && r.Deadline != null && r.Deadline > now && r.Deadline <= soon)
@@ -64,24 +65,43 @@ public class SignatureReminderService : BackgroundService
             .ToListAsync(ct);
         foreach (var req in pending)
         {
-            foreach (var p in req.Participants.Where(x =>
-                x.Status != SignatureParticipantStatus.Signed
-                && x.Status != SignatureParticipantStatus.Declined))
+            // Localise reminder emails against the initiator's preferred
+            // culture — Signature participants don't have a User row so we
+            // can't look up their own language.
+            var initiatorCulture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture)
+                ? "en" : req.Initiator!.PreferredCulture;
+            CultureInfo prev = CultureInfo.CurrentUICulture;
+            try { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(initiatorCulture); }
+            catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
+            try
             {
-                var already = await db.SignatureAudits.AnyAsync(a =>
-                    a.RequestId == req.Id && a.ParticipantId == p.Id
-                    && a.Kind == SignatureAuditKind.Invited
-                    && a.Note != null && a.Note.StartsWith("reminder"), ct);
-                if (already) continue;
-                var subject = $"Erinnerung: {req.Title} – noch offen";
-                var body = $"Hallo {p.Name},\n\ndies ist eine Erinnerung: {req.Initiator?.DisplayName} wartet auf deine {(p.Role == SignatureParticipantRole.Signer ? "Unterschrift" : "Bestätigung")} für '{req.Title}'.\n\nFrist: {req.Deadline:yyyy-MM-dd HH:mm 'UTC'}\n\n— NimShare";
-                try { await notif.SendShareLinkAsync(p.Email, "NimShare", subject, body, ct); } catch { }
-                db.SignatureAudits.Add(new SignatureAudit
+                foreach (var p in req.Participants.Where(x =>
+                    x.Status != SignatureParticipantStatus.Signed
+                    && x.Status != SignatureParticipantStatus.Declined))
                 {
-                    RequestId = req.Id, ParticipantId = p.Id,
-                    Kind = SignatureAuditKind.Invited, Note = "reminder",
-                });
+                    var already = await db.SignatureAudits.AnyAsync(a =>
+                        a.RequestId == req.Id && a.ParticipantId == p.Id
+                        && a.Kind == SignatureAuditKind.Invited
+                        && a.Note != null && a.Note.StartsWith("reminder"), ct);
+                    if (already) continue;
+                    var roleWord = localizer[p.Role == SignatureParticipantRole.Signer
+                        ? "sig.reminder.role_signer" : "sig.reminder.role_viewer"].Value;
+                    var subject = localizer["sig.reminder.subject", req.Title].Value;
+                    var body = localizer["sig.reminder.body",
+                        p.Name,
+                        req.Initiator?.DisplayName ?? "NimShare",
+                        roleWord,
+                        req.Title,
+                        req.Deadline!.Value.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture)].Value;
+                    try { await notif.SendShareLinkAsync(p.Email, "NimShare", subject, body, ct); } catch { }
+                    db.SignatureAudits.Add(new SignatureAudit
+                    {
+                        RequestId = req.Id, ParticipantId = p.Id,
+                        Kind = SignatureAuditKind.Invited, Note = "reminder",
+                    });
+                }
             }
+            finally { CultureInfo.CurrentUICulture = prev; }
         }
         await db.SaveChangesAsync(ct);
 
@@ -93,15 +113,25 @@ public class SignatureReminderService : BackgroundService
             .ToListAsync(ct);
         foreach (var req in expired)
         {
-            req.Status = SignatureRequestStatus.Cancelled;
-            db.SignatureAudits.Add(new SignatureAudit
+            var initiatorCulture = string.IsNullOrWhiteSpace(req.Initiator?.PreferredCulture)
+                ? "en" : req.Initiator!.PreferredCulture;
+            CultureInfo prev = CultureInfo.CurrentUICulture;
+            try { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(initiatorCulture); }
+            catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
+            try
             {
-                RequestId = req.Id, Kind = SignatureAuditKind.Cancelled,
-                Note = "deadline expired",
-            });
-            await inApp.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
-                $"Signatur-Anforderung {req.Title} — Frist abgelaufen",
-                body: "Die Anforderung wurde automatisch abgebrochen.", href: "/signatures", ct: ct);
+                req.Status = SignatureRequestStatus.Cancelled;
+                db.SignatureAudits.Add(new SignatureAudit
+                {
+                    RequestId = req.Id, Kind = SignatureAuditKind.Cancelled,
+                    Note = "deadline expired",
+                });
+                await inApp.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                    localizer["sig.expired.notif.title", req.Title].Value,
+                    body: localizer["sig.expired.notif.body"].Value,
+                    href: "/signatures", ct: ct);
+            }
+            finally { CultureInfo.CurrentUICulture = prev; }
         }
         await db.SaveChangesAsync(ct);
     }

@@ -4,21 +4,21 @@
     var scope = (LandingTemplateScope)ViewData["Scope"]!;
     var scopeSlug = scope == LandingTemplateScope.Global ? "global" : "mine";
     var isGlobal = scope == LandingTemplateScope.Global;
-    ViewData["Title"] = isGlobal ? "Landing-Template — Öffentlich" : "Landing-Template — Meine Dateien";
+    ViewData["Title"] = isGlobal ? T["settings.public_download_page"].Value : T["settings.download_page"].Value;
     Layout = "_AppShell";
 }
 <div class="page-header">
     <div>
-        <a href="/dashboard" class="muted" style="text-decoration:none">← Dashboard</a>
+        <a href="/dashboard" class="muted" style="text-decoration:none">← @T["nav.dashboard"]</a>
         <h1 style="margin-top:6px">🎨 @ViewData["Title"]</h1>
         <p class="lede">
             @if (isGlobal)
             {
-                <span>Wird auf allen Downloads aus dem öffentlichen Bereich angezeigt. Nur Admins können das ändern.</span>
+                <span>@T["landing_admin.public_scope_note"]</span>
             }
             else
             {
-                <span>Wird auf allen Downloads aus <em>Meine Dateien</em> (deiner Personal-Ablage) angezeigt.</span>
+                <span>@T["landing_admin.personal_scope_note"]</span>
             }
         </p>
     </div>
@@ -32,38 +32,37 @@
     <div style="flex:2;min-width:320px">
         <form method="post" action="/settings/landing/@scopeSlug/save" class="card" style="margin-bottom:16px">
             @Html.AntiForgeryToken()
-            <h2 class="card-title">✏ Texte</h2>
+            <h2 class="card-title">✏ @T["landing_admin.section.text"]</h2>
             <div class="field">
-                <label>Titel</label>
-                <input type="text" name="title" value="@Model.Title" placeholder="z. B. „Downloads von ACME"" maxlength="200"/>
+                <label>@T["landing_admin.title.label"]</label>
+                <input type="text" name="title" value="@Model.Title" placeholder="@T["landing_admin.title.placeholder"]" maxlength="200"/>
             </div>
             <div class="field">
-                <label>Untertitel</label>
-                <input type="text" name="subtitle" value="@Model.Subtitle" placeholder="Kurzer Einleitungssatz" maxlength="400"/>
+                <label>@T["landing_admin.subtitle.label"]</label>
+                <input type="text" name="subtitle" value="@Model.Subtitle" placeholder="@T["landing_admin.subtitle.placeholder"]" maxlength="400"/>
             </div>
             <div class="field">
-                <label>Fließtext (Markdown erlaubt)</label>
+                <label>@T["landing_admin.body.label"]</label>
                 <textarea name="bodyMarkdown" rows="6" maxlength="4000">@Model.BodyMarkdown</textarea>
-                <div class="helper">Erscheint über dem Download-Button. **fett**, *kursiv*, [Link](https://…), Listen mit -.</div>
             </div>
             <div class="row" style="gap:16px">
                 <div class="field" style="flex:2">
-                    <label>Fußzeile</label>
-                    <input type="text" name="footerText" value="@Model.FooterText" placeholder="Impressum, Kontakt, Datenschutz…" maxlength="500"/>
+                    <label>@T["landing_admin.footer.label"]</label>
+                    <input type="text" name="footerText" value="@Model.FooterText" placeholder="@T["landing_admin.footer.placeholder"]" maxlength="500"/>
                 </div>
                 <div class="field" style="flex:1;min-width:140px">
-                    <label>Akzentfarbe</label>
+                    <label>@T["landing_admin.accent.label"]</label>
                     <input type="color" name="primaryColor" value="@(Model.PrimaryColor ?? "#002854")" style="width:100%;height:38px;padding:2px"/>
                 </div>
             </div>
-            <div class="actions"><button type="submit" class="btn btn-primary">💾 Speichern</button></div>
+            <div class="actions"><button type="submit" class="btn btn-primary">💾 @T["common.save"]</button></div>
         </form>
 
         <div class="card">
-            <h2 class="card-title">🖼 Bilder</h2>
+            <h2 class="card-title">🖼 @T["landing_admin.section.branding"]</h2>
             <div class="row" style="gap:24px;align-items:flex-start;flex-wrap:wrap">
                 <div style="flex:1;min-width:240px">
-                    <label style="font-weight:600">Logo (oben links)</label>
+                    <label style="font-weight:600">@T["landing_admin.logo.label"]</label>
                     <div style="margin:8px 0;padding:12px;border:1px dashed var(--tw-gray-300);border-radius:6px;text-align:center;background:var(--tw-gray-100)">
                         @if (!string.IsNullOrEmpty(Model.LogoUrl))
                         {
@@ -71,7 +70,7 @@
                         }
                         else
                         {
-                            <span class="muted">Kein Logo</span>
+                            <span class="muted">—</span>
                         }
                     </div>
                     <form method="post" action="/settings/landing/@scopeSlug/upload?kind=logo" enctype="multipart/form-data" class="row" style="gap:6px">
@@ -83,12 +82,12 @@
                     {
                         <form method="post" action="/settings/landing/@scopeSlug/remove?kind=logo" style="margin-top:6px">
                             @Html.AntiForgeryToken()
-                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 Logo entfernen</button>
+                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 @T["common.delete"]</button>
                         </form>
                     }
                 </div>
                 <div style="flex:2;min-width:280px">
-                    <label style="font-weight:600">Titelbild (Banner)</label>
+                    <label style="font-weight:600">@T["landing_admin.hero.label"]</label>
                     <div style="margin:8px 0;padding:12px;border:1px dashed var(--tw-gray-300);border-radius:6px;text-align:center;background:var(--tw-gray-100)">
                         @if (!string.IsNullOrEmpty(Model.HeroUrl))
                         {
@@ -96,7 +95,7 @@
                         }
                         else
                         {
-                            <span class="muted">Kein Banner</span>
+                            <span class="muted">—</span>
                         }
                     </div>
                     <form method="post" action="/settings/landing/@scopeSlug/upload?kind=hero" enctype="multipart/form-data" class="row" style="gap:6px">
@@ -108,7 +107,7 @@
                     {
                         <form method="post" action="/settings/landing/@scopeSlug/remove?kind=hero" style="margin-top:6px">
                             @Html.AntiForgeryToken()
-                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 Banner entfernen</button>
+                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 @T["common.delete"]</button>
                         </form>
                     }
                 </div>
@@ -119,7 +118,7 @@
     <!-- ─────────────── Preview column ─────────────── -->
     <div style="flex:1;min-width:280px">
         <div class="card">
-            <h2 class="card-title">👁 Vorschau</h2>
+            <h2 class="card-title">👁 @T["common.preview"]</h2>
             <div style="background:var(--tw-white);border:1px solid var(--tw-gray-300);border-radius:8px;overflow:hidden">
                 @if (!string.IsNullOrEmpty(Model.HeroUrl))
                 {

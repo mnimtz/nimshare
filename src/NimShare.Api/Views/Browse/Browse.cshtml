@@ -103,6 +103,7 @@
 
         <div class="fm-bulkbar" id="bulkBar">
             <span class="count" id="bulkCount">0 @T["bulk.selected"]</span>
+            <button onclick="bulkZip()">📦 @T["bulk.download_zip"]</button>
             @if (canWrite) { <button onclick="openMoveModal()">↦ @T["bulk.move"]</button> }
             <button onclick="bulkDelete()">🗑 @T["bulk.delete"]</button>
             <button onclick="clearSelection()" style="margin-left:auto">✕ @T["bulk.clear"]</button>
@@ -319,6 +320,45 @@ async function bulkDelete() {
         body: JSON.stringify({ ids }),
     });
     if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+}
+
+async function bulkZip() {
+    // Files-only for the moment (folder zipping is a future feature).
+    const fileIds = Array.from(document.querySelectorAll('tr.ctx.selected[data-kind="file"]'))
+        .map(tr => tr.dataset.id);
+    if (!fileIds.length) {
+        alert(@Json.Serialize(T["bulk.zip.no_files"].Value));
+        return;
+    }
+    // POST returns a chunked zip stream — use a hidden form so the browser
+    // handles the download dialog itself (fetch would buffer in memory).
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = '/api/v1/files/bulk-zip';
+    form.style.display = 'none';
+    // JSON body via a fetch → blob → download-anchor because form-post can't
+    // send JSON. Instead of the form workaround, do the fetch + save flow.
+    document.body.appendChild(form);
+
+    const busy = @Json.Serialize(T["bulk.zip.preparing"].Value);
+    const oldTitle = document.title;
+    document.title = busy;
+    try {
+        const r = await fetch('/api/v1/files/bulk-zip', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ fileIds, archiveName: null })
+        });
+        if (!r.ok) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + r.status); return; }
+        const blob = await r.blob();
+        const cd = r.headers.get('Content-Disposition') || '';
+        const m = /filename="?([^"]+)"?/.exec(cd);
+        const name = m ? m[1] : 'nimshare.zip';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    } finally { document.title = oldTitle; form.remove(); }
 }
 
 async function deleteFile(id) {

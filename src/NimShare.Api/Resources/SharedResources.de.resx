@@ -286,7 +286,31 @@
   <data name="profile.crop.lede"><value>Ziehen zum Verschieben, Regler zum Zoomen. Der Kreis zeigt, was andere sehen.</value></data>
   <data name="profile.crop.zoom"><value>Zoom</value></data>
   <data name="profile.crop.save"><value>Bild speichern</value></data>
-  <data name="bulk.selected"><value>ausgewaehlt</value></data>
+  <data name="bulk.selected"><value>ausgewählt</value></data>
+  <data name="bulk.download_zip"><value>ZIP herunterladen</value></data>
+  <data name="bulk.zip.preparing"><value>ZIP wird vorbereitet…</value></data>
+  <data name="bulk.zip.no_files"><value>Bitte mindestens eine Datei auswählen.</value></data>
+
+  <data name="links.restrict.legend"><value>Empfänger einschränken (optional)</value></data>
+  <data name="links.restrict.allowed_label"><value>Erlaubte E-Mails</value></data>
+  <data name="links.restrict.allowed_hint"><value>Komma-getrennt. Wildcards: &lt;code&gt;@firma.com&lt;/code&gt;, &lt;code&gt;*.firma.com&lt;/code&gt;, oder komplette E-Mail.</value></data>
+  <data name="links.restrict.otp_label"><value>Empfänger muss per 6-stelligem Code per E-Mail bestätigen</value></data>
+
+  <data name="landing_admin.public_scope_note"><value>Wird auf allen Downloads aus dem öffentlichen Bereich angezeigt. Nur Admin kann das ändern.</value></data>
+  <data name="landing_admin.personal_scope_note"><value>Wird auf allen Downloads aus Meine Dateien (deiner Personal-Ablage) angezeigt.</value></data>
+  <data name="landing_admin.section.text"><value>Texte</value></data>
+  <data name="landing_admin.title.label"><value>Titel</value></data>
+  <data name="landing_admin.title.placeholder"><value>Downloads von ACME</value></data>
+  <data name="landing_admin.subtitle.label"><value>Untertitel</value></data>
+  <data name="landing_admin.subtitle.placeholder"><value>Kurzer Einleitungssatz</value></data>
+  <data name="landing_admin.body.label"><value>Fließtext (Markdown erlaubt)</value></data>
+  <data name="landing_admin.footer.label"><value>Fußzeile</value></data>
+  <data name="landing_admin.footer.placeholder"><value>Impressum, Kontakt, Datenschutz…</value></data>
+  <data name="landing_admin.accent.label"><value>Akzentfarbe</value></data>
+  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.hero.label"><value>Hero-Bild</value></data>
+  <data name="landing_admin.logo.label"><value>Logo (optional)</value></data>
+  <data name="common.preview"><value>Vorschau</value></data>
   <data name="bulk.move"><value>Verschieben</value></data>
   <data name="bulk.delete"><value>Loeschen</value></data>
   <data name="bulk.clear"><value>Auswahl aufheben</value></data>
@@ -419,6 +443,74 @@
   <data name="notice.password_updated"><value>Passwort aktualisiert.</value></data>
   <data name="err.bad_credentials"><value>E-Mail oder Passwort falsch.</value></data>
   <data name="err.2fa_code_wrong"><value>Der Code stimmt nicht.</value></data>
+
+  <data name="sig.reminder.subject"><value>Erinnerung: {0} — noch offen</value></data>
+  <data name="sig.reminder.body"><value>Hallo {0},
+
+dies ist eine Erinnerung — {1} wartet auf deine {2} für '{3}'.
+
+Frist: {4}
+
+— NimShare</value></data>
+  <data name="sig.reminder.role_signer"><value>Unterschrift</value></data>
+  <data name="sig.reminder.role_viewer"><value>Bestätigung</value></data>
+  <data name="sig.expired.notif.title"><value>Signatur-Anforderung {0} — Frist abgelaufen</value></data>
+  <data name="sig.expired.notif.body"><value>Die Anforderung wurde automatisch abgebrochen.</value></data>
+
+  <data name="sig.invite.subject_signer"><value>NimShare — Bitte unterschreiben: {0}</value></data>
+  <data name="sig.invite.subject_viewer"><value>NimShare — Bitte lesen: {0}</value></data>
+  <data name="sig.invite.body_signer"><value>Hallo {0},
+
+{1} bittet dich, das folgende Dokument zu unterschreiben: {2}
+
+Öffne diesen Link:
+{3}
+
+{4}Der Link ist personalisiert und nur für dich bestimmt.
+
+— NimShare</value></data>
+  <data name="sig.invite.body_viewer"><value>Hallo {0},
+
+{1} bittet dich, das folgende Dokument zur Kenntnis zu nehmen: {2}
+
+Öffne diesen Link:
+{3}
+
+{4}Der Link ist personalisiert und nur für dich bestimmt.
+
+— NimShare</value></data>
+  <data name="sig.invite.msg_prefix"><value>Nachricht:
+{0}
+
+</value></data>
+
+  <data name="sig.next.subject_signer"><value>NimShare — Bitte unterschreiben: {0}</value></data>
+  <data name="sig.next.subject_viewer"><value>NimShare — Bitte lesen: {0}</value></data>
+  <data name="sig.next.body"><value>Hallo {0},
+
+du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
+
+{3}
+
+— NimShare</value></data>
+  <data name="sig.next.action_sign"><value>unterschreibe</value></data>
+  <data name="sig.next.action_review"><value>bestätige</value></data>
+
+  <data name="sig.manual_remind.subject"><value>Erinnerung: {0}</value></data>
+  <data name="sig.manual_remind.body"><value>Hallo {0},
+
+{1} bittet dich erneut, {2}: {3}
+
+Öffne den Link:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.manual_remind.action_sign"><value>zu unterschreiben</value></data>
+  <data name="sig.manual_remind.action_review"><value>zu bestätigen</value></data>
+
+  <data name="sig.declined.notif.title"><value>{0} hat die Signatur abgelehnt: {1}</value></data>
+  <data name="sig.completed.notif.title"><value>Signatur-Anforderung „{0}" abgeschlossen</value></data>
+  <data name="sig.completed.notif.body"><value>Das signierte PDF liegt in deiner Ablage.</value></data>
   <data name="notice.profile_saved"><value>Profil gespeichert.</value></data>
   <data name="notice.avatar_updated"><value>Profilbild aktualisiert.</value></data>
   <data name="notice.avatar_removed"><value>Profilbild entfernt.</value></data>
@@ -616,6 +708,7 @@
   <data name="wiki.page.title_label"><value>Titel</value></data>
   <data name="wiki.page.content_label"><value>Inhalt (Markdown)</value></data>
   <data name="wiki.page.confirm_delete"><value>Diese Seite löschen?</value></data>
+  <data name="wiki.page.confirm_discard"><value>Ungespeicherte Änderungen verwerfen?</value></data>
 
   <data name="dev.title"><value>Entwickler-Zugriff</value></data>
   <data name="dev.lede"><value>Persönliche API-Tokens und Webhooks für externe Automatisierung.</value></data>

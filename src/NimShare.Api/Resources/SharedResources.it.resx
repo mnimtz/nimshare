@@ -288,7 +288,31 @@
   <data name="profile.crop.lede"><value>Trascina per spostare, usa il cursore per zoomare. Il cerchio mostra cosa vedranno gli altri.</value></data>
   <data name="profile.crop.zoom"><value>Zoom</value></data>
   <data name="profile.crop.save"><value>Salva</value></data>
-  <data name="bulk.selected"><value>selected</value></data>
+  <data name="bulk.selected"><value>selezionati</value></data>
+  <data name="bulk.download_zip"><value>Scarica ZIP</value></data>
+  <data name="bulk.zip.preparing"><value>Preparazione ZIP…</value></data>
+  <data name="bulk.zip.no_files"><value>Seleziona almeno un file.</value></data>
+
+  <data name="links.restrict.legend"><value>Limita destinatari (opzionale)</value></data>
+  <data name="links.restrict.allowed_label"><value>Email consentite</value></data>
+  <data name="links.restrict.allowed_hint"><value>Separate da virgola. Jolly: &lt;code&gt;@azienda.com&lt;/code&gt;, &lt;code&gt;*.azienda.com&lt;/code&gt;, o un'email completa.</value></data>
+  <data name="links.restrict.otp_label"><value>Il destinatario deve confermare tramite codice a 6 cifre inviato via email</value></data>
+
+  <data name="landing_admin.public_scope_note"><value>Mostrato su tutti i download dell'area pubblica. Solo l'admin può modificarlo.</value></data>
+  <data name="landing_admin.personal_scope_note"><value>Mostrato su tutti i download da I miei file (la tua libreria personale).</value></data>
+  <data name="landing_admin.section.text"><value>Testi</value></data>
+  <data name="landing_admin.title.label"><value>Titolo</value></data>
+  <data name="landing_admin.title.placeholder"><value>Download ACME</value></data>
+  <data name="landing_admin.subtitle.label"><value>Sottotitolo</value></data>
+  <data name="landing_admin.subtitle.placeholder"><value>Breve frase introduttiva</value></data>
+  <data name="landing_admin.body.label"><value>Corpo (Markdown consentito)</value></data>
+  <data name="landing_admin.footer.label"><value>Piè di pagina</value></data>
+  <data name="landing_admin.footer.placeholder"><value>Note legali, contatto, privacy…</value></data>
+  <data name="landing_admin.accent.label"><value>Colore accento</value></data>
+  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.hero.label"><value>Immagine hero</value></data>
+  <data name="landing_admin.logo.label"><value>Logo (opzionale)</value></data>
+  <data name="common.preview"><value>Anteprima</value></data>
   <data name="bulk.move"><value>Move</value></data>
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
@@ -421,6 +445,74 @@
   <data name="notice.password_updated"><value>Password aggiornata.</value></data>
   <data name="err.bad_credentials"><value>Email o password errata.</value></data>
   <data name="err.2fa_code_wrong"><value>Il codice non è corretto.</value></data>
+
+  <data name="sig.reminder.subject"><value>Promemoria: {0} — ancora aperto</value></data>
+  <data name="sig.reminder.body"><value>Ciao {0},
+
+questo è un promemoria — {1} sta aspettando la tua {2} per '{3}'.
+
+Scadenza: {4}
+
+— NimShare</value></data>
+  <data name="sig.reminder.role_signer"><value>firma</value></data>
+  <data name="sig.reminder.role_viewer"><value>conferma</value></data>
+  <data name="sig.expired.notif.title"><value>Richiesta di firma {0} — scadenza superata</value></data>
+  <data name="sig.expired.notif.body"><value>La richiesta è stata annullata automaticamente.</value></data>
+
+  <data name="sig.invite.subject_signer"><value>NimShare — Per favore firma: {0}</value></data>
+  <data name="sig.invite.subject_viewer"><value>NimShare — Per favore leggi: {0}</value></data>
+  <data name="sig.invite.body_signer"><value>Ciao {0},
+
+{1} ti chiede di firmare il seguente documento: {2}
+
+Apri questo link:
+{3}
+
+{4}Il link è personalizzato ed è destinato solo a te.
+
+— NimShare</value></data>
+  <data name="sig.invite.body_viewer"><value>Ciao {0},
+
+{1} ti chiede di prendere visione del seguente documento: {2}
+
+Apri questo link:
+{3}
+
+{4}Il link è personalizzato ed è destinato solo a te.
+
+— NimShare</value></data>
+  <data name="sig.invite.msg_prefix"><value>Messaggio:
+{0}
+
+</value></data>
+
+  <data name="sig.next.subject_signer"><value>NimShare — Per favore firma: {0}</value></data>
+  <data name="sig.next.subject_viewer"><value>NimShare — Per favore leggi: {0}</value></data>
+  <data name="sig.next.body"><value>Ciao {0},
+
+è il tuo turno. Per favore {1} il documento '{2}'.
+
+{3}
+
+— NimShare</value></data>
+  <data name="sig.next.action_sign"><value>firma</value></data>
+  <data name="sig.next.action_review"><value>conferma</value></data>
+
+  <data name="sig.manual_remind.subject"><value>Promemoria: {0}</value></data>
+  <data name="sig.manual_remind.body"><value>Ciao {0},
+
+{1} ti chiede di nuovo di {2}: {3}
+
+Apri il link:
+{4}
+
+— NimShare</value></data>
+  <data name="sig.manual_remind.action_sign"><value>firmare</value></data>
+  <data name="sig.manual_remind.action_review"><value>confermare</value></data>
+
+  <data name="sig.declined.notif.title"><value>{0} ha rifiutato la firma: {1}</value></data>
+  <data name="sig.completed.notif.title"><value>Richiesta di firma «{0}» completata</value></data>
+  <data name="sig.completed.notif.body"><value>Il PDF firmato è nella tua libreria.</value></data>
   <data name="notice.profile_saved"><value>Profile saved.</value></data>
   <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
   <data name="notice.avatar_removed"><value>Avatar removed.</value></data>
@@ -612,6 +704,7 @@
   <data name="wiki.page.title_label"><value>Titolo</value></data>
   <data name="wiki.page.content_label"><value>Contenuto (Markdown)</value></data>
   <data name="wiki.page.confirm_delete"><value>Eliminare questa pagina?</value></data>
+  <data name="wiki.page.confirm_discard"><value>Annullare le modifiche non salvate?</value></data>
 
   <data name="dev.title"><value>Accesso sviluppatore</value></data>
   <data name="dev.lede"><value>Token API personali e webhook per l'automazione esterna.</value></data>
