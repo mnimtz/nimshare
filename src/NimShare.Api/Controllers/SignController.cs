@@ -333,7 +333,16 @@ public class SignController : Controller
             Kind = SignatureAuditKind.Invited, Note = $"reassigned-from:{p.Email}",
         });
 
+        // Explicit transaction: the whole reassignment (old participant flipped,
+        // new one added, fields re-parented, two audit rows) MUST commit as one
+        // atom. Sqlite/SqlServer default is auto-commit per SaveChanges, but a
+        // background finalizer for the same request could race and see a
+        // half-applied state (delegate exists, fields not yet moved). This
+        // guarantees the reader either sees the pre-reassign world or the full
+        // post-reassign one.
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         var url = $"{Request.Scheme}://{Request.Host}/sign/{delegateP.Id}?t={raw}";
         var initiator = req.Initiator?.DisplayName ?? "NimShare";

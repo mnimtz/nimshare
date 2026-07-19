@@ -822,6 +822,12 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="certs.err.pfx_too_large"><value>PFX muss kleiner als 512 KB sein.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX muss Base64-kodiert sein.</value></data>
 
+  <data name="email_tpl.preview.recipient_name"><value>Alice Muster</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Sender</value></data>
+  <data name="email_tpl.preview.sender_action"><value>unterschreiben</value></data>
+  <data name="email_tpl.preview.doc_title"><value>Beispiel-Vertrag</value></data>
+  <data name="email_tpl.preview.message"><value>Bitte bis Freitag.</value></data>
+
   <data name="certs.title"><value>Signatur-Zertifikate</value></data>
   <data name="certs.lede"><value>Erstelle ein eigenes Zertifikat für digitale Signaturen in NimShare oder importiere eine vorhandene PKCS#12-Datei (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Zertifikat erstellen</value></data>

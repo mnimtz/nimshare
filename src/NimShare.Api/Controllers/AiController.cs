@@ -352,13 +352,17 @@ public class AiController : ControllerBase
         if (hits.Count == 0)
             return Ok(new { answer = string.Empty, citations = Array.Empty<SearchHit>() });
 
-        // Build passages using cached summaries where available; expand with extracted text otherwise.
+        // Build passages using cached summaries where available; expand with
+        // extracted text otherwise. Batch-load the files in ONE query — the
+        // hit-loop's FindAsync-per-hit was N+1 (7 db round-trips per chat).
+        var hitIds = hits.Select(h => h.Id).ToArray();
+        var files = await _db.Files
+            .Where(f => hitIds.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id, ct);
         var passages = new List<string>();
         for (int i = 0; i < hits.Count; i++)
         {
-            var hit = hits[i];
-            var file = await _db.Files.FindAsync(new object[] { hit.Id }, ct);
-            if (file is null) continue;
+            if (!files.TryGetValue(hits[i].Id, out var file)) continue;
             var text = !string.IsNullOrEmpty(file.AiSummary)
                 ? file.AiSummary
                 : await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct) ?? file.Name;

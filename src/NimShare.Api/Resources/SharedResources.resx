@@ -816,6 +816,12 @@ Please open this link to sign:
   <data name="certs.err.pfx_too_large"><value>PFX must be smaller than 512 KB.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX must be base64-encoded.</value></data>
 
+  <data name="email_tpl.preview.recipient_name"><value>Alice Sample</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Sender</value></data>
+  <data name="email_tpl.preview.sender_action"><value>sign</value></data>
+  <data name="email_tpl.preview.doc_title"><value>Sample Contract</value></data>
+  <data name="email_tpl.preview.message"><value>Please by Friday.</value></data>
+
   <data name="certs.title"><value>Signing certificates</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Create certificate</value></data>

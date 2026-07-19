@@ -818,6 +818,12 @@ Apri questo link per firmare:
   <data name="certs.err.pfx_too_large"><value>PFX deve essere minore di 512 KB.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX deve essere base64.</value></data>
 
+  <data name="email_tpl.preview.recipient_name"><value>Alice Esempio</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Mittente</value></data>
+  <data name="email_tpl.preview.sender_action"><value>firmare</value></data>
+  <data name="email_tpl.preview.doc_title"><value>Contratto d'esempio</value></data>
+  <data name="email_tpl.preview.message"><value>Entro venerdì per favore.</value></data>
+
   <data name="certs.title"><value>Certificati di firma</value></data>
   <data name="certs.lede"><value>Crea un certificato auto-firmato per le firme in NimShare o importa un PKCS#12 (.pfx/.p12) esistente.</value></data>
   <data name="certs.new_self"><value>Crea certificato</value></data>

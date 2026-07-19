@@ -818,6 +818,12 @@ Ouvrez ce lien pour signer :
   <data name="certs.err.pfx_too_large"><value>PFX doit faire moins de 512 Ko.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX doit être en base64.</value></data>
 
+  <data name="email_tpl.preview.recipient_name"><value>Alice Exemple</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Expéditeur</value></data>
+  <data name="email_tpl.preview.sender_action"><value>signer</value></data>
+  <data name="email_tpl.preview.doc_title"><value>Contrat exemple</value></data>
+  <data name="email_tpl.preview.message"><value>Avant vendredi svp.</value></data>
+
   <data name="certs.title"><value>Certificats de signature</value></data>
   <data name="certs.lede"><value>Créez un certificat auto-signé pour les signatures NimShare ou importez un PKCS#12 (.pfx/.p12) existant.</value></data>
   <data name="certs.new_self"><value>Créer un certificat</value></data>

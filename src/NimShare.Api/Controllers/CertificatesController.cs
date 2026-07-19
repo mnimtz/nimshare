@@ -53,19 +53,20 @@ public class CertificatesApiController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
+        var now = DateTimeOffset.UtcNow;
+        // Direct-to-DTO projection — avoids leaking a partially-populated
+        // SigningCertificate entity (PfxDataEncrypted = null!) that a future
+        // caller could accidentally re-attach and blank out.
         var items = await _db.SigningCertificates
             .Where(c => c.OwnerUserId == me.Id)
             .OrderByDescending(c => c.IsDefault).ThenByDescending(c => c.CreatedAt)
-            .Select(c => new SigningCertificate
-            {
-                Id = c.Id, Name = c.Name, SubjectCommonName = c.SubjectCommonName,
-                Issuer = c.Issuer, NotBefore = c.NotBefore, NotAfter = c.NotAfter,
-                Thumbprint = c.Thumbprint, IsSelfIssued = c.IsSelfIssued,
-                IsDefault = c.IsDefault, LastUsedAt = c.LastUsedAt,
-                UseCount = c.UseCount, CreatedAt = c.CreatedAt,
-            })
+            .Select(c => new CertDto(
+                c.Id, c.Name, c.SubjectCommonName, c.Issuer,
+                c.NotBefore, c.NotAfter, c.Thumbprint,
+                c.IsSelfIssued, c.IsDefault, c.LastUsedAt, c.UseCount,
+                c.CreatedAt, c.NotAfter < now))
             .ToListAsync(ct);
-        return Ok(items.Select(ToDto));
+        return Ok(items);
     }
 
     /// <summary>Self-signed certificate — good for internal audit trails and

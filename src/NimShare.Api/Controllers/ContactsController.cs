@@ -85,7 +85,17 @@ public class ContactsApiController : ControllerBase
         };
         _db.Contacts.Add(c);
         await _db.SaveChangesAsync(ct);
-        return CreatedAtAction(nameof(List), null, ToDto(c));
+        // Location must point at the created resource — was pointing at the
+        // list route with a null id, which produced a meaningless header.
+        return CreatedAtAction(nameof(Get), new { id = c.Id }, ToDto(c));
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var c = await _db.Contacts.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
+        return c is null ? NotFound() : Ok(ToDto(c));
     }
 
     [HttpPatch("{id:guid}")]

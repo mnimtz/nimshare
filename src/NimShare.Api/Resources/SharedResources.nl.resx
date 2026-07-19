@@ -817,6 +817,12 @@ Open deze link om te tekenen:
   <data name="certs.err.pfx_too_large"><value>PFX moet kleiner zijn dan 512 KB.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX moet base64 zijn.</value></data>
 
+  <data name="email_tpl.preview.recipient_name"><value>Alice Voorbeeld</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Afzender</value></data>
+  <data name="email_tpl.preview.sender_action"><value>tekenen</value></data>
+  <data name="email_tpl.preview.doc_title"><value>Voorbeeldcontract</value></data>
+  <data name="email_tpl.preview.message"><value>Graag voor vrijdag.</value></data>
+
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Certificaat maken</value></data>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -14,10 +15,12 @@ public class EmailTemplatesApiController : ControllerBase
 {
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
+    private readonly IStringLocalizer<SharedResources> _l;
 
-    public EmailTemplatesApiController(NimShareDbContext db, ICurrentUserService users)
+    public EmailTemplatesApiController(NimShareDbContext db, ICurrentUserService users,
+        IStringLocalizer<SharedResources> l)
     {
-        _db = db; _users = users;
+        _db = db; _users = users; _l = l;
     }
 
     public record TemplateDto(Guid Id, string Name, string Kind, string Subject,
@@ -119,17 +122,20 @@ public class EmailTemplatesApiController : ControllerBase
     [HttpPost("preview")]
     public IActionResult Preview([FromBody] PreviewReq req)
     {
+        // Dummy values shown in the preview follow the author's locale so the
+        // rendered result reads naturally instead of switching languages
+        // half-way through the body.
         var ctx = new Dictionary<string, string?>
         {
-            ["recipient.name"] = "Alice Muster",
+            ["recipient.name"] = _l["email_tpl.preview.recipient_name"].Value,
             ["recipient.email"] = "alice@example.com",
-            ["sender.name"] = "Bob Sender",
+            ["sender.name"] = _l["email_tpl.preview.sender_name"].Value,
             ["sender.email"] = "bob@example.com",
-            ["sender.action"] = "unterschreiben",
-            ["doc.title"] = "Vertrag XY",
-            ["doc.name"] = "vertrag-xy.pdf",
+            ["sender.action"] = _l["email_tpl.preview.sender_action"].Value,
+            ["doc.title"] = _l["email_tpl.preview.doc_title"].Value,
+            ["doc.name"] = "contract.pdf",
             ["url"] = "https://nimshare.example/sign/xyz",
-            ["message"] = "Bitte bis Freitag.",
+            ["message"] = _l["email_tpl.preview.message"].Value,
         };
         return Ok(new
         {
