@@ -29,6 +29,19 @@ public class Folder
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public Guid CreatedByUserId { get; set; }
 
+    /// <summary>
+    /// Optional emoji shown instead of the default folder icon (e.g. "📁",
+    /// "📊", "⭐"). Two-char cap covers most single-emoji + variation-selector
+    /// combos. Null → renderer uses the default folder icon.
+    /// </summary>
+    public string? Emoji { get; set; }
+
+    /// <summary>
+    /// Optional CSS colour override for the folder icon — 6-char hex without
+    /// leading "#" (e.g. "ffc600"). Null → renderer uses the theme default.
+    /// </summary>
+    public string? Color { get; set; }
+
     public ICollection<Folder> Children { get; set; } = new List<Folder>();
     public ICollection<StorageFile> Files { get; set; } = new List<StorageFile>();
 }

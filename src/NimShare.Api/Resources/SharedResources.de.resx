@@ -775,6 +775,14 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="contacts.last_used"><value>Zuletzt verwendet</value></data>
   <data name="contacts.editor_title"><value>Neuer Kontakt</value></data>
 
+  <data name="actions.change_icon"><value>Symbol ändern</value></data>
+  <data name="folder_icon.title"><value>Ordner-Symbol</value></data>
+  <data name="folder_icon.hint"><value>Emoji und Farbe wählen, um diesen Ordner im Baum schneller wiederzufinden.</value></data>
+  <data name="folder_icon.emoji"><value>Emoji</value></data>
+  <data name="folder_icon.color"><value>Farbe</value></data>
+  <data name="folder_icon.reset"><value>Zurücksetzen</value></data>
+  <data name="browse.tree.loading"><value>Baum wird geladen…</value></data>
+
   <data name="sig.new.email_template"><value>Email-Template</value></data>
   <data name="sig.new.default_template"><value>Eingebauter NimShare-Text</value></data>
   <data name="sig.new.manage_templates"><value>Templates verwalten</value></data>

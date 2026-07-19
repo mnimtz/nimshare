@@ -771,6 +771,14 @@ Apri il link:
   <data name="contacts.last_used"><value>Ultimo utilizzo</value></data>
   <data name="contacts.editor_title"><value>Nuovo contatto</value></data>
 
+  <data name="actions.change_icon"><value>Cambia icona</value></data>
+  <data name="folder_icon.title"><value>Icona della cartella</value></data>
+  <data name="folder_icon.hint"><value>Scegli emoji e colore per riconoscere più rapidamente questa cartella nell'albero.</value></data>
+  <data name="folder_icon.emoji"><value>Emoji</value></data>
+  <data name="folder_icon.color"><value>Colore</value></data>
+  <data name="folder_icon.reset"><value>Ripristina</value></data>
+  <data name="browse.tree.loading"><value>Caricamento albero…</value></data>
+
   <data name="sig.new.email_template"><value>Template email</value></data>
   <data name="sig.new.default_template"><value>Testo NimShare integrato</value></data>
   <data name="sig.new.manage_templates"><value>Gestisci template</value></data>

@@ -151,6 +151,31 @@ public class BrowseController : Controller
         return Redirect(SafeReturn(returnUrl));
     }
 
+    /// <summary>Update the folder's icon (emoji + colour) — used by the right-click
+    /// context menu. Both fields are optional; null clears back to the default.</summary>
+    public record FolderIconReq(string? Emoji, string? Color);
+
+    [HttpPost("/api/v1/folders/{id:guid}/icon")]
+    public async Task<IActionResult> UpdateFolderIcon(Guid id, [FromBody] FolderIconReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        // Sanitise the emoji: cap at 4 chars (single emoji + variation selector
+        // + zero-width joiners), strip anything obviously non-emoji.
+        var emoji = string.IsNullOrWhiteSpace(req.Emoji) ? null : req.Emoji.Trim();
+        if (emoji != null && emoji.Length > 8) emoji = emoji.Substring(0, 8);
+        // Sanitise the colour: accept 3- or 6-char hex, no leading "#".
+        var color = req.Color?.Trim().TrimStart('#').ToLowerInvariant();
+        if (!string.IsNullOrEmpty(color) && !System.Text.RegularExpressions.Regex.IsMatch(color, "^[0-9a-f]{3}([0-9a-f]{3})?$"))
+            color = null;
+        folder.Emoji = emoji;
+        folder.Color = color;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { emoji, color });
+    }
+
     // ── POST: delete folder ────────────────────────────────────────────────
     [HttpPost("folders/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
@@ -222,6 +247,8 @@ public class BrowseController : Controller
         {
             id = f.Id,
             name = f.ParentFolderId is null ? (s.ToString()) : f.Name,
+            emoji = f.Emoji,
+            color = f.Color,
             children = byParent.TryGetValue(f.Id, out var kids)
                 ? kids.Select(Build).ToArray()
                 : Array.Empty<object>(),

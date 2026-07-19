@@ -769,6 +769,14 @@ Open the link:
   <data name="contacts.last_used"><value>Last used</value></data>
   <data name="contacts.editor_title"><value>New contact</value></data>
 
+  <data name="actions.change_icon"><value>Change icon</value></data>
+  <data name="folder_icon.title"><value>Folder icon</value></data>
+  <data name="folder_icon.hint"><value>Pick an emoji and a colour to make this folder easier to spot in the tree.</value></data>
+  <data name="folder_icon.emoji"><value>Emoji</value></data>
+  <data name="folder_icon.color"><value>Colour</value></data>
+  <data name="folder_icon.reset"><value>Reset to default</value></data>
+  <data name="browse.tree.loading"><value>Loading tree…</value></data>
+
   <data name="sig.new.email_template"><value>Email template</value></data>
   <data name="sig.new.default_template"><value>Built-in NimShare copy</value></data>
   <data name="sig.new.manage_templates"><value>Manage templates</value></data>

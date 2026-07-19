@@ -770,6 +770,14 @@ Open de link:
   <data name="contacts.last_used"><value>Laatst gebruikt</value></data>
   <data name="contacts.editor_title"><value>Nieuw contact</value></data>
 
+  <data name="actions.change_icon"><value>Icoon wijzigen</value></data>
+  <data name="folder_icon.title"><value>Mapicoon</value></data>
+  <data name="folder_icon.hint"><value>Kies een emoji en kleur om deze map sneller te vinden in de boom.</value></data>
+  <data name="folder_icon.emoji"><value>Emoji</value></data>
+  <data name="folder_icon.color"><value>Kleur</value></data>
+  <data name="folder_icon.reset"><value>Herstellen</value></data>
+  <data name="browse.tree.loading"><value>Boom wordt geladen…</value></data>
+
   <data name="sig.new.email_template"><value>E-mailtemplate</value></data>
   <data name="sig.new.default_template"><value>Ingebouwde NimShare-tekst</value></data>
   <data name="sig.new.manage_templates"><value>Templates beheren</value></data>

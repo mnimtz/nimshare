@@ -237,6 +237,8 @@ public class NimShareDbContext : DbContext
             e.HasIndex(x => new { x.Scope, x.OwnerUserId, x.OwnerGroupId, x.ParentFolderId });
             e.HasIndex(x => new { x.ParentFolderId, x.Name });
             e.Property(x => x.Name).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Emoji).HasMaxLength(8);
+            e.Property(x => x.Color).HasMaxLength(8);
             e.HasOne(x => x.Parent).WithMany(p => p.Children).HasForeignKey(x => x.ParentFolderId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.Cascade);

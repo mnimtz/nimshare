@@ -64,7 +64,7 @@
             }
             <div class="row" style="justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px">
                 <button type="button" class="btn btn-ghost" onclick="declineOpen()">✕ Ablehnen</button>
-                <button type="submit" class="btn btn-primary" onclick="return prepareSubmit(this)">
+                <button type="submit" id="submitBtn" class="btn btn-primary">
                     @(isSigner ? "✍ Unterschreiben & abschicken" : "✓ Gelesen bestätigen")
                 </button>
             </div>
@@ -133,6 +133,21 @@ async function render() {
                 else if (f.type === 'Date') { icon = '📅'; label = 'Datum'; }
                 else if (f.type === 'Checkbox') { icon = '☑'; label = ''; }
                 box.textContent = width > 100 ? `${icon} ${label}` : icon;
+                if (f.type === 'Signature') {
+                    box.style.cursor = 'pointer';
+                    box.style.pointerEvents = 'auto';
+                    box.title = 'Zum Unterschriftfeld springen';
+                    box.addEventListener('click', () => {
+                        const pad = document.getElementById('sigPad');
+                        if (pad) {
+                            pad.scrollIntoView({behavior:'smooth', block:'center'});
+                            pad.style.boxShadow = '0 0 0 3px var(--tw-yellow, #ffc600)';
+                            setTimeout(() => { pad.style.boxShadow = ''; }, 1400);
+                            const nm = document.querySelector('input[name=typedName]');
+                            if (nm && !document.getSelection().toString()) nm.focus();
+                        }
+                    });
+                }
                 pageWrap.appendChild(box);
             });
         }
@@ -157,11 +172,16 @@ render();
     c.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
     c.addEventListener('pointerup', () => { drawing = false; });
     window.clearSig = () => { ctx.clearRect(0, 0, c.width, c.height); empty = true; };
-    window.prepareSubmit = (btn) => {
+    // Bind on the form's submit event, NOT the button's onclick — disabling
+    // the submit button in a click handler prevents the form from being
+    // submitted in Chrome/Edge/Firefox (that was the "wird gesendet…" hang).
+    // Wire the disable via setTimeout(…,0) so it runs AFTER the browser has
+    // begun the actual POST.
+    document.getElementById('signForm').addEventListener('submit', () => {
         if (!empty) document.getElementById('signatureData').value = c.toDataURL('image/png');
-        btn.disabled = true; btn.textContent = 'Wird gesendet…';
-        return true;
-    };
+        const btn = document.getElementById('submitBtn');
+        setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; } }, 0);
+    });
 })();
 window.declineOpen = () => {
     const f = document.getElementById('signForm');
@@ -175,7 +195,10 @@ window.declineOpen = () => {
 else
 {
 <script>
-window.prepareSubmit = () => true;
+document.getElementById('signForm').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; } }, 0);
+});
 window.declineOpen = () => {
     const f = document.getElementById('signForm'); const d = document.getElementById('declineForm');
     const on = d.style.display === 'none';

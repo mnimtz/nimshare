@@ -771,6 +771,14 @@ Ouvrez le lien :
   <data name="contacts.last_used"><value>Dernière utilisation</value></data>
   <data name="contacts.editor_title"><value>Nouveau contact</value></data>
 
+  <data name="actions.change_icon"><value>Modifier l'icône</value></data>
+  <data name="folder_icon.title"><value>Icône du dossier</value></data>
+  <data name="folder_icon.hint"><value>Choisissez un emoji et une couleur pour repérer plus vite ce dossier dans l'arborescence.</value></data>
+  <data name="folder_icon.emoji"><value>Emoji</value></data>
+  <data name="folder_icon.color"><value>Couleur</value></data>
+  <data name="folder_icon.reset"><value>Réinitialiser</value></data>
+  <data name="browse.tree.loading"><value>Chargement de l'arborescence…</value></data>
+
   <data name="sig.new.email_template"><value>Modèle d'e-mail</value></data>
   <data name="sig.new.default_template"><value>Texte NimShare intégré</value></data>
   <data name="sig.new.manage_templates"><value>Gérer les modèles</value></data>

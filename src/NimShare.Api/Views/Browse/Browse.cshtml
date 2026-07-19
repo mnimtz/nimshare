@@ -63,7 +63,14 @@
     }
 }
 
-<div class="fm">
+<div class="fm fm-with-tree">
+    <aside class="fm-tree" id="fmTree"
+           data-scope="@scope"
+           data-group-id="@(groupId?.ToString() ?? "")"
+           data-current-id="@current.Id"
+           data-url-base="@urlBase">
+        <div class="muted" style="padding:12px">@T["browse.tree.loading"]</div>
+    </aside>
     <section class="fm-main" id="dropzone" data-drop-label="@T["browse.drop_hint"]">
         <header class="fm-header">
             <div class="fm-breadcrumb">
@@ -136,11 +143,18 @@
                 <tbody>
                     @foreach (var sub in subs)
                     {
-                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" ondblclick="location.href='@FolderUrl(sub)'">
+                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-emoji="@(sub.Emoji ?? "")" data-color="@(sub.Color ?? "")" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" ondblclick="location.href='@FolderUrl(sub)'">
                             <td class="col-check"></td>
                             <td class="col-name">
                                 <a class="fm-name" href="@FolderUrl(sub)">
-                                    <span class="fm-icon fm-icon-folder">📁</span>
+                                    @if (!string.IsNullOrEmpty(sub.Emoji))
+                                    {
+                                        <span class="fm-icon fm-icon-folder" style="background:transparent;font-size:1.6rem">@sub.Emoji</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="fm-icon fm-icon-folder" style="@(string.IsNullOrEmpty(sub.Color) ? "" : $"background:#{sub.Color}")">📁</span>
+                                    }
                                     <span class="fm-name-text">@sub.Name</span>
                                 </a>
                             </td>
@@ -224,7 +238,31 @@
     <div class="divider"></div>
     <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
     <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
+    <button data-act="icon" style="display:none">🎨 @T["actions.change_icon"]</button>
     <button data-act="delete">🗑 @T["actions.delete"]</button>
+</div>
+
+<!-- Folder-icon modal — swaps emoji + colour via /api/v1/folders/{id}/icon -->
+<div class="modal-backdrop" id="modalFolderIcon" onclick="if(event.target===this)closeModal('modalFolderIcon')">
+    <div class="modal-panel" style="max-width:520px">
+        <h2>🎨 @T["folder_icon.title"] — <span id="fiTargetName" class="muted"></span></h2>
+        <p class="muted" style="margin-top:0">@T["folder_icon.hint"]</p>
+        <div class="field">
+            <label>@T["folder_icon.emoji"]</label>
+            <div id="fiEmojiGrid" class="emoji-grid"></div>
+        </div>
+        <div class="field">
+            <label>@T["folder_icon.color"]</label>
+            <div id="fiColorGrid" class="color-grid"></div>
+        </div>
+        <div class="actions" style="justify-content:space-between">
+            <button class="btn btn-ghost" onclick="fi_reset()">↺ @T["folder_icon.reset"]</button>
+            <div class="row" style="gap:8px">
+                <button class="btn btn-ghost" onclick="closeModal('modalFolderIcon')">@T["modal.close"]</button>
+                <button class="btn btn-primary" onclick="fi_save()">@T["modal.save"]</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Direct-share modal (share to specific users / groups) -->
@@ -381,7 +419,12 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('sign',        isSignable);
         showFor('uploadReq',   ctxTarget.kind === 'folder');
         showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
+        showFor('icon',        ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE);
+        // Stash colour + emoji on the ctxTarget so the icon modal knows the
+        // current state without another server round-trip.
+        ctxTarget.emoji = tr.dataset.emoji || '';
+        ctxTarget.color = tr.dataset.color || '';
         showFor('share',       true);
         showFor('directShare', true);
         showFor('favorite',    true);
@@ -417,6 +460,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         }
         if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
+        if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
         if (act === 'delete') {
             if (ctxTarget.kind === 'file') deleteFile(ctxTarget.id);
@@ -532,39 +576,100 @@ if (dropzone && CAN_WRITE) {
     const quickPick = document.getElementById('quickPick');
     if (quickPick) quickPick.addEventListener('change', () => uploadFiles(quickPick.files));
 }
+// ── Upload progress overlay ──────────────────────────────────
+// A single floating card in the bottom-right corner that stays visible while
+// any upload is in flight. Each file gets its own row with a live bar. XHR
+// (not fetch) so we can actually observe upload progress on the Blob PUT.
+function upEnsurePanel() {
+    let panel = document.getElementById('upPanel');
+    if (panel) return panel;
+    panel = document.createElement('div');
+    panel.id = 'upPanel';
+    panel.className = 'up-panel';
+    panel.innerHTML = '<div class="up-panel-head"><span id="upTitle">Upload läuft…</span>' +
+        '<button type="button" class="up-panel-close" title="Schließen" onclick="this.closest(\'.up-panel\').remove()">✕</button></div>' +
+        '<div class="up-panel-body" id="upBody"></div>';
+    document.body.appendChild(panel);
+    return panel;
+}
+function upAddRow(name) {
+    upEnsurePanel();
+    const body = document.getElementById('upBody');
+    const row = document.createElement('div');
+    row.className = 'up-row';
+    row.innerHTML = '<div class="up-row-name" title="' + name.replace(/"/g,'&quot;') + '">' + name + '</div>' +
+        '<div class="up-row-bar"><div class="up-row-bar-fill"></div></div>' +
+        '<div class="up-row-status">0%</div>';
+    body.appendChild(row);
+    return row;
+}
+function upSetProgress(row, pct, label) {
+    const fill = row.querySelector('.up-row-bar-fill');
+    const st = row.querySelector('.up-row-status');
+    if (fill) fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    if (st) st.textContent = label || (Math.round(pct) + '%');
+}
+function upSetDone(row, ok, msg) {
+    upSetProgress(row, 100, ok ? '✓' : '✕');
+    row.classList.add(ok ? 'up-row-ok' : 'up-row-err');
+    if (msg) row.querySelector('.up-row-status').title = msg;
+}
+function xhrPut(url, blob, contentType, onProgress) {
+    return new Promise((resolve, reject) => {
+        const x = new XMLHttpRequest();
+        x.open('PUT', url);
+        x.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+        x.setRequestHeader('Content-Type', contentType);
+        x.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded / e.total * 100); };
+        x.onload = () => (x.status >= 200 && x.status < 300) ? resolve(x) : reject(new Error('HTTP ' + x.status));
+        x.onerror = () => reject(new Error('Netzwerkfehler'));
+        x.send(blob);
+    });
+}
 async function uploadFiles(fileList) {
     if (!fileList || !fileList.length) return;
+    upEnsurePanel();
+    const total = fileList.length;
+    let done = 0, failed = 0;
+    document.getElementById('upTitle').textContent = '↑ 0 / ' + total;
     for (const file of fileList) {
+        const row = upAddRow(file.name);
         try {
-            // Endpoint is POST /api/v1/files — the old draft used /init which
-            // never existed. Server is idempotent on retry; a wrong path was
-            // the source of every "Init failed" complaint.
+            upSetProgress(row, 0, 'vorbereiten…');
             const initR = await fetch('/api/v1/files', {
                 method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
                 body: JSON.stringify({ folderId: FOLDER_ID, name: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size }),
             });
             if (!initR.ok) {
-                // Surface the actual server message (Problem-details JSON).
                 let msg = 'HTTP ' + initR.status;
                 try { const p = await initR.json(); msg = p.title || p.detail || msg; } catch {}
-                alert('Upload failed for ' + file.name + ': ' + msg);
+                upSetDone(row, false, msg);
+                failed++; done++;
+                document.getElementById('upTitle').textContent = '↑ ' + done + ' / ' + total;
                 continue;
             }
             const { fileId, uploadUrl } = await initR.json();
-            const putR = await fetch(uploadUrl, {
-                method: 'PUT', headers: {'x-ms-blob-type':'BlockBlob','Content-Type': file.type || 'application/octet-stream'},
-                body: file,
-            });
-            if (!putR.ok) { alert('Blob PUT failed for ' + file.name + ': HTTP ' + putR.status); continue; }
+            await xhrPut(uploadUrl, file, file.type || 'application/octet-stream',
+                pct => upSetProgress(row, pct));
+            upSetProgress(row, 99, 'finalisieren…');
             const cR = await fetch('/api/v1/files/' + fileId + '/complete', { method: 'POST', credentials: 'same-origin' });
             if (!cR.ok) {
                 let msg = 'HTTP ' + cR.status;
                 try { const p = await cR.json(); msg = p.title || p.detail || msg; } catch {}
-                alert('Complete failed for ' + file.name + ': ' + msg);
+                upSetDone(row, false, msg);
+                failed++;
+            } else {
+                upSetDone(row, true);
             }
-        } catch (e) { alert('Error uploading ' + file.name + ': ' + e); }
+        } catch (e) {
+            upSetDone(row, false, String(e && e.message || e));
+            failed++;
+        }
+        done++;
+        document.getElementById('upTitle').textContent = '↑ ' + done + ' / ' + total + (failed ? ' (' + failed + ' Fehler)' : '');
     }
-    location.reload();
+    // Give the user 800 ms to see the "done" ticks before we refresh.
+    setTimeout(() => location.reload(), 800);
 }
 
 // Modal helpers used from generated onclicks.
@@ -706,5 +811,151 @@ async function toggleFavorite(target) {
         });
     });
     // Server already returns name-sorted — no initial reflow needed.
+})();
+
+// ── Folder-icon modal ────────────────────────────────────────
+const FI_EMOJIS = ['📁','📂','📊','📈','📉','📆','📅','🗂','🗃','🗄','🗒','📋','📌','📎','🎨','🎯','🎬','🎵','🖼','📷','💼','💰','💡','⭐','🔥','⚡','🚀','🏆','🎁','💎','🔒','🔑','🛠','🧾','📝','📜','📚','📖','🧠','🧪','🧬','🌍','🌐','🗺','🏢','🏠','☑','⚠','🔴','🟠','🟡','🟢','🔵','🟣','🟤','⚫','⚪'];
+const FI_COLORS = ['ffc600','ff8c00','e02828','d81b60','8e24aa','5e35b1','1e88e5','039be5','00acc1','00897b','43a047','7cb342','795548','546e7a','78909c'];
+let fiTarget = null;
+function openFolderIcon(target) {
+    fiTarget = target;
+    document.getElementById('fiTargetName').textContent = target.name;
+    const eg = document.getElementById('fiEmojiGrid');
+    eg.innerHTML = '';
+    // First tile is "no emoji" — falls back to the default folder icon.
+    const none = document.createElement('button');
+    none.type = 'button'; none.className = 'emoji-tile' + (target.emoji ? '' : ' selected');
+    none.dataset.emoji = ''; none.title = 'Standard';
+    none.textContent = '📁';
+    none.onclick = () => fi_pickEmoji(none);
+    eg.appendChild(none);
+    FI_EMOJIS.forEach(e => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'emoji-tile' + (target.emoji === e ? ' selected' : '');
+        b.dataset.emoji = e; b.textContent = e;
+        b.onclick = () => fi_pickEmoji(b);
+        eg.appendChild(b);
+    });
+    const cg = document.getElementById('fiColorGrid');
+    cg.innerHTML = '';
+    const cnone = document.createElement('button');
+    cnone.type = 'button'; cnone.className = 'color-tile color-none' + (target.color ? '' : ' selected');
+    cnone.dataset.color = ''; cnone.title = 'Standard'; cnone.textContent = '✕';
+    cnone.onclick = () => fi_pickColor(cnone);
+    cg.appendChild(cnone);
+    FI_COLORS.forEach(c => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'color-tile' + (target.color === c ? ' selected' : '');
+        b.dataset.color = c; b.style.background = '#' + c;
+        b.onclick = () => fi_pickColor(b);
+        cg.appendChild(b);
+    });
+    document.getElementById('modalFolderIcon').classList.add('open');
+}
+function fi_pickEmoji(btn) {
+    document.querySelectorAll('#fiEmojiGrid .emoji-tile').forEach(t => t.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+function fi_pickColor(btn) {
+    document.querySelectorAll('#fiColorGrid .color-tile').forEach(t => t.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+function fi_reset() {
+    document.querySelectorAll('#fiEmojiGrid .emoji-tile').forEach(t => t.classList.remove('selected'));
+    document.querySelector('#fiEmojiGrid .emoji-tile[data-emoji=""]')?.classList.add('selected');
+    document.querySelectorAll('#fiColorGrid .color-tile').forEach(t => t.classList.remove('selected'));
+    document.querySelector('#fiColorGrid .color-tile[data-color=""]')?.classList.add('selected');
+}
+async function fi_save() {
+    if (!fiTarget) return;
+    const emoji = document.querySelector('#fiEmojiGrid .emoji-tile.selected')?.dataset.emoji || null;
+    const color = document.querySelector('#fiColorGrid .color-tile.selected')?.dataset.color || null;
+    const r = await fetch('/api/v1/folders/' + fiTarget.id + '/icon', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ emoji: emoji || null, color: color || null }),
+    });
+    if (!r.ok) { alert('Speichern fehlgeschlagen: ' + r.status); return; }
+    location.reload();
+}
+
+// ── Folder tree — left panel (collapsible) ────────────────────
+(async function loadFolderTree() {
+    const panel = document.getElementById('fmTree');
+    if (!panel) return;
+    const scope = panel.dataset.scope;
+    const groupId = panel.dataset.groupId || '';
+    const currentId = panel.dataset.currentId;
+    const url = '/api/v1/folders/tree?scope=' + encodeURIComponent(scope) + (groupId ? '&groupId=' + groupId : '');
+    let roots;
+    try {
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error(r.status);
+        roots = await r.json();
+    } catch (e) {
+        panel.innerHTML = '<div class="muted" style="padding:12px">Baum nicht geladen</div>';
+        return;
+    }
+    // Precompute the path from root → currentId so we can auto-expand the trail.
+    const trail = new Set();
+    function findPath(node, path) {
+        const next = [...path, node.id];
+        if (node.id === currentId) { next.forEach(id => trail.add(id)); return true; }
+        for (const c of (node.children || [])) if (findPath(c, next)) return true;
+        return false;
+    }
+    roots.forEach(r => findPath(r, []));
+    function render(node, depth) {
+        const wrap = document.createElement('div');
+        wrap.className = 'ft-node';
+        const row = document.createElement('div');
+        row.className = 'ft-row' + (node.id === currentId ? ' active' : '');
+        row.style.paddingLeft = (6 + depth * 12) + 'px';
+        const hasKids = (node.children || []).length > 0;
+        const tog = document.createElement('span');
+        tog.className = 'ft-toggle';
+        tog.textContent = hasKids ? (trail.has(node.id) ? '▾' : '▸') : '·';
+        row.appendChild(tog);
+        const ico = document.createElement('span');
+        ico.className = 'ft-icon';
+        ico.textContent = node.emoji || '📁';
+        if (!node.emoji && node.color) ico.style.color = '#' + node.color;
+        row.appendChild(ico);
+        const lbl = document.createElement('a');
+        lbl.className = 'ft-label';
+        lbl.textContent = node.name;
+        lbl.href = '#'; // Set below once we know the ancestry.
+        lbl.dataset.id = node.id;
+        row.appendChild(lbl);
+        wrap.appendChild(row);
+        if (hasKids) {
+            const kids = document.createElement('div');
+            kids.className = 'ft-children' + (trail.has(node.id) ? '' : ' collapsed');
+            node.children.forEach(c => kids.appendChild(render(c, depth + 1)));
+            wrap.appendChild(kids);
+            tog.style.cursor = 'pointer';
+            tog.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const open = kids.classList.toggle('collapsed');
+                tog.textContent = open ? '▸' : '▾';
+            });
+        }
+        return wrap;
+    }
+    panel.innerHTML = '';
+    roots.forEach(r => panel.appendChild(render(r, 0)));
+    // Wire click-navigation: rebuild the URL from the label path by walking up
+    // through the tree JSON.
+    const idToPath = {};
+    function buildPaths(node, path) {
+        const next = node.name === scope && path.length === 0 ? [] : [...path, node.name];
+        idToPath[node.id] = next;
+        (node.children || []).forEach(c => buildPaths(c, next));
+    }
+    roots.forEach(r => buildPaths(r, []));
+    const urlBase = panel.dataset.urlBase;
+    panel.querySelectorAll('.ft-label').forEach(a => {
+        const parts = idToPath[a.dataset.id] || [];
+        a.href = parts.length ? (urlBase + '/' + parts.map(encodeURIComponent).join('/')) : urlBase;
+    });
 })();
 </script>
