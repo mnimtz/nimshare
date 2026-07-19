@@ -33,8 +33,16 @@
         </div>
         <div class="field" style="flex:1;min-width:200px">
             <label for="Model">@T["ai.model"]</label>
-            <input type="text" name="Model" id="Model" value="@Model.Model" placeholder="gpt-4o-mini | gemini-2.0-flash | claude-3-5-haiku-latest"/>
-            <div class="helper">@T["ai.model_helper"]</div>
+            <select name="Model" id="Model" data-current="@Model.Model">
+                @* Options are (re-)populated by JS whenever Provider changes.
+                   For form-post we always render the currently persisted value as
+                   the initial option so SaveChanges round-trips even if JS is off. *@
+                @if (!string.IsNullOrEmpty(Model.Model))
+                {
+                    <option value="@Model.Model" selected>@Model.Model</option>
+                }
+            </select>
+            <div class="helper" id="modelHelper">@T["ai.model_helper"]</div>
         </div>
     </div>
     <div class="field" id="endpointField" style="display:none">
@@ -96,17 +104,69 @@
     const providerEl = document.getElementById('Provider');
     const endpointField = document.getElementById('endpointField');
     const modelEl = document.getElementById('Model');
+    const modelHelper = document.getElementById('modelHelper');
+    const currentModel = modelEl.dataset.current || '';
+
+    // Curated list per provider — ordered from most-recommended to legacy.
+    // Vision-capable models are marked with 👁️ so the operator knows which
+    // ones support the Auto-Summary + Image-Description features.
+    const MODELS = {
+        'OpenAi': [
+            { v: 'gpt-4o',            label: '👁️ gpt-4o (recommended, vision)' },
+            { v: 'gpt-4o-mini',       label: '👁️ gpt-4o-mini (cheap, vision)' },
+            { v: 'gpt-4-turbo',       label: '👁️ gpt-4-turbo (vision)' },
+            { v: 'o1-mini',           label: 'o1-mini (reasoning, no vision)' },
+            { v: 'gpt-3.5-turbo',     label: 'gpt-3.5-turbo (legacy, no vision)' },
+        ],
+        'AzureOpenAi': [
+            { v: 'gpt-4o',            label: '👁️ gpt-4o (recommended, vision) — must match your deployment name' },
+            { v: 'gpt-4o-mini',       label: '👁️ gpt-4o-mini (vision)' },
+            { v: 'gpt-4-turbo',       label: '👁️ gpt-4-turbo (vision)' },
+            { v: 'gpt-35-turbo',      label: 'gpt-35-turbo (legacy, no vision)' },
+        ],
+        'Gemini': [
+            { v: 'gemini-2.5-pro',        label: '👁️ gemini-2.5-pro (recommended, vision)' },
+            { v: 'gemini-2.5-flash',      label: '👁️ gemini-2.5-flash (fast, vision)' },
+            { v: 'gemini-2.0-flash',      label: '👁️ gemini-2.0-flash (vision)' },
+            { v: 'gemini-2.0-flash-lite', label: '👁️ gemini-2.0-flash-lite (cheap, vision)' },
+            { v: 'gemini-1.5-pro',        label: '👁️ gemini-1.5-pro (legacy, vision)' },
+            { v: 'gemini-1.5-flash',      label: '👁️ gemini-1.5-flash (legacy, vision)' },
+        ],
+        'Anthropic': [
+            { v: 'claude-opus-4-8',        label: '👁️ claude-opus-4-8 (most capable, vision)' },
+            { v: 'claude-sonnet-5',        label: '👁️ claude-sonnet-5 (recommended, vision)' },
+            { v: 'claude-haiku-4-5',       label: '👁️ claude-haiku-4-5 (fast, vision)' },
+            { v: 'claude-3-5-sonnet-latest', label: '👁️ claude-3-5-sonnet (legacy, vision)' },
+            { v: 'claude-3-5-haiku-latest',  label: '👁️ claude-3-5-haiku (legacy, vision)' },
+        ],
+        'Disabled': [],
+    };
+
     function apply() {
         const p = providerEl.value;
         endpointField.style.display = p === 'AzureOpenAi' ? '' : 'none';
-        if (!modelEl.value) {
-            const defaults = {
-                'OpenAi': 'gpt-4o-mini',
-                'AzureOpenAi': 'gpt-4o-mini',
-                'Gemini': 'gemini-2.0-flash',
-                'Anthropic': 'claude-3-5-haiku-latest'
-            };
-            if (defaults[p]) modelEl.placeholder = defaults[p];
+        const list = MODELS[p] || [];
+        // Preserve the currently selected value on top so the form still round-
+        // trips even if it's an unusual/custom name we don't know about.
+        const known = new Set(list.map(x => x.v));
+        modelEl.innerHTML = '';
+        if (currentModel && !known.has(currentModel)) {
+            const o = document.createElement('option');
+            o.value = currentModel; o.textContent = currentModel + ' (current)'; o.selected = true;
+            modelEl.appendChild(o);
+        }
+        for (const m of list) {
+            const o = document.createElement('option');
+            o.value = m.v; o.textContent = m.label;
+            if (m.v === currentModel) o.selected = true;
+            modelEl.appendChild(o);
+        }
+        // If no current value and provider has options, default to the first (recommended).
+        if (!currentModel && list.length > 0) modelEl.value = list[0].v;
+        if (modelHelper) {
+            modelHelper.textContent = list.length > 0
+                ? 'Nur Modelle mit 👁️ unterstützen Bild-Zusammenfassungen (Vision).'
+                : '';
         }
     }
     providerEl.addEventListener('change', apply);
