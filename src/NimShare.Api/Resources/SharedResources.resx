@@ -735,6 +735,58 @@ Open the link:
   <data name="nav.sig.templates"><value>Email templates</value></data>
   <data name="nav.sig.contacts"><value>Address book</value></data>
   <data name="nav.sig.certificates"><value>Certificates</value></data>
+  <data name="nav.database"><value>Database</value></data>
+
+  <data name="dbset.title"><value>Database</value></data>
+  <data name="dbset.lede"><value>Which database NimShare stores its metadata in. Sqlite is the default and works out of the box. Azure SQL is recommended once you outgrow single-server hosting.</value></data>
+  <data name="dbset.status.title"><value>Current backend</value></data>
+  <data name="dbset.status.provider"><value>Provider</value></data>
+  <data name="dbset.status.override"><value>from config file</value></data>
+  <data name="dbset.status.conn"><value>Connection</value></data>
+  <data name="dbset.status.users"><value>Users</value></data>
+  <data name="dbset.status.configpath"><value>Config file</value></data>
+
+  <data name="dbset.wizard.title"><value>Switch to Azure SQL</value></data>
+  <data name="dbset.wizard.hint"><value>Point NimShare at your existing Azure SQL Server. The wizard will connect with the admin login, create the target database if it doesn't exist yet, optionally copy your existing rows across, and restart the app.</value></data>
+  <data name="dbset.wizard.mode_fields"><value>Server + login</value></data>
+  <data name="dbset.wizard.mode_raw"><value>Raw connection string</value></data>
+  <data name="dbset.field.server"><value>Server hostname</value></data>
+  <data name="dbset.field.server_hint"><value>e.g. myserver.database.windows.net</value></data>
+  <data name="dbset.field.user"><value>Admin login</value></data>
+  <data name="dbset.field.pw"><value>Password</value></data>
+  <data name="dbset.field.rawconn"><value>Connection string</value></data>
+  <data name="dbset.field.rawconn_hint"><value>Point at the master DB — the wizard switches Initial Catalog when it creates the target.</value></data>
+  <data name="dbset.field.dbname"><value>Target database name</value></data>
+  <data name="dbset.field.dbname_hint"><value>Alphanumeric, dash or underscore. Created as Basic tier if it doesn't exist.</value></data>
+  <data name="dbset.field.copy"><value>Copy existing NimShare data across</value></data>
+
+  <data name="dbset.action.test"><value>Test connection</value></data>
+  <data name="dbset.action.create"><value>Create target DB</value></data>
+  <data name="dbset.action.switch"><value>Switch + restart</value></data>
+
+  <data name="dbset.loading.test"><value>Connecting…</value></data>
+  <data name="dbset.loading.create"><value>Creating database…</value></data>
+  <data name="dbset.loading.switch"><value>Preparing schema, copying data, restarting…</value></data>
+
+  <data name="dbset.test.ok"><value>Connection OK.</value></data>
+  <data name="dbset.create.created"><value>Database created:</value></data>
+  <data name="dbset.create.exists"><value>Database already exists:</value></data>
+  <data name="dbset.switch.ok"><value>Switch completed successfully.</value></data>
+  <data name="dbset.switch.tables"><value>Tables copied</value></data>
+  <data name="dbset.switch.rows"><value>Rows copied</value></data>
+  <data name="dbset.switch.restarting"><value>App is restarting — this page will reload once it comes back.</value></data>
+  <data name="dbset.confirm.switch"><value>This will restart the app and switch it to the new database. Continue?</value></data>
+
+  <data name="dbset.warn.title"><value>Before you switch</value></data>
+  <data name="dbset.warn.migration"><value>The schema is built via EnsureCreated on the target — future schema changes still need code updates.</value></data>
+  <data name="dbset.warn.firewall"><value>Make sure the Azure SQL firewall allows the App Service's outbound IP (or turn on "Allow Azure services").</value></data>
+  <data name="dbset.warn.restart"><value>The app restarts after switching. Ongoing sessions stay logged in; in-flight uploads are aborted.</value></data>
+
+  <data name="dbset.revert.title"><value>Revert to Sqlite</value></data>
+  <data name="dbset.revert.hint"><value>Deletes the DB config file and restarts. The app comes back on the original Sqlite path — your Azure SQL database stays untouched, so you can flip back later.</value></data>
+  <data name="dbset.revert.action"><value>Revert + restart</value></data>
+  <data name="dbset.revert.ok"><value>Config cleared — restarting on Sqlite.</value></data>
+  <data name="dbset.confirm.revert"><value>Revert to Sqlite and restart? Any writes since the switch stay on Azure SQL and won't be copied back.</value></data>
 
   <data name="certs.title"><value>Signing certificates</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>

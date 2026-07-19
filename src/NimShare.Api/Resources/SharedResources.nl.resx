@@ -736,6 +736,58 @@ Open de link:
   <data name="nav.sig.templates"><value>E-mailtemplates</value></data>
   <data name="nav.sig.contacts"><value>Adresboek</value></data>
   <data name="nav.sig.certificates"><value>Certificaten</value></data>
+  <data name="nav.database"><value>Database</value></data>
+
+  <data name="dbset.title"><value>Database</value></data>
+  <data name="dbset.lede"><value>Waar NimShare zijn metadata bewaart. Sqlite is de standaard, Azure SQL aanbevolen voorbij één App Service.</value></data>
+  <data name="dbset.status.title"><value>Huidige backend</value></data>
+  <data name="dbset.status.provider"><value>Provider</value></data>
+  <data name="dbset.status.override"><value>uit config-bestand</value></data>
+  <data name="dbset.status.conn"><value>Verbinding</value></data>
+  <data name="dbset.status.users"><value>Gebruikers</value></data>
+  <data name="dbset.status.configpath"><value>Config-bestand</value></data>
+
+  <data name="dbset.wizard.title"><value>Overschakelen naar Azure SQL</value></data>
+  <data name="dbset.wizard.hint"><value>Wijs NimShare naar je bestaande Azure SQL Server. De wizard verbindt, maakt de doel-DB als die ontbreekt, kopieert je data en herstart de app.</value></data>
+  <data name="dbset.wizard.mode_fields"><value>Server + login</value></data>
+  <data name="dbset.wizard.mode_raw"><value>Ruwe connection string</value></data>
+  <data name="dbset.field.server"><value>Server-hostname</value></data>
+  <data name="dbset.field.server_hint"><value>bijv. myserver.database.windows.net</value></data>
+  <data name="dbset.field.user"><value>Admin-login</value></data>
+  <data name="dbset.field.pw"><value>Wachtwoord</value></data>
+  <data name="dbset.field.rawconn"><value>Connection string</value></data>
+  <data name="dbset.field.rawconn_hint"><value>Wijs naar master — de wizard wisselt Initial Catalog bij het aanmaken.</value></data>
+  <data name="dbset.field.dbname"><value>Naam doeldatabase</value></data>
+  <data name="dbset.field.dbname_hint"><value>Alfanumeriek, streepje of underscore. Wordt als Basic aangemaakt als deze ontbreekt.</value></data>
+  <data name="dbset.field.copy"><value>Bestaande NimShare-data overzetten</value></data>
+
+  <data name="dbset.action.test"><value>Verbinding testen</value></data>
+  <data name="dbset.action.create"><value>Doel-DB aanmaken</value></data>
+  <data name="dbset.action.switch"><value>Overschakelen + herstarten</value></data>
+
+  <data name="dbset.loading.test"><value>Verbinden…</value></data>
+  <data name="dbset.loading.create"><value>Database aanmaken…</value></data>
+  <data name="dbset.loading.switch"><value>Schema bouwen, kopiëren, herstarten…</value></data>
+
+  <data name="dbset.test.ok"><value>Verbinding OK.</value></data>
+  <data name="dbset.create.created"><value>Database aangemaakt:</value></data>
+  <data name="dbset.create.exists"><value>Database bestaat al:</value></data>
+  <data name="dbset.switch.ok"><value>Overschakelen gelukt.</value></data>
+  <data name="dbset.switch.tables"><value>Gekopieerde tabellen</value></data>
+  <data name="dbset.switch.rows"><value>Gekopieerde rijen</value></data>
+  <data name="dbset.switch.restarting"><value>App herstart — deze pagina laadt vanzelf opnieuw.</value></data>
+  <data name="dbset.confirm.switch"><value>De app herstart en schakelt naar de nieuwe database. Doorgaan?</value></data>
+
+  <data name="dbset.warn.title"><value>Voordat je overschakelt</value></data>
+  <data name="dbset.warn.migration"><value>Het schema wordt via EnsureCreated gebouwd — toekomstige wijzigingen vragen nog code-updates.</value></data>
+  <data name="dbset.warn.firewall"><value>Zorg dat de Azure SQL-firewall het uitgaande IP van App Service toestaat (of zet "Azure-services toestaan" aan).</value></data>
+  <data name="dbset.warn.restart"><value>De app herstart. Sessies blijven ingelogd; lopende uploads worden afgebroken.</value></data>
+
+  <data name="dbset.revert.title"><value>Terug naar Sqlite</value></data>
+  <data name="dbset.revert.hint"><value>Verwijdert de DB-config en herstart. De app komt terug op Sqlite — Azure SQL blijft, je kunt later weer overschakelen.</value></data>
+  <data name="dbset.revert.action"><value>Herstellen + herstarten</value></data>
+  <data name="dbset.revert.ok"><value>Config gewist — herstart op Sqlite.</value></data>
+  <data name="dbset.confirm.revert"><value>Terug naar Sqlite en herstarten? Wijzigingen sinds de overschakeling blijven op Azure SQL en worden niet teruggekopieerd.</value></data>
 
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>

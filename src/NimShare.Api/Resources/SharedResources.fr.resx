@@ -737,6 +737,58 @@ Ouvrez le lien :
   <data name="nav.sig.templates"><value>Modèles d'e-mail</value></data>
   <data name="nav.sig.contacts"><value>Carnet d'adresses</value></data>
   <data name="nav.sig.certificates"><value>Certificats</value></data>
+  <data name="nav.database"><value>Base de données</value></data>
+
+  <data name="dbset.title"><value>Base de données</value></data>
+  <data name="dbset.lede"><value>Où NimShare stocke ses métadonnées. Sqlite par défaut, Azure SQL recommandé au-delà d'un seul App Service.</value></data>
+  <data name="dbset.status.title"><value>Backend actuel</value></data>
+  <data name="dbset.status.provider"><value>Provider</value></data>
+  <data name="dbset.status.override"><value>depuis fichier de config</value></data>
+  <data name="dbset.status.conn"><value>Connexion</value></data>
+  <data name="dbset.status.users"><value>Utilisateurs</value></data>
+  <data name="dbset.status.configpath"><value>Fichier de config</value></data>
+
+  <data name="dbset.wizard.title"><value>Basculer vers Azure SQL</value></data>
+  <data name="dbset.wizard.hint"><value>Pointez NimShare vers votre serveur Azure SQL existant. L'assistant se connecte, crée la base cible si besoin, copie vos données et redémarre l'app.</value></data>
+  <data name="dbset.wizard.mode_fields"><value>Serveur + login</value></data>
+  <data name="dbset.wizard.mode_raw"><value>Chaîne de connexion brute</value></data>
+  <data name="dbset.field.server"><value>Nom d'hôte du serveur</value></data>
+  <data name="dbset.field.server_hint"><value>ex. myserver.database.windows.net</value></data>
+  <data name="dbset.field.user"><value>Login admin</value></data>
+  <data name="dbset.field.pw"><value>Mot de passe</value></data>
+  <data name="dbset.field.rawconn"><value>Chaîne de connexion</value></data>
+  <data name="dbset.field.rawconn_hint"><value>Pointez sur la base master — l'assistant change Initial Catalog à la création.</value></data>
+  <data name="dbset.field.dbname"><value>Nom de la base cible</value></data>
+  <data name="dbset.field.dbname_hint"><value>Alphanumérique, tiret ou souligné. Créée en Basic si absente.</value></data>
+  <data name="dbset.field.copy"><value>Copier les données NimShare existantes</value></data>
+
+  <data name="dbset.action.test"><value>Tester la connexion</value></data>
+  <data name="dbset.action.create"><value>Créer la base cible</value></data>
+  <data name="dbset.action.switch"><value>Basculer + redémarrer</value></data>
+
+  <data name="dbset.loading.test"><value>Connexion en cours…</value></data>
+  <data name="dbset.loading.create"><value>Création de la base…</value></data>
+  <data name="dbset.loading.switch"><value>Création du schéma, copie, redémarrage…</value></data>
+
+  <data name="dbset.test.ok"><value>Connexion OK.</value></data>
+  <data name="dbset.create.created"><value>Base créée :</value></data>
+  <data name="dbset.create.exists"><value>La base existe déjà :</value></data>
+  <data name="dbset.switch.ok"><value>Bascule réussie.</value></data>
+  <data name="dbset.switch.tables"><value>Tables copiées</value></data>
+  <data name="dbset.switch.rows"><value>Lignes copiées</value></data>
+  <data name="dbset.switch.restarting"><value>L'app redémarre — cette page se rechargera au retour.</value></data>
+  <data name="dbset.confirm.switch"><value>L'app va redémarrer et basculer sur la nouvelle base. Continuer ?</value></data>
+
+  <data name="dbset.warn.title"><value>Avant de basculer</value></data>
+  <data name="dbset.warn.migration"><value>Le schéma est créé via EnsureCreated — les futures évolutions demandent toujours des mises à jour de code.</value></data>
+  <data name="dbset.warn.firewall"><value>Vérifiez que le pare-feu Azure SQL autorise l'IP sortante de l'App Service (ou activez "Autoriser les services Azure").</value></data>
+  <data name="dbset.warn.restart"><value>L'app redémarre après la bascule. Les sessions restent connectées ; les uploads en cours sont interrompus.</value></data>
+
+  <data name="dbset.revert.title"><value>Revenir à Sqlite</value></data>
+  <data name="dbset.revert.hint"><value>Supprime la config DB et redémarre. L'app revient sur Sqlite — Azure SQL reste intacte, vous pouvez rebasculer.</value></data>
+  <data name="dbset.revert.action"><value>Revenir + redémarrer</value></data>
+  <data name="dbset.revert.ok"><value>Config effacée — redémarrage sur Sqlite.</value></data>
+  <data name="dbset.confirm.revert"><value>Revenir à Sqlite et redémarrer ? Les écritures depuis la bascule restent sur Azure SQL et ne seront pas recopiées.</value></data>
 
   <data name="certs.title"><value>Certificats de signature</value></data>
   <data name="certs.lede"><value>Créez un certificat auto-signé pour les signatures NimShare ou importez un PKCS#12 (.pfx/.p12) existant.</value></data>

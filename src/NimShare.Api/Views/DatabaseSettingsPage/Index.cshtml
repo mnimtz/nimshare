@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = T["dbset.title"].Value;
+    Layout = "_AppShell";
+}
+<div class="workspace-inner" style="max-width:960px;margin:0 auto">
+    <div class="page-head">
+        <h1>🗄 @T["dbset.title"]</h1>
+        <p class="muted">@T["dbset.lede"]</p>
+    </div>
+
+    <!-- Current status -->
+    <div class="card" id="statusCard" style="margin-top:16px">
+        <div class="muted">@T["certs.loading"]</div>
+    </div>
+
+    <!-- Wizard -->
+    <div class="card" style="margin-top:16px">
+        <h2>@T["dbset.wizard.title"]</h2>
+        <p class="muted">@T["dbset.wizard.hint"]</p>
+
+        <div class="row" style="gap:16px;flex-wrap:wrap;margin-top:8px">
+            <label style="flex:1;display:flex;gap:6px;align-items:center">
+                <input type="radio" name="wzMode" value="fields" checked/> @T["dbset.wizard.mode_fields"]
+            </label>
+            <label style="flex:1;display:flex;gap:6px;align-items:center">
+                <input type="radio" name="wzMode" value="raw"/> @T["dbset.wizard.mode_raw"]
+            </label>
+        </div>
+
+        <div id="wzFields">
+            <div class="field">
+                <label>@T["dbset.field.server"]</label>
+                <input type="text" id="wzServer" placeholder="myserver.database.windows.net" autocomplete="off"/>
+                <div class="helper">@T["dbset.field.server_hint"]</div>
+            </div>
+            <div class="row" style="gap:12px">
+                <div class="field" style="flex:1">
+                    <label>@T["dbset.field.user"]</label>
+                    <input type="text" id="wzUser" placeholder="sqladmin" autocomplete="off"/>
+                </div>
+                <div class="field" style="flex:1">
+                    <label>@T["dbset.field.pw"]</label>
+                    <input type="password" id="wzPw" autocomplete="new-password"/>
+                </div>
+            </div>
+        </div>
+
+        <div id="wzRaw" style="display:none">
+            <div class="field">
+                <label>@T["dbset.field.rawconn"]</label>
+                <textarea id="wzRawConn" rows="3" placeholder="Server=tcp:my.database.windows.net,1433;Initial Catalog=master;User ID=…;Password=…;Encrypt=True;" style="font-family:monospace;font-size:.85rem" autocomplete="off"></textarea>
+                <div class="helper">@T["dbset.field.rawconn_hint"]</div>
+            </div>
+        </div>
+
+        <div class="field" style="margin-top:8px">
+            <label>@T["dbset.field.dbname"]</label>
+            <input type="text" id="wzDbName" placeholder="nimshare" value="nimshare" autocomplete="off"/>
+            <div class="helper">@T["dbset.field.dbname_hint"]</div>
+        </div>
+
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px">
+            <input type="checkbox" id="wzCopyData" checked/> <span>@T["dbset.field.copy"]</span>
+        </label>
+
+        <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn btn-ghost" onclick="wzTest()">🔎 @T["dbset.action.test"]</button>
+            <button class="btn btn-ghost" onclick="wzCreate()">➕ @T["dbset.action.create"]</button>
+            <button class="btn btn-primary" onclick="wzSwitch()" style="margin-left:auto">🚀 @T["dbset.action.switch"]</button>
+        </div>
+
+        <div id="wzOutput" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;background:rgba(255,198,0,.08);border-left:3px solid var(--tw-yellow)">
+        <h3 style="margin-top:0">⚠ @T["dbset.warn.title"]</h3>
+        <ul class="muted" style="margin-bottom:0">
+            <li>@T["dbset.warn.migration"]</li>
+            <li>@T["dbset.warn.firewall"]</li>
+            <li>@T["dbset.warn.restart"]</li>
+        </ul>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+        <h3 style="margin-top:0">🔙 @T["dbset.revert.title"]</h3>
+        <p class="muted">@T["dbset.revert.hint"]</p>
+        <button class="btn btn-ghost" onclick="wzRevert()">↺ @T["dbset.revert.action"]</button>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function out(html, cls) {
+    const el = document.getElementById('wzOutput');
+    el.className = 'card ' + (cls || '');
+    el.style.background = cls === 'ok' ? 'rgba(34,160,90,.08)'
+        : cls === 'err' ? 'rgba(211,51,51,.08)' : 'rgba(0,160,251,.08)';
+    el.style.borderLeft = '3px solid ' + (cls === 'ok' ? 'var(--status-ok,#22a05a)' : cls === 'err' ? 'var(--status-critical,#d33)' : 'var(--tw-primary-alt)');
+    el.style.padding = '10px 12px';
+    el.innerHTML = html;
+}
+function payload() {
+    const raw = document.querySelector('input[name=wzMode]:checked').value === 'raw';
+    return {
+        server: raw ? null : document.getElementById('wzServer').value.trim(),
+        username: raw ? null : document.getElementById('wzUser').value.trim(),
+        password: raw ? null : document.getElementById('wzPw').value,
+        rawConnectionString: raw ? document.getElementById('wzRawConn').value.trim() : null,
+        databaseName: document.getElementById('wzDbName').value.trim() || 'nimshare',
+    };
+}
+document.querySelectorAll('input[name=wzMode]').forEach(r => r.addEventListener('change', () => {
+    const raw = document.querySelector('input[name=wzMode]:checked').value === 'raw';
+    document.getElementById('wzFields').style.display = raw ? 'none' : '';
+    document.getElementById('wzRaw').style.display = raw ? '' : 'none';
+}));
+
+async function wzTest() {
+    out('<em>' + @Json.Serialize(T["dbset.loading.test"].Value) + '</em>');
+    const p = payload();
+    const r = await fetch('/api/v1/settings/database/test', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(p),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) out('✓ ' + @Json.Serialize(T["dbset.test.ok"].Value) + '<br><small style="opacity:.7">' + esc(d.serverVersion || '') + '</small>', 'ok');
+    else out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
+}
+async function wzCreate() {
+    out('<em>' + @Json.Serialize(T["dbset.loading.create"].Value) + '</em>');
+    const p = payload();
+    const r = await fetch('/api/v1/settings/database/create', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(p),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) out((d.createdNew ? '✓ ' + @Json.Serialize(T["dbset.create.created"].Value) : 'ℹ ' + @Json.Serialize(T["dbset.create.exists"].Value)) + ' <strong>' + esc(p.databaseName) + '</strong>', 'ok');
+    else out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
+}
+async function wzSwitch() {
+    if (!confirm(@Json.Serialize(T["dbset.confirm.switch"].Value))) return;
+    out('<em>' + @Json.Serialize(T["dbset.loading.switch"].Value) + '</em>');
+    const p = payload();
+    p.copyExistingData = document.getElementById('wzCopyData').checked;
+    const r = await fetch('/api/v1/settings/database/switch', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(p),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) {
+        out('✓ ' + @Json.Serialize(T["dbset.switch.ok"].Value) +
+            '<br>' + @Json.Serialize(T["dbset.switch.tables"].Value) + ': ' + d.copiedTables +
+            ' — ' + @Json.Serialize(T["dbset.switch.rows"].Value) + ': ' + d.copiedRows +
+            '<br><em>' + @Json.Serialize(T["dbset.switch.restarting"].Value) + '</em>', 'ok');
+        // Poll for the app to come back up.
+        let attempts = 0;
+        const iv = setInterval(async () => {
+            attempts++;
+            try {
+                const s = await fetch('/api/v1/settings/database/status', { credentials: 'same-origin' });
+                if (s.ok) { clearInterval(iv); location.reload(); }
+            } catch {}
+            if (attempts > 30) { clearInterval(iv); location.reload(); }
+        }, 3000);
+    } else {
+        out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
+    }
+}
+async function wzRevert() {
+    if (!confirm(@Json.Serialize(T["dbset.confirm.revert"].Value))) return;
+    const r = await fetch('/api/v1/settings/database/revert-to-sqlite', {
+        method: 'POST', credentials: 'same-origin',
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) {
+        out('✓ ' + @Json.Serialize(T["dbset.revert.ok"].Value), 'ok');
+        setTimeout(() => location.reload(), 8000);
+    } else {
+        out('✕ ' + JSON.stringify(d), 'err');
+    }
+}
+
+async function loadStatus() {
+    const r = await fetch('/api/v1/settings/database/status', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const s = await r.json();
+    const card = document.getElementById('statusCard');
+    const provider = s.activeProvider;
+    const providerBadge = provider === 'SqlServer'
+        ? '<span style="background:rgba(0,160,251,.15);color:var(--tw-primary);padding:2px 8px;border-radius:12px;font-weight:700">Azure SQL</span>'
+        : '<span style="background:rgba(255,198,0,.20);color:#7a5b00;padding:2px 8px;border-radius:12px;font-weight:700">SQLite</span>';
+    const sizeStr = s.sqliteFileBytes ? ' — ' + (s.sqliteFileBytes / 1024 / 1024).toFixed(1) + ' MB' : '';
+    card.innerHTML = '<h3 style="margin-top:0">' + @Json.Serialize(T["dbset.status.title"].Value) + '</h3>' +
+        '<table class="table"><tbody>' +
+            '<tr><td>' + @Json.Serialize(T["dbset.status.provider"].Value) + '</td><td>' + providerBadge + (s.configOverride ? ' <small class="muted">(' + @Json.Serialize(T["dbset.status.override"].Value) + ')</small>' : '') + '</td></tr>' +
+            '<tr><td>' + @Json.Serialize(T["dbset.status.conn"].Value) + '</td><td><code style="font-size:.8rem">' + esc(s.redactedConnection || '') + sizeStr + '</code></td></tr>' +
+            '<tr><td>' + @Json.Serialize(T["dbset.status.users"].Value) + '</td><td>' + (s.userCount ?? '—') + '</td></tr>' +
+            '<tr><td>' + @Json.Serialize(T["dbset.status.configpath"].Value) + '</td><td><code style="font-size:.8rem">' + esc(s.configPath) + '</code></td></tr>' +
+            '<tr><td>Build</td><td>v' + esc(s.buildVersion) + '</td></tr>' +
+        '</tbody></table>';
+}
+loadStatus();
+</script>
+}

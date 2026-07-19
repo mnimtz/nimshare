@@ -20,8 +20,18 @@ builder.Services.Configure<IpHashOptions>(builder.Configuration.GetSection(IpHas
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 // ── Database ───────────────────────────────────────────────────────────────
-var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
-var connString = builder.Configuration.GetConnectionString("Default")
+// The persistent DB config file (written by /settings/database) takes
+// precedence over env-var / appsettings.json. That's what lets an admin flip
+// the app from Sqlite to Azure SQL without a redeploy: they save the config,
+// we restart, and Program.cs picks the new provider up here.
+var dbConfigStore = new DbConfigStore(builder.Configuration);
+builder.Services.AddSingleton(dbConfigStore);
+var persistedDbConfig = dbConfigStore.Load();
+var dbProvider = persistedDbConfig?.Provider
+                 ?? builder.Configuration["Database:Provider"]
+                 ?? "Sqlite";
+var connString = persistedDbConfig?.ConnectionString
+                 ?? builder.Configuration.GetConnectionString("Default")
                  ?? "Data Source=nimshare.db";
 
 // When Sqlite points at a mounted volume like /data/nimshare.db, make sure
@@ -228,6 +238,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── App services ───────────────────────────────────────────────────────────
+builder.Services.AddScoped<IDbMigrationService, DbMigrationService>();
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 builder.Services.AddScoped<ISlugService, SlugService>();
 builder.Services.AddSingleton<IIpHashService, IpHashService>();
@@ -295,6 +306,7 @@ if (!app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+    var isSqlServer = string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase);
     // Migrate with retry — on Azure Files, the SMB mount can be momentarily
     // unavailable at cold start, which used to abort the whole boot with
     // "unable to open database file". Six attempts on 2 s cadence ≈ 12 s of
@@ -303,7 +315,21 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            await db.Database.MigrateAsync();
+            if (isSqlServer)
+            {
+                // We don't ship SqlServer-specific EF migrations (the whole
+                // migration set was authored against Sqlite). Instead, let EF
+                // build the schema from the current model in one shot on the
+                // freshly created Azure SQL database. Idempotent: if the
+                // schema already exists it's a no-op. Future schema changes
+                // will need a proper SqlServer migration set — noted in
+                // docs/DB-BACKEND.md.
+                await db.Database.EnsureCreatedAsync();
+            }
+            else
+            {
+                await db.Database.MigrateAsync();
+            }
             break;
         }
         catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
@@ -325,7 +351,7 @@ using (var scope = app.Services.CreateScope())
     // which stops "upload complete" from freezing the /browse pages. 15 s
     // busy_timeout absorbs brief lock contention (each connection retries
     // automatically before surfacing SQLITE_BUSY). Best-effort — never fatal.
-    if (!string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+    if (!isSqlServer)
     {
         try
         {

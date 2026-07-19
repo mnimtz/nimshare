@@ -741,6 +741,58 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="nav.sig.templates"><value>Email-Templates</value></data>
   <data name="nav.sig.contacts"><value>Adressbuch</value></data>
   <data name="nav.sig.certificates"><value>Zertifikate</value></data>
+  <data name="nav.database"><value>Datenbank</value></data>
+
+  <data name="dbset.title"><value>Datenbank</value></data>
+  <data name="dbset.lede"><value>Wo NimShare seine Metadaten speichert. Sqlite ist Standard und läuft ohne Konfiguration. Azure SQL empfehlen wir sobald ihr über einen einzelnen App-Service hinauswachst.</value></data>
+  <data name="dbset.status.title"><value>Aktueller Backend</value></data>
+  <data name="dbset.status.provider"><value>Provider</value></data>
+  <data name="dbset.status.override"><value>aus Config-Datei</value></data>
+  <data name="dbset.status.conn"><value>Verbindung</value></data>
+  <data name="dbset.status.users"><value>Benutzer</value></data>
+  <data name="dbset.status.configpath"><value>Config-Datei</value></data>
+
+  <data name="dbset.wizard.title"><value>Auf Azure SQL umstellen</value></data>
+  <data name="dbset.wizard.hint"><value>NimShare auf deinen vorhandenen Azure-SQL-Server umschalten. Der Assistent verbindet sich mit dem Admin-Login, legt die Ziel-DB an falls nötig, kopiert optional deine bestehenden Zeilen und startet die App neu.</value></data>
+  <data name="dbset.wizard.mode_fields"><value>Server + Login</value></data>
+  <data name="dbset.wizard.mode_raw"><value>Verbindungsstring direkt</value></data>
+  <data name="dbset.field.server"><value>Server-Hostname</value></data>
+  <data name="dbset.field.server_hint"><value>z.B. myserver.database.windows.net</value></data>
+  <data name="dbset.field.user"><value>Admin-Login</value></data>
+  <data name="dbset.field.pw"><value>Passwort</value></data>
+  <data name="dbset.field.rawconn"><value>Verbindungsstring</value></data>
+  <data name="dbset.field.rawconn_hint"><value>Auf die master-DB zeigen — der Assistent tauscht Initial Catalog beim Anlegen.</value></data>
+  <data name="dbset.field.dbname"><value>Ziel-Datenbankname</value></data>
+  <data name="dbset.field.dbname_hint"><value>Alphanumerisch, Bindestrich oder Unterstrich. Wird als Basic-Tier angelegt wenn nicht vorhanden.</value></data>
+  <data name="dbset.field.copy"><value>Bestehende NimShare-Daten übernehmen</value></data>
+
+  <data name="dbset.action.test"><value>Verbindung testen</value></data>
+  <data name="dbset.action.create"><value>Ziel-DB anlegen</value></data>
+  <data name="dbset.action.switch"><value>Umstellen + neu starten</value></data>
+
+  <data name="dbset.loading.test"><value>Verbinde…</value></data>
+  <data name="dbset.loading.create"><value>Lege Datenbank an…</value></data>
+  <data name="dbset.loading.switch"><value>Baue Schema, kopiere Daten, starte neu…</value></data>
+
+  <data name="dbset.test.ok"><value>Verbindung OK.</value></data>
+  <data name="dbset.create.created"><value>Datenbank angelegt:</value></data>
+  <data name="dbset.create.exists"><value>Datenbank existiert bereits:</value></data>
+  <data name="dbset.switch.ok"><value>Umstellung erfolgreich.</value></data>
+  <data name="dbset.switch.tables"><value>Kopierte Tabellen</value></data>
+  <data name="dbset.switch.rows"><value>Kopierte Zeilen</value></data>
+  <data name="dbset.switch.restarting"><value>App startet neu — diese Seite lädt sich neu sobald sie wieder da ist.</value></data>
+  <data name="dbset.confirm.switch"><value>Das startet die App neu und schaltet sie auf die neue Datenbank um. Fortfahren?</value></data>
+
+  <data name="dbset.warn.title"><value>Vor dem Umstellen</value></data>
+  <data name="dbset.warn.migration"><value>Das Schema wird per EnsureCreated auf der Ziel-DB gebaut — spätere Schema-Änderungen brauchen weiter Code-Updates.</value></data>
+  <data name="dbset.warn.firewall"><value>Prüfe dass die Azure-SQL-Firewall die ausgehende IP des App Services zulässt (oder "Azure-Dienste zulassen" aktivieren).</value></data>
+  <data name="dbset.warn.restart"><value>Die App startet nach dem Umschalten neu. Laufende Sessions bleiben eingeloggt; laufende Uploads werden abgebrochen.</value></data>
+
+  <data name="dbset.revert.title"><value>Zurück auf Sqlite</value></data>
+  <data name="dbset.revert.hint"><value>Löscht die DB-Config-Datei und startet neu. Die App kommt auf dem ursprünglichen Sqlite-Pfad zurück — deine Azure-SQL-Datenbank bleibt unberührt und du kannst später wieder umschalten.</value></data>
+  <data name="dbset.revert.action"><value>Zurücksetzen + neu starten</value></data>
+  <data name="dbset.revert.ok"><value>Config gelöscht — starte auf Sqlite neu.</value></data>
+  <data name="dbset.confirm.revert"><value>Auf Sqlite zurück und neu starten? Änderungen seit der Umschaltung bleiben in Azure SQL und werden nicht zurückkopiert.</value></data>
 
   <data name="certs.title"><value>Signatur-Zertifikate</value></data>
   <data name="certs.lede"><value>Erstelle ein eigenes Zertifikat für digitale Signaturen in NimShare oder importiere eine vorhandene PKCS#12-Datei (.pfx/.p12).</value></data>
