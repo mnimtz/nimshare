@@ -162,9 +162,6 @@ builder.Services
     })
     .AddMicrosoftIdentityUI();
 
-// Reusable HttpClient pool for webhook dispatch, AI providers, etc.
-builder.Services.AddHttpClient();
-
 builder.Services.AddRazorPages()
     .AddViewLocalization()
     .AddMicrosoftIdentityUI();
@@ -214,10 +211,14 @@ builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 builder.Services.AddHostedService<SignatureReminderService>();
 builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
 
-// Global scope-guard for personal API tokens: an unsafe HTTP verb requires a
-// scope that ends in ":write", ":manage" or "*". Cookie/JWT/Entra callers have
-// no scope claims and pass through unchanged.
-builder.Services.AddScoped<Microsoft.AspNetCore.Mvc.Filters.IAsyncActionFilter, NimShare.Api.Services.ApiTokenMethodGuard>();
+// NOTE: an earlier version tried to register ApiTokenMethodGuard as
+// IAsyncActionFilter via plain DI. That pattern does NOT auto-apply to MVC
+// (only MvcOptions.Filters does) — the guard is a no-op. Removed here to
+// eliminate a suspicious startup-time DI wiring.
+//
+// TODO(v1.7.8+): apply the guard properly via
+//   .AddControllersWithViews(mvc => mvc.Filters.Add<ApiTokenMethodGuard>())
+// after verifying it doesn't break cookie-based requests.
 builder.Services.AddHostedService<RecurringUploadReopenerService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.
@@ -256,10 +257,23 @@ if (!app.Environment.IsDevelopment())
 }
 
 // ── Migrations + container bootstrap ───────────────────────────────────────
+// Wrapped in try/catch so a failed migration doesn't kill Kestrel entirely
+// (which produces Azure's opaque "site can't process the request now" page
+// and leaves the operator blind). Instead we log to stderr — Azure Log Stream
+// / App Service log will show the actual EF exception.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
-    await db.Database.MigrateAsync();
+    try
+    {
+        await db.Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
+        var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
+        logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");
+    }
 }
 
 // Ensuring the blob container exists can take 30+ s of retry when the storage
