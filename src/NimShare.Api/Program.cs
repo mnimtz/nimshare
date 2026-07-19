@@ -204,6 +204,11 @@ builder.Services.AddSingleton<ITotpChallengeStore, TotpChallengeStore>();
 builder.Services.AddScoped<ISignaturePdfService, SignaturePdfService>();
 builder.Services.AddHostedService<SignatureReminderService>();
 builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
+
+// Global scope-guard for personal API tokens: an unsafe HTTP verb requires a
+// scope that ends in ":write", ":manage" or "*". Cookie/JWT/Entra callers have
+// no scope claims and pass through unchanged.
+builder.Services.AddScoped<Microsoft.AspNetCore.Mvc.Filters.IAsyncActionFilter, NimShare.Api.Services.ApiTokenMethodGuard>();
 builder.Services.AddHostedService<RecurringUploadReopenerService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.

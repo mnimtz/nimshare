@@ -153,7 +153,7 @@ public class FolderService : IFolderService
         return folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id || user.Role == UserRole.Admin,
-            FileScope.Public => true,
+            FileScope.Public => user.Role == UserRole.Admin || user.PublicCanRead,
             FileScope.Group => folder.OwnerGroupId is Guid g
                 && (user.Role == UserRole.Admin || await _access.IsGroupMemberAsync(user, g, ct)),
             _ => false,
@@ -165,7 +165,7 @@ public class FolderService : IFolderService
         var baseGrant = folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id || user.Role == UserRole.Admin,
-            FileScope.Public => true,
+            FileScope.Public => user.Role == UserRole.Admin || user.PublicCanWrite,
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupMemberAsync(user, g, ct),
             _ => false,
         };

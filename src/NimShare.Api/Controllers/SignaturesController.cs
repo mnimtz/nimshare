@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NimShare.Api.Services;
@@ -22,11 +23,14 @@ public class SignaturesController : ControllerBase
     private readonly IPasswordHasher _hasher;
     private readonly INotificationService _notify;
     private readonly IUserNotifier _in;
+    private readonly IDataProtector _stash;
 
     public SignaturesController(NimShareDbContext db, ICurrentUserService users,
-        IPasswordHasher hasher, INotificationService notify, IUserNotifier inApp)
+        IPasswordHasher hasher, INotificationService notify, IUserNotifier inApp,
+        IDataProtectionProvider dp)
     {
         _db = db; _users = users; _hasher = hasher; _notify = notify; _in = inApp;
+        _stash = dp.CreateProtector("NimShare.Signature.Chain.v1");
     }
 
     public record RequestDto(Guid Id, Guid SourceFileId, string SourceFileName, string Title,
@@ -195,7 +199,7 @@ public class SignaturesController : ControllerBase
             // sequentially. Since the token is opaque (not sensitive by
             // itself once the flow is in-flight), this trade is fine for the
             // MVP; a follow-up can move to a signed session cookie.
-            p.DeclinedReason = "TOKEN:" + raw;
+            p.DeclinedReason = "TOKEN:" + _stash.Protect(raw);
         }
         r.Status = SignatureRequestStatus.Sent;
         r.SentAt = DateTimeOffset.UtcNow;
@@ -238,8 +242,12 @@ public class SignaturesController : ControllerBase
         });
     }
 
-    private static string ExtractStashedToken(SignatureParticipant p) =>
-        (p.DeclinedReason ?? "").StartsWith("TOKEN:") ? p.DeclinedReason!["TOKEN:".Length..] : "";
+    private string ExtractStashedToken(SignatureParticipant p)
+    {
+        if (!(p.DeclinedReason ?? "").StartsWith("TOKEN:")) return "";
+        try { return _stash.Unprotect(p.DeclinedReason!["TOKEN:".Length..]); }
+        catch { return ""; }
+    }
 
     [HttpPost("{id:guid}/remind")]
     public async Task<IActionResult> ManualRemind(Guid id, CancellationToken ct)

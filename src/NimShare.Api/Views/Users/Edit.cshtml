@@ -66,20 +66,20 @@
         </div>
     </div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--tw-gray-200)">
-        <div style="font-weight:500;margin-bottom:8px">🌐 Öffentlicher Bereich</div>
-        <div class="muted" style="font-size:13px;margin-bottom:10px">Rechte in der öffentlichen Ablage. Admin-User bekommen alle Rechte automatisch.</div>
+        <div style="font-weight:500;margin-bottom:8px">🌐 @T["users.public.heading"]</div>
+        <div class="muted" style="font-size:13px;margin-bottom:10px">@T["users.public.lede"]</div>
         <div class="row" style="gap:16px;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
                 <input type="checkbox" name="publicCanRead" value="true" @(Model.PublicCanRead ? "checked" : "")/>
-                <span>Lesen</span>
+                <span>@T["users.public.read"]</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
                 <input type="checkbox" name="publicCanWrite" value="true" @(Model.PublicCanWrite ? "checked" : "")/>
-                <span>Hochladen / Ändern</span>
+                <span>@T["users.public.write"]</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-weight:400">
                 <input type="checkbox" name="publicCanDelete" value="true" @(Model.PublicCanDelete ? "checked" : "")/>
-                <span>Löschen</span>
+                <span>@T["users.public.delete"]</span>
             </label>
         </div>
     </div>

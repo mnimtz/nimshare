@@ -243,7 +243,9 @@ public class DirectSharesController : ControllerBase
             .Where(m => m.UserId == me.Id).Select(m => m.GroupId).ToListAsync(ct);
         var shares = await _db.DirectShares
             .Where(s => (s.TargetUserId == me.Id || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId.Value)))
-                && s.SharedByUserId != me.Id)
+                && s.SharedByUserId != me.Id
+                && (s.File == null || s.File.OwnerId != me.Id)
+                && (s.Folder == null || s.Folder.OwnerUserId != me.Id))
             .Include(s => s.File).Include(s => s.Folder).Include(s => s.SharedByUser)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(ct);

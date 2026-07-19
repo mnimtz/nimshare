@@ -147,7 +147,11 @@ public class WikiController : Controller
         var siblings = await _db.WikiPages.Where(x => x.Scope == p.Scope
             && x.OwnerUserId == p.OwnerUserId && x.OwnerGroupId == p.OwnerGroupId)
             .OrderBy(x => x.SortOrder).ThenBy(x => x.Title).ToListAsync(ct);
-        ViewData["HTML"] = Markdown.ToHtml(p.ContentMarkdown ?? "");
+        var pipeline = new Markdig.MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .DisableHtml()
+            .Build();
+        ViewData["HTML"] = Markdown.ToHtml(p.ContentMarkdown ?? "", pipeline);
         ViewData["Siblings"] = siblings;
         ViewData["CanWrite"] = await CanWriteAsync(p, ct);
         return View(p);
@@ -190,6 +194,8 @@ public class WikiController : Controller
         var s = new string(title.ToLowerInvariant()
             .Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
         while (s.Contains("--")) s = s.Replace("--", "-");
-        return s.Trim('-')[..Math.Min(120, s.Length)];
+        s = s.Trim('-');
+        if (string.IsNullOrEmpty(s)) s = "page-" + Guid.NewGuid().ToString("N")[..8];
+        return s.Length > 120 ? s[..120] : s;
     }
 }

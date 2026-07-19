@@ -41,7 +41,8 @@ public class FileLocksController : ControllerBase
         var me = await _users.GetOrProvisionAsync(User, ct);
         var f = await _db.Files.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (f is null) return NotFound();
-        if (!await _access.CanReadAsync(me, f, ct)) return Forbid();
+        // Only writers can lock — otherwise a public-read-only user could freeze the file.
+        if (!await _access.CanDeleteAsync(me, f, ct)) return Forbid();
         var now = DateTimeOffset.UtcNow;
         var alive = f.LockedUntil is DateTimeOffset until && until > now;
         if (alive && f.LockedByUserId != me.Id)

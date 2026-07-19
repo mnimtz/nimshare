@@ -127,9 +127,9 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
-            <a href="/signatures" class="@Active("/signatures")">✍ Signaturen</a>
-            <a href="/wiki" class="@Active("/wiki")">📚 Wiki</a>
-            <a href="/notifications" class="@Exact("/notifications")">🔔 Benachrichtigungen</a>
+            <a href="/signatures" class="@Active("/signatures")">✍ @T["nav.signatures"]</a>
+            <a href="/wiki" class="@Active("/wiki")">📚 @T["nav.wiki"]</a>
+            <a href="/notifications" class="@Exact("/notifications")">🔔 @T["nav.notifications"]</a>
             <a href="/activity"  class="@Exact("/activity")">🕐 @T["nav.activity"]</a>
             <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
 
@@ -138,15 +138,15 @@
             </div>
             <div class="nav-section-body">
                 <a href="/settings/profile" class="@Active("/settings/profile")">@T["nav.profile"]</a>
-                <a href="/settings/2fa" class="@Exact("/settings/2fa")">2FA</a>
-                <a href="/settings/landing/mine" class="@Exact("/settings/landing/mine")">Download-Seite</a>
-                <a href="/settings/dev" class="@Exact("/settings/dev")">Entwickler</a>
+                <a href="/settings/2fa" class="@Exact("/settings/2fa")">@T["settings.2fa"]</a>
+                <a href="/settings/landing/mine" class="@Exact("/settings/landing/mine")">@T["settings.download_page"]</a>
+                <a href="/settings/dev" class="@Exact("/settings/dev")">@T["settings.dev"]</a>
                 @if (isAdmin)
                 {
                     <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
-                    <a href="/settings/landing/global" class="@Exact("/settings/landing/global")">Öffentliche Download-Seite</a>
+                    <a href="/settings/landing/global" class="@Exact("/settings/landing/global")">@T["settings.public_download_page"]</a>
                     <a href="/settings/email" class="@Active("/settings/email")">@T["nav.email_gateway"]</a>
-                    <a href="/settings/office" class="@Active("/settings/office")">OnlyOffice</a>
+                    <a href="/settings/office" class="@Active("/settings/office")">@T["settings.office"]</a>
                     <a href="/settings/ai" class="@Active("/settings/ai")">@T["nav.ai_gateway"]</a>
                 }
                 <a href="/settings" class="@Exact("/settings")">@T["nav.domains"]</a>

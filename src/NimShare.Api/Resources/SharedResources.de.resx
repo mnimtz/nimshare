@@ -479,4 +479,73 @@
   <data name="links.public.share"><value>Öffentlich machen</value></data>
   <data name="links.public.unshare"><value>Privat machen</value></data>
   <data name="links.action.open"><value>Öffnen</value></data>
+
+  <data name="common.cancel"><value>Abbrechen</value></data>
+  <data name="common.save"><value>Speichern</value></data>
+  <data name="common.delete"><value>Löschen</value></data>
+  <data name="common.edit"><value>Bearbeiten</value></data>
+  <data name="common.close"><value>Schließen</value></data>
+  <data name="common.copy"><value>Kopieren</value></data>
+  <data name="common.copied"><value>Kopiert</value></data>
+  <data name="common.error"><value>Fehler</value></data>
+  <data name="common.loading"><value>Lade…</value></data>
+  <data name="common.create"><value>Erstellen</value></data>
+  <data name="common.back"><value>Zurück</value></data>
+  <data name="common.title"><value>Titel</value></data>
+  <data name="common.name"><value>Name</value></data>
+  <data name="common.confirm_delete"><value>Wirklich löschen?</value></data>
+
+  <data name="nav.signatures"><value>Signaturen</value></data>
+  <data name="nav.wiki"><value>Wiki</value></data>
+  <data name="nav.notifications"><value>Benachrichtigungen</value></data>
+
+  <data name="settings.2fa"><value>2FA</value></data>
+  <data name="settings.download_page"><value>Download-Seite</value></data>
+  <data name="settings.dev"><value>Entwickler</value></data>
+  <data name="settings.public_download_page"><value>Öffentliche Download-Seite</value></data>
+  <data name="settings.office"><value>OnlyOffice</value></data>
+
+  <data name="users.public.heading"><value>Öffentlicher Bereich</value></data>
+  <data name="users.public.lede"><value>Rechte in der öffentlichen Ablage. Admin-User bekommen alle Rechte automatisch.</value></data>
+  <data name="users.public.read"><value>Lesen</value></data>
+  <data name="users.public.write"><value>Hochladen / Ändern</value></data>
+  <data name="users.public.delete"><value>Löschen</value></data>
+
+  <data name="dashboard.share.heading"><value>Datei teilen</value></data>
+  <data name="dashboard.share.busy"><value>Erstelle Link…</value></data>
+  <data name="dashboard.share.link_label"><value>Öffentlicher Link</value></data>
+  <data name="dashboard.share.manage"><value>Verwalten</value></data>
+  <data name="dashboard.share.title_prefix"><value>Teile: </value></data>
+
+  <data name="office.title"><value>OnlyOffice</value></data>
+  <data name="office.lede"><value>Verbinde NimShare mit einem OnlyOffice- oder Collabora-Document-Server, um Word/Excel/PowerPoint direkt im Browser zu bearbeiten.</value></data>
+  <data name="office.enable"><value>OnlyOffice-Integration aktivieren</value></data>
+  <data name="office.doc_server_url"><value>Document-Server-URL</value></data>
+  <data name="office.doc_server_url_hint"><value>Basis-URL des OnlyOffice/Collabora-Servers, ohne Pfad.</value></data>
+  <data name="office.jwt_secret"><value>JWT Shared Secret</value></data>
+  <data name="office.jwt_secret_hint"><value>Muss auf beiden Seiten identisch sein. Verschlüsselt gespeichert.</value></data>
+  <data name="office.jwt_placeholder_set"><value>•••••••• (leer lassen um bestehendes zu behalten)</value></data>
+  <data name="office.jwt_placeholder_new"><value>geheimer Schlüssel für JWT-Signatur</value></data>
+  <data name="office.saved"><value>OnlyOffice-Einstellungen gespeichert.</value></data>
+  <data name="office.howto.heading"><value>So funktioniert's</value></data>
+  <data name="office.howto.1"><value>Deploye einen OnlyOffice-Docker-Container oder einen Collabora-Server.</value></data>
+  <data name="office.howto.2"><value>Trage die URL und das JWT-Secret oben ein.</value></data>
+  <data name="office.howto.3"><value>Öffne eine Word-/Excel-/PowerPoint-Datei in deiner Ablage — der Bearbeiten-Button erscheint automatisch.</value></data>
+  <data name="office.howto.4"><value>Während der Bearbeitung ist die Datei automatisch gesperrt, damit niemand parallel schreibt.</value></data>
+
+  <data name="wiki.title"><value>Wiki</value></data>
+  <data name="wiki.lede"><value>Markdown-Seiten pro Person + pro Gruppe. Ideal für interne Docs, Meeting-Notes, How-Tos.</value></data>
+  <data name="wiki.new_page"><value>Neue Seite</value></data>
+  <data name="wiki.mine"><value>Meine Seiten</value></data>
+  <data name="wiki.mine.none"><value>Noch keine persönlichen Seiten.</value></data>
+  <data name="wiki.groups"><value>Gruppen-Wikis</value></data>
+  <data name="wiki.groups.none"><value>Du bist in keiner Gruppe.</value></data>
+  <data name="wiki.no_pages_in_group"><value>Noch keine Seiten in dieser Gruppe.</value></data>
+  <data name="wiki.prompt_new_title"><value>Titel der neuen Seite:</value></data>
+  <data name="wiki.no_access"><value>Kein Zugriff.</value></data>
+  <data name="wiki.last_edited"><value>Zuletzt bearbeitet {0} von {1}</value></data>
+  <data name="wiki.title_label"><value>Titel</value></data>
+  <data name="wiki.content_label"><value>Inhalt (Markdown)</value></data>
+  <data name="wiki.pages"><value>Seiten</value></data>
+  <data name="wiki.confirm_delete"><value>Diese Seite löschen?</value></data>
 </root>

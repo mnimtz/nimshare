@@ -152,18 +152,22 @@ public class FilesController : ControllerBase
         // Chunked because we don't know the total size upfront.
         Response.Headers["X-Accel-Buffering"] = "no";
 
-        using var zip = new System.IO.Compression.ZipArchive(Response.Body,
-            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true);
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var f in allowed)
+        using (var zip = new System.IO.Compression.ZipArchive(Response.Body,
+            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            ct.ThrowIfCancellationRequested();
-            var entryName = MakeUnique(f.Name, used);
-            var entry = zip.CreateEntry(entryName, System.IO.Compression.CompressionLevel.NoCompression);
-            using var es = entry.Open();
-            try { await _blobs.DownloadToAsync(f.BlobPath, es, ct); }
-            catch (OperationCanceledException) { throw; }
-            catch { /* Skip broken blob; keep archive going. */ }
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in allowed)
+            {
+                ct.ThrowIfCancellationRequested();
+                var entryName = MakeUnique(f.Name, used);
+                var entry = zip.CreateEntry(entryName, System.IO.Compression.CompressionLevel.NoCompression);
+                using var es = entry.Open();
+                try { await _blobs.DownloadToAsync(f.BlobPath, es, ct); }
+                catch (OperationCanceledException) { throw; }
+                // Any other error must not leak a half-written entry into the
+                // zip. Bubble up so the client sees a broken transfer instead
+                // of a silently corrupt archive.
+            }
         }
         return new EmptyResult();
     }

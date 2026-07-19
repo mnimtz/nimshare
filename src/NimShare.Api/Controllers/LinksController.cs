@@ -186,18 +186,21 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> SendByEmail(Guid id, [FromBody] SendByEmailRequest req, [FromServices] INotificationService notify, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.ShareLinks.Include(l => l.File).SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        var link = await _db.ShareLinks.Include(l => l.File).Include(l => l.Folder)
+            .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
         if (string.IsNullOrWhiteSpace(req.ToEmail) || !req.ToEmail.Contains('@'))
             return Problem(statusCode: 422, title: "Invalid recipient email");
         var url = BuildPublicUrl(link.Slug);
-        var subject = $"{user.DisplayName} shared a file with you: {link.File.Name}";
+        var itemName = link.File?.Name ?? link.Folder?.Name ?? "Freigabe";
+        var itemKind = link.File is not null ? "a file" : "a folder";
+        var subject = $"{user.DisplayName} shared {itemKind} with you: {itemName}";
         var body = $"""
                     Hello,
 
-                    {user.DisplayName} ({user.Email}) has shared a file with you:
+                    {user.DisplayName} ({user.Email}) has shared {itemKind} with you:
 
-                    {link.File.Name}
+                    {itemName}
                     {url}
 
                     {(string.IsNullOrWhiteSpace(req.Message) ? "" : "Message from the sender:\n" + req.Message + "\n\n")}

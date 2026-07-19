@@ -64,9 +64,10 @@ public class FileAccessService : IFileAccessService
             .Where(s => s.FolderId != null && (s.TargetUserId == user.Id || (s.TargetGroupId != null && myGroups.Contains(s.TargetGroupId.Value))))
             .Select(s => s.FolderId!.Value);
 
+        var publicReadable = user.Role == UserRole.Admin || user.PublicCanRead;
         return q.Where(f =>
             (f.Scope == FileScope.Personal && f.OwnerId == user.Id) ||
-            (f.Scope == FileScope.Public) ||
+            (f.Scope == FileScope.Public && publicReadable) ||
             (f.Scope == FileScope.Group && f.GroupId != null && myGroups.Contains(f.GroupId.Value)) ||
             directFileIds.Contains(f.Id) ||
             (f.FolderId != null && directFolderIds.Contains(f.FolderId.Value)));

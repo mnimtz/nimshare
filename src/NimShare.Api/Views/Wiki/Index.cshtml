@@ -1,25 +1,29 @@
 @using NimShare.Api.Services
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = "Wiki";
+    ViewData["Title"] = @T["wiki.title"];
     Layout = "_AppShell";
     var mine = (List<WikiPage>)(ViewData["Mine"] ?? new List<WikiPage>());
     var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
 }
 <div class="page-header">
     <div>
-        <h1>📚 Wiki</h1>
-        <p class="lede">Markdown-Seiten pro Person + pro Gruppe. Ideal für interne Docs, Meeting-Notes, How-Tos.</p>
+        <h1>📚 @T["wiki.title"]</h1>
+        <p class="lede">@T["wiki.lede"]</p>
     </div>
-    <button class="btn btn-primary" onclick="createPage('Personal', null)">+ Neue Seite</button>
+    <button class="btn btn-primary" onclick="createPage('Personal', null)">+ @T["wiki.new_page"]</button>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:stretch">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:stretch"
+     data-prompt-title="@T["wiki.prompt_new_title"]"
+     data-error="@T["common.error"]"
+     data-no-access="@T["wiki.no_access"]"
+     data-no-pages-in-group="@T["wiki.no_pages_in_group"]">
     <div class="card" style="display:flex;flex-direction:column">
-        <h2 class="card-title">👤 Meine Seiten</h2>
+        <h2 class="card-title">👤 @T["wiki.mine"]</h2>
         @if (!mine.Any())
         {
-            <p class="muted">Noch keine persönlichen Seiten.</p>
+            <p class="muted">@T["wiki.mine.none"]</p>
         }
         else
         {
@@ -34,23 +38,23 @@
         }
     </div>
     <div class="card" style="display:flex;flex-direction:column">
-        <h2 class="card-title">👥 Gruppen-Wikis</h2>
+        <h2 class="card-title">👥 @T["wiki.groups"]</h2>
         @if (!groups.Any())
         {
-            <p class="muted">Du bist in keiner Gruppe.</p>
+            <p class="muted">@T["wiki.groups.none"]</p>
         }
         else
         {
             <div style="display:flex;flex-direction:column;gap:6px">
                 @foreach (var g in groups)
                 {
-                    <details>
+                    <details data-group-id="@g.Id">
                         <summary style="cursor:pointer;padding:6px 10px;border-radius:4px;font-weight:500">@g.Name</summary>
                         <div id="group-pages-@g.Id" style="padding-left:20px;margin-top:4px">
-                            <p class="muted">Lade…</p>
+                            <p class="muted">@T["common.loading"]</p>
                         </div>
                         <div style="padding-left:20px;margin-top:6px">
-                            <button class="btn btn-ghost btn-sm" onclick="createPage('Group', '@g.Id')">+ Neue Seite</button>
+                            <button class="btn btn-ghost btn-sm" onclick="createPage('Group', '@g.Id')">+ @T["wiki.new_page"]</button>
                         </div>
                     </details>
                 }
@@ -60,32 +64,31 @@
 </div>
 
 <script>
+const wikiI18n = document.querySelector('[data-prompt-title]').dataset;
 async function createPage(scope, groupId) {
-    const title = prompt('Titel der neuen Seite:');
+    const title = prompt(wikiI18n.promptTitle);
     if (!title) return;
     const body = { scope, ownerGroupId: groupId, parentPageId: null, title, contentMarkdown: '# ' + title + '\n\n' };
     const r = await fetch('/api/v1/wiki/pages', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify(body)
     });
-    if (!r.ok) { alert('Fehler: ' + r.status); return; }
+    if (!r.ok) { alert(wikiI18n.error + ': ' + r.status); return; }
     const d = await r.json();
     location.href = '/wiki/' + d.id;
 }
 
-document.querySelectorAll('details').forEach(det => {
+document.querySelectorAll('details[data-group-id]').forEach(det => {
     det.addEventListener('toggle', async () => {
         if (!det.open) return;
-        const sum = det.querySelector('summary').textContent.trim();
-        const gid = det.querySelector('button')?.getAttribute('onclick').match(/'([^']+)'\)/g)?.slice(-1)[0]?.replace(/[')]/g, '');
-        if (!gid) return;
+        const gid = det.dataset.groupId;
         const cont = document.getElementById('group-pages-' + gid);
         const r = await fetch('/api/v1/wiki/pages?scope=Group&groupId=' + gid, { credentials: 'same-origin' });
-        if (!r.ok) { cont.innerHTML = '<p class="muted">Kein Zugriff.</p>'; return; }
+        if (!r.ok) { cont.innerHTML = '<p class="muted">' + wikiI18n.noAccess + '</p>'; return; }
         const pages = await r.json();
         cont.innerHTML = pages.length === 0
-            ? '<p class="muted">Noch keine Seiten in dieser Gruppe.</p>'
-            : pages.map(p => `<a href="/wiki/${p.id}" style="display:block;padding:4px 8px;text-decoration:none;color:var(--tw-primary)">📄 ${p.title}</a>`).join('');
+            ? '<p class="muted">' + wikiI18n.noPagesInGroup + '</p>'
+            : pages.map(p => `<a href="/wiki/${p.id}" style="display:block;padding:4px 8px;text-decoration:none;color:var(--tw-primary)">📄 ${p.title.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</a>`).join('');
     });
 });
 </script>

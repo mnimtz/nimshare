@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -19,11 +20,12 @@ public class OfficeSettingsController : Controller
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IDataProtector _protector;
+    private readonly IStringLocalizer<SharedResources> _l;
 
     public OfficeSettingsController(NimShareDbContext db, ICurrentUserService users,
-        IDataProtectionProvider dp)
+        IDataProtectionProvider dp, IStringLocalizer<SharedResources> localizer)
     {
-        _db = db; _users = users;
+        _db = db; _users = users; _l = localizer;
         _protector = dp.CreateProtector("NimShare.OfficeSettings.Secret.v1");
     }
 
@@ -51,7 +53,7 @@ public class OfficeSettingsController : Controller
             s.JwtSecretEncrypted = _protector.Protect(jwtSecret);
         s.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = "OnlyOffice-Einstellungen gespeichert.";
+        TempData["Notice"] = _l["office.saved"].Value;
         return RedirectToAction(nameof(Index));
     }
 

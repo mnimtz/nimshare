@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -36,9 +37,11 @@ public class SignController : Controller
         if (req is null || p is null) return View("Invalid");
         if (req.Status == SignatureRequestStatus.Cancelled) return View("Invalid");
 
-        if (p.Status == SignatureParticipantStatus.Pending)
+        if (p.Status == SignatureParticipantStatus.Pending && p.ViewedAt is null)
         {
-            p.Status = SignatureParticipantStatus.Viewed;
+            // Record that they opened the URL, but keep Status=Pending until
+            // they *explicitly* click Sign/Acknowledge — otherwise Outlook /
+            // Slack link previews would silently satisfy a viewer's ack.
             p.ViewedAt = DateTimeOffset.UtcNow;
             p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
             p.UserAgent = Request.Headers.UserAgent;
@@ -144,6 +147,8 @@ public class SignController : Controller
     {
         var (req, p) = await ResolveAsync(pid, t, ct);
         if (req is null || p is null) return View("Invalid");
+        // Only signers can decline the workflow. Viewers can just close the tab.
+        if (p.Role != SignatureParticipantRole.Signer) return View("Invalid");
         p.Status = SignatureParticipantStatus.Declined;
         p.DeclinedReason = reason;
         req.Status = SignatureRequestStatus.Declined;
@@ -171,7 +176,12 @@ public class SignController : Controller
                 && !string.IsNullOrEmpty(p.DeclinedReason)
                 && p.DeclinedReason.StartsWith("TOKEN:"));
         if (next is null) return;
-        var raw = next.DeclinedReason!["TOKEN:".Length..];
+        var stash = HttpContext.RequestServices
+            .GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>()
+            .CreateProtector("NimShare.Signature.Chain.v1");
+        string raw;
+        try { raw = stash.Unprotect(next.DeclinedReason!["TOKEN:".Length..]); }
+        catch { return; }
         var url = $"{Request.Scheme}://{Request.Host}/sign/{next.Id}?t={raw}";
         var initiator = req.Initiator?.DisplayName ?? "NimShare";
         var subject = $"NimShare — {(next.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {req.Title}";

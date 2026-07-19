@@ -1,14 +1,14 @@
 @model NimShare.Core.Entities.OfficeSettings
 @{
-    ViewData["Title"] = "OnlyOffice";
+    ViewData["Title"] = @T["office.title"];
     Layout = "_AppShell";
     var hasSecret = (bool)(ViewData["HasSecret"] ?? false);
 }
 <div class="page-header">
     <div>
-        <a href="/dashboard" class="muted" style="text-decoration:none">← Dashboard</a>
-        <h1 style="margin-top:6px">📝 OnlyOffice / Collabora</h1>
-        <p class="lede">Verbinde NimShare mit einem OnlyOffice- oder Collabora-Document-Server, um Word/Excel/PowerPoint direkt im Browser zu bearbeiten.</p>
+        <a href="/dashboard" class="muted" style="text-decoration:none">← @T["nav.dashboard"]</a>
+        <h1 style="margin-top:6px">📝 @T["office.title"]</h1>
+        <p class="lede">@T["office.lede"]</p>
     </div>
 </div>
 
@@ -18,29 +18,29 @@
     @Html.AntiForgeryToken()
     <label style="display:flex;align-items:center;gap:8px;font-weight:500">
         <input type="checkbox" name="enabled" value="true" @(Model.Enabled ? "checked" : "")/>
-        <span>OnlyOffice-Integration aktivieren</span>
+        <span>@T["office.enable"]</span>
     </label>
     <div class="field" style="margin-top:12px">
-        <label>Document-Server-URL</label>
-        <input type="url" name="documentServerUrl" value="@Model.DocumentServerUrl" placeholder="https://office.deine-firma.com"/>
-        <div class="helper">Basis-URL des OnlyOffice/Collabora-Servers, ohne Pfad.</div>
+        <label>@T["office.doc_server_url"]</label>
+        <input type="url" name="documentServerUrl" value="@Model.DocumentServerUrl" placeholder="https://office.example.com"/>
+        <div class="helper">@T["office.doc_server_url_hint"]</div>
     </div>
     <div class="field">
-        <label>JWT Shared Secret</label>
-        <input type="password" name="jwtSecret" placeholder="@(hasSecret ? "•••••••• (leer lassen um bestehendes zu behalten)" : "geheimer Schlüssel für JWT-Signatur")"/>
-        <div class="helper">Muss auf beiden Seiten identisch sein. Verschlüsselt gespeichert.</div>
+        <label>@T["office.jwt_secret"]</label>
+        <input type="password" name="jwtSecret" placeholder="@(hasSecret ? @T["office.jwt_placeholder_set"].Value : @T["office.jwt_placeholder_new"].Value)"/>
+        <div class="helper">@T["office.jwt_secret_hint"]</div>
     </div>
     <div class="actions">
-        <button type="submit" class="btn btn-primary">💾 Speichern</button>
+        <button type="submit" class="btn btn-primary">💾 @T["common.save"]</button>
     </div>
 </form>
 
 <div class="card" style="margin-top:12px">
-    <h2 class="card-title">So funktioniert's</h2>
+    <h2 class="card-title">@T["office.howto.heading"]</h2>
     <ol style="line-height:1.7">
-        <li>Deploye einen <a href="https://helpcenter.onlyoffice.com/installation/docs-community-install-docker.aspx" target="_blank">OnlyOffice-Docker-Container</a> oder einen Collabora-Server.</li>
-        <li>Trage die URL und das JWT-Secret oben ein.</li>
-        <li>Öffne eine Word-/Excel-/PowerPoint-Datei in deiner Ablage — der Bearbeiten-Button erscheint automatisch.</li>
-        <li>Während der Bearbeitung ist die Datei automatisch gesperrt, damit niemand parallel schreibt.</li>
+        <li>@T["office.howto.1"]</li>
+        <li>@T["office.howto.2"]</li>
+        <li>@T["office.howto.3"]</li>
+        <li>@T["office.howto.4"]</li>
     </ol>
 </div>
