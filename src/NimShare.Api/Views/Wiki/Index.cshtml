@@ -14,8 +14,8 @@
     <button class="btn btn-primary" onclick="createPage('Personal', null)">+ Neue Seite</button>
 </div>
 
-<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
-    <div class="card" style="flex:1;min-width:280px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:stretch">
+    <div class="card" style="display:flex;flex-direction:column">
         <h2 class="card-title">👤 Meine Seiten</h2>
         @if (!mine.Any())
         {
@@ -33,7 +33,7 @@
             </div>
         }
     </div>
-    <div class="card" style="flex:1;min-width:280px">
+    <div class="card" style="display:flex;flex-direction:column">
         <h2 class="card-title">👥 Gruppen-Wikis</h2>
         @if (!groups.Any())
         {
