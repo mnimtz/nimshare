@@ -135,9 +135,11 @@
             </div>
             <div class="nav-section-body">
                 <a href="/settings/profile" class="@Active("/settings/profile")">@T["nav.profile"]</a>
+                <a href="/settings/landing/mine" class="@Exact("/settings/landing/mine")">🎨 Download-Seite</a>
                 @if (isAdmin)
                 {
                     <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
+                    <a href="/settings/landing/global" class="@Exact("/settings/landing/global")">🎨 Öffentliche Download-Seite</a>
                     <a href="/settings/email" class="@Active("/settings/email")">@T["nav.email_gateway"]</a>
                     <a href="/settings/ai" class="@Active("/settings/ai")">@T["nav.ai_gateway"]</a>
                 }

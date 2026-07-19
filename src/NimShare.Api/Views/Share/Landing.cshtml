@@ -1,16 +1,38 @@
 @model NimShare.Api.Controllers.LandingViewModel
 @{
-    ViewData["Title"] = Model.FileName;
+    ViewData["Title"] = Model.Theme.Title ?? Model.FileName;
     Layout = "_Layout";
+    var accent = Model.Theme.PrimaryColor ?? "#002854";
+}
+@if (!string.IsNullOrEmpty(Model.Theme.HeroUrl))
+{
+    <div style="height:180px;background:@accent url('@Model.Theme.HeroUrl') center/cover;margin-bottom:-40px"></div>
 }
 <div class="landing-shell">
-    <div class="landing-card">
+    <div class="landing-card" style="border-top:4px solid @accent">
         <div class="landing-brand">
-            <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            @if (!string.IsNullOrEmpty(Model.Theme.LogoUrl))
+            {
+                <img src="@Model.Theme.LogoUrl" style="max-height:48px;max-width:200px" alt=""/>
+            }
+            else
+            {
+                <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            }
             <small>@T["landing.shared_by"] @Model.OwnerName</small>
         </div>
 
-        <h1>@T["landing.title"]</h1>
+        <h1 style="color:@accent">@(Model.Theme.Title ?? T["landing.title"].Value)</h1>
+        @if (!string.IsNullOrEmpty(Model.Theme.Subtitle))
+        {
+            <p class="lede">@Model.Theme.Subtitle</p>
+        }
+        @if (!string.IsNullOrEmpty(Model.Theme.BodyMarkdown))
+        {
+            <div style="margin:var(--sp-4) 0;line-height:1.55">
+                @Html.Raw(Markdig.Markdown.ToHtml(Model.Theme.BodyMarkdown))
+            </div>
+        }
         <p class="landing-meta">
             @if (Model.ExpiresAt is not null)
             {
@@ -73,11 +95,15 @@
                     }
                 </div>
             }
-            <button type="submit" class="btn btn-primary">@T["landing.download.button"]</button>
+            <button type="submit" class="btn btn-primary" style="background:@accent;color:#fff">@T["landing.download.button"]</button>
         </form>
 
-        <p class="landing-meta" style="margin-top:var(--sp-6)">
-            @T["landing.powered_by"] <strong>NimShare</strong> · <span class="mono">@T["landing.brand_note"]</span>
+        @if (!string.IsNullOrEmpty(Model.Theme.FooterText))
+        {
+            <p class="landing-meta" style="margin-top:var(--sp-6)">@Model.Theme.FooterText</p>
+        }
+        <p class="landing-meta" style="margin-top:var(--sp-4);font-size:.75rem">
+            @T["landing.powered_by"] <strong>NimShare</strong>
         </p>
     </div>
 </div>

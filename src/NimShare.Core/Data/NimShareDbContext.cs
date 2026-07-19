@@ -24,6 +24,7 @@ public class NimShareDbContext : DbContext
     public DbSet<DirectShare> DirectShares => Set<DirectShare>();
     public DbSet<UserFavorite> UserFavorites => Set<UserFavorite>();
     public DbSet<ActivityEvent> ActivityEvents => Set<ActivityEvent>();
+    public DbSet<LandingTemplate> LandingTemplates => Set<LandingTemplate>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -261,6 +262,24 @@ public class NimShareDbContext : DbContext
             e.HasIndex(x => x.At);
             e.Property(x => x.Summary).HasMaxLength(400).IsRequired();
             e.HasOne(x => x.Actor).WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<LandingTemplate>(e =>
+        {
+            e.HasKey(x => x.Id);
+            // Only one Global row; only one UserPersonal per user.
+            e.HasIndex(x => x.Scope).HasFilter("\"Scope\" = 0").IsUnique();
+            e.HasIndex(x => x.OwnerUserId).HasFilter("\"OwnerUserId\" IS NOT NULL").IsUnique();
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Subtitle).HasMaxLength(400);
+            e.Property(x => x.BodyMarkdown).HasMaxLength(4000);
+            e.Property(x => x.FooterText).HasMaxLength(500);
+            e.Property(x => x.PrimaryColor).HasMaxLength(9);
+            e.Property(x => x.LogoBlobPath).HasMaxLength(400);
+            e.Property(x => x.LogoUrl).HasMaxLength(500);
+            e.Property(x => x.HeroBlobPath).HasMaxLength(400);
+            e.Property(x => x.HeroUrl).HasMaxLength(500);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

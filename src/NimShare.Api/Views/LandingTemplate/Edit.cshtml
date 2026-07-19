@@ -1,0 +1,152 @@
+@model NimShare.Core.Entities.LandingTemplate
+@using NimShare.Core.Entities
+@{
+    var scope = (LandingTemplateScope)ViewData["Scope"]!;
+    var scopeSlug = scope == LandingTemplateScope.Global ? "global" : "mine";
+    var isGlobal = scope == LandingTemplateScope.Global;
+    ViewData["Title"] = isGlobal ? "Landing-Template — Öffentlich" : "Landing-Template — Meine Dateien";
+    Layout = "_AppShell";
+}
+<div class="page-header">
+    <div>
+        <a href="/dashboard" class="muted" style="text-decoration:none">← Dashboard</a>
+        <h1 style="margin-top:6px">🎨 @ViewData["Title"]</h1>
+        <p class="lede">
+            @if (isGlobal)
+            {
+                <span>Wird auf allen Downloads aus dem öffentlichen Bereich angezeigt. Nur Admins können das ändern.</span>
+            }
+            else
+            {
+                <span>Wird auf allen Downloads aus <em>Meine Dateien</em> (deiner Personal-Ablage) angezeigt.</span>
+            }
+        </p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n) { <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06);margin-bottom:16px">@n</div> }
+@if (TempData["Error"] is string err) { <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06);margin-bottom:16px">@err</div> }
+
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <!-- ─────────────── Edit column ─────────────── -->
+    <div style="flex:2;min-width:320px">
+        <form method="post" action="/settings/landing/@scopeSlug/save" class="card" style="margin-bottom:16px">
+            @Html.AntiForgeryToken()
+            <h2 class="card-title">✏ Texte</h2>
+            <div class="field">
+                <label>Titel</label>
+                <input type="text" name="title" value="@Model.Title" placeholder="z. B. „Downloads von ACME"" maxlength="200"/>
+            </div>
+            <div class="field">
+                <label>Untertitel</label>
+                <input type="text" name="subtitle" value="@Model.Subtitle" placeholder="Kurzer Einleitungssatz" maxlength="400"/>
+            </div>
+            <div class="field">
+                <label>Fließtext (Markdown erlaubt)</label>
+                <textarea name="bodyMarkdown" rows="6" maxlength="4000">@Model.BodyMarkdown</textarea>
+                <div class="helper">Erscheint über dem Download-Button. **fett**, *kursiv*, [Link](https://…), Listen mit -.</div>
+            </div>
+            <div class="row" style="gap:16px">
+                <div class="field" style="flex:2">
+                    <label>Fußzeile</label>
+                    <input type="text" name="footerText" value="@Model.FooterText" placeholder="Impressum, Kontakt, Datenschutz…" maxlength="500"/>
+                </div>
+                <div class="field" style="flex:1;min-width:140px">
+                    <label>Akzentfarbe</label>
+                    <input type="color" name="primaryColor" value="@(Model.PrimaryColor ?? "#002854")" style="width:100%;height:38px;padding:2px"/>
+                </div>
+            </div>
+            <div class="actions"><button type="submit" class="btn btn-primary">💾 Speichern</button></div>
+        </form>
+
+        <div class="card">
+            <h2 class="card-title">🖼 Bilder</h2>
+            <div class="row" style="gap:24px;align-items:flex-start;flex-wrap:wrap">
+                <div style="flex:1;min-width:240px">
+                    <label style="font-weight:600">Logo (oben links)</label>
+                    <div style="margin:8px 0;padding:12px;border:1px dashed var(--tw-gray-300);border-radius:6px;text-align:center;background:var(--tw-gray-100)">
+                        @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                        {
+                            <img src="@Model.LogoUrl" style="max-height:80px;max-width:100%" alt="Logo"/>
+                        }
+                        else
+                        {
+                            <span class="muted">Kein Logo</span>
+                        }
+                    </div>
+                    <form method="post" action="/settings/landing/@scopeSlug/upload?kind=logo" enctype="multipart/form-data" class="row" style="gap:6px">
+                        @Html.AntiForgeryToken()
+                        <input type="file" name="file" accept="image/*" required style="flex:1"/>
+                        <button class="btn btn-ghost btn-sm">↑</button>
+                    </form>
+                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    {
+                        <form method="post" action="/settings/landing/@scopeSlug/remove?kind=logo" style="margin-top:6px">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 Logo entfernen</button>
+                        </form>
+                    }
+                </div>
+                <div style="flex:2;min-width:280px">
+                    <label style="font-weight:600">Titelbild (Banner)</label>
+                    <div style="margin:8px 0;padding:12px;border:1px dashed var(--tw-gray-300);border-radius:6px;text-align:center;background:var(--tw-gray-100)">
+                        @if (!string.IsNullOrEmpty(Model.HeroUrl))
+                        {
+                            <img src="@Model.HeroUrl" style="max-height:160px;max-width:100%" alt="Banner"/>
+                        }
+                        else
+                        {
+                            <span class="muted">Kein Banner</span>
+                        }
+                    </div>
+                    <form method="post" action="/settings/landing/@scopeSlug/upload?kind=hero" enctype="multipart/form-data" class="row" style="gap:6px">
+                        @Html.AntiForgeryToken()
+                        <input type="file" name="file" accept="image/*" required style="flex:1"/>
+                        <button class="btn btn-ghost btn-sm">↑</button>
+                    </form>
+                    @if (!string.IsNullOrEmpty(Model.HeroUrl))
+                    {
+                        <form method="post" action="/settings/landing/@scopeSlug/remove?kind=hero" style="margin-top:6px">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑 Banner entfernen</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─────────────── Preview column ─────────────── -->
+    <div style="flex:1;min-width:280px">
+        <div class="card">
+            <h2 class="card-title">👁 Vorschau</h2>
+            <div style="background:var(--tw-white);border:1px solid var(--tw-gray-300);border-radius:8px;overflow:hidden">
+                @if (!string.IsNullOrEmpty(Model.HeroUrl))
+                {
+                    <div style="background:@(Model.PrimaryColor ?? "#002854") url('@Model.HeroUrl') center/cover;height:120px"></div>
+                }
+                else
+                {
+                    <div style="background:@(Model.PrimaryColor ?? "#002854");height:60px"></div>
+                }
+                <div style="padding:16px">
+                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    {
+                        <img src="@Model.LogoUrl" style="max-height:36px;margin-bottom:8px" alt=""/>
+                    }
+                    <h3 style="margin:4px 0">@(Model.Title ?? "Download bereit")</h3>
+                    <p class="muted" style="margin:4px 0">@Model.Subtitle</p>
+                    @if (!string.IsNullOrEmpty(Model.BodyMarkdown))
+                    {
+                        <div class="muted" style="font-size:.85rem;margin:8px 0">@(Model.BodyMarkdown.Length > 140 ? Model.BodyMarkdown[..140] + "…" : Model.BodyMarkdown)</div>
+                    }
+                    <button class="btn" style="background:@(Model.PrimaryColor ?? "#002854");color:#fff">⬇ Download</button>
+                    @if (!string.IsNullOrEmpty(Model.FooterText))
+                    {
+                        <div class="muted" style="margin-top:12px;font-size:.75rem;border-top:1px solid var(--tw-gray-200);padding-top:8px">@Model.FooterText</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,3 +1,4 @@
+using NimShare.Core.Data;
 using Markdig;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +27,13 @@ public class ShareController : Controller
     private readonly INotificationService _notify;
     private readonly IStringLocalizer<SharedResources> _t;
     private readonly StorageOptions _storage;
+    private readonly NimShareDbContext _db;
 
     public ShareController(
         ILinkAccessService access, IPasswordHasher hasher, IBlobStorageService blobs,
         IIpHashService iphash, INotificationService notify,
-        IStringLocalizer<SharedResources> t, IOptions<StorageOptions> storage)
+        IStringLocalizer<SharedResources> t, IOptions<StorageOptions> storage,
+        NimShareDbContext db)
     {
         _access = access;
         _hasher = hasher;
@@ -39,6 +42,7 @@ public class ShareController : Controller
         _notify = notify;
         _t = t;
         _storage = storage.Value;
+        _db = db;
     }
 
     [HttpGet("{slug}")]
@@ -77,6 +81,7 @@ public class ShareController : Controller
             _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
             Request.Headers.UserAgent, Request.Headers.Referer, ct);
 
+        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, ct);
         return View("Landing", new LandingViewModel(
             link.Slug,
             link.File.Name,
@@ -87,7 +92,26 @@ public class ShareController : Controller
             link.MaxDownloads,
             link.DownloadCount,
             link.ExpiresAt,
-            link.Owner.DisplayName));
+            link.Owner.DisplayName,
+            theme));
+    }
+
+    /// <summary>
+    /// Pick the applicable landing-template snapshot. Personal-scope files use
+    /// the owner's personal template; Public and Group files use the global
+    /// (admin-authored) one. A missing template returns an empty theme so the
+    /// view falls back to the built-in NimShare look.
+    /// </summary>
+    private async Task<LandingTheme> ResolveThemeAsync(NimShare.Core.Entities.FileScope scope, Guid ownerId, CancellationToken ct)
+    {
+        NimShare.Core.Entities.LandingTemplate? t = scope == NimShare.Core.Entities.FileScope.Personal
+            ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == ownerId, ct)
+            : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+        return new LandingTheme(
+            t?.Title, t?.Subtitle, t?.BodyMarkdown, t?.FooterText,
+            t?.PrimaryColor, t?.LogoUrl, t?.HeroUrl);
     }
 
     [HttpPost("{slug}")]
@@ -164,6 +188,13 @@ public record FolderLandingViewModel(
     List<FolderLandingFile> Files);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
+/// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,
+/// UserPersonal for Personal files) passed to the download landing view. Nullable
+/// pieces let the view fall back to the default look.</summary>
+public record LandingTheme(
+    string? Title, string? Subtitle, string? BodyMarkdown, string? FooterText,
+    string? PrimaryColor, string? LogoUrl, string? HeroUrl);
+
 public record LandingViewModel(
     string Slug,
     string FileName,
@@ -174,6 +205,7 @@ public record LandingViewModel(
     int? MaxDownloads,
     int DownloadCount,
     DateTimeOffset? ExpiresAt,
-    string OwnerName);
+    string OwnerName,
+    LandingTheme Theme);
 
 public record ExpiredViewModel(string Slug, DateTimeOffset? ExpiresAt);
