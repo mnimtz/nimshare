@@ -129,6 +129,10 @@ public class SignController : Controller
             IpHash = p.IpHash, UserAgent = p.UserAgent,
         });
 
+        // Sequential chain: trigger the next participant in Order.
+        if (req.DeliveryOrder == SignatureDeliveryOrder.Sequential)
+            await NotifyNextAsync(req, p, ct);
+
         await MaybeFinalizeAsync(req, ct);
         await _db.SaveChangesAsync(ct);
         return View("Done", new SignDoneViewModel(req, p, true));
@@ -154,6 +158,33 @@ public class SignController : Controller
             $"{p.Name} hat die Signatur abgelehnt: {req.Title}", body: reason,
             href: "/signatures", ct: ct);
         return View("Done", new SignDoneViewModel(req, p, false));
+    }
+
+    private async Task NotifyNextAsync(SignatureRequest req, SignatureParticipant justSigned, CancellationToken ct)
+    {
+        var next = req.Participants.OrderBy(p => p.Order)
+            .FirstOrDefault(p => p.Order > justSigned.Order
+                && p.Status == SignatureParticipantStatus.Pending
+                && !string.IsNullOrEmpty(p.DeclinedReason)
+                && p.DeclinedReason.StartsWith("TOKEN:"));
+        if (next is null) return;
+        var raw = next.DeclinedReason!["TOKEN:".Length..];
+        var url = $"{Request.Scheme}://{Request.Host}/sign/{next.Id}?t={raw}";
+        var initiator = req.Initiator?.DisplayName ?? "NimShare";
+        var subject = $"NimShare — {(next.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {req.Title}";
+        var body = $"Hallo {next.Name},\n\ndu bist als Nächste:r an der Reihe. Bitte {(next.Role == SignatureParticipantRole.Signer ? "unterschreibe" : "bestätige")} das Dokument '{req.Title}'.\n\n{url}\n\n— NimShare";
+        try
+        {
+            var notif = HttpContext.RequestServices.GetService(typeof(INotificationService)) as INotificationService;
+            if (notif is not null) await notif.SendShareLinkAsync(next.Email, initiator, subject, body, ct);
+        }
+        catch { }
+        next.DeclinedReason = null; // clear stashed token now the email is out
+        _db.SignatureAudits.Add(new SignatureAudit
+        {
+            RequestId = req.Id, ParticipantId = next.Id,
+            Kind = SignatureAuditKind.Invited, Note = "sequential-turn",
+        });
     }
 
     // ── helpers ──

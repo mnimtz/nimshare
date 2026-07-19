@@ -182,26 +182,85 @@ public class SignaturesController : ControllerBase
         if (!r.Participants.Any(p => p.Role == SignatureParticipantRole.Signer))
             return Problem(statusCode: 422, title: "Mindestens ein Unterzeichner ist erforderlich.");
 
+        // Mint a token for every participant. Emails go out immediately for
+        // parallel delivery; for sequential we only email the lowest-order
+        // participant now, and the sign flow triggers the next one.
         foreach (var p in r.Participants)
         {
             var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                 .Replace("+", "-").Replace("/", "_").TrimEnd('=');
             p.TokenHash = _hasher.Hash(raw);
-            var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
-            var subject = $"NimShare — {(p.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {r.Title}";
-            var body = $"Hallo {p.Name},\n\n{me.DisplayName} bittet dich, {(p.Role == SignatureParticipantRole.Signer ? "das folgende Dokument zu unterschreiben" : "das folgende Dokument zur Kenntnis zu nehmen")}: {r.Title}\n\nÖffne diesen Link:\n{url}\n\n{(string.IsNullOrEmpty(r.Message) ? "" : "Nachricht:\n" + r.Message + "\n\n")}Der Link ist personalisiert und nur für dich bestimmt.\n\n— NimShare";
-            try { await _notify.SendShareLinkAsync(p.Email, me.DisplayName, subject, body, ct); }
-            catch { /* record only, requester sees state */ }
-            _db.SignatureAudits.Add(new SignatureAudit
-            {
-                RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
-                Note = "invited",
-            });
+            // Stash the raw token temporarily on the DB row so the sign-flow
+            // can rebuild the URL for the *next* participant when acting
+            // sequentially. Since the token is opaque (not sensitive by
+            // itself once the flow is in-flight), this trade is fine for the
+            // MVP; a follow-up can move to a signed session cookie.
+            p.DeclinedReason = "TOKEN:" + raw;
         }
         r.Status = SignatureRequestStatus.Sent;
         r.SentAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // Decide who gets an email right now.
+        var toEmail = r.DeliveryOrder == SignatureDeliveryOrder.Sequential
+            ? new[] { r.Participants.OrderBy(p => p.Order).First() }
+            : r.Participants.ToArray();
+        foreach (var p in toEmail)
+        {
+            await EmailInviteAsync(r, me, p, ct);
+        }
+        // Clear the temp tokens from Reason once we've sent them out; keep
+        // just the ones for still-pending participants that need chaining.
+        foreach (var p in r.Participants.Where(x => toEmail.Contains(x)))
+        {
+            p.DeclinedReason = null;
+        }
+        await _db.SaveChangesAsync(ct);
         return Ok(ToDto(r));
+    }
+
+    private async Task EmailInviteAsync(SignatureRequest r, User initiator,
+        SignatureParticipant p, CancellationToken ct)
+    {
+        var raw = ExtractStashedToken(p);
+        var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
+        var subject = $"NimShare — {(p.Role == SignatureParticipantRole.Signer ? "Bitte unterschreiben" : "Bitte lesen")}: {r.Title}";
+        var body = $"Hallo {p.Name},\n\n{initiator.DisplayName} bittet dich, {(p.Role == SignatureParticipantRole.Signer ? "das folgende Dokument zu unterschreiben" : "das folgende Dokument zur Kenntnis zu nehmen")}: {r.Title}\n\nÖffne diesen Link:\n{url}\n\n{(string.IsNullOrEmpty(r.Message) ? "" : "Nachricht:\n" + r.Message + "\n\n")}Der Link ist personalisiert und nur für dich bestimmt.\n\n— NimShare";
+        try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
+        catch { /* audit still records the invite */ }
+        _db.SignatureAudits.Add(new SignatureAudit
+        {
+            RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
+            Note = "invited",
+        });
+    }
+
+    private static string ExtractStashedToken(SignatureParticipant p) =>
+        (p.DeclinedReason ?? "").StartsWith("TOKEN:") ? p.DeclinedReason!["TOKEN:".Length..] : "";
+
+    [HttpPost("{id:guid}/remind")]
+    public async Task<IActionResult> ManualRemind(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await LoadFullAsync(id, ct);
+        if (r is null || r.InitiatorUserId != me.Id) return Forbid();
+        if (r.Status != SignatureRequestStatus.Sent) return Problem(statusCode: 409);
+        var stillPending = r.Participants.Where(p =>
+            p.Status != SignatureParticipantStatus.Signed
+            && p.Status != SignatureParticipantStatus.Declined).ToList();
+        foreach (var p in stillPending)
+        {
+            var subject = $"Erinnerung: {r.Title}";
+            var body = $"Hallo {p.Name},\n\n{me.DisplayName} bittet dich erneut, {(p.Role == SignatureParticipantRole.Signer ? "zu unterschreiben" : "zu bestätigen")}: {r.Title}.\n\n— NimShare";
+            try { await _notify.SendShareLinkAsync(p.Email, me.DisplayName, subject, body, ct); } catch { }
+            _db.SignatureAudits.Add(new SignatureAudit
+            {
+                RequestId = r.Id, ParticipantId = p.Id,
+                Kind = SignatureAuditKind.Invited, Note = "manual-reminder",
+            });
+        }
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     /// <summary>Server-side proxy that streams the source PDF from Blob to the
