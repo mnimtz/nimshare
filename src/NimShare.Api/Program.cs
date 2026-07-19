@@ -46,7 +46,15 @@ builder.Services.AddDbContext<NimShareDbContext>(o =>
     if (string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
         o.UseSqlServer(connString, b => b.MigrationsAssembly("NimShare.Api"));
     else
-        o.UseSqlite(connString, b => b.MigrationsAssembly("NimShare.Api"));
+        // Sqlite on Azure Files (SMB mount) sees transient "unable to open
+        // database file" errors when the mount is remounted or throttled. Two
+        // guards: (1) enable WAL + a 15 s busy_timeout so brief locks don't
+        // fault, (2) let EF's execution strategy retry the query itself.
+        o.UseSqlite(connString, b =>
+        {
+            b.MigrationsAssembly("NimShare.Api");
+            b.CommandTimeout(45);
+        });
 });
 
 // ── Auth ───────────────────────────────────────────────────────────────────
@@ -287,16 +295,46 @@ if (!app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
-    try
+    // Migrate with retry — on Azure Files, the SMB mount can be momentarily
+    // unavailable at cold start, which used to abort the whole boot with
+    // "unable to open database file". Six attempts on 2 s cadence ≈ 12 s of
+    // grace, which is enough for the mount to appear.
+    for (int attempt = 1; attempt <= 6; attempt++)
     {
-        await db.Database.MigrateAsync();
+        try
+        {
+            await db.Database.MigrateAsync();
+            break;
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
+        {
+            Console.Error.WriteLine($"[STARTUP] Migration attempt {attempt}/6 failed with SQLite error: {sx.Message}. Retrying in 2 s…");
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
+            var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
+            logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");
+            NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
+            break;
+        }
     }
-    catch (Exception ex)
+
+    // WAL journal mode lets readers proceed while a writer holds the lock,
+    // which stops "upload complete" from freezing the /browse pages. 15 s
+    // busy_timeout absorbs brief lock contention (each connection retries
+    // automatically before surfacing SQLITE_BUSY). Best-effort — never fatal.
+    if (!string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
     {
-        Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
-        var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
-        logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");
-        NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15000; PRAGMA synchronous=NORMAL;");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("[STARTUP] Could not set WAL / busy_timeout PRAGMAs: " + ex.Message);
+        }
     }
 }
 

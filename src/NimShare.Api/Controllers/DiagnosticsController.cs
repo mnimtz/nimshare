@@ -22,8 +22,33 @@ public class DiagnosticsController : Controller
     {
         var feature = HttpContext.Features.Get<IExceptionHandlerFeature>();
         var showDetails = User?.IsInRole("Admin") == true;
-        var msg = showDetails ? (feature?.Error?.Message ?? "Unknown error.") : "";
-        var type = showDetails ? (feature?.Error?.GetType().FullName ?? "") : "";
+        var err = feature?.Error;
+        var msg = showDetails ? (err?.Message ?? "Unknown error.") : "";
+        var type = showDetails ? (err?.GetType().FullName ?? "") : "";
+
+        // Detect "database file temporarily unreachable" (Azure Files hiccup
+        // during app-service restart) and downgrade to a 503 with a friendlier
+        // page + auto-refresh. That turns a scary "site is dead" into a "try
+        // again in a moment" — which is exactly what's happening.
+        var isDbTransient = IsTransientDbError(err);
+        if (isDbTransient)
+        {
+            Response.StatusCode = 503;
+            Response.Headers["Retry-After"] = "15";
+            return Content(
+                "<!doctype html><html><head><meta charset=\"utf-8\"><title>NimShare — Temporarily unavailable</title>" +
+                "<meta http-equiv=\"refresh\" content=\"15\"/>" +
+                "<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:60px auto;padding:0 20px;color:#0f1f3d;text-align:center}" +
+                "h1{color:#e08a00;font-size:1.6rem}p{color:#556}a{color:#0060df}</style></head><body>" +
+                "<h1>🌩 Kurz nicht erreichbar</h1>" +
+                "<p>Die Datenbank ist gerade nicht ansprechbar. Wir versuchen es automatisch alle 15&nbsp;Sekunden neu.</p>" +
+                "<p>Das passiert typischerweise während eines Deploys — meist ist NimShare in einer Minute wieder da.</p>" +
+                (showDetails ? $"<pre style=\"background:#f5f5f5;padding:12px;border-radius:6px;text-align:left;font-size:12px\">{System.Net.WebUtility.HtmlEncode(type)}\n\n{System.Net.WebUtility.HtmlEncode(msg)}</pre>" : "") +
+                "<p><small>Version: v" + BuildInfo.Version + "</small></p>" +
+                "</body></html>",
+                "text/html; charset=utf-8");
+        }
+
         Response.StatusCode = 500;
         var detailsBlock = showDetails
             ? $"<h2>Details (admin only)</h2><pre>{System.Net.WebUtility.HtmlEncode(type)}\n\n{System.Net.WebUtility.HtmlEncode(msg)}</pre><p><a href=\"/diagnostics\">→ /diagnostics</a></p>"
@@ -40,6 +65,25 @@ public class DiagnosticsController : Controller
             "<p><a href=\"/\">← Back to home</a></p>" +
             "</body></html>",
             "text/html; charset=utf-8");
+    }
+
+    private static bool IsTransientDbError(Exception? ex)
+    {
+        while (ex is not null)
+        {
+            if (ex is Microsoft.Data.Sqlite.SqliteException sx)
+            {
+                // 14 = SQLITE_CANTOPEN (Azure Files remounting)
+                // 5  = SQLITE_BUSY   (writer holds the lock; will clear)
+                // 8  = SQLITE_READONLY (mount temporarily read-only)
+                if (sx.SqliteErrorCode is 14 or 5 or 8) return true;
+                var lo = (sx.Message ?? "").ToLowerInvariant();
+                if (lo.Contains("unable to open") || lo.Contains("locked") || lo.Contains("busy"))
+                    return true;
+            }
+            ex = ex.InnerException;
+        }
+        return false;
     }
 
     /// <summary>Admin diagnostic endpoint. Shows applied vs pending migrations,
