@@ -158,10 +158,13 @@
                     </svg>
                 </summary>
                 <div class="menu" role="menu">
+                    @{
+                        var currentUrl = Context.Request.Path + Context.Request.QueryString;
+                    }
                     @foreach (var (code, label) in supported)
                     {
                         var cls = code == cur ? "current" : "";
-                        <a href="?ui-culture=@code" class="@cls">@label</a>
+                        <a href="/set-culture?code=@code&returnUrl=@Uri.EscapeDataString(currentUrl.ToString())" class="@cls">@label</a>
                     }
                 </div>
             </details>

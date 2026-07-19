@@ -42,7 +42,7 @@
             @foreach (var (code, label) in langs)
             {
                 var cls = code == cur ? "active" : "";
-                <a href="?ui-culture=@code" class="@cls">@label</a>
+                <a href="/set-culture?code=@code&returnUrl=/setup" class="@cls">@label</a>
             }
         </div>
     </div>
