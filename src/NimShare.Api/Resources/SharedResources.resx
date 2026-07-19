@@ -788,6 +788,7 @@ Open the link:
   <data name="dbset.revert.action"><value>Revert + restart</value></data>
   <data name="dbset.revert.ok"><value>Config cleared — restarting on Sqlite.</value></data>
   <data name="dbset.confirm.revert"><value>Revert to Sqlite and restart? Any writes since the switch stay on Azure SQL and won't be copied back.</value></data>
+  <data name="dbset.err.timeout"><value>Timed out — the server didn't respond. Check the Azure SQL firewall and admin credentials, then try again.</value></data>
 
   <data name="certs.title"><value>Signing certificates</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>

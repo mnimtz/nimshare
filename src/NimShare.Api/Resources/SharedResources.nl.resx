@@ -789,6 +789,7 @@ Open de link:
   <data name="dbset.revert.action"><value>Herstellen + herstarten</value></data>
   <data name="dbset.revert.ok"><value>Config gewist — herstart op Sqlite.</value></data>
   <data name="dbset.confirm.revert"><value>Terug naar Sqlite en herstarten? Wijzigingen sinds de overschakeling blijven op Azure SQL en worden niet teruggekopieerd.</value></data>
+  <data name="dbset.err.timeout"><value>Time-out — de server heeft niet gereageerd. Controleer Azure SQL-firewall en admin-login, probeer opnieuw.</value></data>
 
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>

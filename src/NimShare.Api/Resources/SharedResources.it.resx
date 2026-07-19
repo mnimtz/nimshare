@@ -790,6 +790,7 @@ Apri il link:
   <data name="dbset.revert.action"><value>Ripristina + riavvia</value></data>
   <data name="dbset.revert.ok"><value>Config cancellata — riavvio su Sqlite.</value></data>
   <data name="dbset.confirm.revert"><value>Torno a Sqlite e riavvio? Le scritture dopo il passaggio restano su Azure SQL e non vengono ricopiate.</value></data>
+  <data name="dbset.err.timeout"><value>Timeout — il server non ha risposto. Verifica firewall Azure SQL e login admin, poi riprova.</value></data>
 
   <data name="certs.title"><value>Certificati di firma</value></data>
   <data name="certs.lede"><value>Crea un certificato auto-firmato per le firme in NimShare o importa un PKCS#12 (.pfx/.p12) esistente.</value></data>

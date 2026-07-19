@@ -790,6 +790,7 @@ Abre el enlace:
   <data name="dbset.revert.action"><value>Revertir + reiniciar</value></data>
   <data name="dbset.revert.ok"><value>Config borrada — reiniciando en Sqlite.</value></data>
   <data name="dbset.confirm.revert"><value>¿Volver a Sqlite y reiniciar? Los cambios desde el cambio quedan en Azure SQL y no se copian de vuelta.</value></data>
+  <data name="dbset.err.timeout"><value>Tiempo agotado — el servidor no respondió. Verifica el firewall de Azure SQL y el login admin, e inténtalo de nuevo.</value></data>
 
   <data name="certs.title"><value>Certificados de firma</value></data>
   <data name="certs.lede"><value>Crea un certificado autofirmado para firmas en NimShare o importa un PKCS#12 (.pfx/.p12) existente.</value></data>

@@ -794,6 +794,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="dbset.revert.action"><value>Zurücksetzen + neu starten</value></data>
   <data name="dbset.revert.ok"><value>Config gelöscht — starte auf Sqlite neu.</value></data>
   <data name="dbset.confirm.revert"><value>Auf Sqlite zurück und neu starten? Änderungen seit der Umschaltung bleiben in Azure SQL und werden nicht zurückkopiert.</value></data>
+  <data name="dbset.err.timeout"><value>Zeitüberschreitung — der Server hat nicht geantwortet. Bitte Azure-SQL-Firewall und Admin-Login prüfen und erneut versuchen.</value></data>
 
   <data name="certs.title"><value>Signatur-Zertifikate</value></data>
   <data name="certs.lede"><value>Erstelle ein eigenes Zertifikat für digitale Signaturen in NimShare oder importiere eine vorhandene PKCS#12-Datei (.pfx/.p12).</value></data>

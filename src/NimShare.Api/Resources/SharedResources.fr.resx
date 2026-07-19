@@ -790,6 +790,7 @@ Ouvrez le lien :
   <data name="dbset.revert.action"><value>Revenir + redémarrer</value></data>
   <data name="dbset.revert.ok"><value>Config effacée — redémarrage sur Sqlite.</value></data>
   <data name="dbset.confirm.revert"><value>Revenir à Sqlite et redémarrer ? Les écritures depuis la bascule restent sur Azure SQL et ne seront pas recopiées.</value></data>
+  <data name="dbset.err.timeout"><value>Délai dépassé — le serveur n'a pas répondu. Vérifiez le pare-feu Azure SQL et le login admin, puis réessayez.</value></data>
 
   <data name="certs.title"><value>Certificats de signature</value></data>
   <data name="certs.lede"><value>Créez un certificat auto-signé pour les signatures NimShare ou importez un PKCS#12 (.pfx/.p12) existant.</value></data>

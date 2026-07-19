@@ -18,12 +18,14 @@
         <h2>@T["dbset.wizard.title"]</h2>
         <p class="muted">@T["dbset.wizard.hint"]</p>
 
-        <div class="row" style="gap:16px;flex-wrap:wrap;margin-top:8px">
-            <label style="flex:1;display:flex;gap:6px;align-items:center">
-                <input type="radio" name="wzMode" value="fields" checked/> @T["dbset.wizard.mode_fields"]
+        <div class="db-wizard-modeswitch">
+            <label>
+                <input type="radio" name="wzMode" value="fields" checked/>
+                <span>@T["dbset.wizard.mode_fields"]</span>
             </label>
-            <label style="flex:1;display:flex;gap:6px;align-items:center">
-                <input type="radio" name="wzMode" value="raw"/> @T["dbset.wizard.mode_raw"]
+            <label>
+                <input type="radio" name="wzMode" value="raw"/>
+                <span>@T["dbset.wizard.mode_raw"]</span>
             </label>
         </div>
 
@@ -33,12 +35,12 @@
                 <input type="text" id="wzServer" placeholder="myserver.database.windows.net" autocomplete="off"/>
                 <div class="helper">@T["dbset.field.server_hint"]</div>
             </div>
-            <div class="row" style="gap:12px">
-                <div class="field" style="flex:1">
+            <div class="db-wizard-row">
+                <div class="field">
                     <label>@T["dbset.field.user"]</label>
                     <input type="text" id="wzUser" placeholder="sqladmin" autocomplete="off"/>
                 </div>
-                <div class="field" style="flex:1">
+                <div class="field">
                     <label>@T["dbset.field.pw"]</label>
                     <input type="password" id="wzPw" autocomplete="new-password"/>
                 </div>
@@ -63,10 +65,10 @@
             <input type="checkbox" id="wzCopyData" checked/> <span>@T["dbset.field.copy"]</span>
         </label>
 
-        <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+        <div class="db-wizard-actions">
             <button class="btn btn-ghost" onclick="wzTest()">🔎 @T["dbset.action.test"]</button>
             <button class="btn btn-ghost" onclick="wzCreate()">➕ @T["dbset.action.create"]</button>
-            <button class="btn btn-primary" onclick="wzSwitch()" style="margin-left:auto">🚀 @T["dbset.action.switch"]</button>
+            <button class="btn btn-primary" onclick="wzSwitch()">🚀 @T["dbset.action.switch"]</button>
         </div>
 
         <div id="wzOutput" style="margin-top:12px"></div>
@@ -128,26 +130,63 @@ async function wzTest() {
     else out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
 }
 async function wzCreate() {
-    out('<em>' + @Json.Serialize(T["dbset.loading.create"].Value) + '</em>');
+    out('<em>' + @Json.Serialize(T["dbset.loading.create"].Value) + '</em><br><small class="muted">Azure SQL braucht 30–90 s zum Anlegen. Nicht schließen.</small>');
     const p = payload();
-    const r = await fetch('/api/v1/settings/database/create', {
-        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-        body: JSON.stringify(p),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (d.ok) out((d.createdNew ? '✓ ' + @Json.Serialize(T["dbset.create.created"].Value) : 'ℹ ' + @Json.Serialize(T["dbset.create.exists"].Value)) + ' <strong>' + esc(p.databaseName) + '</strong>', 'ok');
-    else out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
+    // Client-side timeout of 3 min — Azure SQL Basic DB creation typically
+    // takes 30–90 s but has hit 2 min in the past. Beyond that, something is
+    // stuck and the user needs a real error to work with instead of a
+    // permanently spinning progress line.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 3 * 60 * 1000);
+    // Live counter so the user can see time passing.
+    const start = Date.now();
+    const tick = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        out('<em>' + @Json.Serialize(T["dbset.loading.create"].Value) + '</em> <small class="muted">(' + s + ' s)</small>');
+    }, 1000);
+    try {
+        const r = await fetch('/api/v1/settings/database/create', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify(p), signal: abort.signal,
+        });
+        const d = await r.json().catch(() => ({}));
+        if (d.ok) out((d.createdNew ? '✓ ' + @Json.Serialize(T["dbset.create.created"].Value) : 'ℹ ' + @Json.Serialize(T["dbset.create.exists"].Value)) + ' <strong>' + esc(p.databaseName) + '</strong>', 'ok');
+        else out('✕ ' + esc(d.error || d.detail || d.title || 'Fehler'), 'err');
+    } catch (e) {
+        if (e.name === 'AbortError') out('⏱ ' + @Json.Serialize(T["dbset.err.timeout"].Value), 'err');
+        else out('✕ ' + esc(e.message || e), 'err');
+    } finally {
+        clearInterval(tick);
+        clearTimeout(timer);
+    }
 }
 async function wzSwitch() {
     if (!confirm(@Json.Serialize(T["dbset.confirm.switch"].Value))) return;
     out('<em>' + @Json.Serialize(T["dbset.loading.switch"].Value) + '</em>');
     const p = payload();
     p.copyExistingData = document.getElementById('wzCopyData').checked;
-    const r = await fetch('/api/v1/settings/database/switch', {
-        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-        body: JSON.stringify(p),
-    });
-    const d = await r.json().catch(() => ({}));
+    // Switch can take 2–5 min when copying data — bump timeout accordingly.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 8 * 60 * 1000);
+    const start = Date.now();
+    const tick = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        out('<em>' + @Json.Serialize(T["dbset.loading.switch"].Value) + '</em> <small class="muted">(' + s + ' s)</small>');
+    }, 1000);
+    let r, d;
+    try {
+        r = await fetch('/api/v1/settings/database/switch', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify(p), signal: abort.signal,
+        });
+        d = await r.json().catch(() => ({}));
+    } catch (e) {
+        clearInterval(tick); clearTimeout(timer);
+        if (e.name === 'AbortError') out('⏱ ' + @Json.Serialize(T["dbset.err.timeout"].Value), 'err');
+        else out('✕ ' + esc(e.message || e), 'err');
+        return;
+    }
+    clearInterval(tick); clearTimeout(timer);
     if (d.ok) {
         out('✓ ' + @Json.Serialize(T["dbset.switch.ok"].Value) +
             '<br>' + @Json.Serialize(T["dbset.switch.tables"].Value) + ': ' + d.copiedTables +

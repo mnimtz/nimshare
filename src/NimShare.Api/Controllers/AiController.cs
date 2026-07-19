@@ -173,10 +173,26 @@ public class AiController : ControllerBase
             $"Optionally include {{{{message}}}} in the body if relevant. Do NOT introduce other placeholders. " +
             $"Do not add greetings, disclaimers, HTML, or Markdown headings.";
 
-        var raw = await provider.DraftShareEmailAsync(
-            me.DisplayName, "", instruction, lang, ct);
+        // Prefer the detail-carrying path when the provider is Gemini so an
+        // empty response can be surfaced with the actual reason (safety
+        // block, MAX_TOKENS truncation, 4xx from the API) instead of just
+        // "Draft empty."
+        string? raw = null;
+        string? err = null;
+        if (provider is GeminiProvider gp)
+        {
+            var (draftedText, error) = await gp.GenerateWithDetailAsync(
+                $"You are drafting an email template for a signature invite. Style: {promptShort}. Language ISO: {lang}. Return EXACTLY 'SUBJECT: <line>' then a newline 'BODY:' then 3–6 short paragraphs. Use these literal Handlebars placeholders: {{{{recipient.name}}}}, {{{{sender.name}}}}, {{{{doc.title}}}}, {{{{url}}}}. Optional: {{{{message}}}}. No HTML, no markdown headings.",
+                0.6, 1024, ct);
+            raw = draftedText; err = error;
+        }
+        else
+        {
+            raw = await provider.DraftShareEmailAsync(me.DisplayName, "", instruction, lang, ct);
+        }
         if (string.IsNullOrWhiteSpace(raw))
-            return Problem(statusCode: 502, title: "Draft empty.");
+            return Problem(statusCode: 502, title: "Draft empty.",
+                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
 
         // Split on "BODY:" (case-insensitive) — the model usually complies.
         var text = raw.Trim();

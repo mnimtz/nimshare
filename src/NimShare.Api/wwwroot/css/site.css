@@ -1334,6 +1334,48 @@ body.nav-open { position: relative; }
     font-weight: 700;
 }
 
+/* ── DB-Wizard mobile-friendly layout ────────────────────────── */
+.db-wizard-modeswitch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0 4px;
+}
+.db-wizard-modeswitch label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--tw-gray-100);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .95rem;
+}
+.db-wizard-modeswitch label:has(input:checked) {
+    background: rgba(0,160,251,.10);
+    outline: 2px solid var(--tw-primary-alt);
+}
+.db-wizard-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.db-wizard-row .field { margin: 0; }
+.db-wizard-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    align-items: stretch;
+}
+.db-wizard-actions .btn { flex: 1 1 auto; min-width: 140px; }
+.db-wizard-actions .btn-primary { margin-left: auto; }
+@media (max-width: 640px) {
+    .db-wizard-row { grid-template-columns: 1fr; }
+    .db-wizard-modeswitch { grid-template-columns: 1fr; }
+    .db-wizard-actions .btn { flex: 1 1 100%; margin-left: 0 !important; }
+}
+
 /* Prevent accidental modal closes: the modal-panel captures mousedown so a
    drag that ends outside the panel still counts as an "inside" interaction. */
 .modal-panel { user-select: text; }

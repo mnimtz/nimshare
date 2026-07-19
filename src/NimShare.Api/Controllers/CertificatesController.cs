@@ -74,44 +74,98 @@ public class CertificatesApiController : ControllerBase
             return Problem(statusCode: 422, title: "Name and CommonName are required.");
         var years = Math.Clamp(req.ValidityYears <= 0 ? 3 : req.ValidityYears, 1, 20);
 
-        // Build a distinguished name: CN, optional O, optional C.
-        var parts = new List<string> { $"CN={EscapeDn(req.CommonName)}" };
-        if (!string.IsNullOrWhiteSpace(req.Organization)) parts.Add($"O={EscapeDn(req.Organization)}");
-        if (!string.IsNullOrWhiteSpace(req.Country)) parts.Add($"C={EscapeDn(req.Country[..Math.Min(2, req.Country.Length)])}");
-        var dn = new X500DistinguishedName(string.Join(", ", parts));
-
-        using var rsa = RSA.Create(2048);
-        var request = new CertificateRequest(dn, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        // Basic constraints — mark as end-entity, not a CA.
-        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
-        // Digital signature + non-repudiation (used by CMS/PKCS#7 signing).
-        request.CertificateExtensions.Add(new X509KeyUsageExtension(
-            X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, true));
-        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
-            new OidCollection { new("1.3.6.1.5.5.7.3.4") /* Email protection */,
-                                new("1.3.6.1.4.1.311.10.3.12") /* Document signing */ }, false));
-        var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
-        var notAfter = notBefore.AddYears(years);
-        using var cert = request.CreateSelfSigned(notBefore, notAfter);
-
-        var pfxPassword = Guid.NewGuid().ToString("N"); // ephemeral, only used to serialise
-        var pfxBytes = cert.Export(X509ContentType.Pkcs12, pfxPassword);
-        var wrapped = _protector.Protect(BundleWithPassword(pfxBytes, pfxPassword));
-
-        var entity = new SigningCertificate
+        try
         {
-            OwnerUserId = me.Id,
-            Name = req.Name.Trim(),
-            SubjectCommonName = cert.SubjectName.Name?.Replace("CN=", "").Split(',').FirstOrDefault()?.Trim() ?? req.CommonName,
-            Issuer = cert.IssuerName.Name ?? "self",
-            NotBefore = notBefore,
-            NotAfter = notAfter,
-            Thumbprint = cert.Thumbprint,
-            IsSelfIssued = true,
-            PfxDataEncrypted = wrapped,
-        };
-        await SaveAsync(entity, req.SetAsDefault, ct);
-        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+            // Build a distinguished name: CN, optional O, optional C.
+            var parts = new List<string> { $"CN={EscapeDn(req.CommonName)}" };
+            if (!string.IsNullOrWhiteSpace(req.Organization)) parts.Add($"O={EscapeDn(req.Organization)}");
+            if (!string.IsNullOrWhiteSpace(req.Country)) parts.Add($"C={EscapeDn(req.Country[..Math.Min(2, req.Country.Length)])}");
+            var dn = new X500DistinguishedName(string.Join(", ", parts));
+
+            using var rsa = RSA.Create(2048);
+            var request = new CertificateRequest(dn, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            // Basic constraints — mark as end-entity, not a CA.
+            request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
+            // Digital signature + non-repudiation (used by CMS/PKCS#7 signing).
+            request.CertificateExtensions.Add(new X509KeyUsageExtension(
+                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, true));
+            request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+                new OidCollection { new("1.3.6.1.5.5.7.3.4") /* Email protection */,
+                                    new("1.3.6.1.4.1.311.10.3.12") /* Document signing */ }, false));
+            var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
+            var notAfter = notBefore.AddYears(years);
+            using var built = request.CreateSelfSigned(notBefore, notAfter);
+
+            var pfxPassword = Guid.NewGuid().ToString("N"); // ephemeral, only used to serialise
+            // Export can fail on Linux containers if the private key handle
+            // became ephemeral; re-import as Exportable in the same process
+            // then export again. Belt + braces for portability.
+            byte[] pfxBytes;
+            try
+            {
+                pfxBytes = built.Export(X509ContentType.Pfx, pfxPassword);
+            }
+            catch (CryptographicException)
+            {
+                // Fallback path: rebuild the PFX from RSA + cert bytes directly.
+                using var certOnly = new X509Certificate2(built.RawData);
+                using var withKey = certOnly.CopyWithPrivateKey(rsa);
+#pragma warning disable SYSLIB0057
+                using var reimport = new X509Certificate2(
+                    withKey.Export(X509ContentType.Pfx, pfxPassword),
+                    pfxPassword,
+                    X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+                pfxBytes = reimport.Export(X509ContentType.Pfx, pfxPassword);
+            }
+            var wrapped = _protector.Protect(BundleWithPassword(pfxBytes, pfxPassword));
+
+            var entity = new SigningCertificate
+            {
+                OwnerUserId = me.Id,
+                Name = req.Name.Trim(),
+                SubjectCommonName = ExtractCn(built.SubjectName.Name) ?? req.CommonName,
+                Issuer = built.IssuerName.Name ?? "self",
+                NotBefore = notBefore,
+                NotAfter = notAfter,
+                Thumbprint = built.Thumbprint,
+                IsSelfIssued = true,
+                PfxDataEncrypted = wrapped,
+            };
+            await SaveAsync(entity, req.SetAsDefault, ct);
+            return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+        }
+        catch (Exception ex)
+        {
+            // Return the actual message so the UI surfaces something useful
+            // instead of the generic "Fehler: 500". Details are safe here —
+            // the endpoint is admin-scoped by cookie auth and the details
+            // don't leak DB rows.
+            return Problem(statusCode: 500,
+                title: "Zertifikat-Erstellung fehlgeschlagen",
+                detail: $"{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    private static string? ExtractCn(string? subjectName)
+    {
+        if (string.IsNullOrEmpty(subjectName)) return null;
+        // X500 DN format: CN=Foo, O=Bar, C=DE — commas inside CN values are
+        // escaped with backslash, so a plain Split(',') would truncate a name
+        // like "Nimtz, Marcus". Walk RDNs manually.
+        var parts = new List<string>();
+        var current = new System.Text.StringBuilder();
+        bool escaped = false;
+        foreach (var ch in subjectName)
+        {
+            if (escaped) { current.Append(ch); escaped = false; continue; }
+            if (ch == '\\') { escaped = true; continue; }
+            if (ch == ',') { parts.Add(current.ToString().Trim()); current.Clear(); continue; }
+            current.Append(ch);
+        }
+        if (current.Length > 0) parts.Add(current.ToString().Trim());
+        var cn = parts.FirstOrDefault(p => p.StartsWith("CN=", StringComparison.OrdinalIgnoreCase));
+        return cn?.Substring(3).Trim();
     }
 
     /// <summary>Import an existing PKCS#12 (PFX/.p12). The password is

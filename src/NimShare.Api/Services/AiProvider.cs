@@ -336,24 +336,67 @@ public class GeminiProvider : IAiProvider
     }
 
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)
+        => (await GenerateWithDetailAsync(prompt, temperature, 1024, ct)).Text;
+
+    /// <summary>Same as GenerateAsync, but returns both the text and the last
+    /// error / raw response so callers can surface a real reason instead of
+    /// "Draft empty". The email-template endpoint uses this so a rate limit
+    /// or safety block stops looking like a mystery 502.</summary>
+    public async Task<(string? Text, string? Error)> GenerateWithDetailAsync(string prompt, double temperature, int maxTokens, CancellationToken ct)
     {
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
         var payload = new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
-            generationConfig = new { temperature, maxOutputTokens = 400 },
+            // 1024 fits a full SUBJECT + 3–6 paragraph body comfortably; the
+            // old 400 cap silently truncated many template drafts to empty.
+            generationConfig = new { temperature, maxOutputTokens = maxTokens },
         };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         try
         {
             var resp = await _http.PostAsync(url, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                // Trim + keep the useful part of the API error (Gemini's
+                // "error.message" JSON path is the human-readable bit).
+                string reason = text.Length > 500 ? text[..500] : text;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(text);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                return (null, $"Gemini HTTP {(int)resp.StatusCode}: {reason}");
+            }
             var doc = JsonDocument.Parse(text);
-            return doc.RootElement.GetProperty("candidates")[0]
-                .GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
+            if (!doc.RootElement.TryGetProperty("candidates", out var candidates)
+                || candidates.GetArrayLength() == 0)
+                return (null, "Keine candidates in Gemini-Antwort (Safety-Block oder Modell antwortet nicht).");
+            var cand = candidates[0];
+            // MAX_TOKENS finish → the model got cut off before writing anything;
+            // surface that as its own error so bumping the limit is obvious.
+            if (cand.TryGetProperty("finishReason", out var fr))
+            {
+                var frs = fr.GetString();
+                if (!string.Equals(frs, "STOP", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(frs, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase))
+                    return (null, $"Gemini finishReason={frs}");
+            }
+            if (!cand.TryGetProperty("content", out var content)
+                || !content.TryGetProperty("parts", out var parts)
+                || parts.GetArrayLength() == 0
+                || !parts[0].TryGetProperty("text", out var t))
+                return (null, "Gemini-Antwort ohne text.");
+            return (t.GetString(), null);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            return (null, $"{ex.GetType().Name}: {ex.Message}");
+        }
     }
 }
 
