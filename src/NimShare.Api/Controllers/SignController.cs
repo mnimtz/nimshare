@@ -84,6 +84,15 @@ public class SignController : Controller
         var (req, p) = await ResolveAsync(pid, t, ct);
         if (req is null || p is null) return View("Invalid");
         if (p.Status == SignatureParticipantStatus.Signed) return RedirectToAction(nameof(Landing), new { pid, t });
+        // Reassigned participants are flipped to Declined and the fields move to
+        // the delegate — an old bookmark or leaked URL for the original signer
+        // must NOT be able to POST /submit and forge the signature onto the
+        // (now-empty) participant row. Same for anyone who hit Decline.
+        if (p.Status == SignatureParticipantStatus.Declined) return View("Invalid");
+        if (req.Status == SignatureRequestStatus.Cancelled
+            || req.Status == SignatureRequestStatus.Completed
+            || req.Status == SignatureRequestStatus.Declined)
+            return View("Invalid");
         if (p.Role != SignatureParticipantRole.Signer)
         {
             // Viewer path: just acknowledge. Save first, then trigger the
@@ -246,6 +255,99 @@ public class SignController : Controller
                 body: reason, href: "/signatures", ct: ct);
         }
         finally { System.Globalization.CultureInfo.CurrentUICulture = declPrev; }
+        return View("Done", new SignDoneViewModel(req, p, false));
+    }
+
+    /// <summary>Reassign / delegate — the recipient says "I'm not the right
+    /// person, please forward to X" (DocuSign-style). We mark the current
+    /// participant as Declined with a reassigned-to marker, spawn a fresh
+    /// participant with the same role + fields + order, and send an invite to
+    /// the new address. The initiator gets a notification so they know the
+    /// signing chain took a detour.</summary>
+    [HttpPost("/sign/{pid:guid}/reassign")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reassign(Guid pid, string t, string toEmail, string toName, string? reason,
+        [FromServices] Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dpp,
+        [FromServices] INotificationService notif,
+        CancellationToken ct)
+    {
+        var (req, p) = await ResolveAsync(pid, t, ct);
+        if (req is null || p is null) return View("Invalid");
+        if (p.Role != SignatureParticipantRole.Signer) return View("Invalid");
+        if (p.Status != SignatureParticipantStatus.Pending && p.Status != SignatureParticipantStatus.Viewed)
+            return View("Invalid");
+        if (req.Status == SignatureRequestStatus.Cancelled || req.Status == SignatureRequestStatus.Completed
+            || req.Status == SignatureRequestStatus.Declined)
+            return View("Invalid");
+        if (string.IsNullOrWhiteSpace(toEmail) || string.IsNullOrWhiteSpace(toName)) return View("Invalid");
+        toEmail = toEmail.Trim();
+        toName = toName.Trim();
+        // Bare-minimum email sanity — a full validator would need to accept
+        // RFC-5321 corner cases we don't care about here.
+        if (!toEmail.Contains('@') || toEmail.Length > 250) return View("Invalid");
+
+        // Stash a token for the delegate. Same shape as the initial invite —
+        // raw token in the URL, hash on the participant row.
+        var raw = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        var hash = _hasher.Hash(raw);
+
+        var delegateP = new SignatureParticipant
+        {
+            RequestId = req.Id,
+            Email = toEmail,
+            Name = toName,
+            Role = SignatureParticipantRole.Signer,
+            Order = p.Order,
+            TokenHash = hash,
+            Status = SignatureParticipantStatus.Pending,
+        };
+        _db.SignatureParticipants.Add(delegateP);
+
+        // Move the current participant's fields onto the delegate — this is
+        // the whole point of reassignment: they still need to be filled, just
+        // by someone else.
+        var fields = await _db.SignatureFields
+            .Where(f => f.RequestId == req.Id && f.ParticipantId == p.Id).ToListAsync(ct);
+        foreach (var f in fields) f.ParticipantId = delegateP.Id;
+
+        p.Status = SignatureParticipantStatus.Declined;
+        p.DeclinedReason = $"reassigned to {toEmail}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason}");
+
+        _db.SignatureAudits.Add(new SignatureAudit
+        {
+            RequestId = req.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Declined,
+            Note = $"reassigned:{toEmail}",
+            IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+            UserAgent = Request.Headers.UserAgent,
+        });
+        _db.SignatureAudits.Add(new SignatureAudit
+        {
+            RequestId = req.Id, ParticipantId = delegateP.Id,
+            Kind = SignatureAuditKind.Invited, Note = $"reassigned-from:{p.Email}",
+        });
+
+        await _db.SaveChangesAsync(ct);
+
+        var url = $"{Request.Scheme}://{Request.Host}/sign/{delegateP.Id}?t={raw}";
+        var initiator = req.Initiator?.DisplayName ?? "NimShare";
+        try
+        {
+            await notif.SendShareLinkAsync(toEmail, initiator,
+                $"[{initiator}] Signatur weitergeleitet: {req.Title}",
+                $"Hallo {toName},\n\n{p.Name} <{p.Email}> hat die Signatur-Anfrage für „{req.Title}\" an dich weitergeleitet.\n\nÖffne den folgenden Link, um zu unterschreiben:\n{url}\n\n— NimShare",
+                ct);
+        }
+        catch { /* delivery failure isn't fatal — audit shows the reassign */ }
+
+        // Ping the initiator so they know the chain took a detour.
+        try
+        {
+            await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                $"{p.Name} hat die Signatur an {toName} weitergeleitet",
+                body: $"„{req.Title}\" — {toEmail}", href: $"/signatures/{req.Id}", ct: ct);
+        }
+        catch { }
+
         return View("Done", new SignDoneViewModel(req, p, false));
     }
 

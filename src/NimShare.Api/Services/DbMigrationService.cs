@@ -156,6 +156,27 @@ public class DbMigrationService : IDbMigrationService
             // Bulk inserts don't need change tracking.
             target.ChangeTracker.AutoDetectChangesEnabled = false;
 
+            // WIPE FIRST, in reverse-list order so children go before parents.
+            // If we wiped-and-inserted table-by-table in the parent-first
+            // iteration order below, the first SaveChanges on Users would trip
+            // an FK from any pre-existing Files/Groups still in the target DB
+            // (re-runs after a partial migration would guarantee that).
+            for (int i = tables.Count - 1; i >= 0; i--)
+            {
+                var wipeName = tables[i].Name;
+                var entityType = target.Model.FindEntityType(wipeName)?.ClrType ?? typeof(object);
+                // Skip the wipe if the table doesn't exist yet — first-time
+                // switch to a fresh DB has nothing to remove.
+                try
+                {
+                    await target.Database.ExecuteSqlRawAsync($"DELETE FROM [{wipeName}]", ct);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Wipe of {Table} skipped ({Message})", wipeName, ex.Message);
+                }
+            }
+
             for (int i = 0; i < tables.Count; i++)
             {
                 var (name, copy) = tables[i];
@@ -178,27 +199,32 @@ public class DbMigrationService : IDbMigrationService
     private static async Task<long> CopySet<T>(NimShareDbContext source, NimShareDbContext target, CancellationToken ct)
         where T : class
     {
-        // Wipe destination first so re-running the migration doesn't blow up on
-        // primary-key duplicates. Fast path: RemoveRange over the full set.
-        var existing = await target.Set<T>().ToListAsync(ct);
-        if (existing.Count > 0)
-        {
-            target.Set<T>().RemoveRange(existing);
-            await target.SaveChangesAsync(ct);
-            target.ChangeTracker.Clear();
-        }
-        var rows = await source.Set<T>().AsNoTracking().ToListAsync(ct);
-        if (rows.Count == 0) return 0;
-        // Insert in reasonably-sized chunks so a memory-limited App Service
-        // doesn't tip over on wide tables.
+        // Streamed read + chunked write — avoids loading a full Files or
+        // FileEmbeddings table (potentially hundreds of MB) into memory on a
+        // B1 App Service. Target wipe already happened up front in
+        // CopyDataAsync (reverse FK order).
         const int chunk = 500;
-        for (int i = 0; i < rows.Count; i += chunk)
+        long total = 0;
+        var batch = new List<T>(chunk);
+        await foreach (var row in source.Set<T>().AsNoTracking().AsAsyncEnumerable().WithCancellation(ct))
         {
-            var slice = rows.GetRange(i, Math.Min(chunk, rows.Count - i));
-            await target.Set<T>().AddRangeAsync(slice, ct);
+            batch.Add(row);
+            if (batch.Count >= chunk)
+            {
+                await target.Set<T>().AddRangeAsync(batch, ct);
+                await target.SaveChangesAsync(ct);
+                target.ChangeTracker.Clear();
+                total += batch.Count;
+                batch.Clear();
+            }
+        }
+        if (batch.Count > 0)
+        {
+            await target.Set<T>().AddRangeAsync(batch, ct);
             await target.SaveChangesAsync(ct);
             target.ChangeTracker.Clear();
+            total += batch.Count;
         }
-        return rows.Count;
+        return total;
     }
 }

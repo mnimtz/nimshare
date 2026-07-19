@@ -78,9 +78,36 @@
             </div>
             <div class="row" style="justify-content:flex-end;gap:8px">
                 <button type="button" class="btn btn-ghost" onclick="declineOpen()">Zurück</button>
+                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">↪ Weiterleiten stattdessen</button>
                 <button type="submit" class="btn btn-primary" style="background:var(--status-critical)">Ablehnen bestätigen</button>
             </div>
         </form>
+
+        @if (isSigner)
+        {
+        <form method="post" action="/sign/@Model.Me.Id/reassign?t=@Model.Token" id="reassignForm" style="display:none;margin-top:12px">
+            @Html.AntiForgeryToken()
+            <p class="muted">Du bist nicht die richtige Person? Leite die Signatur an einen Kollegen weiter — die Unterschriftsfelder wandern mit.</p>
+            <div class="row" style="gap:12px">
+                <div class="field" style="flex:1">
+                    <label>Name</label>
+                    <input type="text" name="toName" required maxlength="200" autocomplete="off"/>
+                </div>
+                <div class="field" style="flex:2">
+                    <label>E-Mail</label>
+                    <input type="email" name="toEmail" required maxlength="250" autocomplete="off"/>
+                </div>
+            </div>
+            <div class="field">
+                <label>Notiz für den Empfänger (optional)</label>
+                <textarea name="reason" rows="2" maxlength="500" placeholder="z.B. Das gehört ins Legal-Team — kannst du das übernehmen?"></textarea>
+            </div>
+            <div class="row" style="justify-content:flex-end;gap:8px">
+                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">Zurück</button>
+                <button type="submit" class="btn btn-primary">↪ Weiterleiten</button>
+            </div>
+        </form>
+        }
     </div>
 </div>
 
@@ -186,9 +213,21 @@ render();
 window.declineOpen = () => {
     const f = document.getElementById('signForm');
     const d = document.getElementById('declineForm');
+    const r = document.getElementById('reassignForm');
     const on = d.style.display === 'none';
     f.style.display = on ? 'none' : '';
     d.style.display = on ? '' : 'none';
+    if (r) r.style.display = 'none';
+};
+window.reassignOpen = () => {
+    const f = document.getElementById('signForm');
+    const d = document.getElementById('declineForm');
+    const r = document.getElementById('reassignForm');
+    if (!r) return;
+    const on = r.style.display === 'none';
+    f.style.display = on ? 'none' : '';
+    d.style.display = 'none';
+    r.style.display = on ? '' : 'none';
 };
 </script>
 }

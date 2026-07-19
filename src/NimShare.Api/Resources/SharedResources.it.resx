@@ -738,6 +738,7 @@ Apri il link:
   <data name="nav.sig.contacts"><value>Rubrica</value></data>
   <data name="nav.sig.certificates"><value>Certificati</value></data>
   <data name="nav.database"><value>Database</value></data>
+  <data name="ai.live_models"><value>Carica elenco live</value></data>
 
   <data name="dbset.title"><value>Database</value></data>
   <data name="dbset.lede"><value>Dove NimShare salva i metadati. Sqlite di default, Azure SQL consigliato oltre un singolo App Service.</value></data>

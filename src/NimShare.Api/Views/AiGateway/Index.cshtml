@@ -43,6 +43,10 @@
                 }
             </select>
             <div class="helper" id="modelHelper">@T["ai.model_helper"]</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                <button type="button" id="liveModelsBtn" class="btn btn-ghost" style="padding:4px 10px;font-size:.85rem">🔄 @T["ai.live_models"]</button>
+                <span id="liveModelsStatus" class="muted" style="font-size:.85rem"></span>
+            </div>
         </div>
     </div>
     <div class="field" id="endpointField" style="display:none">
@@ -127,6 +131,7 @@
         'Gemini': [
             { v: 'gemini-2.5-pro',        label: '👁️ gemini-2.5-pro (recommended, vision)' },
             { v: 'gemini-2.5-flash',      label: '👁️ gemini-2.5-flash (fast, vision)' },
+            { v: 'gemini-2.5-flash-lite', label: '👁️ gemini-2.5-flash-lite (cheapest 2.5, vision)' },
             { v: 'gemini-2.0-flash',      label: '👁️ gemini-2.0-flash (vision)' },
             { v: 'gemini-2.0-flash-lite', label: '👁️ gemini-2.0-flash-lite (cheap, vision)' },
             { v: 'gemini-1.5-pro',        label: '👁️ gemini-1.5-pro (legacy, vision)' },
@@ -171,5 +176,56 @@
     }
     providerEl.addEventListener('change', apply);
     apply();
+
+    // ── Live model listing ────────────────────────────────────────
+    // The curated list above only covers the marquee models. This button
+    // calls the provider's own list-models endpoint (with the currently
+    // saved API key) and injects EVERY model the provider actually offers
+    // — so operators aren't stuck typing "gemini-2.5-flash-lite" by hand.
+    const liveBtn = document.getElementById('liveModelsBtn');
+    const liveStatus = document.getElementById('liveModelsStatus');
+    if (liveBtn) {
+        liveBtn.addEventListener('click', async () => {
+            liveBtn.disabled = true;
+            liveStatus.textContent = 'Lade…';
+            liveStatus.style.color = 'inherit';
+            try {
+                const r = await fetch('/api/v1/ai/list-models', { credentials: 'same-origin' });
+                const d = await r.json();
+                if (d.error) {
+                    liveStatus.textContent = '⚠ ' + d.error;
+                    liveStatus.style.color = 'var(--status-critical, #d33)';
+                    return;
+                }
+                const models = d.models || [];
+                if (models.length === 0) {
+                    liveStatus.textContent = 'Keine Modelle zurückgegeben.';
+                    return;
+                }
+                // Preserve current selection.
+                const cur = modelEl.value;
+                modelEl.innerHTML = '';
+                for (const m of models) {
+                    const o = document.createElement('option');
+                    o.value = m; o.textContent = m;
+                    if (m === cur) o.selected = true;
+                    modelEl.appendChild(o);
+                }
+                if (cur && !models.includes(cur)) {
+                    const o = document.createElement('option');
+                    o.value = cur; o.textContent = cur + ' (current)';
+                    o.selected = true;
+                    modelEl.insertBefore(o, modelEl.firstChild);
+                }
+                liveStatus.textContent = '✓ ' + models.length + ' Modelle geladen.';
+                liveStatus.style.color = 'var(--status-ok, #22a05a)';
+            } catch (e) {
+                liveStatus.textContent = '⚠ ' + (e.message || e);
+                liveStatus.style.color = 'var(--status-critical, #d33)';
+            } finally {
+                liveBtn.disabled = false;
+            }
+        });
+    }
 })();
 </script>

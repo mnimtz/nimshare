@@ -389,6 +389,11 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/error");
+    // Sits just inside the exception handler so transient Sqlite failures get
+    // one automatic retry before the 503 page ever appears. Sqlite-only —
+    // SqlServer has its own EnableRetryOnFailure execution strategy.
+    if (!string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+        app.UseMiddleware<SqliteRecoveryMiddleware>();
     app.UseHsts();
 }
 

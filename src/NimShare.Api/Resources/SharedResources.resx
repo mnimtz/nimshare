@@ -736,6 +736,7 @@ Open the link:
   <data name="nav.sig.contacts"><value>Address book</value></data>
   <data name="nav.sig.certificates"><value>Certificates</value></data>
   <data name="nav.database"><value>Database</value></data>
+  <data name="ai.live_models"><value>Fetch live model list</value></data>
 
   <data name="dbset.title"><value>Database</value></data>
   <data name="dbset.lede"><value>Which database NimShare stores its metadata in. Sqlite is the default and works out of the box. Azure SQL is recommended once you outgrow single-server hosting.</value></data>

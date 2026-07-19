@@ -738,6 +738,7 @@ Abre el enlace:
   <data name="nav.sig.contacts"><value>Libreta de direcciones</value></data>
   <data name="nav.sig.certificates"><value>Certificados</value></data>
   <data name="nav.database"><value>Base de datos</value></data>
+  <data name="ai.live_models"><value>Cargar lista en vivo</value></data>
 
   <data name="dbset.title"><value>Base de datos</value></data>
   <data name="dbset.lede"><value>Dónde NimShare guarda sus metadatos. Sqlite por defecto, Azure SQL recomendado más allá de un único App Service.</value></data>

@@ -53,18 +53,33 @@ public class DbConfigStore
     /// page so support can find it if they need to hand-edit.</summary>
     public string ConfigPath => _path;
 
+    private static readonly HashSet<string> KnownProviders =
+        new(new[] { "Sqlite", "SqlServer" }, StringComparer.OrdinalIgnoreCase);
+
     public DbConfig? Load()
     {
         try
         {
             if (!File.Exists(_path)) return null;
             var json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<DbConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var cfg = JsonSerializer.Deserialize<DbConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (cfg is null) return null;
+            // Whitelist provider names — a typo like "Postgres" or "SQLServer"
+            // (missing capitalisation) used to boot the app into a broken
+            // state (Program.cs's else-branch treated it as Sqlite and tried
+            // to use a SqlServer connection string). Fall back loudly instead.
+            if (!KnownProviders.Contains(cfg.Provider))
+            {
+                Console.Error.WriteLine($"[DbConfigStore] Unknown provider '{cfg.Provider}' in {_path} — falling back to env-var config.");
+                return null;
+            }
+            return cfg;
         }
-        catch
+        catch (Exception ex)
         {
             // Corrupt file — better to fall back to env-var config than to
             // crash the whole startup.
+            Console.Error.WriteLine($"[DbConfigStore] Could not parse {_path}: {ex.Message}. Falling back to env-var config.");
             return null;
         }
     }

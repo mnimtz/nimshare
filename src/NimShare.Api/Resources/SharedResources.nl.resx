@@ -737,6 +737,7 @@ Open de link:
   <data name="nav.sig.contacts"><value>Adresboek</value></data>
   <data name="nav.sig.certificates"><value>Certificaten</value></data>
   <data name="nav.database"><value>Database</value></data>
+  <data name="ai.live_models"><value>Live modellenlijst laden</value></data>
 
   <data name="dbset.title"><value>Database</value></data>
   <data name="dbset.lede"><value>Waar NimShare zijn metadata bewaart. Sqlite is de standaard, Azure SQL aanbevolen voorbij één App Service.</value></data>

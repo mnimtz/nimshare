@@ -486,6 +486,9 @@ public interface IAiGatewayService
     Task SaveAsync(AiGatewaySettings incoming, string? plainApiKey, Guid updatedBy, CancellationToken ct = default);
     Task<IAiProvider> CreateProviderAsync(CancellationToken ct = default);
     Task<string?> ExtractTextAsync(string blobPath, string contentType, IBlobStorageService blobs, CancellationToken ct = default);
+    /// <summary>Decrypt and return the plain-text API key — used by the
+    /// list-models endpoint. Returns null if no key is saved.</summary>
+    Task<string?> GetApiKeyAsync(CancellationToken ct = default);
 }
 
 public class AiGatewayService : IAiGatewayService
@@ -535,6 +538,14 @@ public class AiGatewayService : IAiGatewayService
         s.UpdatedAt = DateTimeOffset.UtcNow;
         s.UpdatedByUserId = updatedBy;
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<string?> GetApiKeyAsync(CancellationToken ct = default)
+    {
+        var s = await LoadAsync(ct);
+        if (string.IsNullOrEmpty(s.ApiKeyEncrypted)) return null;
+        try { return _protector.Unprotect(s.ApiKeyEncrypted); }
+        catch { return null; }
     }
 
     public async Task<IAiProvider> CreateProviderAsync(CancellationToken ct = default)
