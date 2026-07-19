@@ -554,7 +554,22 @@ public class AiGatewayService : IAiGatewayService
                     sb.AppendLine(page.Text);
                     if (sb.Length > 20_000) break;
                 }
-                return sb.ToString();
+                var extracted = sb.ToString();
+                // If PDF is scanned (no text layer) AND OCR is enabled, fall through to vision.
+                var settings = await LoadAsync(ct);
+                if (extracted.Trim().Length < 40 && settings.EnableOcr
+                    && settings.Provider != AiProvider.Disabled)
+                {
+                    return await OcrViaVisionAsync(ms.ToArray(), "application/pdf", ct);
+                }
+                return extracted;
+            }
+
+            if (contentType.StartsWith("image/"))
+            {
+                var settings = await LoadAsync(ct);
+                if (settings.EnableOcr && settings.Provider != AiProvider.Disabled)
+                    return await OcrViaVisionAsync(ms.ToArray(), contentType, ct);
             }
         }
         catch (Exception ex)
@@ -562,5 +577,19 @@ public class AiGatewayService : IAiGatewayService
             _log.LogInformation(ex, "Text extraction failed for {Path}", blobPath);
         }
         return null;
+    }
+
+    /// <summary>Uses the configured vision provider to extract readable text
+    /// from an image or scanned PDF. Prompts the model to transcribe verbatim
+    /// so the result flows straight into the fulltext index.</summary>
+    private async Task<string?> OcrViaVisionAsync(byte[] bytes, string mimeType, CancellationToken ct)
+    {
+        var provider = await CreateProviderAsync(ct);
+        // Piggy-back the vision API with an OCR prompt encoded into the "language"
+        // slot — providers stuff it into the user message so the model treats
+        // the response as literal transcription rather than description.
+        var text = await provider.DescribeImageAsync(bytes, mimeType,
+            "Transcribe every readable word from this image verbatim, one line per line, without adding commentary. If nothing readable, return empty.", ct);
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 }

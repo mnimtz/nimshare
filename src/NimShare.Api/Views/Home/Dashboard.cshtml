@@ -68,7 +68,7 @@
                         <td class="muted mono">@f.ContentType</td>
                         <td class="muted">@f.CreatedAt.ToString("u")</td>
                         <td>
-                            <a class="btn btn-ghost btn-sm" href="/upload?fileId=@f.Id">@T["file.share"]</a>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="quickShare('@f.Id','@Html.Raw(System.Text.Json.JsonEncodedText.Encode(f.Name))')">@T["file.share"]</button>
                         </td>
                     </tr>
                 }
@@ -77,3 +77,50 @@
         }
     </div>
 </div>
+
+<dialog id="quickShareDlg" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
+    <div style="padding:20px">
+        <h3 style="margin-top:0" id="qsTitle">Datei teilen</h3>
+        <div id="qsBusy" class="muted">Erstelle Link…</div>
+        <div id="qsResult" style="display:none">
+            <div class="field">
+                <label>Öffentlicher Link</label>
+                <input type="text" id="qsUrl" readonly style="font-family:monospace;font-size:13px" onclick="this.select()"/>
+            </div>
+            <div class="actions" style="gap:8px">
+                <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('qsUrl').value);this.textContent='✓ Kopiert'">📋 Kopieren</button>
+                <a class="btn" id="qsManage" href="/links">Verwalten</a>
+                <button class="btn btn-ghost" onclick="document.getElementById('quickShareDlg').close()">Schließen</button>
+            </div>
+        </div>
+        <div id="qsError" style="display:none;color:var(--tw-danger,#c00);margin-top:10px"></div>
+    </div>
+</dialog>
+
+@section Scripts {
+<script>
+async function quickShare(fileId, name) {
+    const dlg = document.getElementById('quickShareDlg');
+    document.getElementById('qsTitle').textContent = 'Teile: ' + name;
+    document.getElementById('qsBusy').style.display = '';
+    document.getElementById('qsResult').style.display = 'none';
+    document.getElementById('qsError').style.display = 'none';
+    dlg.showModal();
+    try {
+        const r = await fetch('/api/v1/links', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify({ fileId: fileId, notifyOnAccess: false })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + await r.text());
+        const d = await r.json();
+        document.getElementById('qsUrl').value = d.url || (location.origin + '/s/' + d.slug);
+        document.getElementById('qsBusy').style.display = 'none';
+        document.getElementById('qsResult').style.display = '';
+    } catch (e) {
+        document.getElementById('qsBusy').style.display = 'none';
+        document.getElementById('qsError').textContent = 'Fehler: ' + e.message;
+        document.getElementById('qsError').style.display = '';
+    }
+}
+</script>
+}
