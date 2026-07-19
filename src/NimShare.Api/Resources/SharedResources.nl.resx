@@ -700,6 +700,7 @@ Open de link:
   <data name="sig.new.err.network"><value>Netwerkfout</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Handtekeningverzoek aangemaakt, maar de e-mail is mislukt voor deze ontvangers:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Controleer /settings/email — de e-mailgateway is mogelijk uitgeschakeld of verkeerd geconfigureerd.</value></data>
+  <data name="sig.email_failed_short"><value>E-mail mislukt</value></data>
 
   <data name="wiki.page.pages_heading"><value>Pagina's</value></data>
   <data name="wiki.page.title_label"><value>Titel</value></data>

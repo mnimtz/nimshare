@@ -705,6 +705,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="sig.new.err.network"><value>Netzwerkfehler</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Signatur-Anforderung erstellt, aber Email für diese Empfänger fehlgeschlagen:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Prüfe /settings/email — das Email-Gateway ist evtl. deaktiviert oder falsch konfiguriert.</value></data>
+  <data name="sig.email_failed_short"><value>Email fehlgeschlagen</value></data>
 
   <data name="wiki.page.pages_heading"><value>Seiten</value></data>
   <data name="wiki.page.title_label"><value>Titel</value></data>

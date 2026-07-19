@@ -30,6 +30,25 @@ public class SignaturesPageController : Controller
             .OrderByDescending(r => r.CreatedAt)
             .Take(200)
             .ToListAsync(ct);
+        // Load the newest Invited/reminder audit per participant so the view
+        // can render "✉️ invited" vs "⚠️ email-failed: <error>" inline. This is
+        // how Marcus (and any requester) finds out WHY nothing arrived without
+        // needing /diagnostics or the log stream.
+        var reqIds = rows.Select(r => r.Id).ToList();
+        var audits = await _db.SignatureAudits
+            .Where(a => reqIds.Contains(a.RequestId)
+                && a.Kind == NimShare.Core.Entities.SignatureAuditKind.Invited
+                && a.ParticipantId != null)
+            .OrderByDescending(a => a.At)
+            .ToListAsync(ct);
+        // Newest audit per (request, participant) wins.
+        var lastNote = new Dictionary<(Guid RequestId, Guid ParticipantId), string?>();
+        foreach (var a in audits)
+        {
+            var key = (a.RequestId, a.ParticipantId!.Value);
+            if (!lastNote.ContainsKey(key)) lastNote[key] = a.Note;
+        }
+        ViewData["LatestInviteNote"] = lastNote;
         return View(rows);
     }
 

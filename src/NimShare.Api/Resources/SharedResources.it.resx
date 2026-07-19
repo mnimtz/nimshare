@@ -701,6 +701,7 @@ Apri il link:
   <data name="sig.new.err.network"><value>Errore di rete</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Richiesta di firma creata, ma l'email è fallita per questi destinatari:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Controlla /settings/email — il gateway email potrebbe essere disattivato o non configurato correttamente.</value></data>
+  <data name="sig.email_failed_short"><value>Email fallita</value></data>
 
   <data name="wiki.page.pages_heading"><value>Pagine</value></data>
   <data name="wiki.page.title_label"><value>Titolo</value></data>

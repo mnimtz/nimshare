@@ -699,6 +699,7 @@ Open the link:
   <data name="sig.new.err.network"><value>Network error</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Signature request created, but email failed for these recipients:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Check /settings/email — the email gateway may be disabled or misconfigured.</value></data>
+  <data name="sig.email_failed_short"><value>Email failed</value></data>
 
   <data name="wiki.page.pages_heading"><value>Pages</value></data>
   <data name="wiki.page.title_label"><value>Title</value></data>

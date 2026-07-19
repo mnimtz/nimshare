@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = @T["sig.title"];
     Layout = "_AppShell";
+    var latestNote = (Dictionary<(Guid RequestId, Guid ParticipantId), string?>)(ViewData["LatestInviteNote"] ?? new Dictionary<(Guid, Guid), string?>());
 }
 <div class="page-header">
     <div>
@@ -47,7 +48,30 @@ else
                 || (p.Role == NimShare.Core.Entities.SignatureParticipantRole.Viewer && p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Viewed));
             <tr>
                 <td>@r.Title</td>
-                <td>@doneCount / @r.Participants.Count</td>
+                <td>
+                    @doneCount / @r.Participants.Count
+                    @{
+                        // Show per-participant email-delivery status inline —
+                        // hover for the exact error text on failed rows.
+                        var failed = new List<string>();
+                        foreach (var p in r.Participants)
+                        {
+                            if (latestNote.TryGetValue((r.Id, p.Id), out var note)
+                                && !string.IsNullOrEmpty(note)
+                                && note.StartsWith("email-failed:"))
+                            {
+                                failed.Add($"{p.Name} ({p.Email}): {note["email-failed:".Length..].Trim()}");
+                            }
+                        }
+                    }
+                    @if (failed.Count > 0)
+                    {
+                        <span class="chip chip-critical" style="margin-left:4px;cursor:help"
+                              title="@string.Join("\n", failed)">
+                            ⚠ @T["sig.email_failed_short"]
+                        </span>
+                    }
+                </td>
                 <td><span class="chip @statusChip.Item1">@statusChip.Item2</span></td>
                 <td class="muted">@r.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>
