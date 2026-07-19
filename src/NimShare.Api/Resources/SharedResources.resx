@@ -731,6 +731,49 @@ Open the link:
   <data name="sig.detail.audit.cancelled"><value>Cancelled</value></data>
   <data name="sig.detail.audit.finalized"><value>Request finalised</value></data>
 
+  <data name="nav.sig.overview"><value>Overview</value></data>
+  <data name="nav.sig.templates"><value>Email templates</value></data>
+  <data name="nav.sig.contacts"><value>Address book</value></data>
+
+  <data name="email_tpl.title"><value>Email templates</value></data>
+  <data name="email_tpl.lede"><value>Your own subject + body copy for signature invites. Reused across every request; picked in the wizard.</value></data>
+  <data name="email_tpl.new"><value>New template</value></data>
+  <data name="email_tpl.empty"><value>No templates yet. The wizard falls back to the built-in NimShare copy.</value></data>
+  <data name="email_tpl.locale"><value>Language</value></data>
+  <data name="email_tpl.subject"><value>Subject</value></data>
+  <data name="email_tpl.subject_ph"><value>{{sender.name}} wants you to sign: {{doc.title}}</value></data>
+  <data name="email_tpl.body"><value>Body</value></data>
+  <data name="email_tpl.body_ph"><value>Hi {{recipient.name}},&#10;&#10;{{sender.name}} would like you to {{sender.action}} the following document: {{doc.title}}&#10;&#10;Open this link:&#10;{{url}}&#10;&#10;— NimShare</value></data>
+  <data name="email_tpl.default"><value>Default</value></data>
+  <data name="email_tpl.set_default"><value>Set as default</value></data>
+  <data name="email_tpl.name_ph"><value>Formal contract</value></data>
+  <data name="email_tpl.editor_title"><value>New template</value></data>
+  <data name="email_tpl.placeholders_label"><value>Placeholders</value></data>
+  <data name="email_tpl.ai_draft"><value>Draft with AI</value></data>
+  <data name="email_tpl.ai_hint"><value>Describe the tone or context — the AI writes subject + body with placeholders.</value></data>
+  <data name="email_tpl.ai_prompt"><value>What is this template for?</value></data>
+  <data name="email_tpl.ai_prompt_ph"><value>Formal legal contract for external counterparty</value></data>
+  <data name="email_tpl.ai_generate"><value>Generate</value></data>
+
+  <data name="contacts.title"><value>Address book</value></data>
+  <data name="contacts.lede"><value>Personal contacts used to pre-fill signature requests. Emails are autocompleted in the wizard.</value></data>
+  <data name="contacts.new"><value>New contact</value></data>
+  <data name="contacts.empty"><value>No contacts yet. Anyone you send a signature request to is added automatically.</value></data>
+  <data name="contacts.search_ph"><value>Search name, email, company or tag…</value></data>
+  <data name="contacts.email"><value>Email</value></data>
+  <data name="contacts.name"><value>Name</value></data>
+  <data name="contacts.company"><value>Company</value></data>
+  <data name="contacts.tags"><value>Tags</value></data>
+  <data name="contacts.tags_hint"><value>Comma-separated. Used for filtering.</value></data>
+  <data name="contacts.notes"><value>Notes</value></data>
+  <data name="contacts.last_used"><value>Last used</value></data>
+  <data name="contacts.editor_title"><value>New contact</value></data>
+
+  <data name="sig.new.email_template"><value>Email template</value></data>
+  <data name="sig.new.default_template"><value>Built-in NimShare copy</value></data>
+  <data name="sig.new.manage_templates"><value>Manage templates</value></data>
+  <data name="sig.new.template_hint"><value>Use one of your saved templates, or leave empty to use the built-in localised copy.</value></data>
+
   <data name="wiki.page.pages_heading"><value>Pages</value></data>
   <data name="wiki.page.title_label"><value>Title</value></data>
   <data name="wiki.page.content_label"><value>Content (Markdown)</value></data>

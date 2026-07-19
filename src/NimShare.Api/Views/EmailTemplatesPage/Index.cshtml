@@ -1,0 +1,211 @@
+@model List<NimShare.Core.Entities.EmailTemplate>
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = @T["email_tpl.title"];
+    Layout = "_AppShell";
+}
+<div class="page-header">
+    <div>
+        <a href="/signatures" class="muted" style="text-decoration:none">← @T["nav.signatures"]</a>
+        <h1 style="margin-top:6px">✉ @T["email_tpl.title"]</h1>
+        <p class="lede">@T["email_tpl.lede"]</p>
+    </div>
+    <button class="btn btn-primary" onclick="openEditor(null)">+ @T["email_tpl.new"]</button>
+</div>
+
+<div class="card" id="tpl-list">
+    @if (!Model.Any())
+    {
+        <p class="muted">@T["email_tpl.empty"]</p>
+    }
+    else
+    {
+        <table class="fm-list">
+            <thead><tr>
+                <th>@T["common.name"]</th>
+                <th>@T["email_tpl.locale"]</th>
+                <th>@T["email_tpl.subject"]</th>
+                <th>@T["email_tpl.default"]</th>
+                <th></th>
+            </tr></thead>
+            <tbody>
+            @foreach (var t in Model)
+            {
+                <tr>
+                    <td><strong>@t.Name</strong></td>
+                    <td><span class="chip">@t.Locale</span></td>
+                    <td class="muted mono" style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@t.Subject</td>
+                    <td>@(t.IsDefault ? "★" : "")</td>
+                    <td>
+                        <button class="btn btn-ghost btn-sm" onclick="openEditor('@t.Id')">✎</button>
+                        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="deleteTpl('@t.Id')">🗑</button>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+<dialog id="editor" style="border:0;border-radius:12px;padding:0;max-width:820px;width:96%">
+    <form method="dialog" style="padding:20px" onsubmit="return saveTpl(event)">
+        <h3 style="margin-top:0" id="editor-title">@T["email_tpl.editor_title"]</h3>
+        <input type="hidden" id="e-id"/>
+        <div class="row" style="gap:12px;flex-wrap:wrap">
+            <div class="field" style="flex:2;min-width:280px">
+                <label>@T["common.name"]</label>
+                <input id="e-name" required placeholder="@T["email_tpl.name_ph"]"/>
+            </div>
+            <div class="field" style="flex:1;min-width:140px">
+                <label>@T["email_tpl.locale"]</label>
+                <select id="e-locale">
+                    <option value="de">Deutsch</option>
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                    <option value="it">Italiano</option>
+                    <option value="es">Español</option>
+                    <option value="nl">Nederlands</option>
+                </select>
+            </div>
+            <div class="field" style="flex:1;min-width:140px;display:flex;align-items:flex-end">
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+                    <input id="e-default" type="checkbox"/> ★ @T["email_tpl.set_default"]
+                </label>
+            </div>
+        </div>
+        <div class="field">
+            <label>@T["email_tpl.subject"]</label>
+            <input id="e-subject" required placeholder="@T["email_tpl.subject_ph"]"/>
+        </div>
+        <div class="field">
+            <label style="display:flex;justify-content:space-between;align-items:center">
+                <span>@T["email_tpl.body"]</span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="draftWithAi()">✨ @T["email_tpl.ai_draft"]</button>
+            </label>
+            <textarea id="e-body" rows="10" style="font-family:var(--font-mono);font-size:.88rem" placeholder="@T["email_tpl.body_ph"]"></textarea>
+            <div class="helper" style="margin-top:6px">
+                @T["email_tpl.placeholders_label"]:
+                <code>{{recipient.name}}</code> <code>{{recipient.email}}</code>
+                <code>{{sender.name}}</code> <code>{{sender.action}}</code>
+                <code>{{doc.title}}</code> <code>{{doc.name}}</code>
+                <code>{{url}}</code> <code>{{message}}</code>
+            </div>
+        </div>
+        <div class="row" style="gap:8px;margin-top:12px">
+            <button type="button" class="btn btn-secondary" onclick="preview()">👁 @T["common.preview"]</button>
+        </div>
+        <div class="card" id="preview-box" style="display:none;margin-top:10px;background:var(--tw-gray-100)">
+            <div style="font-weight:600">@T["email_tpl.subject"]:</div>
+            <div id="p-subject" style="margin-bottom:10px"></div>
+            <div style="font-weight:600">@T["email_tpl.body"]:</div>
+            <pre id="p-body" style="white-space:pre-wrap;background:transparent;padding:0;margin:0;font-family:inherit"></pre>
+        </div>
+        <div class="actions" style="margin-top:16px">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('editor').close()">@T["common.cancel"]</button>
+            <button class="btn btn-primary">💾 @T["common.save"]</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="ai-dlg" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
+    <form method="dialog" style="padding:20px" onsubmit="return runAiDraft(event)">
+        <h3 style="margin-top:0">✨ @T["email_tpl.ai_draft"]</h3>
+        <p class="muted">@T["email_tpl.ai_hint"]</p>
+        <div class="field">
+            <label>@T["email_tpl.ai_prompt"]</label>
+            <input id="ai-prompt" required placeholder="@T["email_tpl.ai_prompt_ph"]"/>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('ai-dlg').close()">@T["common.cancel"]</button>
+            <button class="btn btn-primary" id="ai-run-btn">@T["email_tpl.ai_generate"]</button>
+        </div>
+    </form>
+</dialog>
+
+@section Scripts {
+<script>
+const editor = document.getElementById('editor');
+async function api(m,u,b){const o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()}
+function esc(s){return String(s??'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
+async function openEditor(id) {
+    document.getElementById('preview-box').style.display = 'none';
+    if (id === null) {
+        document.getElementById('e-id').value = '';
+        document.getElementById('e-name').value = '';
+        document.getElementById('e-subject').value = '';
+        document.getElementById('e-body').value = '';
+        document.getElementById('e-locale').value = navigator.language.split('-')[0] || 'de';
+        document.getElementById('e-default').checked = false;
+        document.getElementById('editor-title').textContent = @Json.Serialize(T["email_tpl.editor_title"].Value);
+    } else {
+        const t = await api('GET', '/api/v1/email-templates/' + id);
+        document.getElementById('e-id').value = t.id;
+        document.getElementById('e-name').value = t.name;
+        document.getElementById('e-subject').value = t.subject;
+        document.getElementById('e-body').value = t.bodyMarkdown;
+        document.getElementById('e-locale').value = t.locale;
+        document.getElementById('e-default').checked = t.isDefault;
+        document.getElementById('editor-title').textContent = t.name;
+    }
+    editor.showModal();
+}
+async function saveTpl(ev) {
+    ev.preventDefault();
+    const id = document.getElementById('e-id').value;
+    const body = {
+        name: document.getElementById('e-name').value.trim(),
+        kind: 'SignatureInvite',
+        subject: document.getElementById('e-subject').value.trim(),
+        bodyMarkdown: document.getElementById('e-body').value,
+        locale: document.getElementById('e-locale').value,
+        isDefault: document.getElementById('e-default').checked,
+    };
+    try {
+        if (id) await api('PATCH', '/api/v1/email-templates/' + id, body);
+        else await api('POST', '/api/v1/email-templates', body);
+        editor.close();
+        location.reload();
+    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    return false;
+}
+async function deleteTpl(id) {
+    if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
+    try { await api('DELETE', '/api/v1/email-templates/' + id); location.reload(); }
+    catch (e) { alert(e.message); }
+}
+async function preview() {
+    try {
+        const d = await api('POST', '/api/v1/email-templates/preview', {
+            subject: document.getElementById('e-subject').value,
+            bodyMarkdown: document.getElementById('e-body').value,
+        });
+        document.getElementById('p-subject').textContent = d.subject;
+        document.getElementById('p-body').textContent = d.body;
+        document.getElementById('preview-box').style.display = '';
+    } catch (e) { alert(e.message); }
+}
+function draftWithAi() {
+    document.getElementById('ai-prompt').value = '';
+    document.getElementById('ai-dlg').showModal();
+}
+async function runAiDraft(ev) {
+    ev.preventDefault();
+    const promptEl = document.getElementById('ai-prompt');
+    const btn = document.getElementById('ai-run-btn');
+    const prompt = promptEl.value.trim();
+    if (!prompt) return false;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+        const d = await api('POST', '/api/v1/ai/draft-email-template', {
+            prompt,
+            locale: document.getElementById('e-locale').value,
+        });
+        if (d.subject) document.getElementById('e-subject').value = d.subject;
+        if (d.body) document.getElementById('e-body').value = d.body;
+        document.getElementById('ai-dlg').close();
+    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = @Json.Serialize(T["email_tpl.ai_generate"].Value); }
+    return false;
+}
+</script>
+}

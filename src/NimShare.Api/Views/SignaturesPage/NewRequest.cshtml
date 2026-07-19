@@ -77,6 +77,16 @@
         <label>@T["sig.new.message_label"]</label>
         <textarea id="reqMsg" rows="2"></textarea>
     </div>
+    <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+            <span>✉ @T["sig.new.email_template"]</span>
+            <a href="/signatures/templates" target="_blank" class="muted" style="font-size:.85rem">@T["sig.new.manage_templates"] →</a>
+        </label>
+        <select id="templateId">
+            <option value="">— @T["sig.new.default_template"] —</option>
+        </select>
+        <div class="helper" style="margin-top:6px">@T["sig.new.template_hint"]</div>
+    </div>
     <div class="row" style="justify-content:flex-end">
         <button class="btn btn-primary" onclick="goStep2()">@T["sig.new.next"]</button>
     </div>
@@ -88,7 +98,10 @@
     <p class="muted">@T["sig.new.step2_lede"]</p>
     <div id="pList" style="display:flex;flex-direction:column;gap:6px;margin:12px 0"></div>
     <div class="row" style="gap:6px;flex-wrap:wrap">
-        <input type="email" id="pEmail" placeholder="@T["sig.new.email_ph"]" style="flex:1;min-width:200px"/>
+        <div style="flex:1;min-width:200px;position:relative">
+            <input type="email" id="pEmail" placeholder="@T["sig.new.email_ph"]" list="contactsList" style="width:100%" autocomplete="off"/>
+            <datalist id="contactsList"></datalist>
+        </div>
         <input type="text" id="pName" placeholder="@T["sig.new.name_ph"]" style="flex:1;min-width:180px"/>
         <select id="pRole">
             <option value="Signer">@T["sig.new.role_signer"]</option>
@@ -144,6 +157,45 @@ let fields = [];
 let pdfDoc = null;
 let curPage = 1;
 let pageViewport = null;
+
+// Load email templates + contacts on page open so the dropdowns are ready.
+(async () => {
+    try {
+        const tpls = await fetch('/api/v1/email-templates?kind=SignatureInvite', { credentials: 'same-origin' }).then(r => r.json());
+        const sel = document.getElementById('templateId');
+        for (const t of tpls) {
+            const o = document.createElement('option');
+            o.value = t.id;
+            o.textContent = t.name + ' (' + t.locale + ')' + (t.isDefault ? ' ★' : '');
+            if (t.isDefault) o.selected = true;
+            sel.appendChild(o);
+        }
+    } catch {}
+    try {
+        const contacts = await fetch('/api/v1/contacts?limit=200', { credentials: 'same-origin' }).then(r => r.json());
+        const dl = document.getElementById('contactsList');
+        for (const c of contacts) {
+            const o = document.createElement('option');
+            o.value = c.email;
+            o.label = c.name + (c.company ? ' — ' + c.company : '');
+            dl.appendChild(o);
+        }
+        // When user picks an email from the datalist, auto-fill the name field.
+        window.__contactByEmail = new Map(contacts.map(c => [c.email, c.name]));
+    } catch {}
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const emailEl = document.getElementById('pEmail');
+    if (!emailEl) return;
+    emailEl.addEventListener('change', () => {
+        const map = window.__contactByEmail;
+        if (!map) return;
+        const name = map.get(emailEl.value.trim().toLowerCase()) || map.get(emailEl.value.trim());
+        const nameEl = document.getElementById('pName');
+        if (name && !nameEl.value) nameEl.value = name;
+    });
+});
 
 function show(n) {
     for (const i of [1,2,3]) document.getElementById('wizStep' + i).style.display = i === n ? '' : 'none';
@@ -384,7 +436,8 @@ async function sendReq() {
     if (fields.filter(f => f.type === 'Signature').length === 0) {
         if (!confirm(T.tNoSigfield)) return;
     }
-    const r = await fetch('/api/v1/signatures/' + requestId + '/send', {
+    const tpl = document.getElementById('templateId').value;
+    const r = await fetch('/api/v1/signatures/' + requestId + '/send' + (tpl ? '?templateId=' + encodeURIComponent(tpl) : ''), {
         method: 'POST', credentials: 'same-origin',
     });
     if (!r.ok) { alert(T.tError + ': ' + r.status + ' ' + await r.text()); return; }

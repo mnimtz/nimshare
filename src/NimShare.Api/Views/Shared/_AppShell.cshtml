@@ -127,7 +127,28 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
-            <a href="/signatures" class="@Active("/signatures")">✍ @T["nav.signatures"]</a>
+
+            @{
+                var sigOpen = currentPath.StartsWith("/signatures", StringComparison.OrdinalIgnoreCase);
+            }
+            <div class="nav-group @(sigOpen ? "" : "collapsed")" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
+                <div class="nav-group-head">
+                    <span>✍ @T["nav.signatures"]</span>
+                    <span class="chevron">▾</span>
+                </div>
+                <div class="nav-group-body">
+                    <a href="/signatures" class="nav-sub @(currentPath.Equals("/signatures", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">📋</span>@T["nav.sig.overview"]
+                    </a>
+                    <a href="/signatures/templates" class="nav-sub @(currentPath.StartsWith("/signatures/templates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">✉</span>@T["nav.sig.templates"]
+                    </a>
+                    <a href="/signatures/contacts" class="nav-sub @(currentPath.StartsWith("/signatures/contacts", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">👥</span>@T["nav.sig.contacts"]
+                    </a>
+                </div>
+            </div>
+
             <a href="/wiki" class="@Active("/wiki")">📚 @T["nav.wiki"]</a>
             <a href="/notifications" class="@Exact("/notifications")">🔔 @T["nav.notifications"]</a>
             <a href="/activity"  class="@Exact("/activity")">🕐 @T["nav.activity"]</a>

@@ -1,0 +1,127 @@
+@model List<NimShare.Core.Entities.Contact>
+@{
+    ViewData["Title"] = @T["contacts.title"];
+    Layout = "_AppShell";
+}
+<div class="page-header">
+    <div>
+        <a href="/signatures" class="muted" style="text-decoration:none">← @T["nav.signatures"]</a>
+        <h1 style="margin-top:6px">👥 @T["contacts.title"]</h1>
+        <p class="lede">@T["contacts.lede"]</p>
+    </div>
+    <button class="btn btn-primary" onclick="openEditor(null)">+ @T["contacts.new"]</button>
+</div>
+
+<div class="card" style="margin-bottom:12px">
+    <div class="row" style="gap:8px">
+        <input id="q" placeholder="@T["contacts.search_ph"]" style="flex:1" oninput="reload()"/>
+    </div>
+</div>
+
+<div class="card">
+    <div id="list">
+        @if (!Model.Any())
+        {
+            <p class="muted">@T["contacts.empty"]</p>
+        }
+    </div>
+</div>
+
+<dialog id="editor" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
+    <form method="dialog" style="padding:20px" onsubmit="return saveContact(event)">
+        <h3 style="margin-top:0" id="editor-title">@T["contacts.editor_title"]</h3>
+        <input type="hidden" id="c-id"/>
+        <div class="field">
+            <label>@T["contacts.email"]</label>
+            <input id="c-email" type="email" required placeholder="alice@firma.com"/>
+        </div>
+        <div class="field">
+            <label>@T["contacts.name"]</label>
+            <input id="c-name" required placeholder="Alice Beispiel"/>
+        </div>
+        <div class="field">
+            <label>@T["contacts.company"]</label>
+            <input id="c-company" placeholder="Firma GmbH"/>
+        </div>
+        <div class="field">
+            <label>@T["contacts.tags"]</label>
+            <input id="c-tags" placeholder="kunde, vip, legal"/>
+            <div class="helper">@T["contacts.tags_hint"]</div>
+        </div>
+        <div class="field">
+            <label>@T["contacts.notes"]</label>
+            <textarea id="c-notes" rows="3"></textarea>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('editor').close()">@T["common.cancel"]</button>
+            <button class="btn btn-primary">💾 @T["common.save"]</button>
+        </div>
+    </form>
+</dialog>
+
+@section Scripts {
+<script>
+async function api(m,u,b){const o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()}
+function esc(s){return String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmt(d){return d?new Date(d).toLocaleDateString():'—'}
+async function reload() {
+    const q = document.getElementById('q').value.trim();
+    const rows = await api('GET', '/api/v1/contacts' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    const el = document.getElementById('list');
+    if (rows.length === 0) { el.innerHTML = '<p class="muted">' + @Json.Serialize(T["contacts.empty"].Value) + '</p>'; return; }
+    el.innerHTML = '<table class="fm-list"><thead><tr><th>' +
+        @Json.Serialize(T["common.name"].Value) + '</th><th>' +
+        @Json.Serialize(T["contacts.email"].Value) + '</th><th>' +
+        @Json.Serialize(T["contacts.company"].Value) + '</th><th>' +
+        @Json.Serialize(T["contacts.tags"].Value) + '</th><th>' +
+        @Json.Serialize(T["contacts.last_used"].Value) + '</th><th></th></tr></thead><tbody>' +
+        rows.map(c => `<tr><td><strong>${esc(c.name)}</strong></td><td class="mono">${esc(c.email)}</td><td class="muted">${esc(c.company||'')}</td><td>${(c.tags||'').split(',').filter(t=>t.trim()).map(t=>'<span class="chip">'+esc(t.trim())+'</span>').join(' ')}</td><td class="muted">${fmt(c.lastUsedAt)}${c.useCount?' ('+c.useCount+'×)':''}</td><td><button class="btn btn-ghost btn-sm" onclick="openEditor('${c.id}')">✎</button> <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="delContact('${c.id}')">🗑</button></td></tr>`).join('') +
+        '</tbody></table>';
+}
+async function openEditor(id) {
+    if (id === null) {
+        document.getElementById('c-id').value = '';
+        document.getElementById('c-email').value = '';
+        document.getElementById('c-name').value = '';
+        document.getElementById('c-company').value = '';
+        document.getElementById('c-tags').value = '';
+        document.getElementById('c-notes').value = '';
+    } else {
+        const rows = await api('GET', '/api/v1/contacts');
+        const c = rows.find(x => x.id === id);
+        if (!c) return;
+        document.getElementById('c-id').value = c.id;
+        document.getElementById('c-email').value = c.email;
+        document.getElementById('c-name').value = c.name;
+        document.getElementById('c-company').value = c.company || '';
+        document.getElementById('c-tags').value = c.tags || '';
+        document.getElementById('c-notes').value = '';
+    }
+    document.getElementById('editor').showModal();
+}
+async function saveContact(ev) {
+    ev.preventDefault();
+    const id = document.getElementById('c-id').value;
+    const body = {
+        email: document.getElementById('c-email').value.trim(),
+        name: document.getElementById('c-name').value.trim(),
+        company: document.getElementById('c-company').value.trim() || null,
+        tags: document.getElementById('c-tags').value.trim() || null,
+        notes: document.getElementById('c-notes').value.trim() || null,
+    };
+    try {
+        if (id) await api('PATCH', '/api/v1/contacts/' + id, body);
+        else await api('POST', '/api/v1/contacts', body);
+        document.getElementById('editor').close();
+        reload();
+    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    return false;
+}
+async function delContact(id) {
+    if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
+    try { await api('DELETE', '/api/v1/contacts/' + id); reload(); }
+    catch (e) { alert(e.message); }
+}
+reload();
+</script>
+}

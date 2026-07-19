@@ -180,7 +180,7 @@ public class SignaturesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/send")]
-    public async Task<IActionResult> Send(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Send(Guid id, [FromQuery] Guid? templateId, CancellationToken ct = default)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var r = await LoadFullAsync(id, ct);
@@ -189,6 +189,19 @@ public class SignaturesController : ControllerBase
         if (r.Status != SignatureRequestStatus.Draft) return Problem(statusCode: 409, title: "Bereits versendet.");
         if (!r.Participants.Any(p => p.Role == SignatureParticipantRole.Signer))
             return Problem(statusCode: 422, title: "Mindestens ein Unterzeichner ist erforderlich.");
+
+        // Look up the requested / default email template so EmailInviteAsync
+        // can render it with placeholders.
+        EmailTemplate? template = null;
+        if (templateId is Guid tid)
+        {
+            template = await _db.EmailTemplates.SingleOrDefaultAsync(
+                t => t.Id == tid && t.OwnerUserId == me.Id, ct);
+        }
+        template ??= await _db.EmailTemplates.FirstOrDefaultAsync(
+            t => t.OwnerUserId == me.Id
+                && t.Kind == EmailTemplateKind.SignatureInvite
+                && t.IsDefault, ct);
 
         // Mint a token for every participant. Emails go out immediately for
         // parallel delivery; for sequential we only email the lowest-order
@@ -215,7 +228,29 @@ public class SignaturesController : ControllerBase
             : r.Participants.ToArray();
         foreach (var p in toEmail)
         {
-            await EmailInviteAsync(r, me, p, ct);
+            await EmailInviteAsync(r, me, p, template, ct);
+        }
+        // Bump address-book usage for every participant we just emailed —
+        // "recently used" then sorts them to the top on next request.
+        foreach (var p in r.Participants)
+        {
+            var email = p.Email.Trim().ToLowerInvariant();
+            var c = await _db.Contacts.SingleOrDefaultAsync(
+                x => x.OwnerUserId == me.Id && x.Email == email, ct);
+            if (c is null)
+            {
+                _db.Contacts.Add(new Contact
+                {
+                    OwnerUserId = me.Id, Email = email, Name = p.Name,
+                    LastUsedAt = DateTimeOffset.UtcNow, UseCount = 1,
+                });
+            }
+            else
+            {
+                c.LastUsedAt = DateTimeOffset.UtcNow;
+                c.UseCount++;
+                if (string.IsNullOrEmpty(c.Name)) c.Name = p.Name;
+            }
         }
         // Clear the temp tokens from Reason once we've sent them out; keep
         // just the ones for still-pending participants that need chaining.
@@ -272,36 +307,62 @@ public class SignaturesController : ControllerBase
     }
 
     private async Task EmailInviteAsync(SignatureRequest r, User initiator,
-        SignatureParticipant p, CancellationToken ct)
+        SignatureParticipant p, EmailTemplate? template, CancellationToken ct)
     {
         var raw = ExtractStashedToken(p);
         var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
-        // Localise against the initiator's preferred culture — participants
-        // don't have a user row so we can't look up their own language.
-        var prev = CultureInfo.CurrentUICulture;
-        try
+        var isSigner = p.Role == SignatureParticipantRole.Signer;
+
+        string subject, body;
+        if (template is not null)
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(
-                string.IsNullOrWhiteSpace(initiator.PreferredCulture) ? "en" : initiator.PreferredCulture);
-        }
-        catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
-        try
-        {
-            var isSigner = p.Role == SignatureParticipantRole.Signer;
-            var subject = _l[isSigner ? "sig.invite.subject_signer" : "sig.invite.subject_viewer", r.Title].Value;
-            var msgPrefix = string.IsNullOrEmpty(r.Message) ? "" : _l["sig.invite.msg_prefix", r.Message].Value;
-            var body = _l[isSigner ? "sig.invite.body_signer" : "sig.invite.body_viewer",
-                p.Name, initiator.DisplayName, r.Title, url, msgPrefix].Value;
-            string? emailErr = null;
-            try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
-            catch (Exception ex) { emailErr = ex.Message; }
-            _db.SignatureAudits.Add(new SignatureAudit
+            // User-authored template: render placeholders. Localisation lives
+            // inside the template itself (author picked the language).
+            var ctx = new Dictionary<string, string?>
             {
-                RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
-                Note = emailErr is null ? "invited" : $"email-failed: {emailErr}",
-            });
+                ["recipient.name"] = p.Name,
+                ["recipient.email"] = p.Email,
+                ["sender.name"] = initiator.DisplayName,
+                ["sender.email"] = initiator.Email,
+                ["sender.action"] = isSigner
+                    ? _l["sig.manual_remind.action_sign"].Value
+                    : _l["sig.manual_remind.action_review"].Value,
+                ["doc.title"] = r.Title,
+                ["doc.name"] = r.SourceFile?.Name ?? r.Title,
+                ["url"] = url,
+                ["message"] = r.Message ?? "",
+            };
+            subject = EmailTemplateRenderer.Render(template.Subject, ctx);
+            body = EmailTemplateRenderer.Render(template.BodyMarkdown, ctx);
         }
-        finally { CultureInfo.CurrentUICulture = prev; }
+        else
+        {
+            // No template: fall back to the built-in localised copy.
+            var prev = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(
+                    string.IsNullOrWhiteSpace(initiator.PreferredCulture) ? "en" : initiator.PreferredCulture);
+            }
+            catch { CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en"); }
+            try
+            {
+                subject = _l[isSigner ? "sig.invite.subject_signer" : "sig.invite.subject_viewer", r.Title].Value;
+                var msgPrefix = string.IsNullOrEmpty(r.Message) ? "" : _l["sig.invite.msg_prefix", r.Message].Value;
+                body = _l[isSigner ? "sig.invite.body_signer" : "sig.invite.body_viewer",
+                    p.Name, initiator.DisplayName, r.Title, url, msgPrefix].Value;
+            }
+            finally { CultureInfo.CurrentUICulture = prev; }
+        }
+
+        string? emailErr = null;
+        try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
+        catch (Exception ex) { emailErr = ex.Message; }
+        _db.SignatureAudits.Add(new SignatureAudit
+        {
+            RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
+            Note = emailErr is null ? "invited" : $"email-failed: {emailErr}",
+        });
     }
 
     private string ExtractStashedToken(SignatureParticipant p)

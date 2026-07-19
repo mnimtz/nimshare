@@ -733,6 +733,49 @@ Apri il link:
   <data name="sig.detail.audit.cancelled"><value>Annullato</value></data>
   <data name="sig.detail.audit.finalized"><value>Richiesta completata</value></data>
 
+  <data name="nav.sig.overview"><value>Panoramica</value></data>
+  <data name="nav.sig.templates"><value>Template email</value></data>
+  <data name="nav.sig.contacts"><value>Rubrica</value></data>
+
+  <data name="email_tpl.title"><value>Template email</value></data>
+  <data name="email_tpl.lede"><value>I tuoi oggetti + corpo per gli inviti alla firma. Selezionabili nel wizard.</value></data>
+  <data name="email_tpl.new"><value>Nuovo template</value></data>
+  <data name="email_tpl.empty"><value>Nessun template. Il wizard usa il testo NimShare predefinito.</value></data>
+  <data name="email_tpl.locale"><value>Lingua</value></data>
+  <data name="email_tpl.subject"><value>Oggetto</value></data>
+  <data name="email_tpl.subject_ph"><value>{{sender.name}} ti chiede di firmare: {{doc.title}}</value></data>
+  <data name="email_tpl.body"><value>Corpo</value></data>
+  <data name="email_tpl.body_ph"><value>Ciao {{recipient.name}},&#10;&#10;{{sender.name}} ti chiede di {{sender.action}} il seguente documento: {{doc.title}}&#10;&#10;Apri questo link:&#10;{{url}}&#10;&#10;— NimShare</value></data>
+  <data name="email_tpl.default"><value>Predefinito</value></data>
+  <data name="email_tpl.set_default"><value>Imposta come predefinito</value></data>
+  <data name="email_tpl.name_ph"><value>Contratto formale</value></data>
+  <data name="email_tpl.editor_title"><value>Nuovo template</value></data>
+  <data name="email_tpl.placeholders_label"><value>Segnaposto</value></data>
+  <data name="email_tpl.ai_draft"><value>Bozza con AI</value></data>
+  <data name="email_tpl.ai_hint"><value>Descrivi il tono — l'AI scrive oggetto e corpo con i segnaposto.</value></data>
+  <data name="email_tpl.ai_prompt"><value>A cosa serve questo template?</value></data>
+  <data name="email_tpl.ai_prompt_ph"><value>Contratto formale per una controparte esterna</value></data>
+  <data name="email_tpl.ai_generate"><value>Genera</value></data>
+
+  <data name="contacts.title"><value>Rubrica</value></data>
+  <data name="contacts.lede"><value>Contatti personali per precompilare le richieste di firma. Autocomplete delle email nel wizard.</value></data>
+  <data name="contacts.new"><value>Nuovo contatto</value></data>
+  <data name="contacts.empty"><value>Nessun contatto. Ogni destinatario di una firma viene aggiunto automaticamente.</value></data>
+  <data name="contacts.search_ph"><value>Cerca nome, email, azienda o tag…</value></data>
+  <data name="contacts.email"><value>Email</value></data>
+  <data name="contacts.name"><value>Nome</value></data>
+  <data name="contacts.company"><value>Azienda</value></data>
+  <data name="contacts.tags"><value>Tag</value></data>
+  <data name="contacts.tags_hint"><value>Separati da virgola. Usati per filtrare.</value></data>
+  <data name="contacts.notes"><value>Note</value></data>
+  <data name="contacts.last_used"><value>Ultimo utilizzo</value></data>
+  <data name="contacts.editor_title"><value>Nuovo contatto</value></data>
+
+  <data name="sig.new.email_template"><value>Template email</value></data>
+  <data name="sig.new.default_template"><value>Testo NimShare integrato</value></data>
+  <data name="sig.new.manage_templates"><value>Gestisci template</value></data>
+  <data name="sig.new.template_hint"><value>Usa uno dei tuoi template salvati oppure lascia vuoto per il testo NimShare integrato.</value></data>
+
   <data name="wiki.page.pages_heading"><value>Pagine</value></data>
   <data name="wiki.page.title_label"><value>Titolo</value></data>
   <data name="wiki.page.content_label"><value>Contenuto (Markdown)</value></data>

@@ -135,6 +135,66 @@ public class AiController : ControllerBase
 
     public record DraftReq(Guid LinkId, string? Context);
 
+    public record DraftTemplateReq(string Prompt, string? Locale);
+
+    /// <summary>
+    /// AI-drafts an email template (subject + body-markdown) for the
+    /// signature workflow. Prompt is user-supplied ("Formal contract for a
+    /// legal counterparty"); locale defaults to the user's PreferredCulture.
+    /// The reply MUST include placeholder tokens like {{recipient.name}} and
+    /// {{url}} — the frontend just shoves the result into the editor.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("draft-email-template")]
+    public async Task<IActionResult> DraftEmailTemplate([FromBody] DraftTemplateReq req,
+        [FromServices] ICurrentUserService users, CancellationToken ct)
+    {
+        var settings = await _ai.LoadAsync(ct);
+        if (!settings.EnableDraftedShareEmails || settings.Provider == AiProvider.Disabled)
+            return Problem(statusCode: 503, title: "AI-drafted emails are disabled.");
+
+        var me = await users.GetOrProvisionAsync(User, ct);
+        var lang = string.IsNullOrWhiteSpace(req.Locale)
+            ? (string.IsNullOrWhiteSpace(me.PreferredCulture) ? "en" : me.PreferredCulture)
+            : req.Locale;
+        var provider = await _ai.CreateProviderAsync(ct);
+
+        // Reuse the existing chat helper via DraftShareEmailAsync (already
+        // wired for all provider back-ends). Feed the template-specific
+        // instructions in the "context" field so the provider's system
+        // prompt still applies.
+        var promptShort = string.IsNullOrWhiteSpace(req.Prompt) ? "signature request" : req.Prompt.Trim();
+        var instruction = $"You are drafting an email template used to invite a person to sign a document. " +
+            $"Style/tone: {promptShort}. Write in the language whose ISO code is '{lang}'. " +
+            $"Return EXACTLY two blocks, plain text, separated by a line 'BODY:':\n" +
+            $"SUBJECT: <one-line subject>\nBODY:\n<3-6 short paragraphs of body>\n\n" +
+            $"Include these Handlebars placeholders LITERALLY, so downstream code can substitute:\n" +
+            $"{{{{recipient.name}}}}, {{{{sender.name}}}}, {{{{doc.title}}}}, {{{{url}}}}. " +
+            $"Optionally include {{{{message}}}} in the body if relevant. Do NOT introduce other placeholders. " +
+            $"Do not add greetings, disclaimers, HTML, or Markdown headings.";
+
+        var raw = await provider.DraftShareEmailAsync(
+            me.DisplayName, "", instruction, lang, ct);
+        if (string.IsNullOrWhiteSpace(raw))
+            return Problem(statusCode: 502, title: "Draft empty.");
+
+        // Split on "BODY:" (case-insensitive) — the model usually complies.
+        var text = raw.Trim();
+        string subject = "", body = text;
+        var idx = text.IndexOf("BODY:", StringComparison.OrdinalIgnoreCase);
+        if (idx > 0)
+        {
+            var before = text[..idx].Trim();
+            var after = text[(idx + "BODY:".Length)..].Trim();
+            if (before.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase))
+                subject = before["SUBJECT:".Length..].Trim();
+            else
+                subject = before;
+            body = after;
+        }
+        return Ok(new { subject, body });
+    }
+
     // ── #3 Semantic search ─────────────────────────────────────────────────
 
     public record SearchReq(string Query, string Scope, Guid? GroupId, int Limit);

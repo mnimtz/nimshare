@@ -36,6 +36,8 @@ public class NimShareDbContext : DbContext
     public DbSet<WikiPage> WikiPages => Set<WikiPage>();
     public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
     public DbSet<Webhook> Webhooks => Set<Webhook>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<Contact> Contacts => Set<Contact>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -267,6 +269,30 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Url).HasMaxLength(500).IsRequired();
             e.Property(x => x.SecretEncrypted).HasMaxLength(2000).IsRequired();
             e.Property(x => x.Events).HasMaxLength(500);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<EmailTemplate>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OwnerUserId, x.Kind, x.Locale });
+            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Subject).HasMaxLength(400).IsRequired();
+            e.Property(x => x.BodyMarkdown).HasMaxLength(10_000).IsRequired();
+            e.Property(x => x.Locale).HasMaxLength(8).IsRequired();
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Contact>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OwnerUserId, x.Email });
+            e.HasIndex(x => new { x.OwnerUserId, x.LastUsedAt });
+            e.Property(x => x.Email).HasMaxLength(250).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Company).HasMaxLength(200);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            e.Property(x => x.Tags).HasMaxLength(500);
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 

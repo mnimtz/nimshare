@@ -732,6 +732,49 @@ Open de link:
   <data name="sig.detail.audit.cancelled"><value>Geannuleerd</value></data>
   <data name="sig.detail.audit.finalized"><value>Verzoek voltooid</value></data>
 
+  <data name="nav.sig.overview"><value>Overzicht</value></data>
+  <data name="nav.sig.templates"><value>E-mailtemplates</value></data>
+  <data name="nav.sig.contacts"><value>Adresboek</value></data>
+
+  <data name="email_tpl.title"><value>E-mailtemplates</value></data>
+  <data name="email_tpl.lede"><value>Je eigen onderwerp + tekst voor handtekeningverzoeken. Kiesbaar in de wizard.</value></data>
+  <data name="email_tpl.new"><value>Nieuwe template</value></data>
+  <data name="email_tpl.empty"><value>Nog geen templates. De wizard gebruikt anders de standaard NimShare-tekst.</value></data>
+  <data name="email_tpl.locale"><value>Taal</value></data>
+  <data name="email_tpl.subject"><value>Onderwerp</value></data>
+  <data name="email_tpl.subject_ph"><value>{{sender.name}} vraagt je te tekenen: {{doc.title}}</value></data>
+  <data name="email_tpl.body"><value>Tekst</value></data>
+  <data name="email_tpl.body_ph"><value>Hallo {{recipient.name}},&#10;&#10;{{sender.name}} vraagt je om het volgende document te {{sender.action}}: {{doc.title}}&#10;&#10;Open deze link:&#10;{{url}}&#10;&#10;— NimShare</value></data>
+  <data name="email_tpl.default"><value>Standaard</value></data>
+  <data name="email_tpl.set_default"><value>Als standaard instellen</value></data>
+  <data name="email_tpl.name_ph"><value>Formeel contract</value></data>
+  <data name="email_tpl.editor_title"><value>Nieuwe template</value></data>
+  <data name="email_tpl.placeholders_label"><value>Placeholders</value></data>
+  <data name="email_tpl.ai_draft"><value>Concept met AI</value></data>
+  <data name="email_tpl.ai_hint"><value>Beschrijf de toon — de AI schrijft onderwerp en tekst met placeholders.</value></data>
+  <data name="email_tpl.ai_prompt"><value>Waarvoor is deze template?</value></data>
+  <data name="email_tpl.ai_prompt_ph"><value>Formeel contract voor externe partij</value></data>
+  <data name="email_tpl.ai_generate"><value>Genereren</value></data>
+
+  <data name="contacts.title"><value>Adresboek</value></data>
+  <data name="contacts.lede"><value>Persoonlijke contacten om handtekeningverzoeken voor in te vullen. E-mails worden in de wizard automatisch aangevuld.</value></data>
+  <data name="contacts.new"><value>Nieuw contact</value></data>
+  <data name="contacts.empty"><value>Nog geen contacten. Elke ontvanger van een handtekening wordt automatisch toegevoegd.</value></data>
+  <data name="contacts.search_ph"><value>Zoek naam, e-mail, bedrijf of tag…</value></data>
+  <data name="contacts.email"><value>E-mail</value></data>
+  <data name="contacts.name"><value>Naam</value></data>
+  <data name="contacts.company"><value>Bedrijf</value></data>
+  <data name="contacts.tags"><value>Tags</value></data>
+  <data name="contacts.tags_hint"><value>Komma-gescheiden. Wordt gebruikt om te filteren.</value></data>
+  <data name="contacts.notes"><value>Notities</value></data>
+  <data name="contacts.last_used"><value>Laatst gebruikt</value></data>
+  <data name="contacts.editor_title"><value>Nieuw contact</value></data>
+
+  <data name="sig.new.email_template"><value>E-mailtemplate</value></data>
+  <data name="sig.new.default_template"><value>Ingebouwde NimShare-tekst</value></data>
+  <data name="sig.new.manage_templates"><value>Templates beheren</value></data>
+  <data name="sig.new.template_hint"><value>Gebruik een opgeslagen template of laat leeg voor de ingebouwde tekst.</value></data>
+
   <data name="wiki.page.pages_heading"><value>Pagina's</value></data>
   <data name="wiki.page.title_label"><value>Titel</value></data>
   <data name="wiki.page.content_label"><value>Inhoud (Markdown)</value></data>
