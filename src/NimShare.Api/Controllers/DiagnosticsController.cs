@@ -60,6 +60,7 @@ public class DiagnosticsController : Controller
             appliedMigrations = applied,
             pendingMigrations = pending,
             startupErrors = StartupState.Errors,
+            emailDeliveryLog = NimShare.Api.Services.EmailDeliveryLog.Snapshot(),
         });
     }
 }

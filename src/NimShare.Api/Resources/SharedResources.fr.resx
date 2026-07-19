@@ -699,6 +699,8 @@ Ouvrez le lien :
   <data name="sig.new.err.min_signer"><value>Au moins un signataire.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Aucun champ de signature placé — envoyer quand même ?</value></data>
   <data name="sig.new.err.network"><value>Erreur réseau</value></data>
+  <data name="sig.new.send.email_failed_prefix"><value>Demande de signature créée, mais l'e-mail a échoué pour ces destinataires :</value></data>
+  <data name="sig.new.send.check_email_gateway"><value>Vérifiez /settings/email — la passerelle e-mail est peut-être désactivée ou mal configurée.</value></data>
 
   <data name="wiki.page.pages_heading"><value>Pages</value></data>
   <data name="wiki.page.title_label"><value>Titre</value></data>

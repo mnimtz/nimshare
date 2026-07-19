@@ -177,7 +177,17 @@ public class GatewayBackedNotificationService : INotificationService
 
     public async Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default)
     {
-        try { await _gateway.SendAsync(toEmail, subject, body, ct); }
-        catch (Exception ex) { _log.LogWarning(ex, "share-link email failed"); }
+        try
+        {
+            await _gateway.SendAsync(toEmail, subject, body, ct);
+            EmailDeliveryLog.Record(toEmail, subject, ok: true, error: null, kind: "share-link");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "share-link email failed");
+            EmailDeliveryLog.Record(toEmail, subject, ok: false, error: ex.Message, kind: "share-link");
+            throw; // Let callers see the failure — signatures/uploads decide
+                   // whether to swallow or surface it.
+        }
     }
 }

@@ -227,7 +227,48 @@ public class SignaturesController : ControllerBase
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(me.Id, WebhookEvent.SignatureRequestSent,
                 new { requestId = r.Id, title = r.Title, participantCount = r.Participants.Count });
-        return Ok(ToDto(r));
+
+        // Read back the audit rows we just wrote to know which participants
+        // actually got their invite email — surface that to the wizard so the
+        // requester sees "sent to 2, failed for 1" instead of the misleading
+        // "all sent" success screen.
+        var invitedAudits = await _db.SignatureAudits
+            .Where(a => a.RequestId == r.Id && a.Kind == SignatureAuditKind.Invited)
+            .OrderByDescending(a => a.At)
+            .ToListAsync(ct);
+        var delivery = toEmail.Select(p =>
+        {
+            var audit = invitedAudits.FirstOrDefault(a => a.ParticipantId == p.Id);
+            var ok = audit?.Note == "invited";
+            return new
+            {
+                email = p.Email,
+                name = p.Name,
+                ok,
+                error = ok ? null : (audit?.Note ?? "no-audit"),
+            };
+        }).ToArray();
+
+        // Flatten RequestDto + delivery so old clients that read RequestDto
+        // fields (like iOS) still work; new fields are additive.
+        var dto = ToDto(r);
+        return Ok(new
+        {
+            dto.Id,
+            dto.SourceFileId,
+            dto.SourceFileName,
+            dto.Title,
+            dto.Message,
+            dto.Status,
+            dto.DeliveryOrder,
+            dto.CreatedAt,
+            dto.SentAt,
+            dto.CompletedAt,
+            dto.FinalFileId,
+            dto.Participants,
+            dto.Fields,
+            delivery,
+        });
     }
 
     private async Task EmailInviteAsync(SignatureRequest r, User initiator,
@@ -251,15 +292,16 @@ public class SignaturesController : ControllerBase
             var msgPrefix = string.IsNullOrEmpty(r.Message) ? "" : _l["sig.invite.msg_prefix", r.Message].Value;
             var body = _l[isSigner ? "sig.invite.body_signer" : "sig.invite.body_viewer",
                 p.Name, initiator.DisplayName, r.Title, url, msgPrefix].Value;
+            string? emailErr = null;
             try { await _notify.SendShareLinkAsync(p.Email, initiator.DisplayName, subject, body, ct); }
-            catch { /* audit still records the invite */ }
+            catch (Exception ex) { emailErr = ex.Message; }
+            _db.SignatureAudits.Add(new SignatureAudit
+            {
+                RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
+                Note = emailErr is null ? "invited" : $"email-failed: {emailErr}",
+            });
         }
         finally { CultureInfo.CurrentUICulture = prev; }
-        _db.SignatureAudits.Add(new SignatureAudit
-        {
-            RequestId = r.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Invited,
-            Note = "invited",
-        });
     }
 
     private string ExtractStashedToken(SignatureParticipant p)

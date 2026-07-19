@@ -388,6 +388,22 @@ async function sendReq() {
         method: 'POST', credentials: 'same-origin',
     });
     if (!r.ok) { alert(T.tError + ': ' + r.status + ' ' + await r.text()); return; }
+    // Show per-recipient email-delivery status before navigating away —
+    // the wizard is the LAST chance to warn "email failed to X".
+    try {
+        const d = await r.json();
+        if (Array.isArray(d.delivery)) {
+            const failed = d.delivery.filter(x => !x.ok);
+            if (failed.length > 0) {
+                const lines = failed.map(x => `• ${x.name} (${x.email}): ${x.error}`).join('\n');
+                alert(
+                    (@Json.Serialize(@T["sig.new.send.email_failed_prefix"].Value)) +
+                    '\n\n' + lines +
+                    '\n\n' + (@Json.Serialize(@T["sig.new.send.check_email_gateway"].Value))
+                );
+            }
+        }
+    } catch {}
     location.href = '/signatures';
 }
 

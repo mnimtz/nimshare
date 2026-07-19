@@ -697,6 +697,8 @@ Open the link:
   <data name="sig.new.err.min_signer"><value>At least one signer.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>No signature field placed — send anyway?</value></data>
   <data name="sig.new.err.network"><value>Network error</value></data>
+  <data name="sig.new.send.email_failed_prefix"><value>Signature request created, but email failed for these recipients:</value></data>
+  <data name="sig.new.send.check_email_gateway"><value>Check /settings/email — the email gateway may be disabled or misconfigured.</value></data>
 
   <data name="wiki.page.pages_heading"><value>Pages</value></data>
   <data name="wiki.page.title_label"><value>Title</value></data>
