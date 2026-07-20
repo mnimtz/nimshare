@@ -1385,6 +1385,59 @@ body.nav-open { position: relative; }
     .db-wizard-actions .btn { flex: 1 1 100%; margin-left: 0 !important; }
 }
 
+/* v1.10.49 — Mobile-Sammelfix aus dem UX-Audit. Grob:
+   - iOS zoomt Inputs < 16px beim Focus; global 16px auf Handy
+   - Touch-Targets >= 40x40 (Apple/Google-Empfehlung ist 44, wir kompromissen
+     wegen der dichten fm-row-actions)
+   - kleinstmögliche Fontgrößen 12.8-13.6px, alles darunter unlesbar
+   - Modals bekommen ihren padding zurechtgestutzt damit Content nicht am Rand klebt
+   - .sig-*-audit Meta-Zeilen hebbar auf .85rem */
+/* v1.10.49 — BYO-Cert-Row klappt auf Mobile korrekt um. Vorher schoss
+   der "Prüfen"-Button aus der Zeile weil min-width der beiden Felder
+   ~340px + Gap ergaben. Auf Mobile: alle Kinder untereinander. */
+@media (max-width: 640px) {
+    #sigByoWrap .row > .field { flex: 1 1 100% !important; min-width: 0 !important; }
+    #sigByoWrap .row > button { flex: 1 1 100%; }
+}
+
+/* v1.10.49 — Signatures Detail two-column: eine Karte pro Zeile, breite
+   Tabellen in scroll-container wrappen. */
+@media (max-width: 900px) {
+    .sig-detail-cols { grid-template-columns: 1fr !important; }
+    .sig-detail-cols .card { min-width: 0 !important; }
+    .sig-detail-cols table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+/* v1.10.49 — Sign-Owner-Avatar auf Mobile aus dem Header lösen, sonst
+   überlappt er das Logo + den Titel-Block. */
+@media (max-width: 640px) {
+    .sig-owner-avatar {
+        position: static !important;
+        width: 48px !important;
+        height: 48px !important;
+        margin: 0 0 12px auto !important;
+        display: block;
+    }
+}
+
+@media (max-width: 640px) {
+    input, select, textarea { font-size: 16px !important; }
+    .btn-sm { min-height: 40px; padding: 10px 14px; }
+    .fm-row-actions button { min-width: 40px; min-height: 40px; }
+    .landing-card { padding: var(--sp-5); }
+    .modal-panel { padding: 12px !important; }
+    .sig-audit-when, .sig-audit-who, .sig-audit-note { font-size: .85rem; }
+    /* Signatur-Modus-Toggles bekommen fettere Touch-Targets */
+    .sig-shell button[onclick^="setSigMode"] { padding: 10px 14px !important; font-size: .9rem !important; min-height: 40px; }
+    /* Mobile-Topbar Titel darf clippen mit Ellipsis statt zu overflow'n */
+    .mobile-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+    /* Landing-Card innen enger */
+    .landing-shell { padding: var(--sp-3) !important; }
+    /* Extreme Micro-Fonts (Wizard-Steps, Details) auf mindestens 12px */
+    body { --min-mobile-font: .75rem; }
+    p.muted, span.muted, div.muted { font-size: max(0.85rem, .75rem); }
+}
+
 /* Prevent accidental modal closes: the modal-panel captures mousedown so a
    drag that ends outside the panel still counts as an "inside" interaction. */
 .modal-panel { user-select: text; }
