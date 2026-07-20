@@ -1083,4 +1083,13 @@ Ouvrez ce lien pour signer :
   <data name="sign.byo_valid_html"><value>Certificat chargé : &lt;strong&gt;{0}&lt;/strong&gt; — émis par &lt;em&gt;{1}&lt;/em&gt; — empreinte &lt;code&gt;{2}&lt;/code&gt;</value></data>
   <data name="sign.byo_no_persist_note"><value>Le fichier est transmis via HTTPS, traité uniquement en mémoire serveur puis effacé. Il n'est jamais écrit sur disque ni en base.</value></data>
   <data name="sign.login_as_user"><value>Se connecter en tant qu'utilisateur NimShare</value></data>
+  <data name="sig.completed.email.subject" xml:space="preserve"><value>Signature terminée — {0}</value></data>
+  <data name="sig.completed.email.body" xml:space="preserve"><value>Bonjour {0},
+
+votre demande de signature « {1} » est terminée — les {2} participant(s) ont signé. Le PDF final signé est joint à cet e-mail et se trouve également dans votre espace Personnel sur NimShare.
+
+Merci d'utiliser NimShare.</value></data>
+  <data name="sig.section.active" xml:space="preserve"><value>En cours</value></data>
+  <data name="sig.section.completed" xml:space="preserve"><value>Terminées</value></data>
+  <data name="sig.section.completed_empty" xml:space="preserve"><value>Les signatures terminées apparaîtront ici.</value></data>
 </root>

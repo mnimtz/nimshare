@@ -1081,4 +1081,13 @@ Please open this link to sign:
   <data name="sign.byo_valid_html"><value>Own certificate loaded: &lt;strong&gt;{0}&lt;/strong&gt; — issued by &lt;em&gt;{1}&lt;/em&gt; — thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
   <data name="sign.byo_no_persist_note"><value>The file is transferred over HTTPS, parsed only in server memory and cleared after use. It never touches the database or disk.</value></data>
   <data name="sign.login_as_user"><value>Sign in as NimShare user</value></data>
+  <data name="sig.completed.email.subject" xml:space="preserve"><value>Signature workflow complete — {0}</value></data>
+  <data name="sig.completed.email.body" xml:space="preserve"><value>Hi {0},
+
+your signature workflow "{1}" is complete — all {2} participant(s) have signed. The final signed PDF is attached to this email and is also available in your Personal library on NimShare.
+
+Thanks for using NimShare.</value></data>
+  <data name="sig.section.active" xml:space="preserve"><value>In progress</value></data>
+  <data name="sig.section.completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="sig.section.completed_empty" xml:space="preserve"><value>Completed signature workflows will appear here.</value></data>
 </root>

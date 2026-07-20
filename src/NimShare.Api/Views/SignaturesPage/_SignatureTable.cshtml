@@ -1,0 +1,86 @@
+@model List<NimShare.Core.Entities.SignatureRequest>
+@{
+    var latestNote = (Dictionary<(Guid RequestId, Guid ParticipantId), string?>)(ViewData["LatestInviteNote"] ?? new Dictionary<(Guid, Guid), string?>());
+}
+<table class="table">
+    <thead>
+        <tr>
+            <th>@T["sig.col.document"]</th>
+            <th>@T["sig.col.recipients"]</th>
+            <th>@T["sig.col.status"]</th>
+            <th>@T["sig.col.created"]</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var r in Model)
+    {
+        var statusChip = r.Status switch
+        {
+            NimShare.Core.Entities.SignatureRequestStatus.Completed => ("chip-ok", @T["sig.status.completed"].Value),
+            NimShare.Core.Entities.SignatureRequestStatus.Sent => ("chip-warn", @T["sig.status.sent"].Value),
+            NimShare.Core.Entities.SignatureRequestStatus.Declined => ("chip-critical", @T["sig.status.declined"].Value),
+            NimShare.Core.Entities.SignatureRequestStatus.Cancelled => ("chip", @T["sig.status.cancelled"].Value),
+            _ => ("chip", @T["sig.status.draft"].Value),
+        };
+        var doneCount = r.Participants.Count(p =>
+            p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Signed
+            || (p.Role == NimShare.Core.Entities.SignatureParticipantRole.Viewer && p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Viewed));
+        <tr>
+            <td>@r.Title</td>
+            <td>
+                @doneCount / @r.Participants.Count
+                @{
+                    var failed = new List<string>();
+                    foreach (var p in r.Participants)
+                    {
+                        if (latestNote.TryGetValue((r.Id, p.Id), out var note)
+                            && !string.IsNullOrEmpty(note)
+                            && note.StartsWith("email-failed:"))
+                        {
+                            failed.Add($"{p.Name} ({p.Email}): {note["email-failed:".Length..].Trim()}");
+                        }
+                    }
+                }
+                @if (failed.Count > 0)
+                {
+                    <span class="chip chip-critical" style="margin-left:4px;cursor:help"
+                          title="@string.Join("\n", failed)">
+                        ⚠ @T["sig.email_failed_short"]
+                    </span>
+                }
+            </td>
+            <td>
+                <span class="chip @statusChip.Item1">@statusChip.Item2</span>
+                @{
+                    var declined = r.Participants
+                        .Where(p => p.Status == NimShare.Core.Entities.SignatureParticipantStatus.Declined
+                                    && !string.IsNullOrWhiteSpace(p.DeclinedReason))
+                        .ToList();
+                }
+                @if (declined.Count > 0)
+                {
+                    var reasons = string.Join("\n", declined.Select(d => $"{d.Name}: {d.DeclinedReason}"));
+                    <span class="chip chip-critical" title="@reasons" style="cursor:help;margin-left:4px">
+                        ✕ @T["sig.declined_reason_short"]
+                    </span>
+                }
+            </td>
+            <td class="muted">@r.CreatedAt.ToDisplay()</td>
+            <td>
+                <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap">
+                    @if (r.FinalFileId is Guid ff)
+                    {
+                        <a class="btn btn-secondary btn-sm" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-ghost btn-sm" href="/signatures/@r.Id">@T["sig.detail.title"]</a>
+                    }
+                    <button class="btn btn-ghost btn-sm" onclick="sigDelete('@r.Id')" title="@T["actions.delete"]" style="color:var(--status-critical,#d33)">🗑</button>
+                </div>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

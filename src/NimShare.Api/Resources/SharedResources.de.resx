@@ -1087,4 +1087,13 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sign.byo_valid_html"><value>Eigenes Zertifikat geladen: &lt;strong&gt;{0}&lt;/strong&gt; — ausgestellt von &lt;em&gt;{1}&lt;/em&gt; — Thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
   <data name="sign.byo_no_persist_note"><value>Die Datei wird per HTTPS übertragen, nur im Server-Speicher verarbeitet und danach sofort gelöscht. Sie landet nie in einer Datenbank oder auf Festplatte.</value></data>
   <data name="sign.login_as_user"><value>Als NimShare-Nutzer anmelden</value></data>
+  <data name="sig.completed.email.subject" xml:space="preserve"><value>Signatur-Vorgang abgeschlossen — {0}</value></data>
+  <data name="sig.completed.email.body" xml:space="preserve"><value>Hallo {0},
+
+dein Signatur-Vorgang „{1}" ist abgeschlossen — alle {2} Beteiligten haben unterschrieben. Das fertig signierte PDF liegt als Anhang bei und findet sich zusätzlich in deinem Persönlichen Bereich auf NimShare.
+
+Danke, dass du NimShare nutzt.</value></data>
+  <data name="sig.section.active" xml:space="preserve"><value>In Bearbeitung</value></data>
+  <data name="sig.section.completed" xml:space="preserve"><value>Abgeschlossen</value></data>
+  <data name="sig.section.completed_empty" xml:space="preserve"><value>Abgeschlossene Signatur-Vorgänge erscheinen hier.</value></data>
 </root>

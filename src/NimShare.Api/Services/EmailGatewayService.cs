@@ -19,7 +19,16 @@ public interface IEmailGatewayService
     Task SaveAsync(EmailGatewaySettings settings, string? plainSmtpPassword, string? plainResendApiKey, Guid updatedByUserId, CancellationToken ct = default);
     Task<(bool Ok, string Message)> SendTestAsync(string toEmail, CancellationToken ct = default);
     Task SendAsync(string toEmail, string subject, string bodyText, CancellationToken ct = default);
+    // v1.10.39: Overload mit optionalen Anhängen — der SignatureFinalizer
+    // braucht das um dem Initiator das fertig signierte PDF direkt per
+    // Mail mitzuschicken. attachments = null hält den bisherigen Pfad
+    // unverändert (Text-Only Mail).
+    Task SendAsync(string toEmail, string subject, string bodyText, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default);
 }
+
+// Small value type — kein Stream, damit der Aufrufer über die Lifetime
+// seines byte[] entscheidet und wir nicht ungewollt Dispose'n.
+public sealed record EmailAttachment(string Filename, string ContentType, byte[] Content);
 
 public class EmailGatewayService : IEmailGatewayService
 {
@@ -83,7 +92,10 @@ public class EmailGatewayService : IEmailGatewayService
         }
     }
 
-    public async Task SendAsync(string toEmail, string subject, string bodyText, CancellationToken ct = default)
+    public Task SendAsync(string toEmail, string subject, string bodyText, CancellationToken ct = default)
+        => SendAsync(toEmail, subject, bodyText, attachments: null, ct);
+
+    public async Task SendAsync(string toEmail, string subject, string bodyText, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default)
     {
         var s = await LoadAsync(ct);
         switch (s.Provider)
@@ -92,21 +104,44 @@ public class EmailGatewayService : IEmailGatewayService
                 _log.LogInformation("Email gateway disabled — would send to {To}: {Subject}", toEmail, subject);
                 return;
             case EmailProvider.Smtp:
-                await SendSmtpAsync(s, toEmail, subject, bodyText, ct);
+                await SendSmtpAsync(s, toEmail, subject, bodyText, attachments, ct);
                 return;
             case EmailProvider.Resend:
-                await SendResendAsync(s, toEmail, subject, bodyText, ct);
+                await SendResendAsync(s, toEmail, subject, bodyText, attachments, ct);
                 return;
         }
     }
 
-    private async Task SendSmtpAsync(EmailGatewaySettings s, string to, string subject, string body, CancellationToken ct)
+    private async Task SendSmtpAsync(EmailGatewaySettings s, string to, string subject, string body, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
     {
         var msg = new MimeMessage();
         msg.From.Add(new MailboxAddress(s.FromName, s.FromAddress));
         msg.To.Add(MailboxAddress.Parse(to));
         msg.Subject = subject;
-        msg.Body = new TextPart("plain") { Text = body };
+        if (attachments is null || attachments.Count == 0)
+        {
+            msg.Body = new TextPart("plain") { Text = body };
+        }
+        else
+        {
+            var multipart = new Multipart("mixed");
+            multipart.Add(new TextPart("plain") { Text = body });
+            foreach (var a in attachments)
+            {
+                var slash = a.ContentType.IndexOf('/');
+                var mediaType = slash > 0 ? a.ContentType[..slash] : "application";
+                var mediaSub = slash > 0 ? a.ContentType[(slash + 1)..] : "octet-stream";
+                var part = new MimePart(mediaType, mediaSub)
+                {
+                    Content = new MimeContent(new MemoryStream(a.Content)),
+                    ContentDisposition = new ContentDisposition(ContentDisposition.Attachment) { FileName = a.Filename },
+                    ContentTransferEncoding = ContentEncoding.Base64,
+                    FileName = a.Filename,
+                };
+                multipart.Add(part);
+            }
+            msg.Body = multipart;
+        }
         using var smtp = new SmtpClient();
         await smtp.ConnectAsync(s.SmtpHost, s.SmtpPort,
             s.SmtpUseStartTls ? MailKit.Security.SecureSocketOptions.StartTls : MailKit.Security.SecureSocketOptions.SslOnConnect, ct);
@@ -116,20 +151,42 @@ public class EmailGatewayService : IEmailGatewayService
         await smtp.DisconnectAsync(true, ct);
     }
 
-    private async Task SendResendAsync(EmailGatewaySettings s, string to, string subject, string body, CancellationToken ct)
+    private async Task SendResendAsync(EmailGatewaySettings s, string to, string subject, string body, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(s.ResendApiKeyEncrypted))
             throw new InvalidOperationException("Resend API key is not configured.");
         var apiKey = _protector.Unprotect(s.ResendApiKeyEncrypted);
         var http = _http.CreateClient();
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
-        var payload = new
+        // Resend accepts attachments as an array of { filename, content } with
+        // content base64-encoded (docs: https://resend.com/docs/api-reference/emails/send-email).
+        object payload;
+        if (attachments is null || attachments.Count == 0)
         {
-            from = $"{s.FromName} <{s.FromAddress}>",
-            to = new[] { to },
-            subject,
-            text = body,
-        };
+            payload = new
+            {
+                from = $"{s.FromName} <{s.FromAddress}>",
+                to = new[] { to },
+                subject,
+                text = body,
+            };
+        }
+        else
+        {
+            payload = new
+            {
+                from = $"{s.FromName} <{s.FromAddress}>",
+                to = new[] { to },
+                subject,
+                text = body,
+                attachments = attachments.Select(a => new
+                {
+                    filename = a.Filename,
+                    content = Convert.ToBase64String(a.Content),
+                    content_type = a.ContentType,
+                }).ToArray(),
+            };
+        }
         var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload),
             System.Text.Encoding.UTF8, "application/json");
         var resp = await http.PostAsync("https://api.resend.com/emails", content, ct);

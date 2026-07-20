@@ -1082,4 +1082,13 @@ Open deze link om te tekenen:
   <data name="sign.byo_valid_html"><value>Certificaat geladen: &lt;strong&gt;{0}&lt;/strong&gt; — uitgegeven door &lt;em&gt;{1}&lt;/em&gt; — thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
   <data name="sign.byo_no_persist_note"><value>Het bestand wordt via HTTPS verzonden, alleen in het servergeheugen verwerkt en daarna gewist. Het komt nooit op schijf of in een database.</value></data>
   <data name="sign.login_as_user"><value>Inloggen als NimShare-gebruiker</value></data>
+  <data name="sig.completed.email.subject" xml:space="preserve"><value>Ondertekening afgerond — {0}</value></data>
+  <data name="sig.completed.email.body" xml:space="preserve"><value>Hallo {0},
+
+jouw handtekeningaanvraag „{1}" is afgerond — alle {2} deelnemers hebben ondertekend. De uiteindelijke ondertekende PDF is als bijlage toegevoegd en is ook beschikbaar in je Persoonlijke bibliotheek op NimShare.
+
+Bedankt voor het gebruik van NimShare.</value></data>
+  <data name="sig.section.active" xml:space="preserve"><value>Bezig</value></data>
+  <data name="sig.section.completed" xml:space="preserve"><value>Afgerond</value></data>
+  <data name="sig.section.completed_empty" xml:space="preserve"><value>Afgeronde handtekeningaanvragen verschijnen hier.</value></data>
 </root>

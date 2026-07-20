@@ -28,14 +28,15 @@ public class SignatureFinalizerService : ISignatureFinalizerService
     private readonly ILogger<SignatureFinalizerService> _log;
     private readonly IPdfSignatureService _pdfSign;
     private readonly IDataProtectionProvider _dp;
+    private readonly IEmailGatewayService _email;
 
     public SignatureFinalizerService(NimShareDbContext db, IBlobStorageService blobs,
         ISignaturePdfService sig, IUserNotifier inApp, IHttpClientFactory http,
         IStringLocalizer<SharedResources> localizer, ILogger<SignatureFinalizerService> log,
-        IPdfSignatureService pdfSign, IDataProtectionProvider dp)
+        IPdfSignatureService pdfSign, IDataProtectionProvider dp, IEmailGatewayService email)
     {
         _db = db; _blobs = blobs; _sig = sig; _in = inApp; _http = http; _l = localizer; _log = log;
-        _pdfSign = pdfSign; _dp = dp;
+        _pdfSign = pdfSign; _dp = dp; _email = email;
     }
 
     public async Task TryFinalizeAsync(Guid requestId, CancellationToken ct = default)
@@ -176,6 +177,31 @@ public class SignatureFinalizerService : ISignatureFinalizerService
                     _l["sig.completed.notif.title", req.Title].Value,
                     body: _l["sig.completed.notif.body"].Value,
                     href: "/signatures", fileId: final.Id, ct: ct);
+
+                // v1.10.39: Initiator bekommt das fertige PDF direkt per
+                // Mail. Locale ist bereits auf req.Initiator.PreferredCulture
+                // umgestellt (siehe oben), also greifen die _l[]-Zugriffe
+                // in der Sprache des Empfängers.
+                if (req.Initiator is { Email: var toEmail } && !string.IsNullOrWhiteSpace(toEmail))
+                {
+                    var subject = _l["sig.completed.email.subject", req.Title].Value;
+                    var body = _l["sig.completed.email.body",
+                        req.Initiator.DisplayName ?? "",
+                        req.Title,
+                        req.Participants.Count].Value;
+                    var attachment = new EmailAttachment(finalName, "application/pdf", finalBytes);
+                    try
+                    {
+                        await _email.SendAsync(toEmail, subject, body, new[] { attachment }, ct);
+                    }
+                    catch (Exception mailEx)
+                    {
+                        // Mail-Fehler dürfen den Finalize nicht zurückrollen —
+                        // die In-App-Notification ist schon raus, das Dokument
+                        // liegt im Personal-Bereich. Nur loggen.
+                        _log.LogWarning(mailEx, "Sending completion email to {Email} for {ReqId} failed", toEmail, req.Id);
+                    }
+                }
             }
             finally { CultureInfo.CurrentUICulture = prev; }
             await _db.SaveChangesAsync(ct);

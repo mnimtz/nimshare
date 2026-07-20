@@ -1083,4 +1083,13 @@ Apri questo link per firmare:
   <data name="sign.byo_valid_html"><value>Certificato caricato: &lt;strong&gt;{0}&lt;/strong&gt; — emesso da &lt;em&gt;{1}&lt;/em&gt; — thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
   <data name="sign.byo_no_persist_note"><value>Il file viene inviato via HTTPS, elaborato solo in memoria server e poi cancellato. Non finisce mai su disco né in un database.</value></data>
   <data name="sign.login_as_user"><value>Accedi come utente NimShare</value></data>
+  <data name="sig.completed.email.subject" xml:space="preserve"><value>Firma completata — {0}</value></data>
+  <data name="sig.completed.email.body" xml:space="preserve"><value>Ciao {0},
+
+la tua richiesta di firma « {1} » è stata completata — tutti i {2} partecipanti hanno firmato. Il PDF finale firmato è allegato a questa email ed è disponibile anche nella tua area Personale su NimShare.
+
+Grazie per usare NimShare.</value></data>
+  <data name="sig.section.active" xml:space="preserve"><value>In corso</value></data>
+  <data name="sig.section.completed" xml:space="preserve"><value>Completate</value></data>
+  <data name="sig.section.completed_empty" xml:space="preserve"><value>Le firme completate appariranno qui.</value></data>
 </root>
