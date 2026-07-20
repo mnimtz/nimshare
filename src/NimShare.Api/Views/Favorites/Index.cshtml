@@ -47,7 +47,7 @@ else
                         }
                     </span>
                 </td>
-                <td class="muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                <td class="muted">@f.CreatedAt.ToDisplay()</td>
                 <td>
                     <button class="btn btn-ghost" title="@T["actions.unstar"]" onclick='fetch("/api/v1/favorites/toggle",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({fileId:@Json.Serialize(f.FileId),folderId:@Json.Serialize(f.FolderId)})}).then(()=>location.reload())'>✕</button>
                 </td>

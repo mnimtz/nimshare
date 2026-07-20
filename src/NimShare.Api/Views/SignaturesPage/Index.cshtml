@@ -90,7 +90,7 @@ else
                         </span>
                     }
                 </td>
-                <td class="muted">@r.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                <td class="muted">@r.CreatedAt.ToDisplay()</td>
                 <td>
                     <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap">
                         @if (r.FinalFileId is Guid ff)

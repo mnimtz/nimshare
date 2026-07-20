@@ -46,7 +46,7 @@ else
             <tr class="fm-row">
                 <td><span class="fm-name"><span class="fm-icon fm-icon-file">📄</span>@f.Name</span></td>
                 <td>@Bytes(f.SizeBytes)</td>
-                <td class="muted">@(f.DeletedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                <td class="muted">@(f.DeletedAt?.ToDisplay() ?? "")</td>
                 <td class="muted">@f.Owner?.DisplayName</td>
                 <td>
                     <form method="post" action="/trash/@f.Id/restore" style="display:inline">

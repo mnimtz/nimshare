@@ -10,7 +10,7 @@
     <div>
         <a href="/wiki" class="muted" style="text-decoration:none">← @T["wiki.title"]</a>
         <h1 style="margin-top:6px">📄 @Model.Title</h1>
-        <p class="muted" style="font-size:.85rem">@string.Format(@T["wiki.last_edited"].Value, Model.UpdatedAt.ToString("yyyy-MM-dd HH:mm"), Model.LastEditedByUser?.DisplayName ?? "")</p>
+        <p class="muted" style="font-size:.85rem">@string.Format(@T["wiki.last_edited"].Value, Model.UpdatedAt.ToDisplay(), Model.LastEditedByUser?.DisplayName ?? "")</p>
     </div>
     @if (canWrite)
     {

@@ -53,7 +53,7 @@ else
                     @s.SharedByUser?.DisplayName
                     @if (s.TargetGroup is not null) { <span class="muted"> (via @s.TargetGroup.Name)</span> }
                 </td>
-                <td class="muted">@s.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                <td class="muted">@s.CreatedAt.ToDisplay()</td>
             </tr>
         }
         </tbody>

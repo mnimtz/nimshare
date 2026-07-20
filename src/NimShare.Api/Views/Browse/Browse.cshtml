@@ -168,7 +168,7 @@
                                 </a>
                             </td>
                             <td class="col-size muted">—</td>
-                            <td class="col-date muted">@sub.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="col-date muted">@sub.CreatedAt.ToDisplay()</td>
                             @if (scope != FileScope.Personal) { <td class="col-owner"></td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
@@ -211,7 +211,7 @@
                                 </div>
                             </td>
                             <td class="col-size">@Bytes(f.SizeBytes)</td>
-                            <td class="col-date muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="col-date muted">@f.CreatedAt.ToDisplay()</td>
                             @if (scope != FileScope.Personal) { <td class="col-owner muted">@f.Owner.DisplayName</td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
@@ -235,7 +235,7 @@
                                 </div>
                             </td>
                             <td class="col-size">@Bytes(f.SizeBytes)</td>
-                            <td class="col-date muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="col-date muted">@f.CreatedAt.ToDisplay()</td>
                             <td class="col-actions">
                                 <div class="fm-row-actions">
                                     <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>

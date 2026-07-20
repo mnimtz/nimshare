@@ -39,7 +39,7 @@ else
             @foreach (var e in items)
             {
                 <tr class="fm-row">
-                    <td class="muted">@e.At.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="muted">@e.At.ToDisplay()</td>
                     <td><span class="chip">@e.Kind.ToString()</span></td>
                     <td>@e.Summary</td>
                     @if (showAll) { <td class="muted">@e.Actor?.DisplayName</td> }

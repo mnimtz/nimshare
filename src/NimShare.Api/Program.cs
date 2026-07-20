@@ -299,6 +299,7 @@ builder.Services.AddSwaggerGen(c =>
 // ── App services ───────────────────────────────────────────────────────────
 builder.Services.AddScoped<IDbMigrationService, DbMigrationService>();
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddSingleton<ITimeService, TimeService>();
 builder.Services.AddScoped<ISlugService, SlugService>();
 builder.Services.AddSingleton<IIpHashService, IpHashService>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
@@ -344,6 +345,11 @@ builder.Services.AddScoped<INotificationService, GatewayBackedNotificationServic
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
+
+// Wire the extension-method holder so Razor views can call `.ToDisplay()`
+// on any DateTimeOffset without threading ITimeService through every model.
+NimShare.Api.Services.TimeDisplay.Register(
+    app.Services.GetRequiredService<NimShare.Api.Services.ITimeService>());
 
 // Refuse to boot in Production with the default IP-hash salt — otherwise
 // visitor IPs would be pseudonymised with a public constant, and anyone who
