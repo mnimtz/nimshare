@@ -441,14 +441,6 @@ using (var scope = app.Services.CreateScope())
                 await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
             }
             await db.Database.MigrateAsync();
-            // v1.10.44 — defensive Nachrüst-Backfill für v1.10.42's forensische
-            // Spalten. Die V182_ForensicFields Migration wurde bei Marcus's
-            // Prod-Install nicht angewendet (partial class ohne Designer wird
-            // von EF Core 8 Assembly-Scan nicht immer als Migration erkannt).
-            // Diese Funktion prüft schema-getrieben ob die Spalten existieren
-            // und fügt sie ansonsten per ALTER TABLE nach. Idempotent — bei
-            // sauberem Migrate() macht sie nichts.
-            await EnsureForensicColumnsAsync(db, isSqlServer);
             break;
         }
         catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
@@ -464,6 +456,22 @@ using (var scope = app.Services.CreateScope())
             NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
             break;
         }
+    }
+
+    // v1.10.45 — Column-Backfill AUßERHALB des Retry-Loops, damit er auch
+    // dann läuft wenn MigrateAsync selber gebrochen ist (retry gescheitert).
+    // In v1.10.44 stand er im try, wurde also bei MigrateAsync-Fehler
+    // umgangen. Der Backfill ist idempotent, kann jederzeit laufen und
+    // fixt die "no such column: s.City"-Fehler die trotz Deploy blieben.
+    try
+    {
+        Console.Error.WriteLine("[STARTUP] Running EnsureForensicColumnsAsync…");
+        await EnsureForensicColumnsAsync(db, isSqlServer);
+        Console.Error.WriteLine("[STARTUP] EnsureForensicColumnsAsync done.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] EnsureForensicColumnsAsync threw: " + ex);
     }
 
     // WAL journal mode lets readers proceed while a writer holds the lock,
