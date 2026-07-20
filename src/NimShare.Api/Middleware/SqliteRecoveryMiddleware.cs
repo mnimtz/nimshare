@@ -65,18 +65,34 @@ public class SqliteRecoveryMiddleware
                 _log.LogWarning(ex, "Sqlite transient ({Method}) — pool cleared, surfacing to error handler.", m);
                 throw;
             }
-            _log.LogInformation("Sqlite transient ({Method}) — cleared pool, retrying once.", m);
-            ctx.Response.Clear();
-            await Task.Delay(400);
-            try
+            // v1.10.31: statt 1 Retry mit 400ms — 3 Retries mit exponential
+            // backoff (400ms, 1000ms, 2500ms). Deckt längere Azure Files
+            // SMB-Remount-Fenster ab ohne dass der User schon die 503-Seite
+            // sieht. Insgesamt bis ~4s extra Wartezeit im worst case, sonst
+            // heilt der Request von selbst.
+            int[] backoffs = { 400, 1000, 2500 };
+            Exception? lastEx = ex;
+            for (int attempt = 0; attempt < backoffs.Length; attempt++)
             {
-                await _next(ctx);
+                _log.LogInformation("Sqlite transient ({Method} {Path}) — cleared pool, retry {Attempt}/{Total} in {Ms}ms.",
+                    m, path, attempt + 1, backoffs.Length, backoffs[attempt]);
+                ctx.Response.Clear();
+                SqliteConnection.ClearAllPools();
+                await Task.Delay(backoffs[attempt]);
+                try
+                {
+                    await _next(ctx);
+                    return; // success
+                }
+                catch (Exception retry) when (IsTransientSqlite(retry))
+                {
+                    lastEx = retry;
+                    // fall through to next attempt
+                }
             }
-            catch (Exception retry) when (IsTransientSqlite(retry))
-            {
-                _log.LogWarning(retry, "Sqlite transient still failing after pool reset — surfacing to error handler.");
-                throw;
-            }
+            _log.LogWarning(lastEx, "Sqlite still transient after {N} retries — surfacing to error handler ({Path}).",
+                backoffs.Length, path);
+            throw lastEx!;
         }
     }
 
