@@ -134,16 +134,19 @@
                     <input type="text" name="typedName" required value="@Model.Me.Name" maxlength="120"/>
                 </div>
                 <div class="field">
-                    @{ var isAuthed = User?.Identity?.IsAuthenticated ?? false; }
+                    @* v1.10.33: Toggle immer sichtbar. Der Cert-Button lädt on-
+                       demand /api/v1/certificates/default. Ist der Signer nicht
+                       eingeloggt oder hat kein Default-Cert, zeigt die JS eine
+                       sprechende Info-Zeile UND lässt "🖊 Zeichnen" als
+                       funktionierende Alternative offen. Kein server-side hide
+                       mehr — sonst sieht auch der eingeloggte Initiator seinen
+                       eigenen Toggle nicht auf dem anonymen Sign-Link. *@
                     <label style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                         <span>Unterschrift</span>
-                        @if (isAuthed)
-                        {
-                            <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
-                                <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
-                                <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
-                            </span>
-                        }
+                        <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
+                            <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
+                            <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
+                        </span>
                     </label>
                     <div id="sigDrawWrap" style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
                         <canvas id="sigPad" width="720" height="180" style="width:100%;height:180px;touch-action:none;display:block"></canvas>

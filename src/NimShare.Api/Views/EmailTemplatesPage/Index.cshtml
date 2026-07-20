@@ -118,6 +118,18 @@
             <label>@T["email_tpl.ai_prompt"]</label>
             <input id="ai-prompt" required placeholder="@T["email_tpl.ai_prompt_ph"]"/>
         </div>
+        <div class="field">
+            <label for="ai-lang">Sprache des generierten Textes</label>
+            <select id="ai-lang">
+                <option value="">Automatisch (Template-Sprache)</option>
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="it">Italiano</option>
+                <option value="es">Español</option>
+                <option value="nl">Nederlands</option>
+            </select>
+        </div>
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="closeDlg('ai-dlg')">@T["common.cancel"]</button>
             <button class="btn btn-primary" id="ai-run-btn">@T["email_tpl.ai_generate"]</button>
@@ -194,6 +206,11 @@ async function preview() {
 }
 function draftWithAi() {
     document.getElementById('ai-prompt').value = '';
+    // v1.10.33: Sprachauswahl vorbelegen mit der aktuell im Template
+    // eingestellten Locale — Marcus wollte "auch mal en" ohne dass er
+    // den Template-Locale ändern muss.
+    const langSel = document.getElementById('ai-lang');
+    if (langSel) langSel.value = ''; // "Automatisch" — nutzt e-locale
     openDlg('ai-dlg');
 }
 async function runAiDraft(ev) {
@@ -204,9 +221,13 @@ async function runAiDraft(ev) {
     if (!prompt) return false;
     btn.disabled = true; btn.textContent = '…';
     try {
+        // Explizite Sprache aus dem Dialog. Leer = Auto = nimm die
+        // Template-Locale wie bisher.
+        const explicitLang = document.getElementById('ai-lang')?.value || '';
+        const locale = explicitLang || document.getElementById('e-locale').value;
         const d = await api('POST', '/api/v1/ai/draft-email-template', {
             prompt,
-            locale: document.getElementById('e-locale').value,
+            locale,
         });
         if (d.subject) document.getElementById('e-subject').value = d.subject;
         if (d.body) document.getElementById('e-body').value = d.body;
