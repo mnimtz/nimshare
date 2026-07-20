@@ -278,19 +278,41 @@ public class SignController : Controller
 
             // ALSO send an email — the in-app notification alone is easy to
             // miss and the initiator needs to know the workflow is stuck.
+            // Route through IEmailGatewayService directly (same path as
+            // signature-invite emails) so the DB-configured provider is used
+            // and any failure is LOGGED — not silently caught (a pre-v1.10.5
+            // bug that made "no decline email" impossible to debug).
             var initiatorEmail = req.Initiator?.Email;
             if (!string.IsNullOrWhiteSpace(initiatorEmail))
             {
-                var notif = HttpContext.RequestServices.GetService(typeof(INotificationService)) as INotificationService;
-                if (notif is not null)
+                var gateway = HttpContext.RequestServices.GetService(typeof(IEmailGatewayService)) as IEmailGatewayService;
+                var logger = HttpContext.RequestServices.GetService(typeof(ILogger<SignController>)) as ILogger<SignController>;
+                if (gateway is not null)
                 {
                     var subject = declTitle;
-                    var body = declLocalizer["sig.declined.mail.body",
+                    var mailBody = declLocalizer["sig.declined.mail.body",
                         req.Initiator?.DisplayName ?? "",
                         p.Name, p.Email, req.Title,
                         string.IsNullOrWhiteSpace(reason) ? declLocalizer["sig.declined.no_reason_given"].Value : reason].Value;
-                    try { await notif.SendShareLinkAsync(initiatorEmail, "NimShare", subject, body, ct); }
-                    catch { /* best-effort; in-app notification is the source of truth */ }
+                    try
+                    {
+                        await gateway.SendAsync(initiatorEmail, subject, mailBody, ct);
+                        EmailDeliveryLog.Record(initiatorEmail, subject, ok: true, error: null, kind: "sig-decline");
+                        logger?.LogInformation("Decline email sent to initiator {Email} for request {ReqId}",
+                            initiatorEmail, req.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        EmailDeliveryLog.Record(initiatorEmail, subject, ok: false, error: ex.Message, kind: "sig-decline");
+                        logger?.LogWarning(ex,
+                            "Decline email FAILED for request {ReqId} to {Email} — in-app notification stays as source of truth",
+                            req.Id, initiatorEmail);
+                    }
+                }
+                else
+                {
+                    (HttpContext.RequestServices.GetService(typeof(ILogger<SignController>)) as ILogger<SignController>)
+                        ?.LogWarning("Decline email skipped: IEmailGatewayService is not registered.");
                 }
             }
         }
