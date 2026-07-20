@@ -19,17 +19,21 @@ namespace NimShare.Api.Middleware;
 public sealed class PublicPathBrowserLanguageProvider : RequestCultureProvider
 {
     private static readonly string[] PublicPrefixes = { "/s/", "/u/", "/sign/" };
+    // .NET 8 dropped the base-class NullResult static, so we cache our own.
+    // Returning Task.FromResult((ProviderCultureResult?)null) at every fall-
+    // through would allocate a Task per request; one shared instance is fine.
+    private static readonly Task<ProviderCultureResult?> NullResultTask = Task.FromResult<ProviderCultureResult?>(null);
 
     public override Task<ProviderCultureResult?> DetermineProviderCultureResult(HttpContext httpContext)
     {
         var path = httpContext.Request.Path.Value;
-        if (string.IsNullOrEmpty(path)) return NullResult;
+        if (string.IsNullOrEmpty(path)) return NullResultTask;
         var isPublic = false;
         foreach (var p in PublicPrefixes)
         {
             if (path.StartsWith(p, StringComparison.OrdinalIgnoreCase)) { isPublic = true; break; }
         }
-        if (!isPublic) return NullResult;
+        if (!isPublic) return NullResultTask;
 
         // Respect an explicit ?ui-culture=xx / ?culture=xx override on the URL
         // itself — that's how the "Sprache" pill on the landings works and it
@@ -43,7 +47,7 @@ public sealed class PublicPathBrowserLanguageProvider : RequestCultureProvider
         }
 
         var accept = httpContext.Request.Headers.AcceptLanguage.ToString();
-        if (string.IsNullOrWhiteSpace(accept)) return NullResult;
+        if (string.IsNullOrWhiteSpace(accept)) return NullResultTask;
 
         // Parse "de-DE,de;q=0.9,en;q=0.8" — take the first token that we ship
         // as a SupportedUICulture. Options.SupportedUICultures is filled by
@@ -67,6 +71,6 @@ public sealed class PublicPathBrowserLanguageProvider : RequestCultureProvider
             var loose = supported.FirstOrDefault(s => s.StartsWith(shortTag + "-", StringComparison.OrdinalIgnoreCase));
             if (loose != null) return Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(loose));
         }
-        return NullResult;
+        return NullResultTask;
     }
 }
