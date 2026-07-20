@@ -557,7 +557,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="err.no_image"><value>Geen afbeelding ontvangen.</value></data>
   <data name="err.image_too_large"><value>Afbeelding is te groot (max. 3 MiB na bijsnijden).</value></data>
   <data name="err.upload_failed"><value>Uploaden mislukt. Probeer opnieuw.</value></data>
-  <data name="users.edit"><value>Gebruiker bewerken</value></data>
+  <data name="users.edit"><value>Nutzer bearbeiten</value></data>
   <data name="users.reset_password"><value>Wachtwoord resetten</value></data>
   <data name="users.reset_password.helper"><value>Stuurt een e-mail met een nieuw wachtwoord.</value></data>
   <data name="users.new_password"><value>Nieuw wachtwoord</value></data>

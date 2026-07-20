@@ -559,7 +559,7 @@ Apri il link:
   <data name="err.no_image"><value>No image received.</value></data>
   <data name="err.image_too_large"><value>Image is too large (max 3 MiB after cropping).</value></data>
   <data name="err.upload_failed"><value>Upload failed. Try again.</value></data>
-  <data name="users.edit"><value>Edit user</value></data>
+  <data name="users.edit"><value>Modifica utente</value></data>
   <data name="users.reset_password"><value>Reset password</value></data>
   <data name="users.reset_password.helper"><value>Sends an email with a new password to the user.</value></data>
   <data name="users.new_password"><value>New password</value></data>

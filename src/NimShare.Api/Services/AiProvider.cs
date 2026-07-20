@@ -790,7 +790,11 @@ public class AiGatewayService : IAiGatewayService
         s.Provider = incoming.Provider;
         s.Model = incoming.Model;
         s.Endpoint = incoming.Endpoint;
-        if (!string.IsNullOrEmpty(plainApiKey)) s.ApiKeyEncrypted = _protector.Protect(plainApiKey);
+        // v1.10.22: Trim whitespace/newlines aus dem Key. Copy-Paste aus einem
+        // Password-Manager oder ein Enter am Ende hängt sonst ein "\n" dran, das
+        // Gemini/OpenAI mit "API key not valid" abweist obwohl der Key stimmt.
+        if (!string.IsNullOrEmpty(plainApiKey))
+            s.ApiKeyEncrypted = _protector.Protect(plainApiKey.Trim());
         s.EnableAutoSummary = incoming.EnableAutoSummary;
         s.EnableSmartTags = incoming.EnableSmartTags;
         s.EnableSemanticSearch = incoming.EnableSemanticSearch;
