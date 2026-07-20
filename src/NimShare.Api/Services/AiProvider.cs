@@ -287,7 +287,12 @@ public class GeminiProvider : IAiProvider
     public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
     {
         // Gemini generateContent accepts inline_data with base64. gemini-2.0-*
-        // family handles vision natively.
+        // and 2.5-* families handle vision natively; 2.5 needs thinkingBudget=0
+        // or the token budget is consumed by internal reasoning before any
+        // text is emitted (leaves parts[] empty and the caller sees "empty").
+        object visionConfig = ModelHasThinkingTokens()
+            ? new { temperature = 0.3, maxOutputTokens = 1024, thinkingConfig = new { thinkingBudget = 0 } }
+            : new { temperature = 0.3, maxOutputTokens = 1024 };
         var payload = new
         {
             contents = new[]
@@ -301,7 +306,7 @@ public class GeminiProvider : IAiProvider
                     }
                 }
             },
-            generationConfig = new { temperature = 0.3, maxOutputTokens = 400 },
+            generationConfig = visionConfig,
         };
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -311,7 +316,15 @@ public class GeminiProvider : IAiProvider
             if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
             var doc = JsonDocument.Parse(text);
-            return doc.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
+            // Defensive: if 2.5 still burns the budget, parts[] can be absent.
+            if (!doc.RootElement.TryGetProperty("candidates", out var cands)
+                || cands.GetArrayLength() == 0) return null;
+            var c0 = cands[0];
+            if (!c0.TryGetProperty("content", out var ct2)
+                || !ct2.TryGetProperty("parts", out var ps)
+                || ps.GetArrayLength() == 0
+                || !ps[0].TryGetProperty("text", out var tx)) return null;
+            return tx.GetString();
         }
         catch { return null; }
     }
@@ -336,7 +349,15 @@ public class GeminiProvider : IAiProvider
     }
 
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)
-        => (await GenerateWithDetailAsync(prompt, temperature, 1024, ct)).Text;
+        => (await GenerateWithDetailAsync(prompt, temperature, 4096, ct)).Text;
+
+    /// <summary>True when the model belongs to a Gemini generation that emits
+    /// internal "thinking" tokens (2.5 family). Those eat the output budget
+    /// silently — a 1024-token cap can leave 0 tokens for the actual reply
+    /// and returns finishReason=MAX_TOKENS with an empty text field. Fix:
+    /// send thinkingConfig.thinkingBudget = 0 for these models.</summary>
+    private bool ModelHasThinkingTokens() =>
+        _model.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Same as GenerateAsync, but returns both the text and the last
     /// error / raw response so callers can surface a real reason instead of
@@ -345,12 +366,18 @@ public class GeminiProvider : IAiProvider
     public async Task<(string? Text, string? Error)> GenerateWithDetailAsync(string prompt, double temperature, int maxTokens, CancellationToken ct)
     {
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+        // Gemini 2.5 defaults thinkingBudget to "dynamic" — for 2.5-flash that
+        // can burn 500-800 output tokens on internal reasoning before writing
+        // anything, so a 1024 cap silently produces an empty response. Zero
+        // disables thinking entirely (fine for our short generative tasks).
+        // Fields ignored by 1.5 models per Gemini API docs, so unconditional.
+        object generationConfig = ModelHasThinkingTokens()
+            ? new { temperature, maxOutputTokens = maxTokens, thinkingConfig = new { thinkingBudget = 0 } }
+            : new { temperature, maxOutputTokens = maxTokens };
         var payload = new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
-            // 1024 fits a full SUBJECT + 3–6 paragraph body comfortably; the
-            // old 400 cap silently truncated many template drafts to empty.
-            generationConfig = new { temperature, maxOutputTokens = maxTokens },
+            generationConfig,
         };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         try
@@ -377,20 +404,34 @@ public class GeminiProvider : IAiProvider
                 || candidates.GetArrayLength() == 0)
                 return (null, "Keine candidates in Gemini-Antwort (Safety-Block oder Modell antwortet nicht).");
             var cand = candidates[0];
+            string? finishReason = null;
             // MAX_TOKENS finish → the model got cut off before writing anything;
             // surface that as its own error so bumping the limit is obvious.
             if (cand.TryGetProperty("finishReason", out var fr))
             {
-                var frs = fr.GetString();
-                if (!string.Equals(frs, "STOP", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(frs, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase))
-                    return (null, $"Gemini finishReason={frs}");
+                finishReason = fr.GetString();
+                if (!string.Equals(finishReason, "STOP", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(finishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase))
+                    return (null, $"Gemini finishReason={finishReason} (Modell: {_model})");
             }
+            // Read thinking-token usage for diagnostic — if the model burned
+            // its whole output budget on reasoning we say so plainly.
+            int thinkingTokens = 0;
+            if (doc.RootElement.TryGetProperty("usageMetadata", out var um)
+                && um.TryGetProperty("thoughtsTokenCount", out var tt))
+                thinkingTokens = tt.GetInt32();
+
             if (!cand.TryGetProperty("content", out var content)
                 || !content.TryGetProperty("parts", out var parts)
                 || parts.GetArrayLength() == 0
                 || !parts[0].TryGetProperty("text", out var t))
-                return (null, "Gemini-Antwort ohne text-Feld.");
+            {
+                // Common cause on 2.5-flash: finishReason=MAX_TOKENS + no
+                // `parts` at all because ALL output tokens went into thinking.
+                if (string.Equals(finishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase))
+                    return (null, $"Gemini {_model}: gesamtes Output-Budget von {maxTokens} Tokens in interne Reasoning-Schritte geflossen ({thinkingTokens} thinking-tokens) — kein sichtbarer Text. Provider-Fix: v1.10.4 sendet thinkingConfig=0 für 2.5-Modelle.");
+                return (null, $"Gemini-Antwort ohne text-Feld (Modell: {_model}, finishReason={finishReason ?? "unknown"}).");
+            }
             var textValue = t.GetString();
             // Gemini can respond with an empty string + finishReason=STOP when
             // the model decided the prompt yielded nothing useful (e.g. a
@@ -398,7 +439,11 @@ public class GeminiProvider : IAiProvider
             // template is needed"). Treat that as an error so the UI shows
             // something actionable instead of the generic "Draft empty".
             if (string.IsNullOrWhiteSpace(textValue))
-                return (null, "Gemini lieferte leeren Text (evtl. Safety-Filter, unpassender Prompt oder Modell nicht verfügbar). Modell im AI-Gateway wechseln (2.5-pro / 2.5-flash) oder Prompt weniger allgemein formulieren.");
+            {
+                if (string.Equals(finishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase))
+                    return (null, $"Gemini {_model}: MAX_TOKENS erreicht ({thinkingTokens} thinking-tokens von {maxTokens}) — Output-Budget im Code erhöhen oder anderes Modell wählen.");
+                return (null, $"Gemini {_model} lieferte leeren Text (evtl. Safety-Filter). Modell wechseln oder Prompt weniger allgemein formulieren.");
+            }
             return (textValue, null);
         }
         catch (Exception ex)

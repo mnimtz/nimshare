@@ -128,8 +128,24 @@ public class AiController : ControllerBase
 
         var provider = await _ai.CreateProviderAsync(ct);
         var lang = CurrentLanguageIso();
-        var draft = await provider.DraftShareEmailAsync(me.DisplayName, link.File.Name, req.Context, lang, ct);
-        if (string.IsNullOrWhiteSpace(draft)) return Problem(statusCode: 502, title: "Draft empty.");
+        // Route through the detail-carrying path for Gemini so v1.10.4's
+        // thinking-token diagnostic actually reaches the client.
+        string? draft; string? err = null;
+        if (provider is GeminiProvider gp)
+        {
+            var (t, e) = await gp.GenerateWithDetailAsync(
+                $"Draft a short, warm cover email (max 6 sentences, no markdown) in the language whose ISO code is '{lang}' from {me.DisplayName} accompanying the file '{link.File.Name}'.{(string.IsNullOrWhiteSpace(req.Context) ? "" : $" Context: {req.Context}.")} End with a signature that uses the sender's name.",
+                0.6, 1024, ct);
+            draft = t; err = e;
+        }
+        else
+        {
+            draft = await provider.DraftShareEmailAsync(me.DisplayName, link.File.Name, req.Context, lang, ct);
+            if (string.IsNullOrWhiteSpace(draft) && provider is OpenAiProvider op) err = op.LastError;
+        }
+        if (string.IsNullOrWhiteSpace(draft))
+            return Problem(statusCode: 502, title: "Draft empty.",
+                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
         return Ok(new { draft });
     }
 
@@ -436,8 +452,22 @@ public class AiController : ControllerBase
         if (link is null) return NotFound();
         var provider = await _ai.CreateProviderAsync(ct);
         var lang = CurrentLanguageIso();
-        var draft = await provider.DraftUploadRequestAsync(me.DisplayName, req.RecipientEmail, req.Context, lang, ct);
-        if (string.IsNullOrEmpty(draft)) return Problem(statusCode: 502, title: "Draft empty.");
+        string? draft; string? err = null;
+        if (provider is GeminiProvider gp)
+        {
+            var (t, e) = await gp.GenerateWithDetailAsync(
+                $"Draft a short cover email in the language whose ISO code is '{lang}' from {me.DisplayName} asking {req.RecipientEmail} to upload a file. Adapt tone to the recipient's email domain.{(string.IsNullOrWhiteSpace(req.Context) ? "" : $" Context: {req.Context}.")} Under 5 sentences, no markdown.",
+                0.6, 1024, ct);
+            draft = t; err = e;
+        }
+        else
+        {
+            draft = await provider.DraftUploadRequestAsync(me.DisplayName, req.RecipientEmail, req.Context, lang, ct);
+            if (string.IsNullOrWhiteSpace(draft) && provider is OpenAiProvider op) err = op.LastError;
+        }
+        if (string.IsNullOrEmpty(draft))
+            return Problem(statusCode: 502, title: "Draft empty.",
+                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
         return Ok(new { draft });
     }
 }
