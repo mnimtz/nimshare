@@ -202,6 +202,7 @@ public class OpenAiProvider : IAiProvider
 
     private async Task<string?> ChatAsync(string system, string user, double temperature, CancellationToken ct)
     {
+        LastError = null;
         var payload = new
         {
             model = _isAzure ? (object?)null : _model,
@@ -211,18 +212,57 @@ public class OpenAiProvider : IAiProvider
                 new { role = "user",   content = user },
             },
             temperature,
-            max_tokens = 400,
+            max_tokens = 800,
         };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         try
         {
             var resp = await _http.PostAsync(_endpoint, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                // v1.10.19: extract the OpenAI-style error.message from the
+                // response body so the caller can surface it instead of the
+                // generic "check API key, quota, or model availability."
+                string reason = text.Length > 500 ? text[..500] : text;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(text);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                LastError = $"OpenAI HTTP {(int)resp.StatusCode} ({_model}): {reason}";
+                return null;
+            }
             var doc = JsonDocument.Parse(text);
-            return doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+            if (!doc.RootElement.TryGetProperty("choices", out var choices)
+                || choices.GetArrayLength() == 0)
+            {
+                LastError = $"OpenAI {_model}: keine choices in Response (Content-Filter oder Modell antwortet nicht).";
+                return null;
+            }
+            if (!choices[0].TryGetProperty("message", out var msg)
+                || !msg.TryGetProperty("content", out var content))
+            {
+                LastError = $"OpenAI {_model}: choices[0].message.content fehlt.";
+                return null;
+            }
+            var value = content.GetString();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                var finish = choices[0].TryGetProperty("finish_reason", out var fr) ? fr.GetString() : null;
+                LastError = $"OpenAI {_model}: leerer content (finish_reason={finish ?? "unknown"}). Content-Filter oder Modell nicht verfügbar.";
+                return null;
+            }
+            return value;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LastError = $"OpenAI {_model} Exception: {ex.Message}";
+            return null;
+        }
     }
 }
 
@@ -450,10 +490,21 @@ public class GeminiProvider : IAiProvider
         object generationConfig = ModelHasThinkingTokens()
             ? new { temperature, maxOutputTokens = maxTokens, thinkingConfig = new { thinkingBudget = 0 } }
             : new { temperature, maxOutputTokens = maxTokens };
+        // v1.10.19: Safety-Filter auf BLOCK_ONLY_HIGH — Business-Emails werden
+        // sonst gelegentlich als "hate speech" oder "harassment" gefiltert
+        // (z.B. Formulierungen wie "urgent action required" triggern's).
+        var safety = new object[]
+        {
+            new { category = "HARM_CATEGORY_HARASSMENT", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_HATE_SPEECH", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_DANGEROUS_CONTENT", threshold = "BLOCK_ONLY_HIGH" },
+        };
         var payload = new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
             generationConfig,
+            safetySettings = safety,
         };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         try
@@ -534,6 +585,11 @@ public class AnthropicProvider : IAiProvider
 {
     private readonly HttpClient _http;
     private readonly string _model;
+
+    /// <summary>Last diagnostic — same pattern as OpenAiProvider.LastError so
+    /// AiController can surface real reasons instead of the generic
+    /// "Provider returned no text" fallback.</summary>
+    public string? LastError { get; private set; }
 
     public AnthropicProvider(HttpClient http, string apiKey, string model)
     {
@@ -630,10 +686,11 @@ public class AnthropicProvider : IAiProvider
 
     private async Task<string?> MessagesAsync(string system, string user, double temperature, CancellationToken ct)
     {
+        LastError = null;
         var payload = new
         {
             model = _model,
-            max_tokens = 400,
+            max_tokens = 800,
             temperature,
             system,
             messages = new object[] { new { role = "user", content = user } },
@@ -642,12 +699,42 @@ public class AnthropicProvider : IAiProvider
         try
         {
             var resp = await _http.PostAsync("https://api.anthropic.com/v1/messages", body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                string reason = text.Length > 500 ? text[..500] : text;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(text);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                LastError = $"Anthropic HTTP {(int)resp.StatusCode} ({_model}): {reason}";
+                return null;
+            }
             var doc = JsonDocument.Parse(text);
-            return doc.RootElement.GetProperty("content")[0].GetProperty("text").GetString();
+            if (!doc.RootElement.TryGetProperty("content", out var contentArr)
+                || contentArr.GetArrayLength() == 0
+                || !contentArr[0].TryGetProperty("text", out var t))
+            {
+                LastError = $"Anthropic {_model}: content[0].text fehlt.";
+                return null;
+            }
+            var value = t.GetString();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                LastError = $"Anthropic {_model}: leerer content-text.";
+                return null;
+            }
+            return value;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LastError = $"Anthropic {_model} Exception: {ex.Message}";
+            return null;
+        }
     }
 }
 

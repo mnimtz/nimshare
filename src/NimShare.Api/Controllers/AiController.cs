@@ -174,7 +174,9 @@ public class AiController : ControllerBase
     [Authorize(Policy = "ApiUser")]
     [HttpPost("draft-email-template")]
     public async Task<IActionResult> DraftEmailTemplate([FromBody] DraftTemplateReq req,
-        [FromServices] ICurrentUserService users, CancellationToken ct)
+        [FromServices] ICurrentUserService users,
+        [FromServices] ILogger<AiController> log,
+        CancellationToken ct)
     {
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableDraftedShareEmails || settings.Provider == AiProvider.Disabled)
@@ -186,10 +188,6 @@ public class AiController : ControllerBase
             : req.Locale;
         var provider = await _ai.CreateProviderAsync(ct);
 
-        // Reuse the existing chat helper via DraftShareEmailAsync (already
-        // wired for all provider back-ends). Feed the template-specific
-        // instructions in the "context" field so the provider's system
-        // prompt still applies.
         var promptShort = string.IsNullOrWhiteSpace(req.Prompt) ? "signature request" : req.Prompt.Trim();
         var instruction = $"You are drafting an email template used to invite a person to sign a document. " +
             $"Style/tone: {promptShort}. Write in the language whose ISO code is '{lang}'. " +
@@ -200,26 +198,40 @@ public class AiController : ControllerBase
             $"Optionally include {{{{message}}}} in the body if relevant. Do NOT introduce other placeholders. " +
             $"Do not add greetings, disclaimers, HTML, or Markdown headings.";
 
-        // Prefer the detail-carrying path when the provider is Gemini so an
-        // empty response can be surfaced with the actual reason (safety
-        // block, MAX_TOKENS truncation, 4xx from the API) instead of just
-        // "Draft empty."
+        // v1.10.19: Universal-Fehlerpfad. Ruf Provider je nach Typ. Nach dem
+        // Aufruf: LastError von JEDEM konkreten Provider abfragen (OpenAI +
+        // Anthropic setzen den seit v1.10.19 auch, Gemini schon vorher).
+        // Falls provider = NullAiProvider (kein API-Key persistiert), nennt
+        // die Detail-Message das direkt.
         string? raw = null;
         string? err = null;
         if (provider is GeminiProvider gp)
         {
             var (draftedText, error) = await gp.GenerateWithDetailAsync(
                 $"You are drafting an email template for a signature invite. Style: {promptShort}. Language ISO: {lang}. Return EXACTLY 'SUBJECT: <line>' then a newline 'BODY:' then 3–6 short paragraphs. Use these literal Handlebars placeholders: {{{{recipient.name}}}}, {{{{sender.name}}}}, {{{{doc.title}}}}, {{{{url}}}}. Optional: {{{{message}}}}. No HTML, no markdown headings.",
-                0.6, 1024, ct);
+                0.6, 2048, ct);
             raw = draftedText; err = error;
         }
         else
         {
             raw = await provider.DraftShareEmailAsync(me.DisplayName, "", instruction, lang, ct);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                err = (provider as OpenAiProvider)?.LastError
+                    ?? (provider as AnthropicProvider)?.LastError
+                    ?? (provider is NullAiProvider
+                        ? $"AI-Provider ist deaktiviert oder API-Key fehlt (settings.Provider={settings.Provider}, settings.Model={settings.Model ?? "-"}). Prüfe /settings/ai."
+                        : null);
+            }
         }
         if (string.IsNullOrWhiteSpace(raw))
+        {
+            log.LogWarning(
+                "DraftEmailTemplate empty. Provider={ProviderType} SettingProvider={SP} Model={Model} err={Err}",
+                provider.GetType().Name, settings.Provider, settings.Model, err);
             return Problem(statusCode: 502, title: "Draft empty.",
-                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
+                detail: err ?? $"AI-Provider {provider.GetType().Name} (Model={settings.Model ?? "-"}) lieferte keinen Text und keine Fehlerursache. Server-Log prüfen.");
+        }
 
         // Split on "BODY:" (case-insensitive) — the model usually complies.
         var text = raw.Trim();
