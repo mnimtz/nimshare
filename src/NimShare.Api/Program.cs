@@ -441,6 +441,14 @@ using (var scope = app.Services.CreateScope())
                 await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
             }
             await db.Database.MigrateAsync();
+            // v1.10.44 — defensive Nachrüst-Backfill für v1.10.42's forensische
+            // Spalten. Die V182_ForensicFields Migration wurde bei Marcus's
+            // Prod-Install nicht angewendet (partial class ohne Designer wird
+            // von EF Core 8 Assembly-Scan nicht immer als Migration erkannt).
+            // Diese Funktion prüft schema-getrieben ob die Spalten existieren
+            // und fügt sie ansonsten per ALTER TABLE nach. Idempotent — bei
+            // sauberem Migrate() macht sie nichts.
+            await EnsureForensicColumnsAsync(db, isSqlServer);
             break;
         }
         catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
@@ -558,6 +566,86 @@ app.Run();
 /// "up to date". Fresh installs skip the branch because Users doesn't exist
 /// yet. Safe to leave in indefinitely — the fingerprint check is cheap.
 /// </summary>
+// v1.10.44 — idempotenter Column-Backfill für die v1.10.42 forensischen
+// Felder. Der eigentliche Weg wäre die V182_ForensicFields Migration —
+// die aber wegen der partial-class-ohne-Designer-Auslassung von EF Core
+// nicht discovered wurde. Diese Funktion prüft schema-getrieben ob die
+// Spalten existieren und fügt sie ansonsten via ALTER TABLE ADD COLUMN
+// nach. Reihenfolge:
+//   SignatureAudits: Country, City, DeviceType, Timezone
+//   ShareLinkAccesses: City, DeviceType, Timezone (CountryCode war schon da)
+// Bei einer bereits sauber migrierten DB macht die Funktion nichts.
+static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlServer)
+{
+    // Spezifikation: (Tabelle, Spalte, SQLite-Typ, SqlServer-Typ)
+    var wanted = new (string Table, string Column, string SqliteType, string SqlServerType)[]
+    {
+        ("SignatureAudits", "Country", "TEXT", "nvarchar(2)"),
+        ("SignatureAudits", "City", "TEXT", "nvarchar(80)"),
+        ("SignatureAudits", "DeviceType", "TEXT", "nvarchar(20)"),
+        ("SignatureAudits", "Timezone", "TEXT", "nvarchar(60)"),
+        ("ShareLinkAccesses", "City", "TEXT", "nvarchar(80)"),
+        ("ShareLinkAccesses", "DeviceType", "TEXT", "nvarchar(20)"),
+        ("ShareLinkAccesses", "Timezone", "TEXT", "nvarchar(60)"),
+    };
+    foreach (var w in wanted)
+    {
+        try
+        {
+            bool exists;
+            if (isSqlServer)
+            {
+                var connStr = db.Database.GetConnectionString();
+                using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+                await cn.OpenAsync();
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = $"SELECT COL_LENGTH('{w.Table}', '{w.Column}')";
+                var res = await cmd.ExecuteScalarAsync();
+                exists = res is not null && res != DBNull.Value;
+                if (!exists)
+                {
+                    using var alter = cn.CreateCommand();
+                    alter.CommandText = $"ALTER TABLE [{w.Table}] ADD [{w.Column}] {w.SqlServerType} NULL";
+                    await alter.ExecuteNonQueryAsync();
+                    Console.Error.WriteLine($"[STARTUP] Added missing column {w.Table}.{w.Column} (SqlServer).");
+                }
+            }
+            else
+            {
+                var connStr = db.Database.GetConnectionString();
+                using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+                await cn.OpenAsync();
+                using var cmd = cn.CreateCommand();
+                cmd.CommandText = $"PRAGMA table_info(\"{w.Table}\")";
+                exists = false;
+                using (var rdr = await cmd.ExecuteReaderAsync())
+                {
+                    while (await rdr.ReadAsync())
+                    {
+                        var name = rdr.GetString(1);
+                        if (string.Equals(name, w.Column, StringComparison.OrdinalIgnoreCase))
+                        { exists = true; break; }
+                    }
+                }
+                if (!exists)
+                {
+                    using var alter = cn.CreateCommand();
+                    alter.CommandText = $"ALTER TABLE \"{w.Table}\" ADD COLUMN \"{w.Column}\" {w.SqliteType} NULL";
+                    await alter.ExecuteNonQueryAsync();
+                    Console.Error.WriteLine($"[STARTUP] Added missing column {w.Table}.{w.Column} (SQLite).");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Nicht fatal — wenn die Spalte trotzdem nicht angelegt werden kann
+            // (Tabelle existiert nicht in der DB, unerwartete DB-Version) soll
+            // der App-Start weiterlaufen. Marcus sieht die Fehler im Log.
+            Console.Error.WriteLine($"[STARTUP] EnsureForensicColumns for {w.Table}.{w.Column} failed: {ex.Message}");
+        }
+    }
+}
+
 static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceProvider services)
 {
     try
