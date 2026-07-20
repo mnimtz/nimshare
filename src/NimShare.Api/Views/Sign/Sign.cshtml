@@ -143,9 +143,10 @@
                        eigenen Toggle nicht auf dem anonymen Sign-Link. *@
                     <label style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                         <span>@T["sign.signature_label"]</span>
-                        <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
+                        <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px;flex-wrap:wrap" role="tablist">
                             <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">@T["sign.mode_draw"]</button>
                             <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">@T["sign.mode_cert"]</button>
+                            <button type="button" id="modeByo" onclick="setSigMode('byo')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">@T["sign.mode_byo"]</button>
                         </span>
                     </label>
                     <div id="sigDrawWrap" style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
@@ -158,6 +159,28 @@
                         <div id="sigCertHint" class="muted" style="font-size:.78rem;margin-top:8px">
                             @Html.Raw(T["sign.cert_hint_html"].Value)
                         </div>
+                    </div>
+                    @* v1.10.36 — Bring-Your-Own-Cert: externer Empfänger lädt
+                       PFX/P12 + Passwort hoch. Server parst rein im Speicher,
+                       verwirft SOFORT, gibt Metadata für den Stempel zurück.
+                       Beim Submit sendet der Browser die Datei ein zweites Mal
+                       (Doppel-Upload statt Server-side-Cache — sicherer). *@
+                    <div id="sigByoWrap" style="display:none;border:2px solid var(--tw-gray-300);border-radius:8px;background:#fff;padding:14px">
+                        <p class="muted" style="font-size:.8rem;margin:0 0 10px 0">@T["sign.byo_hint"]</p>
+                        <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+                            <div class="field" style="flex:2;min-width:200px;margin:0">
+                                <label style="font-size:.8rem">@T["sign.byo_file"]</label>
+                                <input type="file" id="byoFile" accept=".pfx,.p12,application/x-pkcs12"/>
+                            </div>
+                            <div class="field" style="flex:1;min-width:140px;margin:0">
+                                <label style="font-size:.8rem">@T["sign.byo_password"]</label>
+                                <input type="password" id="byoPassword" autocomplete="off"/>
+                            </div>
+                            <button type="button" id="byoValidateBtn" class="btn btn-secondary btn-sm" onclick="validateByoCert()">@T["sign.byo_validate"]</button>
+                        </div>
+                        <div id="byoInfo" class="muted" style="font-size:.9rem;margin-top:10px"></div>
+                        <canvas id="byoPreview" width="720" height="180" style="width:100%;max-height:180px;border:1px solid var(--tw-gray-200);border-radius:6px;margin-top:10px;display:none"></canvas>
+                        <p class="muted" style="font-size:.72rem;margin:8px 0 0 0;font-style:italic">🔒 @T["sign.byo_no_persist_note"]</p>
                     </div>
                 </div>
                 <input type="hidden" name="signatureData" id="signatureData"/>
@@ -303,6 +326,11 @@ window.__sig_i18n = {
     cert_no_default_html: @Json.Serialize(T["sign.cert_no_default_html"].Value),
     cert_load_error: @Json.Serialize(T["sign.cert_load_error"].Value),
     cert_missing_alert: @Json.Serialize(T["sign.cert_missing_alert"].Value),
+    byo_verifying: @Json.Serialize(T["sign.byo_verifying"].Value),
+    byo_invalid: @Json.Serialize(T["sign.byo_invalid"].Value),
+    byo_valid_html: @Json.Serialize(T["sign.byo_valid_html"].Value),
+    byo_validate: @Json.Serialize(T["sign.byo_validate"].Value),
+    login_as_user: @Json.Serialize(T["sign.login_as_user"].Value),
     stamp_headline: @Json.Serialize(T["sign.stamp_headline"].Value),
     stamp_time_prefix: @Json.Serialize(T["sign.stamp_time_prefix"].Value),
     stamp_thumb_prefix: @Json.Serialize(T["sign.stamp_thumb_prefix"].Value),
@@ -495,6 +523,20 @@ render();
                 return;
             }
             document.getElementById('signatureData').value = certCanvas.toDataURL('image/png');
+        } else if (mode === 'byo') {
+            // BYO-Cert: der Stempel-Canvas wurde in validateByoCert()
+            // gerendert. Wir übernehmen ihn als Bild — die PFX-Bytes
+            // selbst werden NICHT ans Backend geschickt (der Stempel
+            // trägt CN + Thumbprint, das reicht für die visuelle
+            // Signatur). PAdES-B mit dem Empfänger-PFX ist ein
+            // separates Feature.
+            const byoCanvas = document.getElementById('byoPreview');
+            if (!byoCanvas || byoCanvas.style.display === 'none' || !window.__byoReady) {
+                ev.preventDefault();
+                alert(window.__sig_i18n.byo_invalid);
+                return;
+            }
+            document.getElementById('signatureData').value = byoCanvas.toDataURL('image/png');
         } else {
             if (!empty) document.getElementById('signatureData').value = c.toDataURL('image/png');
         }
@@ -503,37 +545,103 @@ render();
     });
 })();
 
-// ── Signatur-Modus: Zeichnen vs. Zertifikat-Stempel ────────────────
+// ── Signatur-Modus: Zeichnen / Default-Cert / Eigenes-Cert ────────
 window.__certReady = false;
+window.__byoReady = false;
 window.setSigMode = async function (mode) {
     document.getElementById('signMode').value = mode;
-    const drawWrap = document.getElementById('sigDrawWrap');
-    const certWrap = document.getElementById('sigCertWrap');
-    const modeDrawBtn = document.getElementById('modeDraw');
-    const modeCertBtn = document.getElementById('modeCert');
-    if (!drawWrap || !certWrap) return;
-    if (mode === 'cert') {
-        drawWrap.style.display = 'none';
-        certWrap.style.display = '';
-        modeDrawBtn.setAttribute('aria-pressed', 'false');
-        modeCertBtn.setAttribute('aria-pressed', 'true');
-        modeCertBtn.style.background = 'var(--tw-white)';
-        modeCertBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,.1)';
-        modeDrawBtn.style.background = '';
-        modeDrawBtn.style.boxShadow = '';
-        await loadCertPreview();
-    } else {
-        drawWrap.style.display = '';
-        certWrap.style.display = 'none';
-        modeDrawBtn.setAttribute('aria-pressed', 'true');
-        modeCertBtn.setAttribute('aria-pressed', 'false');
-        modeDrawBtn.style.background = 'var(--tw-white)';
-        modeDrawBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,.1)';
-        modeCertBtn.style.background = '';
-        modeCertBtn.style.boxShadow = '';
+    const wraps = {
+        draw: document.getElementById('sigDrawWrap'),
+        cert: document.getElementById('sigCertWrap'),
+        byo: document.getElementById('sigByoWrap'),
+    };
+    const btns = {
+        draw: document.getElementById('modeDraw'),
+        cert: document.getElementById('modeCert'),
+        byo: document.getElementById('modeByo'),
+    };
+    if (!wraps.draw || !wraps.cert || !wraps.byo) return;
+    for (const m of ['draw', 'cert', 'byo']) {
+        const active = m === mode;
+        wraps[m].style.display = active ? '' : 'none';
+        if (btns[m]) {
+            btns[m].setAttribute('aria-pressed', active ? 'true' : 'false');
+            btns[m].style.background = active ? 'var(--tw-white)' : '';
+            btns[m].style.boxShadow = active ? '0 1px 3px rgba(0,0,0,.1)' : '';
+        }
     }
+    if (mode === 'cert') await loadCertPreview();
 };
 setSigMode('draw'); // set initial pressed style
+
+// ── Bring-Your-Own-Cert flow ────────────────────────────────────────
+// Upload PFX+password to /sign/{pid}/validate-cert. Server parses in
+// memory, returns metadata JSON, wipes bytes. On success we render the
+// stamp locally on <canvas id="byoPreview">. The actual PFX file stays
+// selected on the file-input — at Submit time the form is re-serialised
+// as FormData so the file rides along a second time. No server-side
+// cache: per Marcus, wir speichern kein fremdes Zertifikat.
+window.validateByoCert = async function () {
+    const info = document.getElementById('byoInfo');
+    const canvas = document.getElementById('byoPreview');
+    const btn = document.getElementById('byoValidateBtn');
+    const fileEl = document.getElementById('byoFile');
+    const pwEl = document.getElementById('byoPassword');
+    window.__byoReady = false;
+    if (!info || !canvas || !btn || !fileEl || !pwEl) return;
+    if (!fileEl.files || fileEl.files.length === 0) {
+        info.textContent = window.__sig_i18n.byo_invalid;
+        info.style.color = 'var(--status-critical, #d33)';
+        return;
+    }
+    btn.disabled = true;
+    const originalBtnText = btn.textContent;
+    btn.textContent = window.__sig_i18n.byo_verifying;
+    info.textContent = '';
+    canvas.style.display = 'none';
+    try {
+        const fd = new FormData();
+        fd.append('pfx', fileEl.files[0]);
+        fd.append('password', pwEl.value || '');
+        // Anti-forgery token: mirror what @@Html.AntiForgeryToken() emits
+        // on the sign form so this POST is accepted the same way as submit.
+        const tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        if (tok) fd.append('__RequestVerificationToken', tok);
+        const url = '/sign/@Model.Me.Id/validate-cert?t=@Model.Token';
+        const r = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+        if (!r.ok) {
+            info.textContent = window.__sig_i18n.byo_invalid;
+            info.style.color = 'var(--status-critical, #d33)';
+            return;
+        }
+        const d = await r.json();
+        renderCertStamp(canvas, {
+            name: d.subjectCommonName,
+            subjectCommonName: d.subjectCommonName,
+            thumbprint: d.thumbprint,
+            isSelfIssued: d.isSelfIssued,
+        });
+        // Format the "geladen"-line. cert_used-style: escape values before
+        // slotting them into the HTML template so a weird CN can't inject.
+        const tpl = window.__sig_i18n.byo_valid_html;
+        const cn = escapeHtml(d.subjectCommonName || '');
+        const issuer = escapeHtml(d.issuerCommonName || '');
+        const thumb = escapeHtml((d.thumbprint || '').slice(0, 16)) + '…';
+        info.innerHTML = tpl
+            .replace('{0}', cn)
+            .replace('{1}', issuer)
+            .replace('{2}', thumb);
+        info.style.color = '';
+        canvas.style.display = '';
+        window.__byoReady = true;
+    } catch (e) {
+        info.textContent = window.__sig_i18n.byo_invalid;
+        info.style.color = 'var(--status-critical, #d33)';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalBtnText || window.__sig_i18n.byo_validate;
+    }
+};
 
 async function loadCertPreview() {
     const info = document.getElementById('sigCertInfo');
@@ -552,11 +660,11 @@ async function loadCertPreview() {
         // content-type or the redirect chain.
         const ct = r.headers.get('content-type') || '';
         if (!ct.includes('application/json')) {
-            info.innerHTML = window.__sig_i18n.cert_needed_login_html;
+            info.innerHTML = renderCertNeededLoginHtml();
             return;
         }
         if (r.status === 401 || r.status === 403) {
-            info.innerHTML = window.__sig_i18n.cert_needed_login_html;
+            info.innerHTML = renderCertNeededLoginHtml();
             return;
         }
         if (r.status === 404) {
@@ -582,6 +690,18 @@ async function loadCertPreview() {
 
 function escapeHtml(s) {
     return String(s || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// v1.10.36: injects a real <a> anchor into the "not signed in" template.
+// The template contains {loginLink} — we swap in a link that carries the
+// current sign URL (path + query = pid + token) so the login page can
+// return the visitor exactly where they were.
+function renderCertNeededLoginHtml() {
+    const tpl = window.__sig_i18n.cert_needed_login_html;
+    const returnUrl = encodeURIComponent(location.pathname + location.search);
+    const linkText = escapeHtml(window.__sig_i18n.login_as_user || 'Sign in');
+    const link = '<a href="/login?returnUrl=' + returnUrl + '">' + linkText + '</a>';
+    return tpl.replace('{loginLink}', link);
 }
 
 function renderCertStamp(canvas, cert) {

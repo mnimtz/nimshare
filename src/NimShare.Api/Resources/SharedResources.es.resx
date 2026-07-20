@@ -1026,7 +1026,7 @@ Abre este enlace para firmar:
   <data name="sign.cert_loading"><value>Cargando certificado …</value></data>
   <data name="sign.cert_hint_html"><value>Si has iniciado sesión y tienes un certificado predeterminado en &lt;a href="/settings/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt;, se usará aquí. El sello contiene tu CN, huella y marca de tiempo — se incrusta en el campo de firma como imagen (igual que una firma dibujada a mano).</value></data>
   <data name="sign.cert_used_html"><value>Certificado usado: &lt;strong&gt;{0}&lt;/strong&gt; — huella &lt;code&gt;{1}&lt;/code&gt;</value></data>
-  <data name="sign.cert_needed_login_html"><value>⚠ El sello por certificado solo está disponible para &lt;strong&gt;usuarios NimShare autenticados&lt;/strong&gt; con un certificado predeterminado. Vuelve a « 🖊 Dibujar », o abre la página de firma tras iniciar sesión.</value></data>
+  <data name="sign.cert_needed_login_html"><value>⚠ El sello con certificado predeterminado es solo para &lt;strong&gt;usuarios NimShare autenticados&lt;/strong&gt;. Cambia a « 🖊 Dibujar » o « 📎 Mi certificado » — o {loginLink} para usar tu predeterminado.</value></data>
   <data name="sign.cert_no_default_html"><value>⚠ No se encontró un certificado predeterminado. Crea uno en &lt;a href="/settings/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt; y márcalo como predeterminado.</value></data>
   <data name="sign.cert_load_error"><value>Error al cargar el certificado:</value></data>
   <data name="sign.extra_fields"><value>Rellena los campos adicionales</value></data>
@@ -1073,4 +1073,14 @@ Abre este enlace para firmar:
   <data name="sign.done_declined"><value>Solicitud rechazada</value></data>
   <data name="sign.done_signed_body"><value>Tu respuesta ha llegado a {0}. Cuando todas las firmas estén completas, recibirás el documento final firmado.</value></data>
   <data name="sign.done_declined_body"><value>Has rechazado la solicitud de firma « {0} ». Se ha informado al iniciador.</value></data>
+  <data name="sign.mode_byo"><value>📎 Mi certificado</value></data>
+  <data name="sign.byo_hint"><value>Sube tu propio archivo PFX/P12 — el certificado se valida en memoria y se descarta al instante, no lo guardamos.</value></data>
+  <data name="sign.byo_file"><value>Archivo PFX / P12</value></data>
+  <data name="sign.byo_password"><value>Contraseña</value></data>
+  <data name="sign.byo_validate"><value>Verificar</value></data>
+  <data name="sign.byo_verifying"><value>Verificando…</value></data>
+  <data name="sign.byo_invalid"><value>No se pudo abrir el certificado. Comprueba el archivo y la contraseña.</value></data>
+  <data name="sign.byo_valid_html"><value>Certificado cargado: &lt;strong&gt;{0}&lt;/strong&gt; — emitido por &lt;em&gt;{1}&lt;/em&gt; — huella &lt;code&gt;{2}&lt;/code&gt;</value></data>
+  <data name="sign.byo_no_persist_note"><value>El archivo se transmite por HTTPS, se procesa solo en memoria del servidor y se borra tras el uso. Nunca se guarda en disco ni en base de datos.</value></data>
+  <data name="sign.login_as_user"><value>Iniciar sesión como usuario NimShare</value></data>
 </root>

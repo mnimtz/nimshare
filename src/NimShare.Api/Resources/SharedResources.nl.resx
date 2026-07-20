@@ -1025,7 +1025,7 @@ Open deze link om te tekenen:
   <data name="sign.cert_loading"><value>Certificaat laden …</value></data>
   <data name="sign.cert_hint_html"><value>Als je bent ingelogd en een standaardcertificaat hebt onder &lt;a href="/settings/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt;, wordt dat hier gebruikt. De stempel bevat je CN, thumbprint en tijdstempel — hij wordt als afbeelding in het handtekeningveld ingebed (zoals een handgetekende handtekening).</value></data>
   <data name="sign.cert_used_html"><value>Gebruikt certificaat: &lt;strong&gt;{0}&lt;/strong&gt; — thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
-  <data name="sign.cert_needed_login_html"><value>⚠ De certificaatstempel is alleen beschikbaar voor &lt;strong&gt;ingelogde NimShare-gebruikers&lt;/strong&gt; met een standaardcertificaat. Ga terug naar « 🖊 Tekenen », of open de ondertekenpagina ingelogd.</value></data>
+  <data name="sign.cert_needed_login_html"><value>⚠ De certificaatstempel via standaardcertificaat is alleen voor &lt;strong&gt;ingelogde NimShare-gebruikers&lt;/strong&gt;. Ga naar « 🖊 Tekenen » of « 📎 Eigen certificaat » — of {loginLink} om je standaardcertificaat te gebruiken.</value></data>
   <data name="sign.cert_no_default_html"><value>⚠ Geen standaardcertificaat gevonden. Maak er een aan onder &lt;a href="/settings/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt; en stel het in als standaard.</value></data>
   <data name="sign.cert_load_error"><value>Fout bij laden certificaat:</value></data>
   <data name="sign.extra_fields"><value>Vul aanvullende velden in</value></data>
@@ -1072,4 +1072,14 @@ Open deze link om te tekenen:
   <data name="sign.done_declined"><value>Aanvraag geweigerd</value></data>
   <data name="sign.done_signed_body"><value>Jouw antwoord is ontvangen door {0}. Als alle handtekeningen binnen zijn, ontvang je het uiteindelijke ondertekende document.</value></data>
   <data name="sign.done_declined_body"><value>Je hebt de handtekeningaanvraag « {0} » geweigerd. De aanvrager is geïnformeerd.</value></data>
+  <data name="sign.mode_byo"><value>📎 Eigen certificaat</value></data>
+  <data name="sign.byo_hint"><value>Upload je eigen PFX/P12 bestand — het certificaat wordt in het geheugen geverifieerd en meteen verwijderd, wij bewaren het niet.</value></data>
+  <data name="sign.byo_file"><value>PFX / P12 bestand</value></data>
+  <data name="sign.byo_password"><value>Wachtwoord</value></data>
+  <data name="sign.byo_validate"><value>Controleren</value></data>
+  <data name="sign.byo_verifying"><value>Controleren…</value></data>
+  <data name="sign.byo_invalid"><value>Certificaat kon niet worden geopend. Controleer het bestand en het wachtwoord.</value></data>
+  <data name="sign.byo_valid_html"><value>Certificaat geladen: &lt;strong&gt;{0}&lt;/strong&gt; — uitgegeven door &lt;em&gt;{1}&lt;/em&gt; — thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
+  <data name="sign.byo_no_persist_note"><value>Het bestand wordt via HTTPS verzonden, alleen in het servergeheugen verwerkt en daarna gewist. Het komt nooit op schijf of in een database.</value></data>
+  <data name="sign.login_as_user"><value>Inloggen als NimShare-gebruiker</value></data>
 </root>

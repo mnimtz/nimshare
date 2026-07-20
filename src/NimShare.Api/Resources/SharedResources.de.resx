@@ -1030,7 +1030,7 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sign.cert_loading"><value>Lade Zertifikat …</value></data>
   <data name="sign.cert_hint_html"><value>Wenn du eingeloggt bist und ein Default-Zertifikat unter &lt;a href="/settings/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; hinterlegt hast, wird es hier verwendet. Der Stempel enthält deinen CN, den Thumbprint und Zeitstempel — er wird als Bild ins Signaturfeld eingebettet (wie eine handgezeichnete Unterschrift).</value></data>
   <data name="sign.cert_used_html"><value>Verwendetes Zertifikat: &lt;strong&gt;{0}&lt;/strong&gt; — Thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
-  <data name="sign.cert_needed_login_html"><value>⚠ Zertifikat-Stempel nur für &lt;strong&gt;angemeldete NimShare-Nutzer&lt;/strong&gt; mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.</value></data>
+  <data name="sign.cert_needed_login_html"><value>⚠ Zertifikat-Stempel via Default-Cert nur für &lt;strong&gt;angemeldete NimShare-Nutzer&lt;/strong&gt;. Wechsle auf „🖊 Zeichnen" oder „📎 Eigenes Zertifikat" — oder {loginLink} um dein Default-Cert zu nutzen.</value></data>
   <data name="sign.cert_no_default_html"><value>⚠ Kein Default-Zertifikat gefunden. Lege eines unter &lt;a href="/settings/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; an und setze es als Default.</value></data>
   <data name="sign.cert_load_error"><value>Fehler beim Laden des Zertifikats:</value></data>
   <data name="sign.extra_fields"><value>Zusätzliche Felder ausfüllen</value></data>
@@ -1077,4 +1077,14 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sign.done_declined"><value>Anforderung abgelehnt</value></data>
   <data name="sign.done_signed_body"><value>Deine Antwort ist bei {0} eingegangen. Nach Abschluss aller Signaturen erhältst du das finale, unterschriebene Dokument.</value></data>
   <data name="sign.done_declined_body"><value>Du hast die Signatur-Anforderung „{0}“ abgelehnt. Der Initiator wurde informiert.</value></data>
+  <data name="sign.mode_byo"><value>📎 Eigenes Zertifikat</value></data>
+  <data name="sign.byo_hint"><value>Lade dein eigenes PFX/P12 hoch — das Zertifikat wird nur im Speicher validiert und sofort verworfen, wir speichern es nicht.</value></data>
+  <data name="sign.byo_file"><value>PFX / P12 Datei</value></data>
+  <data name="sign.byo_password"><value>Passwort</value></data>
+  <data name="sign.byo_validate"><value>Prüfen</value></data>
+  <data name="sign.byo_verifying"><value>Prüfe …</value></data>
+  <data name="sign.byo_invalid"><value>Zertifikat konnte nicht geöffnet werden. Prüfe die Datei und dein Passwort.</value></data>
+  <data name="sign.byo_valid_html"><value>Eigenes Zertifikat geladen: &lt;strong&gt;{0}&lt;/strong&gt; — ausgestellt von &lt;em&gt;{1}&lt;/em&gt; — Thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
+  <data name="sign.byo_no_persist_note"><value>Die Datei wird per HTTPS übertragen, nur im Server-Speicher verarbeitet und danach sofort gelöscht. Sie landet nie in einer Datenbank oder auf Festplatte.</value></data>
+  <data name="sign.login_as_user"><value>Als NimShare-Nutzer anmelden</value></data>
 </root>

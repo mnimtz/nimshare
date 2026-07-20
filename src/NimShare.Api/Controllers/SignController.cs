@@ -116,6 +116,86 @@ public class SignController : Controller
 
     public record SignSubmitReq(string SignatureImagePngBase64, string TypedName);
 
+    /// <summary>
+    /// v1.10.36 — externer Empfänger hat kein NimShare-Account, will aber
+    /// mit einem selbst mitgebrachten PFX/P12 signieren. Diese Route nimmt
+    /// die Datei + Passwort entgegen, parst sie NUR im Speicher, extrahiert
+    /// die Metadaten für den Stempel (CN, Thumbprint, Aussteller) und
+    /// verwirft die Bytes + das Passwort SOFORT. Keine Persistenz.
+    ///
+    /// Marcus-Vorgabe: "wir wollen kein fremdes speichern". Deshalb kein
+    /// Cache, keine Session, keine DB — der Client muss bei Submit die
+    /// Datei nochmal senden (Doppel-Upload ist die einzige belegbare Form
+    /// von Nicht-Speichern).
+    /// </summary>
+    [HttpPost("/sign/{pid:guid}/validate-cert")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ValidateOwnCert(Guid pid, string t, IFormFile? pfx, string? password, CancellationToken ct)
+    {
+        var (req, p) = await ResolveAsync(pid, t, ct);
+        if (req is null || p is null) return NotFound();
+        if (p.Role != SignatureParticipantRole.Signer)
+            return BadRequest(new { detail = "Only signers can attach a certificate" });
+        if (pfx is null || pfx.Length == 0) return BadRequest(new { detail = "No file uploaded" });
+        // 2 MB cap — a legitimate PFX is 4–20 KB. Anything above is either
+        // wrong content or an OOM attempt.
+        if (pfx.Length > 2 * 1024 * 1024) return BadRequest(new { detail = "PFX too large" });
+
+        byte[] bytes;
+        using (var ms = new MemoryStream((int)pfx.Length))
+        {
+            await pfx.CopyToAsync(ms, ct);
+            bytes = ms.ToArray();
+        }
+        try
+        {
+            using var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+                bytes,
+                password ?? "",
+                System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.EphemeralKeySet);
+            var subjectCn = ExtractCn(cert.Subject) ?? cert.Subject;
+            var issuerCn = ExtractCn(cert.Issuer) ?? cert.Issuer;
+            var isSelfIssued = string.Equals(cert.Subject, cert.Issuer, StringComparison.OrdinalIgnoreCase);
+            return Ok(new
+            {
+                subjectCommonName = subjectCn,
+                issuerCommonName = issuerCn,
+                thumbprint = cert.Thumbprint,
+                isSelfIssued,
+                notBefore = cert.NotBefore.ToUniversalTime(),
+                notAfter = cert.NotAfter.ToUniversalTime(),
+            });
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            // Wrong password or malformed PFX. Do NOT leak which — both cases
+            // look the same to a real user ("prüfe die Datei und dein Passwort").
+            return BadRequest(new { detail = "cert.invalid_or_wrong_password" });
+        }
+        finally
+        {
+            // Wipe the PFX bytes from managed memory. Not a security guarantee
+            // (GC may have shuffled copies) but it eliminates the obvious
+            // straight-through-heap trace during the response tail.
+            Array.Clear(bytes, 0, bytes.Length);
+        }
+    }
+
+    // v1.10.36: extract "CN=..." from an X.500 DN. cert.Subject is a comma-
+    // joined DN and the CN comes with commas inside quoted values sometimes;
+    // this is deliberately naive because we only need it for a display stamp.
+    private static string? ExtractCn(string dn)
+    {
+        if (string.IsNullOrWhiteSpace(dn)) return null;
+        foreach (var part in dn.Split(','))
+        {
+            var p = part.Trim();
+            if (p.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                return p.Substring(3).Trim();
+        }
+        return null;
+    }
+
     /// <summary>Sign submission — persists signature image(s), marks participant Signed,
     /// finalises the request if this was the last one.</summary>
     [HttpPost("/sign/{pid:guid}/submit")]

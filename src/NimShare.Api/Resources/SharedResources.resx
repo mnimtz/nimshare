@@ -1024,7 +1024,7 @@ Please open this link to sign:
   <data name="sign.cert_loading"><value>Loading certificate …</value></data>
   <data name="sign.cert_hint_html"><value>If you are signed in and have a default certificate stored under &lt;a href="/settings/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt;, it will be used here. The stamp shows your CN, thumbprint and timestamp — it is embedded into the signature field as an image (just like a hand-drawn signature).</value></data>
   <data name="sign.cert_used_html"><value>Certificate used: &lt;strong&gt;{0}&lt;/strong&gt; — thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
-  <data name="sign.cert_needed_login_html"><value>⚠ The certificate stamp is only available to &lt;strong&gt;signed-in NimShare users&lt;/strong&gt; with a default certificate. Switch back to "🖊 Draw", or open the signing page while signed in.</value></data>
+  <data name="sign.cert_needed_login_html"><value>⚠ The certificate stamp is only available to &lt;strong&gt;signed-in NimShare users&lt;/strong&gt; with a default certificate. Switch to "🖊 Draw" or "📎 Own certificate" — or {loginLink} to use your default.</value></data>
   <data name="sign.cert_no_default_html"><value>⚠ No default certificate found. Create one under &lt;a href="/settings/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt; and mark it as the default.</value></data>
   <data name="sign.cert_load_error"><value>Failed to load the certificate:</value></data>
   <data name="sign.extra_fields"><value>Fill in additional fields</value></data>
@@ -1071,4 +1071,14 @@ Please open this link to sign:
   <data name="sign.done_declined"><value>Request declined</value></data>
   <data name="sign.done_signed_body"><value>Your response has reached {0}. Once every signer is done you will receive the final signed document.</value></data>
   <data name="sign.done_declined_body"><value>You declined the signature request „{0}“. The initiator has been notified.</value></data>
+  <data name="sign.mode_byo"><value>📎 Own certificate</value></data>
+  <data name="sign.byo_hint"><value>Upload your own PFX/P12 file — the certificate is validated in memory and discarded immediately, we never store it.</value></data>
+  <data name="sign.byo_file"><value>PFX / P12 file</value></data>
+  <data name="sign.byo_password"><value>Password</value></data>
+  <data name="sign.byo_validate"><value>Verify</value></data>
+  <data name="sign.byo_verifying"><value>Verifying…</value></data>
+  <data name="sign.byo_invalid"><value>Could not open the certificate. Check the file and the password.</value></data>
+  <data name="sign.byo_valid_html"><value>Own certificate loaded: &lt;strong&gt;{0}&lt;/strong&gt; — issued by &lt;em&gt;{1}&lt;/em&gt; — thumbprint &lt;code&gt;{2}&lt;/code&gt;</value></data>
+  <data name="sign.byo_no_persist_note"><value>The file is transferred over HTTPS, parsed only in server memory and cleared after use. It never touches the database or disk.</value></data>
+  <data name="sign.login_as_user"><value>Sign in as NimShare user</value></data>
 </root>
