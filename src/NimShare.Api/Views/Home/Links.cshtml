@@ -184,7 +184,7 @@ async function sendEmail() {
     if (!to) return;
     const r = await api('POST', `/api/v1/links/${linkId}/send-email`, { toEmail: to, message: msg });
     document.getElementById('modalEmail').classList.remove('open');
-    if (r.ok) nimAlert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status, { kind: 'error' });
+    if (r.ok) nimToast(@Json.Serialize(T["links.email.sent"].Value), { kind: 'success' }); else nimAlert('Failed: ' + r.status, { kind: 'error' });
 }
 </script>
 

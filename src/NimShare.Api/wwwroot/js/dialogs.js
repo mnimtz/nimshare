@@ -117,8 +117,23 @@
                 function onKey(ev) {
                     if (ev.key === 'Escape') { ev.preventDefault(); close(isConfirm ? false : true); }
                     else if (ev.key === 'Enter' && document.activeElement?.tagName !== 'TEXTAREA') {
+                        // v1.10.55 Safety: bei danger-Confirms fokussiert
+                        // openDialog absichtlich den Cancel-Button. Wenn der
+                        // User dann Enter drückt, resolve false (nicht true) —
+                        // sonst wäre der Delete-Confirm mit Enter genauso
+                        // gefährlich wie ohne Dialog. Enter auf einem konkret
+                        // fokussierten Button folgt dem Button (activeElement
+                        // check), sonst falls kein Focus → sicher-Seite (Cancel
+                        // bei danger, OK sonst).
                         ev.preventDefault();
-                        close(true);
+                        const active = document.activeElement;
+                        if (isConfirm && active?.classList.contains('nim-dialog-cancel')) {
+                            close(false);
+                        } else if (isConfirm && danger && !active?.classList.contains('nim-dialog-primary')) {
+                            close(false);
+                        } else {
+                            close(true);
+                        }
                     }
                 }
 

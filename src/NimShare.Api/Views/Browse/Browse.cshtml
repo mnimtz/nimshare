@@ -597,7 +597,7 @@ async function performMove() {
         if (r.ok) ok++; else fail++;
     }
     document.getElementById('modalMove').classList.remove('open');
-    if (fail) nimAlert(ok + ' moved, ' + fail + ' failed'); else location.reload(, { kind: 'error' });
+    if (fail) nimAlert(ok + ' moved, ' + fail + ' failed', { kind: 'warning' }); else location.reload();
 }
 
 // ── Semantic search ───────────────────────────────────────────
