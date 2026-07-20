@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using NimShare.Core.Data;
@@ -25,12 +26,16 @@ public class SignatureFinalizerService : ISignatureFinalizerService
     private readonly IHttpClientFactory _http;
     private readonly IStringLocalizer<SharedResources> _l;
     private readonly ILogger<SignatureFinalizerService> _log;
+    private readonly IPdfSignatureService _pdfSign;
+    private readonly IDataProtectionProvider _dp;
 
     public SignatureFinalizerService(NimShareDbContext db, IBlobStorageService blobs,
         ISignaturePdfService sig, IUserNotifier inApp, IHttpClientFactory http,
-        IStringLocalizer<SharedResources> localizer, ILogger<SignatureFinalizerService> log)
+        IStringLocalizer<SharedResources> localizer, ILogger<SignatureFinalizerService> log,
+        IPdfSignatureService pdfSign, IDataProtectionProvider dp)
     {
         _db = db; _blobs = blobs; _sig = sig; _in = inApp; _http = http; _l = localizer; _log = log;
+        _pdfSign = pdfSign; _dp = dp;
     }
 
     public async Task TryFinalizeAsync(Guid requestId, CancellationToken ct = default)
@@ -75,6 +80,49 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             }
 
             var finalBytes = await _sig.RenderFinalAsync(req, srcBytes, sigImages, ct);
+
+            // v1.10.16 — embed a real PAdES-B cryptographic signature using
+            // the initiator's default certificate (if any). Every byte of the
+            // visually-flattened PDF is covered by SHA-256 hash inside a
+            // PKCS#7 SignedData that Adobe Reader validates natively (green
+            // padlock). Silent fallback if no cert: ship the unsigned PDF as
+            // before.
+            var initiatorCert = await _db.SigningCertificates
+                .Where(c => c.OwnerUserId == req.InitiatorUserId && c.NotAfter > DateTimeOffset.UtcNow)
+                .OrderByDescending(c => c.IsDefault)
+                .ThenByDescending(c => c.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+            string? cryptoSigInfo = null;
+            if (initiatorCert is not null)
+            {
+                try
+                {
+                    var protector = _dp.CreateProtector("NimShare.SigningCertificate.v1");
+                    var signed = _pdfSign.SignPdf(finalBytes, initiatorCert, protector,
+                        signerName: req.Initiator?.DisplayName ?? "NimShare user",
+                        reasonText: "Signature workflow — all participants signed",
+                        locationText: "NimShare",
+                        out var failure);
+                    if (failure is null && signed.Length > finalBytes.Length)
+                    {
+                        finalBytes = signed;
+                        initiatorCert.LastUsedAt = DateTimeOffset.UtcNow;
+                        initiatorCert.UseCount++;
+                        cryptoSigInfo = $"PKCS#7 attached (SHA-256) — cert {initiatorCert.SubjectCommonName} / {initiatorCert.Thumbprint[..16]}…";
+                        _log.LogInformation("PAdES signature embedded for {ReqId} using cert {CN}",
+                            req.Id, initiatorCert.SubjectCommonName);
+                    }
+                    else if (failure is not null)
+                    {
+                        _log.LogWarning("PAdES signing skipped for {ReqId}: {Failure}", req.Id, failure);
+                        cryptoSigInfo = "unsigned — " + failure;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "PAdES signing threw for {ReqId}", req.Id);
+                }
+            }
             var finalName = System.IO.Path.GetFileNameWithoutExtension(req.SourceFile.Name) + " (signed).pdf";
             var finalPath = $"users/{req.InitiatorUserId:N}/signatures/{req.Id:N}.pdf";
             using var upMs = new MemoryStream(finalBytes);
@@ -111,6 +159,7 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             _db.SignatureAudits.Add(new SignatureAudit
             {
                 RequestId = req.Id, Kind = SignatureAuditKind.Finalized,
+                Note = cryptoSigInfo,
             });
 
             var prev = CultureInfo.CurrentUICulture;

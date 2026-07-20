@@ -532,6 +532,40 @@ public class SignaturesController : ControllerBase
         return File(ms, "application/pdf");
     }
 
+    /// <summary>Verify the embedded PAdES signature of a finalized request's
+    /// signed PDF. Downloads the final blob, re-hashes the byte range covered
+    /// by /ByteRange, and reports whether the crypto matches. Auth-guarded to
+    /// initiator + admin (v1.10.16).</summary>
+    [HttpGet("{id:guid}/verify")]
+    public async Task<IActionResult> VerifySignature(Guid id,
+        [FromServices] IBlobStorageService blobs,
+        [FromServices] IPdfSignatureService pdfSign,
+        CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests.Include(x => x.FinalFile)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r is null) return NotFound();
+        if (r.InitiatorUserId != me.Id && me.Role != UserRole.Admin) return Forbid();
+        if (r.FinalFile is null) return Problem(statusCode: 409, title: "Request not finalized yet.");
+        var ms = new MemoryStream();
+        await blobs.DownloadToAsync(r.FinalFile.BlobPath, ms, ct);
+        var verdict = pdfSign.Verify(ms.ToArray());
+        if (verdict is null)
+            return Ok(new { signed = false, message = "No embedded PAdES signature found. This PDF was finalized without an initiator certificate." });
+        return Ok(new
+        {
+            signed = true,
+            cryptoValid = verdict.CryptoValid,
+            coverageComplete = verdict.CoverageComplete,
+            signer = verdict.SignerCommonName,
+            thumbprint = verdict.Thumbprint,
+            validFrom = verdict.NotBefore,
+            validTo = verdict.NotAfter,
+            diagnostic = verdict.Diagnostic,
+        });
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
