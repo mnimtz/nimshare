@@ -748,6 +748,11 @@ public interface IAiGatewayService
     /// <summary>Decrypt and return the plain-text API key — used by the
     /// list-models endpoint. Returns null if no key is saved.</summary>
     Task<string?> GetApiKeyAsync(CancellationToken ct = default);
+
+    /// <summary>Sticky reason the last CreateProviderAsync fell back to
+    /// NullAiProvider — visible to controllers so 502 messages can name the
+    /// actual cause (missing key, unwrap-failed, endpoint invalid).</summary>
+    string? LastProviderCreationFailure { get; }
 }
 
 public class AiGatewayService : IAiGatewayService
@@ -807,14 +812,29 @@ public class AiGatewayService : IAiGatewayService
         catch { return null; }
     }
 
+    public string? LastProviderCreationFailure { get; private set; }
+
     public async Task<IAiProvider> CreateProviderAsync(CancellationToken ct = default)
     {
+        LastProviderCreationFailure = null;
         var s = await LoadAsync(ct);
-        if (s.Provider == AiProvider.Disabled || string.IsNullOrEmpty(s.ApiKeyEncrypted))
+        if (s.Provider == AiProvider.Disabled)
+        {
+            LastProviderCreationFailure = "AI-Gateway ist deaktiviert (settings.Provider=Disabled). Gehe zu /settings/ai und wähle einen Provider.";
             return new NullAiProvider();
+        }
+        if (string.IsNullOrEmpty(s.ApiKeyEncrypted))
+        {
+            LastProviderCreationFailure = $"Kein API-Key gespeichert für Provider={s.Provider}. Feld ist im DB-Objekt leer — gib den Key in /settings/ai neu ein und speichere.";
+            return new NullAiProvider();
+        }
         string apiKey;
         try { apiKey = _protector.Unprotect(s.ApiKeyEncrypted); }
-        catch { return new NullAiProvider(); }
+        catch (Exception ex)
+        {
+            LastProviderCreationFailure = $"API-Key kann nicht entschlüsselt werden ({ex.GetType().Name}: {ex.Message}). Meist Azure App Service DataProtection-Keys weg (Neustart ohne persistenten Key-Ring). Gib den Key in /settings/ai NEU ein und speichere — dann wird er mit dem aktuellen Ring re-verschlüsselt.";
+            return new NullAiProvider();
+        }
         var http = _httpFactory.CreateClient();
         return s.Provider switch
         {

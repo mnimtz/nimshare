@@ -89,18 +89,17 @@ public class AiController : ControllerBase
             summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
             {
-                // v1.10.18: include the concrete provider TYPE in the fallback
-                // so we can see server-side (and now client-side too) what's
-                // actually configured — the previous "may not support image
-                // input" message was ambiguous when the real cause was e.g.
-                // provider Disabled or API-key missing (→ NullAiProvider).
+                // v1.10.20: NullAiProvider gets the specific reason from the
+                // gateway (missing key vs. unprotect failed vs. Disabled).
                 var openErr = (provider as OpenAiProvider)?.LastError;
                 var geminiErr = (provider as GeminiProvider)?.LastError;
-                var detail = openErr ?? geminiErr
-                    ?? $"AI provider is {provider.GetType().Name} (model: {settings.Model ?? "-"}). No error text was returned — the provider likely lacks vision support at this model, or the SDK ate an exception. Check server logs.";
+                var anthErr = (provider as AnthropicProvider)?.LastError;
+                var creationFailure = provider is NullAiProvider ? _ai.LastProviderCreationFailure : null;
+                var detail = openErr ?? geminiErr ?? anthErr ?? creationFailure
+                    ?? $"AI provider is {provider.GetType().Name} (model: {settings.Model ?? "-"}). Provider gab keinen Text und keine Fehler-Ursache zurück — Server-Log prüfen.";
                 log.LogWarning(
-                    "Vision returned no result. Provider={ProviderType} Model={Model} File={FileId} ContentType={ContentType} OpenErr={OpenErr} GeminiErr={GeminiErr}",
-                    provider.GetType().Name, settings.Model, file.Id, contentTypeLower, openErr, geminiErr);
+                    "Vision returned no result. Provider={ProviderType} Model={Model} File={FileId} ContentType={ContentType} OpenErr={OpenErr} GeminiErr={GeminiErr} AnthErr={AnthErr} CreateErr={CreateErr}",
+                    provider.GetType().Name, settings.Model, file.Id, contentTypeLower, openErr, geminiErr, anthErr, creationFailure);
                 return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
             }
         }
@@ -152,11 +151,16 @@ public class AiController : ControllerBase
         else
         {
             draft = await provider.DraftShareEmailAsync(me.DisplayName, link.File.Name, req.Context, lang, ct);
-            if (string.IsNullOrWhiteSpace(draft) && provider is OpenAiProvider op) err = op.LastError;
+            if (string.IsNullOrWhiteSpace(draft))
+            {
+                err = (provider as OpenAiProvider)?.LastError
+                    ?? (provider as AnthropicProvider)?.LastError
+                    ?? (provider is NullAiProvider ? _ai.LastProviderCreationFailure : null);
+            }
         }
         if (string.IsNullOrWhiteSpace(draft))
             return Problem(statusCode: 502, title: "Draft empty.",
-                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
+                detail: err ?? $"AI-Provider {provider.GetType().Name} (Model={settings.Model ?? "-"}) lieferte weder Text noch Fehlerursache. Server-Log prüfen.");
         return Ok(new { draft });
     }
 
@@ -219,9 +223,7 @@ public class AiController : ControllerBase
             {
                 err = (provider as OpenAiProvider)?.LastError
                     ?? (provider as AnthropicProvider)?.LastError
-                    ?? (provider is NullAiProvider
-                        ? $"AI-Provider ist deaktiviert oder API-Key fehlt (settings.Provider={settings.Provider}, settings.Model={settings.Model ?? "-"}). Prüfe /settings/ai."
-                        : null);
+                    ?? (provider is NullAiProvider ? _ai.LastProviderCreationFailure : null);
             }
         }
         if (string.IsNullOrWhiteSpace(raw))
@@ -486,11 +488,16 @@ public class AiController : ControllerBase
         else
         {
             draft = await provider.DraftUploadRequestAsync(me.DisplayName, req.RecipientEmail, req.Context, lang, ct);
-            if (string.IsNullOrWhiteSpace(draft) && provider is OpenAiProvider op) err = op.LastError;
+            if (string.IsNullOrWhiteSpace(draft))
+            {
+                err = (provider as OpenAiProvider)?.LastError
+                    ?? (provider as AnthropicProvider)?.LastError
+                    ?? (provider is NullAiProvider ? _ai.LastProviderCreationFailure : null);
+            }
         }
         if (string.IsNullOrEmpty(draft))
             return Problem(statusCode: 502, title: "Draft empty.",
-                detail: err ?? "Provider returned no text — check API key, quota, or model availability.");
+                detail: err ?? $"AI-Provider {provider.GetType().Name} (Model={settings.Model ?? "-"}) lieferte weder Text noch Fehlerursache. Server-Log prüfen.");
         return Ok(new { draft });
     }
 }
