@@ -736,6 +736,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="sig.detail.audit.declined"><value>Abgelehnt</value></data>
   <data name="sig.detail.audit.cancelled"><value>Zurückgezogen</value></data>
   <data name="sig.detail.audit.finalized"><value>Anforderung abgeschlossen</value></data>
+  <data name="sig.confirm_delete"><value>Diese Signatur-Anfrage mit allen Teilnehmern, Feldern und Audit-Einträgen löschen? Das kann nicht rückgängig gemacht werden.</value></data>
 
   <data name="nav.sig.overview"><value>Übersicht</value></data>
   <data name="nav.sig.templates"><value>Email-Templates</value></data>

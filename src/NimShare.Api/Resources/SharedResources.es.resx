@@ -732,6 +732,7 @@ Abre el enlace:
   <data name="sig.detail.audit.declined"><value>Rechazado</value></data>
   <data name="sig.detail.audit.cancelled"><value>Cancelado</value></data>
   <data name="sig.detail.audit.finalized"><value>Solicitud finalizada</value></data>
+  <data name="sig.confirm_delete"><value>¿Eliminar esta solicitud de firma con todos los participantes, campos y entradas de auditoría? Esta acción no se puede deshacer.</value></data>
 
   <data name="nav.sig.overview"><value>Resumen</value></data>
   <data name="nav.sig.templates"><value>Plantillas de correo</value></data>

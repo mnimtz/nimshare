@@ -731,6 +731,7 @@ Open de link:
   <data name="sig.detail.audit.declined"><value>Geweigerd</value></data>
   <data name="sig.detail.audit.cancelled"><value>Geannuleerd</value></data>
   <data name="sig.detail.audit.finalized"><value>Verzoek voltooid</value></data>
+  <data name="sig.confirm_delete"><value>Dit handtekeningverzoek met alle deelnemers, velden en audit-items verwijderen? Dit kan niet ongedaan worden gemaakt.</value></data>
 
   <data name="nav.sig.overview"><value>Overzicht</value></data>
   <data name="nav.sig.templates"><value>E-mailtemplates</value></data>

@@ -27,8 +27,9 @@
     </div>
 </div>
 
-<dialog id="editor" style="border:0;border-radius:12px;padding:0;max-width:520px;width:92%">
-    <form method="dialog" style="padding:20px" onsubmit="return saveContact(event)">
+<div class="modal-backdrop" id="editor">
+  <div class="modal-panel" style="max-width:520px">
+    <form onsubmit="return saveContact(event)">
         <h3 style="margin-top:0" id="editor-title">@T["contacts.editor_title"]</h3>
         <input type="hidden" id="c-id"/>
         <div class="field">
@@ -53,14 +54,20 @@
             <textarea id="c-notes" rows="3"></textarea>
         </div>
         <div class="actions">
-            <button type="button" class="btn btn-ghost" onclick="document.getElementById('editor').close()">@T["common.cancel"]</button>
+            <button type="button" class="btn btn-ghost" onclick="closeDlg('editor')">@T["common.cancel"]</button>
             <button class="btn btn-primary">💾 @T["common.save"]</button>
         </div>
     </form>
-</dialog>
+  </div>
+</div>
 
 @section Scripts {
 <script>
+// Use the app-wide .modal-backdrop pattern instead of <dialog>+showModal;
+// the native dialog element renders as inline block in the top-left on
+// iOS Safari and some mobile Chromes.
+function openDlg(id){ document.getElementById(id).classList.add('open'); }
+function closeDlg(id){ document.getElementById(id).classList.remove('open'); }
 async function api(m,u,b){const o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()}
 function esc(s){return String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(d){return d?new Date(d).toLocaleDateString():'—'}
@@ -97,7 +104,7 @@ async function openEditor(id) {
         document.getElementById('c-tags').value = c.tags || '';
         document.getElementById('c-notes').value = '';
     }
-    document.getElementById('editor').showModal();
+    openDlg('editor');
 }
 async function saveContact(ev) {
     ev.preventDefault();
@@ -112,7 +119,7 @@ async function saveContact(ev) {
     try {
         if (id) await api('PATCH', '/api/v1/contacts/' + id, body);
         else await api('POST', '/api/v1/contacts', body);
-        document.getElementById('editor').close();
+        closeDlg('editor');
         reload();
     } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
     return false;

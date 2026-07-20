@@ -732,6 +732,7 @@ Ouvrez le lien :
   <data name="sig.detail.audit.declined"><value>Refusé</value></data>
   <data name="sig.detail.audit.cancelled"><value>Annulé</value></data>
   <data name="sig.detail.audit.finalized"><value>Demande finalisée</value></data>
+  <data name="sig.confirm_delete"><value>Supprimer cette demande de signature avec tous les participants, champs et entrées d'audit ? Cette action est irréversible.</value></data>
 
   <data name="nav.sig.overview"><value>Aperçu</value></data>
   <data name="nav.sig.templates"><value>Modèles d'e-mail</value></data>

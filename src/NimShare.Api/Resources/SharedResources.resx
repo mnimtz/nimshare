@@ -730,6 +730,7 @@ Open the link:
   <data name="sig.detail.audit.declined"><value>Declined</value></data>
   <data name="sig.detail.audit.cancelled"><value>Cancelled</value></data>
   <data name="sig.detail.audit.finalized"><value>Request finalised</value></data>
+  <data name="sig.confirm_delete"><value>Delete this signature request and all its participants, fields and audit entries? This cannot be undone.</value></data>
 
   <data name="nav.sig.overview"><value>Overview</value></data>
   <data name="nav.sig.templates"><value>Email templates</value></data>

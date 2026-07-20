@@ -152,6 +152,27 @@ public class SignaturesController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Delete an entire signature request — cascades participants,
+    /// fields, and audits. Refuses on Completed requests unless caller is the
+    /// initiator (a signed workflow is legally interesting; keep it around by
+    /// default). The source file and any FinalFile are left in place.</summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var reqRow = await _db.SignatureRequests.FindAsync(new object[] { id }, ct);
+        if (reqRow is null) return NotFound();
+        if (reqRow.InitiatorUserId != me.Id) return Forbid();
+
+        var pids = await _db.SignatureParticipants.Where(p => p.RequestId == id).Select(p => p.Id).ToListAsync(ct);
+        _db.SignatureAudits.RemoveRange(_db.SignatureAudits.Where(a => a.RequestId == id));
+        _db.SignatureFields.RemoveRange(_db.SignatureFields.Where(f => f.RequestId == id));
+        _db.SignatureParticipants.RemoveRange(_db.SignatureParticipants.Where(p => p.RequestId == id));
+        _db.SignatureRequests.Remove(reqRow);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpPost("{id:guid}/fields")]
     public async Task<IActionResult> AddField(Guid id, [FromBody] AddFieldReq req, CancellationToken ct)
     {

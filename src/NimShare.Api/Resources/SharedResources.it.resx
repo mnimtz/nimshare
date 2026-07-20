@@ -732,6 +732,7 @@ Apri il link:
   <data name="sig.detail.audit.declined"><value>Rifiutato</value></data>
   <data name="sig.detail.audit.cancelled"><value>Annullato</value></data>
   <data name="sig.detail.audit.finalized"><value>Richiesta completata</value></data>
+  <data name="sig.confirm_delete"><value>Eliminare questa richiesta di firma con tutti i partecipanti, campi e voci di audit? L'operazione non è reversibile.</value></data>
 
   <data name="nav.sig.overview"><value>Panoramica</value></data>
   <data name="nav.sig.templates"><value>Template email</value></data>
