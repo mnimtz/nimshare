@@ -28,12 +28,13 @@ public class ShareController : Controller
     private readonly IStringLocalizer<SharedResources> _t;
     private readonly StorageOptions _storage;
     private readonly NimShareDbContext _db;
+    private readonly IGeoIpService _geo;
 
     public ShareController(
         ILinkAccessService access, IPasswordHasher hasher, IBlobStorageService blobs,
         IIpHashService iphash, INotificationService notify,
         IStringLocalizer<SharedResources> t, IOptions<StorageOptions> storage,
-        NimShareDbContext db)
+        NimShareDbContext db, IGeoIpService geo)
     {
         _access = access;
         _hasher = hasher;
@@ -43,6 +44,19 @@ public class ShareController : Controller
         _t = t;
         _storage = storage.Value;
         _db = db;
+        _geo = geo;
+    }
+
+    // v1.10.42 — kleiner Helper: liefert (country, city, device) für den
+    // Link-Report. Timezone kommt hier nicht — Landing ist GET, ohne
+    // JS-Beacon können wir sie nicht ermitteln.
+    private async Task<(string? Country, string? City, string? Device)> LandingForensicsAsync(CancellationToken ct)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var ua = HttpContext.Request.Headers.UserAgent.ToString();
+        var device = DeviceTypeParser.Classify(ua);
+        var (country, city) = await _geo.LookupAsync(ip, ct);
+        return (country, city, device);
     }
 
     [HttpGet("{slug}")]
@@ -60,9 +74,11 @@ public class ShareController : Controller
             var folder = await db.Folders.FindAsync(new object[] { folderId }, ct);
             if (folder is null) return View("NotFound");
             var files = await folderSvc.ListFilesAsync(folder, ct);
+            var lf0 = await LandingForensicsAsync(ct);
             await _access.LogAsync(link, ShareLinkAccessKind.Landing,
                 _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
-                Request.Headers.UserAgent, Request.Headers.Referer, ct);
+                Request.Headers.UserAgent, Request.Headers.Referer,
+                lf0.Country, lf0.City, lf0.Device, timezone: null, ct);
             // Folder shares now honour the same template-resolution as file
             // shares: link creator's personal template ALWAYS wins first, then
             // the folder-owner's (Personal-scope only), else Global. Passing
@@ -98,9 +114,11 @@ public class ShareController : Controller
         }
 
         // Log the landing hit (fire-and-forget-ish, but awaited so we don't lose it).
+        var lf1 = await LandingForensicsAsync(ct);
         await _access.LogAsync(link, ShareLinkAccessKind.Landing,
             _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
-            Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            Request.Headers.UserAgent, Request.Headers.Referer,
+            lf1.Country, lf1.City, lf1.Device, timezone: null, ct);
 
         var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, link.OwnerId, ct);
         return View("Landing", new LandingViewModel(
@@ -258,10 +276,12 @@ public class ShareController : Controller
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
         var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        var lfDl = await LandingForensicsAsync(ct);
         if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
         {
             await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail,
-                ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+                ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+                lfDl.Country, lfDl.City, lfDl.Device, timezone: null, ct);
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
         }
@@ -270,7 +290,8 @@ public class ShareController : Controller
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
         await _access.LogAsync(link, ShareLinkAccessKind.Download,
-            ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+            lfDl.Country, lfDl.City, lfDl.Device, timezone: null, ct);
 
         await _notify.NotifyDownloadAsync(link, ipHash, ct);
 
@@ -290,9 +311,11 @@ public class ShareController : Controller
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
         var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        var lfFf = await LandingForensicsAsync(ct);
         if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
         {
-            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+                lfFf.Country, lfFf.City, lfFf.Device, timezone: null, ct);
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
         }
@@ -302,7 +325,8 @@ public class ShareController : Controller
 
         if (!await _access.TryConsumeDownloadAsync(link, ct))
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
-        await _access.LogAsync(link, ShareLinkAccessKind.Download, ipHash, Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        await _access.LogAsync(link, ShareLinkAccessKind.Download, ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+            lfFf.Country, lfFf.City, lfFf.Device, timezone: null, ct);
         await _notify.NotifyDownloadAsync(link, ipHash, ct);
         var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType);
         return Redirect(sas.ToString());

@@ -21,12 +21,42 @@ public class SignController : Controller
     private readonly IIpHashService _iphash;
     private readonly ISignaturePdfService _sig;
     private readonly IUserNotifier _in;
+    private readonly IGeoIpService _geo;
 
     public SignController(NimShareDbContext db, IPasswordHasher hasher,
         IBlobStorageService blobs, IIpHashService iphash,
-        ISignaturePdfService sig, IUserNotifier inApp)
+        ISignaturePdfService sig, IUserNotifier inApp, IGeoIpService geo)
     {
-        _db = db; _hasher = hasher; _blobs = blobs; _iphash = iphash; _sig = sig; _in = inApp;
+        _db = db; _hasher = hasher; _blobs = blobs; _iphash = iphash; _sig = sig; _in = inApp; _geo = geo;
+    }
+
+    // v1.10.42 — extrahiert die vom Client mitgeschickte Timezone (IANA-
+    // Id) aus dem Form-Feld "clientTz". Vorsichtige Validation:
+    // nur [A-Za-z0-9_/+-] und max 60 Zeichen, damit kein Junk in die
+    // DB landet.
+    private static string? ReadTimezone(HttpRequest req)
+    {
+        if (!req.HasFormContentType) return null;
+        var tz = req.Form["clientTz"].ToString();
+        if (string.IsNullOrWhiteSpace(tz) || tz.Length > 60) return null;
+        foreach (var c in tz)
+        {
+            if (!(char.IsLetterOrDigit(c) || c == '/' || c == '_' || c == '-' || c == '+')) return null;
+        }
+        return tz;
+    }
+
+    // v1.10.42 — sammelt Country/City/Device/Timezone für Persistenz in
+    // SignatureAudit. Ein Aufruf pro Event; die Werte gehen in
+    // ausgehende Audit-Zeilen (Signed / Declined / Reassigned).
+    private async Task<(string? Country, string? City, string? Device, string? Timezone)> ForensicsAsync(CancellationToken ct)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var ua = HttpContext.Request.Headers.UserAgent.ToString();
+        var device = DeviceTypeParser.Classify(ua);
+        var tz = ReadTimezone(HttpContext.Request);
+        var (country, city) = await _geo.LookupAsync(ip, ct);
+        return (country, city, device, tz);
     }
 
     /// <summary>Participant landing — HTML page with the signature UI.</summary>
@@ -45,10 +75,17 @@ public class SignController : Controller
             p.ViewedAt = DateTimeOffset.UtcNow;
             p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
             p.UserAgent = Request.Headers.UserAgent;
+            // v1.10.42 — beim Landing haben wir noch keinen Timezone-
+            // Header (Landing ist GET, clientTz kommt nur mit Form-POST).
+            // Trotzdem Country + City + Device einloggen, das ist der
+            // "wann und woher hat er den Link geöffnet"-Datenpunkt.
+            var vf = await ForensicsAsync(ct);
             _db.SignatureAudits.Add(new SignatureAudit
             {
                 RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Viewed,
                 IpHash = p.IpHash, UserAgent = p.UserAgent,
+                Country = vf.Country, City = vf.City,
+                DeviceType = vf.Device, Timezone = vf.Timezone,
             });
             await _db.SaveChangesAsync(ct);
         }
@@ -318,6 +355,7 @@ public class SignController : Controller
         p.Status = SignatureParticipantStatus.Signed;
         p.SignedAt = now;
         p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        var f = await ForensicsAsync(ct);
         _db.SignatureAudits.Add(new SignatureAudit
         {
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Signed,
@@ -326,7 +364,12 @@ public class SignController : Controller
             // the audit trail can distinguish hand-drawn from cert-stamped.
             Note = string.Equals(signMode, "cert", StringComparison.OrdinalIgnoreCase)
                 ? "signed via certificate stamp"
-                : null,
+                : (string.Equals(signMode, "byo", StringComparison.OrdinalIgnoreCase)
+                    ? "signed via own certificate"
+                    : null),
+            // v1.10.42 — forensische Zusatzdaten für Beweiskraft.
+            Country = f.Country, City = f.City,
+            DeviceType = f.Device, Timezone = f.Timezone,
         });
 
         // Persist the Signed status BEFORE any long-running work.
@@ -383,10 +426,15 @@ public class SignController : Controller
         p.Status = SignatureParticipantStatus.Declined;
         p.DeclinedReason = reason;
         req.Status = SignatureRequestStatus.Declined;
+        var declF = await ForensicsAsync(ct);
         _db.SignatureAudits.Add(new SignatureAudit
         {
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Declined,
             Note = reason,
+            IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+            UserAgent = HttpContext.Request.Headers.UserAgent.ToString(),
+            Country = declF.Country, City = declF.City,
+            DeviceType = declF.Device, Timezone = declF.Timezone,
         });
         await _db.SaveChangesAsync(ct);
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?

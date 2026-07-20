@@ -222,6 +222,26 @@
                             @a.At.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
                             @if (!string.IsNullOrEmpty(a.Note)) { <span> · <code>@a.Note</code></span> }
                         </div>
+                        @{
+                            // v1.10.42: forensische Zusatzinfo pro Audit-Zeile.
+                            // Nur anzeigen wenn wir tatsächlich Daten haben,
+                            // sonst bleibt die Zeile aufgeräumt.
+                            var pieces = new List<string>();
+                            if (!string.IsNullOrEmpty(a.Country))
+                            {
+                                pieces.Add(string.IsNullOrEmpty(a.City) ? a.Country : $"{a.City}, {a.Country}");
+                            }
+                            if (!string.IsNullOrEmpty(a.DeviceType) && a.DeviceType != "Unknown")
+                                pieces.Add(a.DeviceType);
+                            if (!string.IsNullOrEmpty(a.Timezone))
+                                pieces.Add(a.Timezone);
+                        }
+                        @if (pieces.Count > 0)
+                        {
+                            <div class="muted" style="font-size:11px;margin-top:2px">
+                                <span title="Forensic info">🌐 @string.Join(" · ", pieces)</span>
+                            </div>
+                        }
                     </div>
                 }
                 </div>
@@ -235,7 +255,7 @@
                 <a class="btn btn-secondary" href="/api/v1/signatures/@Model.Id/source-pdf" target="_blank">📄 @T["sig.detail.view_source"]</a>
                 @if (Model.FinalFileId is Guid finalId)
                 {
-                    <a class="btn btn-primary" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+                    <a class="btn btn-primary" href="/api/v1/signatures/@Model.Id/signed-pdf" target="_blank" rel="noopener">📥 @T["sig.signed_pdf"]</a>
                 }
             </div>
         </div>

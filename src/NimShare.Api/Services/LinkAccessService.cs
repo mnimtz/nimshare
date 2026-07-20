@@ -9,6 +9,12 @@ public interface ILinkAccessService
     Task<ShareLink?> FindActiveAsync(string slug, CancellationToken ct = default);
 
     Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default);
+    // v1.10.42 — Overload mit forensischen Feldern für Link-Reports.
+    // country/city aus GeoIP-Auflösung, device aus User-Agent-Heuristik,
+    // timezone (aktuell noch nicht befüllt bei Landings — nur Signaturen
+    // schicken die TZ per POST).
+    Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
+        string? country, string? city, string? device, string? timezone, CancellationToken ct = default);
 
     /// <summary>
     /// Atomically increments <see cref="ShareLink.DownloadCount"/> for a link that is still
@@ -29,7 +35,11 @@ public class LinkAccessService : ILinkAccessService
             .Include(x => x.Owner)
             .SingleOrDefaultAsync(x => x.Slug == slug, ct);
 
-    public async Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)
+    public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)
+        => LogAsync(link, kind, ipHash, ua, referer, country: null, city: null, device: null, timezone: null, ct);
+
+    public async Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
+        string? country, string? city, string? device, string? timezone, CancellationToken ct = default)
     {
         _db.ShareLinkAccesses.Add(new ShareLinkAccess
         {
@@ -38,6 +48,10 @@ public class LinkAccessService : ILinkAccessService
             IpHash = ipHash,
             UserAgent = ua,
             Referer = referer,
+            CountryCode = country,
+            City = city,
+            DeviceType = device,
+            Timezone = timezone,
         });
         link.HitCount++;
         link.LastAccessAt = DateTimeOffset.UtcNow;

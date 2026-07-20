@@ -141,4 +141,16 @@ public class SignatureAudit
     public string? IpHash { get; set; }
     public string? UserAgent { get; set; }
     public string? Note { get; set; }
+
+    // v1.10.42: forensische Zusatzdaten für Beweiskraft der Signatur.
+    // Alle nullable — kein Provider konfiguriert / kein JS → bleibt leer.
+    // ISO-3166 zweistelliger Ländercode via IGeoIpService.
+    public string? Country { get; set; }
+    // Stadt aus dem GeoIP-Provider (nur wenn konfiguriert).
+    public string? City { get; set; }
+    // "Desktop" | "Mobile" | "Tablet" | "Bot" — Heuristik aus User-Agent.
+    public string? DeviceType { get; set; }
+    // IANA-Zeitzonen-Id vom Browser (Intl.DateTimeFormat), z.B. "Europe/Berlin".
+    // Bei Legacy-Browsern oder JS-off bleibt leer.
+    public string? Timezone { get; set; }
 }

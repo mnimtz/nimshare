@@ -185,6 +185,10 @@
                 </div>
                 <input type="hidden" name="signatureData" id="signatureData"/>
                 <input type="hidden" name="signMode" id="signMode" value="draw"/>
+                @* v1.10.42: IANA-Timezone vom Browser → SignatureAudit.Timezone.
+                   Beweis-Indiz für Forensik-Report ("Signer war zur Signatur-
+                   zeit in Berlin"). Wird beim Ready-Event via JS gefüllt. *@
+                <input type="hidden" name="clientTz" id="clientTz"/>
 
                 @* Sonstige Felder (Text/Datum/Checkbox), die der Initiator platziert hat —
                    der Signer muss sie hier ausfüllen. Signature-Felder werden über die
@@ -233,6 +237,7 @@
 
         <form method="post" action="/sign/@Model.Me.Id/decline?t=@Model.Token" id="declineForm" style="display:none;margin-top:12px">
             @Html.AntiForgeryToken()
+            <input type="hidden" name="clientTz" />
             <div class="field">
                 <label>@T["sign.reason_optional"]</label>
                 <textarea name="reason" rows="2" maxlength="500"></textarea>
@@ -311,6 +316,18 @@
      "Wird gesendet…", "Hier unterschreiben", "Digital signiert" etc.
      automatisch in der Browser-Sprache — kein hardcoded Deutsch mehr. -->
 <script>
+// v1.10.42: Timezone-Auto-Fill für alle Hidden-Fields "clientTz" auf
+// dieser Seite. Intl liefert eine IANA-Id wie "Europe/Berlin". Wir
+// füllen alle Felder mit dem Namen "clientTz" — sowohl im Submit-
+// Form als auch im Decline-Form falls dort auch eins ist (Decline
+// baue ich im v1.10.42 auch mit Timezone-Feld, Skript ist ready).
+(function () {
+    try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        document.querySelectorAll('input[name="clientTz"]').forEach(el => { el.value = tz; });
+    } catch { /* Legacy-Browser ohne Intl.timeZone — dann leer lassen */ }
+})();
+
 window.__sig_i18n = {
     doc_load_failed: @Json.Serialize(T["sign.doc_load_failed"].Value),
     placeholder_here: @Json.Serialize(T["sign.placeholder_here"].Value),

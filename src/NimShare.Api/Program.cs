@@ -314,6 +314,17 @@ builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 builder.Services.AddSingleton<ITimeService, TimeService>();
 builder.Services.AddScoped<ISlugService, SlugService>();
 builder.Services.AddSingleton<IIpHashService, IpHashService>();
+// v1.10.42 — GeoIp-Auflösung für Signatur-Audit + Link-Report. Default
+// Null (kein externer Call, keine DSGVO-Frage). Wenn Marcus
+// "NimShare:GeoIp:Provider" = "IpApiCo" in appsettings setzt, wird
+// stattdessen ipapi.co (HTTPS, kein Key, 1000 req/day) verwendet.
+{
+    var geoProvider = builder.Configuration["NimShare:GeoIp:Provider"];
+    if (string.Equals(geoProvider, "IpApiCo", StringComparison.OrdinalIgnoreCase))
+        builder.Services.AddSingleton<IGeoIpService, IpApiCoGeoIpService>();
+    else
+        builder.Services.AddSingleton<IGeoIpService, NullGeoIpService>();
+}
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<ILinkAccessService, LinkAccessService>();

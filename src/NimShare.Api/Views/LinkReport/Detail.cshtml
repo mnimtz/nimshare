@@ -128,8 +128,9 @@
                         <tr>
                             <th>Wann</th>
                             <th>Typ</th>
+                            <th>Ort</th>
+                            <th>Gerät</th>
                             <th>Herkunft</th>
-                            <th>User-Agent</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -141,11 +142,19 @@
                             ShareLinkAccessKind.PasswordFail => "chip-critical",
                             _ => "chip-warn",
                         };
+                        // v1.10.42: Ort-Zelle kombiniert City + CountryCode.
+                        // Beides null → "—" damit die Zelle nicht leer wirkt.
+                        var loc = !string.IsNullOrEmpty(e.City)
+                            ? (!string.IsNullOrEmpty(e.CountryCode) ? $"{e.City}, {e.CountryCode}" : e.City)
+                            : (e.CountryCode ?? "—");
                         <tr>
                             <td class="muted">@e.At.ToString("dd.MM. HH:mm:ss")</td>
                             <td><span class="chip @badge">@e.Kind</span></td>
-                            <td class="mono" style="font-size:.75rem">@(string.IsNullOrEmpty(e.Referer) ? "(direct)" : e.Referer)</td>
-                            <td class="muted" style="font-size:.72rem;max-width:260px;overflow:hidden;text-overflow:ellipsis">@e.UserAgent</td>
+                            <td>@loc</td>
+                            <td>@(string.IsNullOrEmpty(e.DeviceType) || e.DeviceType == "Unknown" ? "—" : e.DeviceType)</td>
+                            <td class="mono" style="font-size:.75rem" title="@e.UserAgent">
+                                @(string.IsNullOrEmpty(e.Referer) ? "(direct)" : e.Referer)
+                            </td>
                         </tr>
                     }
                     </tbody>

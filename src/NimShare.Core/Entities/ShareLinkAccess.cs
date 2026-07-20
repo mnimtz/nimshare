@@ -24,4 +24,12 @@ public class ShareLinkAccess
     public string? UserAgent { get; set; }
     public string? Referer { get; set; }
     public string? CountryCode { get; set; }
+    // v1.10.42: gleiche forensische Felder wie SignatureAudit. City nur
+    // wenn ein GeoIP-Provider konfiguriert ist der auf Stadt-Ebene auflöst.
+    public string? City { get; set; }
+    // "Desktop" | "Mobile" | "Tablet" | "Bot" — aus User-Agent-Heuristik.
+    public string? DeviceType { get; set; }
+    // IANA-TZ vom Browser via /beacon. Erste Iteration: nur Signaturen
+    // schicken die TZ, hier bleibt es meist null.
+    public string? Timezone { get; set; }
 }
