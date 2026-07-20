@@ -1102,4 +1102,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="slug.normalised_prefix"><value>wordt opgeslagen als</value></data>
   <data name="slug.suggestions"><value>probeer:</value></data>
   <data name="sig.section.abandoned"><value>Geweigerd / geannuleerd</value></data>
+  <data name="sig.detail.forensics_title"><value>Handtekening-bewijs</value></data>
+  <data name="sig.detail.forensics_hint"><value>Metadata vastgelegd op het moment van ondertekenen — locatie (uit IP), apparaattype, tijdzone. Niet gedeeld met de ondertekenaar.</value></data>
 </root>

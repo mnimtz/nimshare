@@ -1101,4 +1101,6 @@ Thanks for using NimShare.</value></data>
   <data name="slug.normalised_prefix"><value>will be saved as</value></data>
   <data name="slug.suggestions"><value>try:</value></data>
   <data name="sig.section.abandoned"><value>Declined / cancelled</value></data>
+  <data name="sig.detail.forensics_title"><value>Signature evidence</value></data>
+  <data name="sig.detail.forensics_hint"><value>Metadata captured at the moment of signing — location (from IP), device type, timezone. Not shared with the signer.</value></data>
 </root>

@@ -50,6 +50,13 @@ public class User
     /// <summary>Preferred UI language — one of en/fr/it/de/es.</summary>
     public string PreferredCulture { get; set; } = "en";
 
+    /// <summary>
+    /// v1.10.50: IANA-Zeitzonen-Id für die Display-Formatierung.
+    /// Wenn null/leer → falls back auf die Server-Timezone (siehe
+    /// TimeService). Sonst zeigt jeder User seine eigene Zeit.
+    /// </summary>
+    public string? PreferredTimezone { get; set; }
+
     /// <summary>TOTP secret (base32) — null when 2FA isn't enrolled. When set,
     /// login demands a valid 6-digit code after password verification.</summary>
     public string? TotpSecret { get; set; }

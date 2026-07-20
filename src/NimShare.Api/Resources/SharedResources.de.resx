@@ -1107,4 +1107,6 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="slug.normalised_prefix"><value>wird gespeichert als</value></data>
   <data name="slug.suggestions"><value>Vorschläge:</value></data>
   <data name="sig.section.abandoned"><value>Abgelehnt / abgebrochen</value></data>
+  <data name="sig.detail.forensics_title"><value>Signatur-Beweise</value></data>
+  <data name="sig.detail.forensics_hint"><value>Metadaten aus dem Moment der Signatur — Standort (aus IP), Gerätetyp, Zeitzone. Wird dem Unterzeichnenden nicht gezeigt.</value></data>
 </root>

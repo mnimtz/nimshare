@@ -1103,4 +1103,6 @@ Gracias por usar NimShare.</value></data>
   <data name="slug.normalised_prefix"><value>se guardará como</value></data>
   <data name="slug.suggestions"><value>prueba:</value></data>
   <data name="sig.section.abandoned"><value>Rechazados / cancelados</value></data>
+  <data name="sig.detail.forensics_title"><value>Pruebas de la firma</value></data>
+  <data name="sig.detail.forensics_hint"><value>Metadatos capturados en el momento de firmar — ubicación (a partir de IP), tipo de dispositivo, zona horaria. No se comparten con el firmante.</value></data>
 </root>

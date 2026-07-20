@@ -657,6 +657,8 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         ("ShareLinkAccesses", "City", "TEXT", "nvarchar(80)"),
         ("ShareLinkAccesses", "DeviceType", "TEXT", "nvarchar(20)"),
         ("ShareLinkAccesses", "Timezone", "TEXT", "nvarchar(60)"),
+        // v1.10.50: Per-User Timezone-Preference
+        ("Users", "PreferredTimezone", "TEXT", "nvarchar(60)"),
     };
     foreach (var w in wanted)
     {

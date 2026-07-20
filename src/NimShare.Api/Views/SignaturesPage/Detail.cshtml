@@ -49,10 +49,58 @@
         }
         @if (Model.FinalFileId is Guid ff)
         {
-            <a class="btn btn-primary" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+            <a class="btn btn-primary" href="/api/v1/signatures/@Model.Id/signed-pdf" target="_blank" rel="noopener">📥 @T["sig.signed_pdf"]</a>
         }
     </div>
 </div>
+
+@{
+    // v1.10.50: Beweis-Karte prominent oben. Zeigt pro Signer den Standort
+    // (Land/Stadt), Device und Timezone aus dem letzten Signed-Audit — das
+    // ist die Kern-Info für den forensischen Wert der Signatur. Nur wenn
+    // wirklich etwas erfasst wurde und der Vorgang nicht mehr Draft ist.
+    var signedAudits = audits
+        .Where(a => a.Kind == SignatureAuditKind.Signed && a.ParticipantId is not null)
+        .GroupBy(a => a.ParticipantId!.Value)
+        .Select(g => g.OrderByDescending(a => a.At).First())
+        .ToList();
+    var hasForensics = signedAudits.Any(a =>
+        !string.IsNullOrEmpty(a.Country) || !string.IsNullOrEmpty(a.City)
+        || !string.IsNullOrEmpty(a.DeviceType) || !string.IsNullOrEmpty(a.Timezone));
+}
+@if (hasForensics && Model.Status != SignatureRequestStatus.Draft)
+{
+    <div class="card" style="margin-top:16px;border-left:3px solid var(--status-ok,#2a7f2a);background:rgba(42,127,42,.04)">
+        <h2 class="card-title" style="margin-top:0">🔐 @T["sig.detail.forensics_title"]</h2>
+        <p class="muted" style="margin:4px 0 10px 0;font-size:.85rem">@T["sig.detail.forensics_hint"]</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+            @foreach (var a in signedAudits)
+            {
+                var p = Model.Participants.FirstOrDefault(x => x.Id == a.ParticipantId!.Value);
+                if (p is null) { continue; }
+                var loc = !string.IsNullOrEmpty(a.City)
+                    ? (!string.IsNullOrEmpty(a.Country) ? $"{a.City}, {a.Country}" : a.City!)
+                    : (a.Country ?? "—");
+                <div style="border:1px solid var(--tw-gray-200);border-radius:8px;padding:10px 12px;background:#fff">
+                    <div style="font-weight:600">@p.Name</div>
+                    <div class="muted" style="font-size:.8rem">@p.Email</div>
+                    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;font-size:.82rem">
+                        <span class="chip">🌍 @loc</span>
+                        @if (!string.IsNullOrEmpty(a.DeviceType) && a.DeviceType != "Unknown")
+                        {
+                            <span class="chip">📱 @a.DeviceType</span>
+                        }
+                        @if (!string.IsNullOrEmpty(a.Timezone))
+                        {
+                            <span class="chip">🕐 @a.Timezone</span>
+                        }
+                    </div>
+                    <div class="muted" style="font-size:.75rem;margin-top:6px">@a.At.ToString("yyyy-MM-dd HH:mm 'UTC'")</div>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 <div class="row sig-detail-cols" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
     <!-- Participants + delivery -->
