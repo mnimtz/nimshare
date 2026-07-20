@@ -1129,12 +1129,19 @@ async function fi_save() {
     // Wire click-navigation: rebuild the URL from the label path by walking up
     // through the tree JSON.
     const idToPath = {};
-    function buildPaths(node, path) {
-        const next = node.name === scope && path.length === 0 ? [] : [...path, node.name];
+    // v1.10.38: vorher wurde JEDER Node dessen Name mit dem Scope-Namen
+    // übereinstimmte als "Scope-Wurzel" behandelt (next=[]). Ein
+    // User-erstellter Unter-Ordner namens "Public" im Public-Scope bekam
+    // damit denselben Link wie die echte Wurzel → Klick brachte zurück
+    // zu /browse/public statt in den Ordner → Loop. Der echte Root ist
+    // strukturell der oberste Node im JSON, nicht der mit passendem
+    // Namen. isScopeRoot=true fließt nur beim allerersten Aufruf.
+    function buildPaths(node, path, isScopeRoot) {
+        const next = isScopeRoot ? [] : [...path, node.name];
         idToPath[node.id] = next;
-        (node.children || []).forEach(c => buildPaths(c, next));
+        (node.children || []).forEach(c => buildPaths(c, next, false));
     }
-    roots.forEach(r => buildPaths(r, []));
+    roots.forEach(r => buildPaths(r, [], true));
     const urlBase = panel.dataset.urlBase;
     // Tree links go through /browse/folder/{id} — the pretty-path scheme
     // 404'd on names ending in "." (e.g. "Business - Production.") because
