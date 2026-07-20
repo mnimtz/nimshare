@@ -153,7 +153,10 @@
             </div>
 
             <a href="/wiki" class="@Active("/wiki")">📚 @T["nav.wiki"]</a>
-            <a href="/notifications" class="@Exact("/notifications")">🔔 @T["nav.notifications"]</a>
+            <a href="/notifications" class="@Exact("/notifications")" id="navNotifications">
+                🔔 @T["nav.notifications"]
+                <span id="navNotifBadge" class="nav-badge" style="display:none"></span>
+            </a>
             <a href="/activity"  class="@Exact("/activity")">🕐 @T["nav.activity"]</a>
             <a href="/ai/chat"   class="@Active("/ai/chat")">✨ @T["nav.chat"]</a>
 
@@ -336,6 +339,24 @@
         }
         window.nsPrompt = (title, message, defaultValue) => open('prompt', title, message, defaultValue);
         window.nsConfirm = (title, message) => open('confirm', title, message);
+    })();
+
+    // ── Unread notification badge — polled every 60 s ─────────
+    (function () {
+        const el = document.getElementById('navNotifBadge');
+        if (!el) return;
+        async function refresh() {
+            try {
+                const r = await fetch('/api/v1/notifications/unread-count', { credentials: 'same-origin' });
+                if (!r.ok) return;
+                const d = await r.json();
+                const n = d.unreadCount || d.count || 0;
+                if (n > 0) { el.textContent = n > 99 ? '99+' : String(n); el.style.display = ''; }
+                else { el.style.display = 'none'; }
+            } catch {}
+        }
+        refresh();
+        setInterval(refresh, 60000);
     })();
 
     // ── Avatar-popover with profile shortcut ─────────────────────

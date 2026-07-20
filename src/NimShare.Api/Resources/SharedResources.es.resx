@@ -733,6 +733,12 @@ Abre el enlace:
   <data name="sig.detail.audit.cancelled"><value>Cancelado</value></data>
   <data name="sig.detail.audit.finalized"><value>Solicitud finalizada</value></data>
   <data name="sig.confirm_delete"><value>¿Eliminar esta solicitud de firma con todos los participantes, campos y entradas de auditoría? Esta acción no se puede deshacer.</value></data>
+  <data name="notifications.lede"><value>Eventos que te conciernen — compartidos contigo, descargas de tus enlaces, mensajes del sistema.</value></data>
+  <data name="notifications.empty_title"><value>Sin notificaciones</value></data>
+  <data name="notifications.empty_hint"><value>Cuando ocurra algo aparecerá aquí.</value></data>
+  <data name="notifications.mark_read"><value>Marcar como leída</value></data>
+  <data name="notifications.mark_all_read"><value>Marcar todas como leídas</value></data>
+  <data name="notifications.open"><value>Abrir</value></data>
 
   <data name="nav.sig.overview"><value>Resumen</value></data>
   <data name="nav.sig.templates"><value>Plantillas de correo</value></data>

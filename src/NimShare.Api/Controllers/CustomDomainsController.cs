@@ -64,16 +64,27 @@ public class CustomDomainsController : ControllerBase
         var domain = await _db.CustomDomains.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == user.Id, ct);
         if (domain is null) return NotFound();
 
-        // DNS TXT verification is not implemented yet — we deliberately do NOT
-        // mark the domain as Failed on every call (that led to a permanent
-        // "Failed" chip in the UI). Return 501 so the UI can render an
-        // "install a DNS resolver first" hint instead.
+        // Actually verify via Google DoH — the CheckTxtAsync helper below has
+        // been ready since v1.3 but the endpoint was still returning 501.
+        // "verified" flips the chip green in the UI; "failed" marks it so the
+        // user can retry after fixing DNS. Either way we bump the attempt
+        // timestamp so the UI can show "last checked X ago".
         domain.LastVerificationAttemptAt = DateTimeOffset.UtcNow;
+        var ok = await CheckTxtAsync(domain.Hostname, domain.VerificationToken, ct);
+        domain.VerificationStatus = ok
+            ? CustomDomainVerificationStatus.Verified
+            : CustomDomainVerificationStatus.Failed;
         await _db.SaveChangesAsync(ct);
-        return Problem(
-            statusCode: 501,
-            title: "Domain verification not implemented",
-            detail: "TXT-record verification is a scaffolded stub. Wire DnsClient.NET into CheckTxtAsync to enable it. See docs/CUSTOM_DOMAINS.md.");
+        return Ok(new
+        {
+            verified = ok,
+            status = domain.VerificationStatus.ToString(),
+            hostname = domain.Hostname,
+            expectedTxt = domain.VerificationToken,
+            hint = ok
+                ? "TXT-Record wurde gefunden. Domain ist verifiziert."
+                : $"TXT-Record fehlt oder passt nicht. Trage exakt diesen Wert auf _nimshare-verify.{domain.Hostname} als TXT ein und probiere in 1–5 min erneut.",
+        });
     }
 
     [HttpGet]

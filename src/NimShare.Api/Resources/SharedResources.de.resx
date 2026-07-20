@@ -737,6 +737,12 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="sig.detail.audit.cancelled"><value>Zurückgezogen</value></data>
   <data name="sig.detail.audit.finalized"><value>Anforderung abgeschlossen</value></data>
   <data name="sig.confirm_delete"><value>Diese Signatur-Anfrage mit allen Teilnehmern, Feldern und Audit-Einträgen löschen? Das kann nicht rückgängig gemacht werden.</value></data>
+  <data name="notifications.lede"><value>Ereignisse, die dich betreffen — Freigaben an dich, Downloads deiner Links, System-Nachrichten.</value></data>
+  <data name="notifications.empty_title"><value>Keine Benachrichtigungen</value></data>
+  <data name="notifications.empty_hint"><value>Sobald etwas passiert, taucht es hier auf.</value></data>
+  <data name="notifications.mark_read"><value>Als gelesen markieren</value></data>
+  <data name="notifications.mark_all_read"><value>Alle als gelesen markieren</value></data>
+  <data name="notifications.open"><value>Öffnen</value></data>
 
   <data name="nav.sig.overview"><value>Übersicht</value></data>
   <data name="nav.sig.templates"><value>Email-Templates</value></data>

@@ -1404,6 +1404,26 @@ body.nav-open { position: relative; }
 .avatar-popover a:hover { background: var(--tw-gray-100); }
 .avatar-popover a.logout { color: var(--status-critical, #d33); border-top: 1px solid var(--tw-gray-200); margin-top: 2px; padding-top: 10px; }
 
+/* Nav-badge for unread notifications, plus visual highlight on unread notif cards. */
+.nav-badge {
+    display: inline-block;
+    background: var(--status-critical, #d33);
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: .72rem;
+    font-weight: 700;
+    margin-left: 6px;
+    line-height: 1.4;
+    min-width: 18px;
+    text-align: center;
+    vertical-align: middle;
+}
+.notif-unread {
+    border-left: 3px solid var(--tw-primary-alt, #00a0fb);
+    background: rgba(0,160,251,.04);
+}
+
 /* ── Main file pane ────────────────────────────────────────────── */
 .fm-main {
     padding: 18px 24px 40px;

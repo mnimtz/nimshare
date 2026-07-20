@@ -732,6 +732,12 @@ Open de link:
   <data name="sig.detail.audit.cancelled"><value>Geannuleerd</value></data>
   <data name="sig.detail.audit.finalized"><value>Verzoek voltooid</value></data>
   <data name="sig.confirm_delete"><value>Dit handtekeningverzoek met alle deelnemers, velden en audit-items verwijderen? Dit kan niet ongedaan worden gemaakt.</value></data>
+  <data name="notifications.lede"><value>Gebeurtenissen die jou aangaan — deelacties naar jou, downloads van je links, systeemberichten.</value></data>
+  <data name="notifications.empty_title"><value>Geen meldingen</value></data>
+  <data name="notifications.empty_hint"><value>Zodra er iets gebeurt verschijnt het hier.</value></data>
+  <data name="notifications.mark_read"><value>Als gelezen markeren</value></data>
+  <data name="notifications.mark_all_read"><value>Alle als gelezen markeren</value></data>
+  <data name="notifications.open"><value>Openen</value></data>
 
   <data name="nav.sig.overview"><value>Overzicht</value></data>
   <data name="nav.sig.templates"><value>E-mailtemplates</value></data>

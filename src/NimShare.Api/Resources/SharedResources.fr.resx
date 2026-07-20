@@ -733,6 +733,12 @@ Ouvrez le lien :
   <data name="sig.detail.audit.cancelled"><value>Annulé</value></data>
   <data name="sig.detail.audit.finalized"><value>Demande finalisée</value></data>
   <data name="sig.confirm_delete"><value>Supprimer cette demande de signature avec tous les participants, champs et entrées d'audit ? Cette action est irréversible.</value></data>
+  <data name="notifications.lede"><value>Événements qui vous concernent — partages vers vous, téléchargements de vos liens, messages système.</value></data>
+  <data name="notifications.empty_title"><value>Aucune notification</value></data>
+  <data name="notifications.empty_hint"><value>Dès qu'il se passe quelque chose, cela apparaîtra ici.</value></data>
+  <data name="notifications.mark_read"><value>Marquer comme lu</value></data>
+  <data name="notifications.mark_all_read"><value>Tout marquer comme lu</value></data>
+  <data name="notifications.open"><value>Ouvrir</value></data>
 
   <data name="nav.sig.overview"><value>Aperçu</value></data>
   <data name="nav.sig.templates"><value>Modèles d'e-mail</value></data>

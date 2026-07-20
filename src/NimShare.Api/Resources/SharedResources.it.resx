@@ -733,6 +733,12 @@ Apri il link:
   <data name="sig.detail.audit.cancelled"><value>Annullato</value></data>
   <data name="sig.detail.audit.finalized"><value>Richiesta completata</value></data>
   <data name="sig.confirm_delete"><value>Eliminare questa richiesta di firma con tutti i partecipanti, campi e voci di audit? L'operazione non è reversibile.</value></data>
+  <data name="notifications.lede"><value>Eventi che ti riguardano — condivisioni a te, download dei tuoi link, messaggi di sistema.</value></data>
+  <data name="notifications.empty_title"><value>Nessuna notifica</value></data>
+  <data name="notifications.empty_hint"><value>Appena succede qualcosa, comparirà qui.</value></data>
+  <data name="notifications.mark_read"><value>Segna come letto</value></data>
+  <data name="notifications.mark_all_read"><value>Segna tutte come lette</value></data>
+  <data name="notifications.open"><value>Apri</value></data>
 
   <data name="nav.sig.overview"><value>Panoramica</value></data>
   <data name="nav.sig.templates"><value>Template email</value></data>
