@@ -2,9 +2,27 @@
 @{
     ViewData["Title"] = "Fertig";
     Layout = "_Layout";
+    var theme = ViewData["Theme"] as NimShare.Api.Controllers.SignLandingTheme;
+    var brandColor = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? null : theme!.PrimaryColor;
+}
+@if (brandColor is not null)
+{
+    <style>
+        .landing-shell { --tw-primary: @brandColor; --tw-primary-alt: @brandColor; }
+        .btn-primary { background: @brandColor !important; border-color: @brandColor !important; }
+    </style>
 }
 <div class="landing-shell">
-    <div class="landing-card" style="max-width:520px;text-align:center">
+    <div class="landing-card" style="max-width:520px;text-align:center;position:relative">
+        @if (!string.IsNullOrEmpty(theme?.OwnerAvatarUrl))
+        {
+            <img src="@theme.OwnerAvatarUrl" alt="@theme.OwnerName" title="@theme.OwnerName"
+                 style="position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(0,0,0,.15);border:2px solid #fff"/>
+        }
+        @if (!string.IsNullOrWhiteSpace(theme?.LogoUrl))
+        {
+            <img src="@theme.LogoUrl" alt="Logo" style="max-height:44px;max-width:180px;object-fit:contain;margin-bottom:12px"/>
+        }
         <div style="font-size:4rem;line-height:1;margin-bottom:12px">@(Model.Signed ? "✅" : "✕")</div>
         <h1 style="margin-top:0">@(Model.Signed ? "Vielen Dank!" : "Anforderung abgelehnt")</h1>
         <p class="muted">
@@ -17,6 +35,15 @@
                 <span>Du hast die Signatur-Anforderung „@Model.Request.Title" abgelehnt. Der Initiator wurde informiert.</span>
             }
         </p>
-        <p class="muted" style="font-size:.75rem;margin-top:24px">Powered by <strong>NimShare</strong></p>
+        <p class="muted" style="font-size:.75rem;margin-top:24px">
+            @if (!string.IsNullOrWhiteSpace(theme?.FooterText))
+            {
+                @theme.FooterText
+            }
+            else
+            {
+                <text>Powered by <strong>NimShare</strong></text>
+            }
+        </p>
     </div>
 </div>

@@ -71,7 +71,37 @@ public class SignController : Controller
             .ToListAsync(ct);
         ViewData["Audits"] = audits;
         ViewData["ParticipantsById"] = participants;
+        ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
         return View("Sign", new SignViewModel(req, p, t));
+    }
+
+    /// <summary>Load the same LandingTemplate an initiator uses for download
+    /// shares (v1.10.6): personal template first, global as fallback. Applied
+    /// to the /sign/{pid} landing so signature invites carry the same brand
+    /// as the initiator's download links — logo, avatar, primary colour,
+    /// header/footer copy.</summary>
+    private async Task<SignLandingTheme> ResolveSignThemeAsync(SignatureRequest req, CancellationToken ct)
+    {
+        NimShare.Core.Entities.LandingTemplate? tpl = null;
+        try
+        {
+            tpl = await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal
+                && x.OwnerUserId == req.InitiatorUserId, ct);
+            tpl ??= await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+        }
+        catch { /* table might be missing on very old DBs — fall through to defaults */ }
+        string? avatarUrl = null;
+        if (req.Initiator is { ShowAvatarOnLandings: true } u)
+        {
+            if (!string.IsNullOrEmpty(u.AvatarBlobPath)) avatarUrl = $"/avatars/{u.Id:N}";
+            else if (!string.IsNullOrEmpty(u.AvatarUrl)) avatarUrl = u.AvatarUrl;
+        }
+        return new SignLandingTheme(
+            tpl?.Title, tpl?.Subtitle, tpl?.BodyMarkdown, tpl?.FooterText,
+            tpl?.PrimaryColor, tpl?.LogoUrl, tpl?.HeroUrl,
+            avatarUrl, req.Initiator?.DisplayName ?? "");
     }
 
     /// <summary>Stream the source PDF inline via a short-lived SAS.</summary>
@@ -124,7 +154,8 @@ public class SignController : Controller
                 }
                 catch { }
             });
-            return View("Done", new SignDoneViewModel(req, p, false));
+            ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
+        return View("Done", new SignDoneViewModel(req, p, false));
         }
 
         // Persist signature PNG to blob if provided; else fall back to typed name.
@@ -227,6 +258,7 @@ public class SignController : Controller
             }
         });
 
+        ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
         return View("Done", new SignDoneViewModel(req, p, true));
     }
 
@@ -317,6 +349,7 @@ public class SignController : Controller
             }
         }
         finally { System.Globalization.CultureInfo.CurrentUICulture = declPrev; }
+        ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
         return View("Done", new SignDoneViewModel(req, p, false));
     }
 
@@ -478,6 +511,7 @@ public class SignController : Controller
         }
         finally { System.Globalization.CultureInfo.CurrentUICulture = prevCulture; }
 
+        ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
         return View("Done", new SignDoneViewModel(req, p, false));
     }
 
@@ -635,3 +669,13 @@ public class SignController : Controller
 
 public record SignViewModel(SignatureRequest Request, SignatureParticipant Me, string Token);
 public record SignDoneViewModel(SignatureRequest Request, SignatureParticipant Me, bool Signed);
+
+/// <summary>Landing-Template-Snapshot für die Signatur-Landing (Sign.cshtml
+/// und Done.cshtml). Wird über ViewData["Theme"] durchgereicht — dieselbe
+/// Struktur wie beim Download-Landing (LandingTheme in ShareController),
+/// erweitert um Avatar + Absender-Name für die Sign-spezifische Kopfzeile.
+/// Alle Felder nullable — leerer Theme fällt auf den NimShare-Look zurück.</summary>
+public record SignLandingTheme(
+    string? Title, string? Subtitle, string? BodyMarkdown, string? FooterText,
+    string? PrimaryColor, string? LogoUrl, string? HeroUrl,
+    string? OwnerAvatarUrl, string OwnerName);
