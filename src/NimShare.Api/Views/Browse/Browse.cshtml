@@ -59,10 +59,16 @@
         var parts = ancestry.Skip(1).Take(upTo).Select(a => Uri.EscapeDataString(a.Name));
         return string.Join('/', parts);
     }
-    string FolderUrl(Folder sub)
+    // Folder-URLs go through /browse/folder/{id} so names with trailing dots
+    // ("Business - Production.") or unusual chars don't trip IIS's
+    // request-filtering (which blocks trailing "." segments before ASP.NET
+    // Core routing sees them). ID-based navigation is dot-safe AND survives
+    // renames — see BrowseController.ByFolderId.
+    string FolderUrl(Folder sub) => $"/browse/folder/{sub.Id}";
+    string AncestryUrl(int i)
     {
-        var basePart = urlBase + (current.ParentFolderId is null ? "/" : "/" + SegPath(ancestry.Count - 1) + "/");
-        return basePart + Uri.EscapeDataString(sub.Name);
+        // Root of the scope keeps the pretty URL; deeper crumbs go by ID.
+        return i == 0 ? urlBase : $"/browse/folder/{ancestry[i].Id}";
     }
 }
 
@@ -81,7 +87,7 @@
                 {
                     var isLast = i == ancestry.Count - 1;
                     var name = i == 0 ? scopeTitle : ancestry[i].Name;
-                    var url = i == 0 ? urlBase : (urlBase + "/" + SegPath(i));
+                    var url = AncestryUrl(i);
                     if (isLast) { <span class="fm-crumb-current">@name</span> }
                     else { <a href="@url">@name</a> <span class="fm-crumb-sep">›</span> }
                 }
@@ -1130,13 +1136,16 @@ async function fi_save() {
     }
     roots.forEach(r => buildPaths(r, []));
     const urlBase = panel.dataset.urlBase;
+    // Tree links go through /browse/folder/{id} — the pretty-path scheme
+    // 404'd on names ending in "." (e.g. "Business - Production.") because
+    // Azure/IIS AspNetCoreModule rejects trailing-dot segments before ASP.NET
+    // Core routing sees them. ID-based navigation is deterministic AND
+    // survives folder renames (bookmarks stay valid).
     panel.querySelectorAll('.ft-label').forEach(a => {
         const parts = idToPath[a.dataset.id] || [];
-        const href = parts.length ? (urlBase + '/' + parts.map(encodeURIComponent).join('/')) : urlBase;
+        // Root of the current scope keeps the pretty URL — no ID needed.
+        const href = parts.length === 0 ? urlBase : ('/browse/folder/' + a.dataset.id);
         a.href = href;
-        // Explicit click handler on the label — some browsers (or extensions)
-        // suppress default anchor navigation on programmatically-added <a>
-        // inside dynamically-rendered lists. Belt-and-braces: force the nav.
         a.addEventListener('click', (e) => {
             e.preventDefault();
             location.href = href;
@@ -1150,7 +1159,7 @@ async function fi_save() {
             if (e.target.closest('.ft-toggle')) return;
             if (e.target.closest('.ft-label')) return; // label handles its own
             const a = row.querySelector('.ft-label');
-            if (a && a.href && a.href !== '#' && !a.href.endsWith('#')) {
+            if (a && a.href && !a.href.endsWith('#')) {
                 location.href = a.href;
             }
         });

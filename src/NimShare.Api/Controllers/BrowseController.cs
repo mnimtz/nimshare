@@ -52,6 +52,27 @@ public class BrowseController : Controller
     [HttpGet("group/{groupId:guid}/{**path}")]
     public Task<IActionResult> Group(Guid groupId, string? path, CancellationToken ct) => RenderScope(FileScope.Group, groupId, path, ct);
 
+    /// <summary>
+    /// Resolve a folder by ID and render its scope-appropriate view directly.
+    /// The tree JS uses THIS route (v1.10.8) instead of building name-based
+    /// paths because names can contain trailing dots ("Business - Production.")
+    /// and non-ASCII chars that IIS/AspNetCoreModule request-filtering blocks
+    /// with a 404 before ASP.NET Core routing even sees them. ID-based routing
+    /// is deterministic and dot-safe.
+    /// </summary>
+    [HttpGet("folder/{folderId:guid}")]
+    public async Task<IActionResult> ByFolderId(Guid folderId, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { folderId }, ct);
+        if (folder is null) return NotFound();
+        if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid gid
+            && me.Role != UserRole.Admin && !await _access.IsGroupMemberAsync(me, gid, ct))
+            return Forbid();
+        if (!await _folders.CanReadAsync(folder, me, ct)) return Forbid();
+        return await RenderScopeAtFolder(folder, me, ct);
+    }
+
     private async Task<IActionResult> RenderScope(FileScope scope, Guid? groupId, string? path, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
@@ -91,6 +112,19 @@ public class BrowseController : Controller
         if (current is null) return NotFound();
         if (!await _folders.CanReadAsync(current, me, ct)) return Forbid();
 
+        return await RenderCurrentFolder(current, me, scope, groupId, ct);
+    }
+
+    /// <summary>Shared rendering step for both path-based and ID-based routes.
+    /// Assumes CanRead has already been verified.</summary>
+    private async Task<IActionResult> RenderScopeAtFolder(Folder current, User me, CancellationToken ct)
+    {
+        Guid? groupId = current.Scope == FileScope.Group ? current.OwnerGroupId : null;
+        return await RenderCurrentFolder(current, me, current.Scope, groupId, ct);
+    }
+
+    private async Task<IActionResult> RenderCurrentFolder(Folder current, User me, FileScope scope, Guid? groupId, CancellationToken ct)
+    {
         var subs = await _folders.ListSubfoldersAsync(current, ct);
         var files = await _folders.ListFilesAsync(current, ct);
         var ancestry = await _folders.GetAncestryAsync(current, ct);
