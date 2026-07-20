@@ -344,6 +344,16 @@ using (var scope = app.Services.CreateScope())
                 // to date".
                 await BaselineSqlServerIfNeededAsync(db, scope.ServiceProvider);
             }
+            else
+            {
+                // Rescue path for the v1.9.1-V179 mess: on Sqlite, V179
+                // (a scaffolded-with-wrong-factory garbage migration)
+                // triggered full-table rebuilds and dropped the
+                // Folder.Color / Folder.Emoji columns on deployed
+                // instances. Re-add them idempotently before MigrateAsync
+                // so the Ablage view starts working again.
+                await RepairSqliteMissingColumnsAsync(db, scope.ServiceProvider);
+            }
             await db.Database.MigrateAsync();
             break;
         }
@@ -516,6 +526,63 @@ static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceP
         Console.Error.WriteLine("[STARTUP] Baseline-stamp for SqlServer failed: " + ex.Message);
         // Fall through — MigrateAsync will either succeed on a fresh DB or
         // fail loudly, which is the pre-fix behaviour.
+    }
+}
+
+/// <summary>
+/// Idempotently re-adds columns that v1.9.1's V179 dropped on the Sqlite
+/// side. Runs BEFORE MigrateAsync so the migrator can proceed against a
+/// well-formed schema. Each expected column is probed via
+/// <c>PRAGMA table_info</c>; only missing ones get an ALTER TABLE ADD
+/// COLUMN. Runs on every startup — cheap, safe, and self-heals any Sqlite
+/// DB corrupted by the v1.9.1 deploy.
+/// </summary>
+static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IServiceProvider services)
+{
+    // (table, column, type-and-constraints) tuples for anything V179 might
+    // have dropped. Keep this list narrow — repairs are a last-resort
+    // safety net, not a substitute for real migrations.
+    var expected = new (string Table, string Column, string DdlType)[]
+    {
+        ("Folders", "Color", "TEXT"),
+        ("Folders", "Emoji", "TEXT"),
+    };
+    try
+    {
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        foreach (var (table, column, ddlType) in expected)
+        {
+            bool tableExists;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=$t";
+                var p = cmd.CreateParameter(); p.ParameterName = "$t"; p.Value = table; cmd.Parameters.Add(p);
+                tableExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+            }
+            if (!tableExists) continue;
+            bool columnExists;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = $"SELECT COUNT(1) FROM pragma_table_info('{table}') WHERE name=$c";
+                var p = cmd.CreateParameter(); p.ParameterName = "$c"; p.Value = column; cmd.Parameters.Add(p);
+                columnExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+            }
+            if (columnExists) continue;
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {ddlType}";
+                await cmd.ExecuteNonQueryAsync();
+            }
+            services.GetService<ILoggerFactory>()?.CreateLogger("Startup")
+                ?.LogWarning("Restored missing Sqlite column {Table}.{Column} (dropped by v1.9.1 V179 bug).",
+                    table, column);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] Sqlite column repair failed: " + ex.Message);
+        // Non-fatal — MigrateAsync will surface any real damage.
     }
 }
 
