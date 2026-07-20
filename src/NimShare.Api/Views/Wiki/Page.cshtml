@@ -155,13 +155,13 @@ function isDirty() {
 window.addEventListener('beforeunload', ev => {
     if (isDirty()) { ev.preventDefault(); ev.returnValue = ''; }
 });
-function toggleEdit() {
+async function toggleEdit() {
     const v = document.getElementById('viewMode'), e = document.getElementById('editMode');
     const showEdit = v.style.display !== 'none';
     // Leaving edit mode with unsaved changes → confirm.
     if (!showEdit && isDirty()) {
         const msg = @Json.Serialize(@T["wiki.page.confirm_discard"].Value);
-        if (!confirm(msg)) return;
+        if (!await nimConfirm(msg, { danger: true })) return;
         // Discard: reset the textarea state so beforeunload no longer fires.
         document.getElementById('editTitle').value = originalTitle;
         document.getElementById('editContent').value = originalBody;

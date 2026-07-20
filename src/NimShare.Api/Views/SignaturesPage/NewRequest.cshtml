@@ -397,7 +397,7 @@ function setupDrag(overlay) {
         if (type === 'Signature'
             && fields.some(f => f.participantId === participantId && f.type === 'Signature')) {
             const p = participants.find(x => x.id === participantId);
-            if (!confirm((T.tDuplicateSigField || 'Es gibt bereits ein Signaturfeld für {0}. Trotzdem hinzufügen?').replace('{0}', p ? p.name : '?'))) {
+            if (!await nimConfirm((T.tDuplicateSigField || 'Es gibt bereits ein Signaturfeld für {0}. Trotzdem hinzufügen?').replace('{0}', p ? p.name : '?'))) {
                 box.remove(); return;
             }
         }
@@ -509,7 +509,7 @@ function nextPage() { if (curPage < pdfDoc.numPages) { curPage++; renderPage(); 
 
 async function sendReq() {
     if (fields.filter(f => f.type === 'Signature').length === 0) {
-        if (!confirm(T.tNoSigfield)) return;
+        if (!await nimConfirm(T.tNoSigfield, { danger: true })) return;
     }
     const tpl = document.getElementById('templateId').value;
     const r = await fetch('/api/v1/signatures/' + requestId + '/send' + (tpl ? '?templateId=' + encodeURIComponent(tpl) : ''), {

@@ -123,7 +123,7 @@ async function api(method, path, body) {
 }
 document.querySelectorAll('[data-revoke]').forEach(b => {
     b.addEventListener('click', async () => {
-        if (!confirm(@Json.Serialize(T["links.confirm.revoke"].Value))) return;
+        if (!await nimConfirm(@Json.Serialize(T["links.confirm.revoke"].Value), { danger: true })) return;
         const r = await api('PATCH', `/api/v1/links/${b.dataset.revoke}`, { isRevoked: true });
         if (r.ok) location.reload(); else alert('Failed: ' + r.status);
     });
@@ -137,7 +137,7 @@ document.querySelectorAll('[data-toggle-public]').forEach(b => {
 });
 document.querySelectorAll('[data-delete]').forEach(b => {
     b.addEventListener('click', async () => {
-        if (!confirm(@Json.Serialize(T["links.confirm.delete"].Value))) return;
+        if (!await nimConfirm(@Json.Serialize(T["links.confirm.delete"].Value), { danger: true })) return;
         const r = await api('DELETE', `/api/v1/links/${b.dataset.delete}`);
         if (r.ok) location.reload(); else alert('Failed: ' + r.status);
     });

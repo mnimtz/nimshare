@@ -154,7 +154,8 @@
     @Html.AntiForgeryToken()
                     <button class="btn btn-ghost btn-sm">@(u.IsActive ? @T["users.action.disable"] : @T["users.action.enable"])</button>
                 </form>
-                <form method="post" action="/settings/users/@u.Id/delete" style="display:inline" onsubmit="return confirm('@T["users.confirm.delete"]')">
+                <form method="post" action="/settings/users/@u.Id/delete" style="display:inline"
+                      onsubmit="const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["users.confirm.delete"].Value),{danger:true}))f.submit();})();return false;">
     @Html.AntiForgeryToken()
                     <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)">🗑</button>
                 </form>

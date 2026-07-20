@@ -235,6 +235,10 @@
         @RenderBody()
     </main>
 </div>
+@* v1.10.53 — nimConfirm/nimAlert/nimToast global verfügbar. `defer`
+   damit die Skripte darunter (die noch alte confirm() nutzen bis
+   sie migriert sind) trotzdem laden können. *@
+<script src="~/js/dialogs.js" defer></script>
 <script>
     // Localised labels for the JS helpers below (nsPrompt/nsConfirm/avatar popover).
     window.T_cancel = @Json.Serialize(T["modal.cancel"].Value);

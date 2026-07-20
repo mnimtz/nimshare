@@ -75,7 +75,7 @@ else
 @section Scripts {
 <script>
 async function sigDelete(id) {
-    if (!confirm(@Json.Serialize(T["sig.confirm_delete"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["sig.confirm_delete"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/signatures/' + id, {
         method: 'DELETE', credentials: 'same-origin',
     });

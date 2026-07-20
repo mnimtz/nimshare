@@ -183,7 +183,9 @@
                                     @if (canManage)
                                     {
                                         <button title="@T["actions.rename"]" aria-label="@T["actions.rename"]" onclick="event.stopPropagation();openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
-                                        <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline" onsubmit="return confirm('@T["actions.confirm_delete"]')" onclick="event.stopPropagation()">
+                                        <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline"
+                                              onclick="event.stopPropagation()"
+                                              onsubmit="const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["actions.confirm_delete"].Value),{danger:true}))f.submit();})();return false;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="returnUrl" value="@currentUrl"/>
                                             <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" type="submit">🗑</button>
@@ -393,7 +395,7 @@ async function bulkDelete() {
     const ids = selectedIds();
     if (!ids.length) return;
     const tpl = @Json.Serialize(T["bulk.confirm.delete"].Value);
-    if (!confirm(tpl.replace("{n}", ids.length))) return;
+    if (!await nimConfirm(tpl.replace("{n}", ids.length), { danger: true })) return;
     const r = await fetch('/api/v1/files/bulk-delete', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify({ ids }),
@@ -466,7 +468,7 @@ async function pinFile(fileId) {
     }
 }
 async function unpinFile(fileId) {
-    if (!confirm(@Json.Serialize(T["pin.unpin_confirm"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["pin.unpin_confirm"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/file-pins/' + fileId, { method: 'DELETE', credentials: 'same-origin' });
     if (r.ok || r.status === 404) location.reload(); else alert('Fehler: ' + r.status);
 }

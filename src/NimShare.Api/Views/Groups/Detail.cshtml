@@ -22,7 +22,11 @@
         <a class="btn btn-primary" href="/files/group/@Model.Id">@T["groups.open_files"]</a>
         @if (canManage)
         {
-            <form method="post" action="/groups/@Model.Id/delete" onsubmit="return confirm('@T["groups.confirm.delete"]')" style="display:inline">
+            @* v1.10.53: statt sync onsubmit-confirm → nimConfirm mit
+               preventDefault + async. Form-Ref wird VOR dem await
+               festgehalten damit sie noch gültig ist. *@
+            <form method="post" action="/groups/@Model.Id/delete" style="display:inline"
+                  onsubmit="const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["groups.confirm.delete"].Value),{danger:true}))f.submit();})();return false;">
     @Html.AntiForgeryToken()
                 <button class="btn btn-ghost">@T["groups.delete"]</button>
             </form>

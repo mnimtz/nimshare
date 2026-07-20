@@ -161,7 +161,7 @@ async function wzCreate() {
     }
 }
 async function wzSwitch() {
-    if (!confirm(@Json.Serialize(T["dbset.confirm.switch"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["dbset.confirm.switch"].Value), { danger: true })) return;
     out('<em>' + @Json.Serialize(T["dbset.loading.switch"].Value) + '</em>');
     const p = payload();
     p.copyExistingData = document.getElementById('wzCopyData').checked;
@@ -207,7 +207,7 @@ async function wzSwitch() {
     }
 }
 async function wzRevert() {
-    if (!confirm(@Json.Serialize(T["dbset.confirm.revert"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["dbset.confirm.revert"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/settings/database/revert-to-sqlite', {
         method: 'POST', credentials: 'same-origin',
     });

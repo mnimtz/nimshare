@@ -115,8 +115,8 @@ async function submitToken(ev){ev.preventDefault();const f=ev.target;const body=
 async function submitHook(ev){ev.preventDefault();const f=ev.target;const body={url:f.url.value,secret:f.secret.value,events:f.events.value||null}
     try{await api('POST','/api/v1/dev/webhooks',body);document.getElementById('create-hook-dlg').close();f.reset();loadHooks()}
     catch(e){alert(DT.tError+': '+e.message)}return false}
-async function revokeToken(id){if(!confirm(DT.tConfirmRevoke))return;try{await api('DELETE','/api/v1/dev/tokens/'+id);loadTokens()}catch(e){alert(e.message)}}
-async function deleteHook(id){if(!confirm(DT.tConfirmDelete))return;try{await api('DELETE','/api/v1/dev/webhooks/'+id);loadHooks()}catch(e){alert(e.message)}}
+async function revokeToken(id){if(!await nimConfirm(DT.tConfirmRevoke,{danger:true}))return;try{await api('DELETE','/api/v1/dev/tokens/'+id);loadTokens()}catch(e){nimAlert(e.message,{kind:'error'})}}
+async function deleteHook(id){if(!await nimConfirm(DT.tConfirmDelete,{danger:true}))return;try{await api('DELETE','/api/v1/dev/webhooks/'+id);loadHooks()}catch(e){nimAlert(e.message,{kind:'error'})}}
 loadTokens();loadHooks()
 </script>
 }

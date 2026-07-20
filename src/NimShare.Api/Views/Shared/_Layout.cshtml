@@ -16,5 +16,8 @@
 </head>
 <body>
 @RenderBody()
+@* v1.10.53 — moderne confirm/alert/toast, ersetzt window.confirm() *@
+<script src="~/js/dialogs.js" defer></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
