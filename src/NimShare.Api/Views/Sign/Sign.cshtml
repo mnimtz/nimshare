@@ -14,12 +14,12 @@
 
     string AuditLabel(SignatureAuditKind k) => k switch
     {
-        SignatureAuditKind.Invited => "Eingeladen",
-        SignatureAuditKind.Viewed => "Geöffnet",
-        SignatureAuditKind.Signed => "Unterschrieben",
-        SignatureAuditKind.Declined => "Abgelehnt",
-        SignatureAuditKind.Cancelled => "Abgebrochen",
-        SignatureAuditKind.Finalized => "Abgeschlossen",
+        SignatureAuditKind.Invited => T["sign.audit_invited"].Value,
+        SignatureAuditKind.Viewed => T["sign.audit_viewed"].Value,
+        SignatureAuditKind.Signed => T["sign.audit_signed"].Value,
+        SignatureAuditKind.Declined => T["sign.audit_declined"].Value,
+        SignatureAuditKind.Cancelled => T["sign.audit_cancelled"].Value,
+        SignatureAuditKind.Finalized => T["sign.audit_finalized"].Value,
         _ => k.ToString(),
     };
     string AuditIcon(SignatureAuditKind k) => k switch
@@ -73,7 +73,7 @@
                 <img src="/img/icon-64.png" width="32" height="32" style="border-radius:6px"/>
             }
             <div>
-                <div style="font-size:.8rem;color:var(--tw-muted-blue)">@(string.IsNullOrWhiteSpace(theme?.Subtitle) ? "NimShare Signatur" : theme!.Subtitle!)</div>
+                <div style="font-size:.8rem;color:var(--tw-muted-blue)">@(string.IsNullOrWhiteSpace(theme?.Subtitle) ? T["sign.brand_subtitle_default"].Value : theme!.Subtitle!)</div>
                 <div style="font-weight:700">@(string.IsNullOrWhiteSpace(theme?.Title) ? Model.Request.Title : theme!.Title!)</div>
             </div>
         </div>
@@ -87,11 +87,11 @@
                 @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
             </div>
         }
-        <p class="muted">Hallo <strong>@Model.Me.Name</strong>, @Model.Request.Initiator?.DisplayName bittet dich, dieses Dokument @(isSigner ? "zu unterschreiben" : "zur Kenntnis zu nehmen").</p>
+        <p class="muted">@T["sign.hello"] <strong>@Model.Me.Name</strong>, @Model.Request.Initiator?.DisplayName @(isSigner ? T["sign.asks_you_to_sign"].Value : T["sign.asks_you_to_ack"].Value)</p>
         @if (myFields.Count > 0 && isSigner)
         {
             <div class="card" style="background:rgba(255,198,0,.10);border-left:3px solid var(--tw-yellow);margin:12px 0;padding:10px 14px;font-size:.9rem">
-                💡 Die gelb umrandeten Felder im Dokument zeigen dir, wo deine Unterschrift eingefügt wird — insgesamt <strong>@myFields.Count</strong> Feld(er).
+                💡 @Html.Raw(string.Format(T["sign.field_hint"].Value, $"<strong>{myFields.Count}</strong>"))
             </div>
         }
         @if (!string.IsNullOrEmpty(Model.Request.Message))
@@ -103,9 +103,9 @@
              Der eigentliche Text erscheint erst wenn geklickt wird. -->
         <div class="card sig-summary-card" style="margin:12px 0;padding:10px 14px">
             <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap">
-                <button type="button" id="sigSummaryBtn" class="btn btn-secondary btn-sm">✨ Zusammenfassung anzeigen</button>
+                <button type="button" id="sigSummaryBtn" class="btn btn-secondary btn-sm">@T["sign.summary_show"]</button>
                 <select id="sigSummaryLang" class="btn btn-ghost btn-sm" style="padding:6px 10px">
-                    <option value="">Automatisch</option>
+                    <option value="">@T["sign.summary_auto"]</option>
                     <option value="de">Deutsch</option>
                     <option value="en">English</option>
                     <option value="fr">Français</option>
@@ -113,7 +113,7 @@
                     <option value="es">Español</option>
                     <option value="nl">Nederlands</option>
                 </select>
-                <span class="muted" style="font-size:.82rem">KI-Kurzfassung des Dokuments — hilft beim schnellen Verstehen bevor du unterschreibst.</span>
+                <span class="muted" style="font-size:.82rem">@T["sign.summary_helper"]</span>
             </div>
             <div id="sigSummaryOut" style="display:none;margin-top:10px;padding:10px;background:var(--tw-gray-100);border-radius:6px;font-size:.92rem;line-height:1.5"></div>
         </div>
@@ -122,7 +122,7 @@
         <div id="pdfPages" style="border:1px solid var(--tw-gray-300);border-radius:8px;background:#e9ecef;padding:12px;max-height:70vh;overflow-y:auto"
              data-src="/sign/@Model.Me.Id/preview?t=@Model.Token"
              data-fields='@Html.Raw(fieldsJson)'>
-            <div class="muted" style="text-align:center;padding:40px">Dokument wird geladen …</div>
+            <div class="muted" style="text-align:center;padding:40px">@T["sign.doc_loading"]</div>
         </div>
 
         <form method="post" action="/sign/@Model.Me.Id/submit?t=@Model.Token" style="margin-top:16px" id="signForm">
@@ -130,7 +130,7 @@
             @if (isSigner)
             {
                 <div class="field">
-                    <label>Dein Name (für die Unterschrift)</label>
+                    <label>@T["sign.your_name"]</label>
                     <input type="text" name="typedName" required value="@Model.Me.Name" maxlength="120"/>
                 </div>
                 <div class="field">
@@ -142,22 +142,21 @@
                        mehr — sonst sieht auch der eingeloggte Initiator seinen
                        eigenen Toggle nicht auf dem anonymen Sign-Link. *@
                     <label style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                        <span>Unterschrift</span>
+                        <span>@T["sign.signature_label"]</span>
                         <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
-                            <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
-                            <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
+                            <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">@T["sign.mode_draw"]</button>
+                            <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">@T["sign.mode_cert"]</button>
                         </span>
                     </label>
                     <div id="sigDrawWrap" style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
                         <canvas id="sigPad" width="720" height="180" style="width:100%;height:180px;touch-action:none;display:block"></canvas>
-                        <button type="button" onclick="clearSig()" style="position:absolute;top:6px;right:6px;background:var(--tw-gray-100);border:0;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.8rem">Löschen</button>
+                        <button type="button" onclick="clearSig()" style="position:absolute;top:6px;right:6px;background:var(--tw-gray-100);border:0;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.8rem">@T["sign.pad_clear"]</button>
                     </div>
                     <div id="sigCertWrap" style="display:none;border:2px solid var(--tw-gray-300);border-radius:8px;background:#fff;padding:14px">
-                        <div id="sigCertInfo" class="muted" style="font-size:.9rem">Lade Zertifikat …</div>
+                        <div id="sigCertInfo" class="muted" style="font-size:.9rem">@T["sign.cert_loading"]</div>
                         <canvas id="sigCertPreview" width="720" height="180" style="width:100%;max-height:180px;border:1px solid var(--tw-gray-200);border-radius:6px;margin-top:10px;display:none"></canvas>
                         <div id="sigCertHint" class="muted" style="font-size:.78rem;margin-top:8px">
-                            Wenn du eingeloggt bist und ein Default-Zertifikat unter <a href="/settings/certificates" target="_blank">Einstellungen › Zertifikate</a> hinterlegt hast, wird es hier verwendet.
-                            Der Stempel enthält deinen CN, den Thumbprint und Zeitstempel — er wird als Bild ins Signaturfeld eingebettet (wie eine handgezeichnete Unterschrift).
+                            @Html.Raw(T["sign.cert_hint_html"].Value)
                         </div>
                     </div>
                 </div>
@@ -170,21 +169,21 @@
                 @if (otherFields.Count > 0)
                 {
                     <div class="field">
-                        <label>Zusätzliche Felder ausfüllen</label>
+                        <label>@T["sign.extra_fields"]</label>
                         <div style="display:grid;grid-template-columns:1fr;gap:10px">
                         @foreach (var f in otherFields)
                         {
                             var lbl = string.IsNullOrWhiteSpace(f.Label)
-                                ? (f.Type == SignatureFieldType.Date ? "Datum" : (f.Type == SignatureFieldType.Checkbox ? "Bestätigung" : "Text"))
+                                ? (f.Type == SignatureFieldType.Date ? T["sign.field_type_date"].Value : (f.Type == SignatureFieldType.Checkbox ? T["sign.field_type_checkbox"].Value : T["sign.field_type_text"].Value))
                                 : f.Label;
                             <div style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--tw-gray-300);border-radius:6px;background:#fff">
-                                <span class="muted" style="font-size:.75rem">Seite @f.Page · @f.Type</span>
+                                <span class="muted" style="font-size:.75rem">@string.Format(T["sign.field_page"].Value, f.Page) · @f.Type</span>
                                 <label style="font-weight:500;font-size:.9rem">@lbl</label>
                                 @if (f.Type == SignatureFieldType.Checkbox)
                                 {
                                     <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
                                         <input type="checkbox" name="fieldValue_@f.Id" value="true" style="width:18px;height:18px"/>
-                                        <span>Bestätigt</span>
+                                        <span>@T["sign.field_confirmed"]</span>
                                     </label>
                                 }
                                 else if (f.Type == SignatureFieldType.Date)
@@ -202,9 +201,9 @@
                 }
             }
             <div class="row" style="justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px">
-                <button type="button" class="btn btn-ghost" onclick="declineOpen()">✕ Ablehnen</button>
+                <button type="button" class="btn btn-ghost" onclick="declineOpen()">@T["sign.decline"]</button>
                 <button type="submit" id="submitBtn" class="btn btn-primary">
-                    @(isSigner ? "✍ Unterschreiben & abschicken" : "✓ Gelesen bestätigen")
+                    @(isSigner ? T["sign.submit_sign"].Value : T["sign.submit_ack"].Value)
                 </button>
             </div>
         </form>
@@ -212,13 +211,13 @@
         <form method="post" action="/sign/@Model.Me.Id/decline?t=@Model.Token" id="declineForm" style="display:none;margin-top:12px">
             @Html.AntiForgeryToken()
             <div class="field">
-                <label>Grund (optional)</label>
+                <label>@T["sign.reason_optional"]</label>
                 <textarea name="reason" rows="2" maxlength="500"></textarea>
             </div>
             <div class="row" style="justify-content:flex-end;gap:8px">
-                <button type="button" class="btn btn-ghost" onclick="declineOpen()">Zurück</button>
-                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">↪ Weiterleiten stattdessen</button>
-                <button type="submit" class="btn btn-primary" style="background:var(--status-critical)">Ablehnen bestätigen</button>
+                <button type="button" class="btn btn-ghost" onclick="declineOpen()">@T["sign.back"]</button>
+                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">@T["sign.forward_instead"]</button>
+                <button type="submit" class="btn btn-primary" style="background:var(--status-critical)">@T["sign.confirm_decline"]</button>
             </div>
         </form>
 
@@ -226,31 +225,31 @@
         {
         <form method="post" action="/sign/@Model.Me.Id/reassign?t=@Model.Token" id="reassignForm" style="display:none;margin-top:12px">
             @Html.AntiForgeryToken()
-            <p class="muted">Du bist nicht die richtige Person? Leite die Signatur an einen Kollegen weiter — die Unterschriftsfelder wandern mit.</p>
+            <p class="muted">@T["sign.reassign_hint"]</p>
             <div class="row" style="gap:12px">
                 <div class="field" style="flex:1">
-                    <label>Name</label>
+                    <label>@T["sign.reassign_name"]</label>
                     <input type="text" name="toName" required maxlength="200" autocomplete="off"/>
                 </div>
                 <div class="field" style="flex:2">
-                    <label>E-Mail</label>
+                    <label>@T["sign.reassign_email"]</label>
                     <input type="email" name="toEmail" required maxlength="250" autocomplete="off"/>
                 </div>
             </div>
             <div class="field">
-                <label>Notiz für den Empfänger (optional)</label>
-                <textarea name="reason" rows="2" maxlength="500" placeholder="z.B. Das gehört ins Legal-Team — kannst du das übernehmen?"></textarea>
+                <label>@T["sign.reassign_note_optional"]</label>
+                <textarea name="reason" rows="2" maxlength="500" placeholder="@T["sign.reassign_note_ph"]"></textarea>
             </div>
             <div class="row" style="justify-content:flex-end;gap:8px">
-                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">Zurück</button>
-                <button type="submit" class="btn btn-primary">↪ Weiterleiten</button>
+                <button type="button" class="btn btn-ghost" onclick="reassignOpen()">@T["sign.back"]</button>
+                <button type="submit" class="btn btn-primary">@T["sign.reassign_do"]</button>
             </div>
         </form>
         }
     </div>
 
     <aside class="sig-audit">
-        <h3 style="margin-top:0;font-size:1rem">🕐 Verlauf</h3>
+        <h3 style="margin-top:0;font-size:1rem">@T["sign.audit_title"]</h3>
         <ol class="sig-audit-list">
             @foreach (var a in audits)
             {
@@ -278,11 +277,41 @@
         </ol>
         @if (audits.Count == 0)
         {
-            <p class="muted" style="font-size:.85rem">Noch keine Aktivität.</p>
+            <p class="muted" style="font-size:.85rem">@T["sign.audit_empty"]</p>
         }
     </aside>
   </div>
 </div>
+
+<!-- v1.10.34: alle JS-Strings die dem Benutzer angezeigt werden landen
+     hier zentral, per @@Json.Serialize aus dem IStringLocalizer. So laufen
+     "Wird gesendet…", "Hier unterschreiben", "Digital signiert" etc.
+     automatisch in der Browser-Sprache — kein hardcoded Deutsch mehr. -->
+<script>
+window.__sig_i18n = {
+    doc_load_failed: @Json.Serialize(T["sign.doc_load_failed"].Value),
+    placeholder_here: @Json.Serialize(T["sign.placeholder_here"].Value),
+    placeholder_jump: @Json.Serialize(T["sign.placeholder_jump"].Value),
+    field_type_text: @Json.Serialize(T["sign.field_type_text"].Value),
+    field_type_date: @Json.Serialize(T["sign.field_type_date"].Value),
+    summary_analyzing: @Json.Serialize(T["sign.summary_analyzing"].Value),
+    summary_empty: @Json.Serialize(T["sign.summary_empty"].Value),
+    sending: @Json.Serialize(T["sign.sending"].Value),
+    cert_loading: @Json.Serialize(T["sign.cert_loading"].Value),
+    cert_used_html: @Json.Serialize(T["sign.cert_used_html"].Value),
+    cert_needed_login_html: @Json.Serialize(T["sign.cert_needed_login_html"].Value),
+    cert_no_default_html: @Json.Serialize(T["sign.cert_no_default_html"].Value),
+    cert_load_error: @Json.Serialize(T["sign.cert_load_error"].Value),
+    cert_missing_alert: @Json.Serialize(T["sign.cert_missing_alert"].Value),
+    stamp_headline: @Json.Serialize(T["sign.stamp_headline"].Value),
+    stamp_time_prefix: @Json.Serialize(T["sign.stamp_time_prefix"].Value),
+    stamp_thumb_prefix: @Json.Serialize(T["sign.stamp_thumb_prefix"].Value),
+    stamp_issuer_prefix: @Json.Serialize(T["sign.stamp_issuer_prefix"].Value),
+    stamp_issuer_self: @Json.Serialize(T["sign.stamp_issuer_self"].Value),
+    stamp_issuer_ca: @Json.Serialize(T["sign.stamp_issuer_ca"].Value),
+    stamp_footer: @Json.Serialize(T["sign.stamp_footer"].Value),
+};
+</script>
 
 <!-- pdf.js — same CDN as the requester wizard -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
@@ -328,15 +357,15 @@ async function render() {
                 box.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;border:2px solid #ffc600;background:rgba(255,198,0,.25);border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#7a5b00;font-size:.85rem;pointer-events:none;text-shadow:0 0 3px #fff`;
                 let icon = '';
                 let label = '';
-                if (f.type === 'Signature') { icon = '✍'; label = 'Hier unterschreiben'; }
-                else if (f.type === 'Text') { icon = 'Aa'; label = 'Text'; }
-                else if (f.type === 'Date') { icon = '📅'; label = 'Datum'; }
+                if (f.type === 'Signature') { icon = '✍'; label = window.__sig_i18n.placeholder_here; }
+                else if (f.type === 'Text') { icon = 'Aa'; label = window.__sig_i18n.field_type_text; }
+                else if (f.type === 'Date') { icon = '📅'; label = window.__sig_i18n.field_type_date; }
                 else if (f.type === 'Checkbox') { icon = '☑'; label = ''; }
                 box.textContent = width > 100 ? `${icon} ${label}` : icon;
                 if (f.type === 'Signature') {
                     box.style.cursor = 'pointer';
                     box.style.pointerEvents = 'auto';
-                    box.title = 'Zum Unterschriftfeld springen';
+                    box.title = window.__sig_i18n.placeholder_jump;
                     // Tag every signature placeholder so the sig-pad JS can
                     // find them later and mirror the drawing live.
                     box.classList.add('sig-placeholder');
@@ -357,7 +386,7 @@ async function render() {
             });
         }
     } catch (e) {
-        wrap.innerHTML = '<div class="muted" style="text-align:center;padding:40px;color:var(--status-critical)">Dokument konnte nicht geladen werden: ' + (e.message || e) + '</div>';
+        wrap.innerHTML = '<div class="muted" style="text-align:center;padding:40px;color:var(--status-critical)">' + window.__sig_i18n.doc_load_failed + ' ' + (e.message || e) + '</div>';
     }
 }
 render();
@@ -374,7 +403,7 @@ render();
     btn.addEventListener('click', async () => {
         btn.disabled = true;
         const originalText = btn.textContent;
-        btn.textContent = '… wird analysiert';
+        btn.textContent = window.__sig_i18n.summary_analyzing;
         out.style.display = 'block';
         out.textContent = '';
         const lang = langSel.value || (navigator.language || '').split('-')[0] || '';
@@ -386,7 +415,7 @@ render();
                 out.textContent = '⚠ ' + (d.detail || d.title || ('HTTP ' + r.status));
                 out.style.color = 'var(--status-critical, #d33)';
             } else {
-                out.textContent = d.text || '(leere Zusammenfassung)';
+                out.textContent = d.text || window.__sig_i18n.summary_empty;
                 out.style.color = '';
             }
         } catch (e) {
@@ -437,7 +466,7 @@ render();
             p.style.background = 'rgba(255,198,0,.25)';
             p.style.border = '2px solid #ffc600';
             const w = parseFloat(p.dataset.fieldWidth || '0');
-            p.textContent = w > 100 ? '✍ Hier unterschreiben' : '✍';
+            p.textContent = w > 100 ? ('✍ ' + window.__sig_i18n.placeholder_here) : '✍';
         });
     }
     let mirrorPending = false;
@@ -462,7 +491,7 @@ render();
             const certCanvas = document.getElementById('sigCertPreview');
             if (!certCanvas || certCanvas.style.display === 'none' || !window.__certReady) {
                 ev.preventDefault();
-                alert('Zertifikat konnte nicht geladen werden. Bitte auf "🖊 Zeichnen" wechseln oder Zertifikat unter Einstellungen › Zertifikate anlegen.');
+                alert(window.__sig_i18n.cert_missing_alert);
                 return;
             }
             document.getElementById('signatureData').value = certCanvas.toDataURL('image/png');
@@ -470,7 +499,7 @@ render();
             if (!empty) document.getElementById('signatureData').value = c.toDataURL('image/png');
         }
         const btn = document.getElementById('submitBtn');
-        setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; } }, 0);
+        setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = window.__sig_i18n.sending; } }, 0);
     });
 })();
 
@@ -511,7 +540,7 @@ async function loadCertPreview() {
     const canvas = document.getElementById('sigCertPreview');
     window.__certReady = false;
     if (!info || !canvas) return;
-    info.textContent = 'Lade Zertifikat …';
+    info.textContent = window.__sig_i18n.cert_loading;
     canvas.style.display = 'none';
     try {
         const r = await fetch('/api/v1/certificates/default', {
@@ -523,25 +552,31 @@ async function loadCertPreview() {
         // content-type or the redirect chain.
         const ct = r.headers.get('content-type') || '';
         if (!ct.includes('application/json')) {
-            info.innerHTML = '⚠ Zertifikat-Stempel nur für <strong>angemeldete NimShare-Nutzer</strong> mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.';
+            info.innerHTML = window.__sig_i18n.cert_needed_login_html;
             return;
         }
         if (r.status === 401 || r.status === 403) {
-            info.innerHTML = '⚠ Zertifikat-Stempel nur für <strong>angemeldete NimShare-Nutzer</strong> mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.';
+            info.innerHTML = window.__sig_i18n.cert_needed_login_html;
             return;
         }
         if (r.status === 404) {
-            info.innerHTML = '⚠ Kein Default-Zertifikat gefunden. Lege eines unter <a href="/settings/certificates" target="_blank">Einstellungen › Zertifikate</a> an und setze es als Default.';
+            info.innerHTML = window.__sig_i18n.cert_no_default_html;
             return;
         }
-        if (!r.ok) { info.textContent = 'Fehler beim Laden: HTTP ' + r.status; return; }
+        if (!r.ok) { info.textContent = window.__sig_i18n.cert_load_error + ' HTTP ' + r.status; return; }
         const cert = await r.json();
         renderCertStamp(canvas, cert);
-        info.innerHTML = `Verwendetes Zertifikat: <strong>${escapeHtml(cert.name || cert.subjectCommonName)}</strong> — Thumbprint <code>${escapeHtml((cert.thumbprint || '').slice(0, 16))}…</code>`;
+        // Format the cert-used template. The value contains {0}=Name and
+        // {1}=Thumbprint — both HTML-escaped before substitution because
+        // the outer string carries <strong>/<code> tags we want to preserve.
+        const tpl = window.__sig_i18n.cert_used_html;
+        const name = escapeHtml(cert.name || cert.subjectCommonName || '');
+        const thumb = escapeHtml((cert.thumbprint || '').slice(0, 16)) + '…';
+        info.innerHTML = tpl.replace('{0}', name).replace('{1}', thumb);
         canvas.style.display = '';
         window.__certReady = true;
     } catch (e) {
-        info.textContent = 'Fehler beim Laden des Zertifikats: ' + (e.message || e);
+        info.textContent = window.__sig_i18n.cert_load_error + ' ' + (e.message || e);
     }
 }
 
@@ -570,7 +605,7 @@ function renderCertStamp(canvas, cert) {
     ctx.fillStyle = '#002854';
     ctx.font = 'bold 24px sans-serif';
     ctx.textBaseline = 'top';
-    ctx.fillText('Digital signiert', 130, 20);
+    ctx.fillText(window.__sig_i18n.stamp_headline, 130, 20);
     // subject
     ctx.font = '18px sans-serif';
     ctx.fillStyle = '#1a202c';
@@ -581,13 +616,13 @@ function renderCertStamp(canvas, cert) {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    ctx.fillText('Zeitstempel: ' + ts, 130, 90);
-    ctx.fillText('Thumbprint:  ' + (cert.thumbprint || '').slice(0, 32).match(/.{1,4}/g)?.join(' '), 130, 110);
-    ctx.fillText('Aussteller:  ' + (cert.isSelfIssued ? 'Selbstausgestellt (NimShare)' : 'CA-signiert'), 130, 130);
+    ctx.fillText(window.__sig_i18n.stamp_time_prefix + ts, 130, 90);
+    ctx.fillText(window.__sig_i18n.stamp_thumb_prefix + (cert.thumbprint || '').slice(0, 32).match(/.{1,4}/g)?.join(' '), 130, 110);
+    ctx.fillText(window.__sig_i18n.stamp_issuer_prefix + (cert.isSelfIssued ? window.__sig_i18n.stamp_issuer_self : window.__sig_i18n.stamp_issuer_ca), 130, 130);
     // footer strip
     ctx.font = 'italic 11px sans-serif';
     ctx.fillStyle = '#718096';
-    ctx.fillText('Signiert via NimShare — Nachweis siehe Audit-Trail', 130, 154);
+    ctx.fillText(window.__sig_i18n.stamp_footer, 130, 154);
 }
 window.declineOpen = () => {
     const f = document.getElementById('signForm');
@@ -615,7 +650,7 @@ else
 <script>
 document.getElementById('signForm').addEventListener('submit', () => {
     const btn = document.getElementById('submitBtn');
-    setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; } }, 0);
+    setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = window.__sig_i18n.sending; } }, 0);
 });
 window.declineOpen = () => {
     const f = document.getElementById('signForm'); const d = document.getElementById('declineForm');

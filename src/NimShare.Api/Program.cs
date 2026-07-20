@@ -251,6 +251,13 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
     // step 3 and stays the last resort before DefaultRequestCulture.
     o.RequestCultureProviders.Insert(0, new QueryStringRequestCultureProvider());
     o.RequestCultureProviders.Insert(1, new CookieRequestCultureProvider());
+    // v1.10.34 — public share/sign/upload-request landings ignore the cookie
+    // and follow the visitor's browser language instead. See
+    // PublicPathBrowserLanguageProvider for the rationale. Inserted at
+    // position 0 so it wins over query+cookie IF the query didn't set one
+    // — but it also honours ?ui-culture= itself, so a language-pill click
+    // on the landing keeps working.
+    o.RequestCultureProviders.Insert(0, new NimShare.Api.Middleware.PublicPathBrowserLanguageProvider());
 });
 
 // ── MVC / Razor Pages / API ────────────────────────────────────────────────

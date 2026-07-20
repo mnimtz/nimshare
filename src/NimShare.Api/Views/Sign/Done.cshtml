@@ -1,6 +1,6 @@
 @model NimShare.Api.Controllers.SignDoneViewModel
 @{
-    ViewData["Title"] = "Fertig";
+    ViewData["Title"] = T["sign.done_title"];
     Layout = "_Layout";
     var theme = ViewData["Theme"] as NimShare.Api.Controllers.SignLandingTheme;
     var brandColor = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? null : theme!.PrimaryColor;
@@ -24,15 +24,15 @@
             <img src="@theme.LogoUrl" alt="Logo" style="max-height:44px;max-width:180px;object-fit:contain;margin-bottom:12px"/>
         }
         <div style="font-size:4rem;line-height:1;margin-bottom:12px">@(Model.Signed ? "✅" : "✕")</div>
-        <h1 style="margin-top:0">@(Model.Signed ? "Vielen Dank!" : "Anforderung abgelehnt")</h1>
+        <h1 style="margin-top:0">@(Model.Signed ? T["sign.done_thanks"] : T["sign.done_declined"])</h1>
         <p class="muted">
             @if (Model.Signed)
             {
-                <span>Deine Antwort ist bei @Model.Request.Initiator?.DisplayName eingegangen. Nach Abschluss aller Signaturen erhältst du das finale, unterschriebene Dokument.</span>
+                <span>@string.Format(T["sign.done_signed_body"].Value, Model.Request.Initiator?.DisplayName ?? "")</span>
             }
             else
             {
-                <span>Du hast die Signatur-Anforderung „@Model.Request.Title" abgelehnt. Der Initiator wurde informiert.</span>
+                <span>@string.Format(T["sign.done_declined_body"].Value, Model.Request.Title ?? "")</span>
             }
         </p>
         <p class="muted" style="font-size:.75rem;margin-top:24px">
