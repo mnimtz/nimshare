@@ -88,7 +88,12 @@ public class AiController : ControllerBase
             summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
             {
+                // Check both concrete providers — the earlier code only asked
+                // OpenAI, so Gemini users saw the generic fallback ("may not
+                // support image input") even when the actual reason was a
+                // safety block, MAX_TOKENS, or a model-not-found 404.
                 var detail = (provider as OpenAiProvider)?.LastError
+                    ?? (provider as GeminiProvider)?.LastError
                     ?? "The configured AI model may not support image input.";
                 return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
             }

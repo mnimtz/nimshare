@@ -233,6 +233,12 @@ public class GeminiProvider : IAiProvider
     private readonly string _model;
     private readonly string _apiKey;
 
+    /// <summary>Last non-success diagnostic (HTTP status, safety block, empty
+    /// output). Callers surface this in 502 Problem-details instead of the
+    /// generic "no result" — v1.10.13 makes Vision failures diagnosable for
+    /// Gemini the same way OpenAiProvider has done since v1.4.3.</summary>
+    public string? LastError { get; private set; }
+
     public GeminiProvider(HttpClient http, string apiKey, string model)
     {
         _http = http;
@@ -310,23 +316,62 @@ public class GeminiProvider : IAiProvider
         };
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        LastError = null;
         try
         {
             var resp = await _http.PostAsync(url, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
             var text = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                string reason = text.Length > 500 ? text[..500] : text;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(text);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                LastError = $"Gemini Vision HTTP {(int)resp.StatusCode} ({_model}): {reason}";
+                return null;
+            }
             var doc = JsonDocument.Parse(text);
-            // Defensive: if 2.5 still burns the budget, parts[] can be absent.
             if (!doc.RootElement.TryGetProperty("candidates", out var cands)
-                || cands.GetArrayLength() == 0) return null;
+                || cands.GetArrayLength() == 0)
+            {
+                LastError = $"Gemini Vision {_model}: keine candidates (Safety-Block, Modell ohne Vision-Support, oder ungültiges Bild).";
+                return null;
+            }
             var c0 = cands[0];
+            string? finishReason = null;
+            if (c0.TryGetProperty("finishReason", out var fr)) finishReason = fr.GetString();
+            int thinkingTokens = 0;
+            if (doc.RootElement.TryGetProperty("usageMetadata", out var um)
+                && um.TryGetProperty("thoughtsTokenCount", out var tt))
+                thinkingTokens = tt.GetInt32();
             if (!c0.TryGetProperty("content", out var ct2)
                 || !ct2.TryGetProperty("parts", out var ps)
                 || ps.GetArrayLength() == 0
-                || !ps[0].TryGetProperty("text", out var tx)) return null;
-            return tx.GetString();
+                || !ps[0].TryGetProperty("text", out var tx))
+            {
+                LastError = string.Equals(finishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase)
+                    ? $"Gemini Vision {_model}: Output-Budget verbraucht ({thinkingTokens} thinking-tokens von 1024). thinkingBudget=0 ist gesetzt — falls trotzdem MAX_TOKENS: gemini-2.5-pro versuchen (mehr Kapazität)."
+                    : $"Gemini Vision {_model}: Antwort ohne text-Feld (finishReason={finishReason ?? "unknown"}).";
+                return null;
+            }
+            var value = tx.GetString();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                LastError = $"Gemini Vision {_model}: leerer Text (evtl. Safety-Filter oder Bild nicht analysierbar).";
+                return null;
+            }
+            return value;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LastError = $"Gemini Vision {_model} Exception: {ex.Message}";
+            return null;
+        }
     }
 
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
