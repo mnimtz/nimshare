@@ -1,7 +1,7 @@
 @using NimShare.Api.Services
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = @T["wiki.title"];
+    ViewData["Title"] = T["wiki.title"];
     Layout = "_AppShell";
     var mine = (List<WikiPage>)(ViewData["Mine"] ?? new List<WikiPage>());
     var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());

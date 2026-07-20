@@ -436,6 +436,37 @@ namespace NimShare.Api.Migrations
                     b.ToTable("FileEmbeddings");
                 });
 
+            modelBuilder.Entity("NimShare.Core.Entities.FilePin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PinnedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("UserId", "FileId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "PinnedAt");
+
+                    b.ToTable("FilePins");
+                });
+
             modelBuilder.Entity("NimShare.Core.Entities.Folder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1705,6 +1736,25 @@ namespace NimShare.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("File");
+                });
+
+            modelBuilder.Entity("NimShare.Core.Entities.FilePin", b =>
+                {
+                    b.HasOne("NimShare.Core.Entities.StorageFile", "File")
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NimShare.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("File");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("NimShare.Core.Entities.Folder", b =>

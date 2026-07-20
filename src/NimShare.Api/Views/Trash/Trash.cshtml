@@ -1,6 +1,6 @@
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = @T["trash.title"];
+    ViewData["Title"] = T["trash.title"];
     Layout = "_AppShell";
     var files = (List<StorageFile>)ViewData["Files"]!;
     string Bytes(long b) { string[] u = { "B","KB","MB","GB","TB" }; double v=b; int i=0; while(v>=1024 && i<u.Length-1){v/=1024;i++;} return $"{v:0.##} {u[i]}"; }

@@ -1,6 +1,6 @@
 @model IEnumerable<NimShare.Core.Entities.Group>
 @{
-    ViewData["Title"] = @T["groups.title"];
+    ViewData["Title"] = T["groups.title"];
     Layout = "_AppShell";
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
 }

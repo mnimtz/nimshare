@@ -553,6 +553,70 @@ static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceP
 /// </summary>
 static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IServiceProvider services)
 {
+    // First: ensure any post-baseline tables exist. BaselineSqliteIfNeededAsync
+    // stamps every known migration as applied, so MigrateAsync would skip
+    // CREATE TABLE ops for anything the baseline covered — this catches
+    // instances that jumped past the release that introduced a new table.
+    var expectedTables = new (string Name, string CreateSql)[]
+    {
+        // V181 — FilePins. Idempotent CREATE TABLE IF NOT EXISTS matches the
+        // migration column-for-column (Sqlite types). Indexes below.
+        ("FilePins", @"CREATE TABLE IF NOT EXISTS FilePins (
+            Id TEXT NOT NULL PRIMARY KEY,
+            UserId TEXT NOT NULL,
+            FileId TEXT NOT NULL,
+            Note TEXT NULL,
+            PinnedAt INTEGER NOT NULL,
+            FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
+            FOREIGN KEY (FileId) REFERENCES Files(Id) ON DELETE CASCADE
+        )"),
+    };
+    try
+    {
+        var conn0 = db.Database.GetDbConnection();
+        await conn0.OpenAsync();
+        foreach (var (name, sql) in expectedTables)
+        {
+            await using var cmd = conn0.CreateCommand();
+            cmd.CommandText = sql;
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // Indexes are separate statements so a missing table above doesn't
+        // dropkick the whole batch.
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_FilePins_UserId_FileId ON FilePins(UserId, FileId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_FilePins_UserId_PinnedAt ON FilePins(UserId, PinnedAt)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // Cascade-delete perf: matches migration V181 which creates this
+        // non-unique FK index. Missing it caused a full FilePins scan for
+        // every StorageFile delete.
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_FilePins_FileId ON FilePins(FileId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // If Repair just brought FilePins into existence on an instance that
+        // was baseline-stamped BEFORE V181 (history has rows but no V181 row),
+        // MigrateAsync would otherwise re-run V181's CREATE TABLE and crash on
+        // "table already exists". Stamp V181 as applied to keep the two in
+        // sync — the schema is already there, no work left to do.
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = @"INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+                                SELECT '20260720055248_V181_FilePins', '8.0.0'
+                                WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory')
+                                  AND EXISTS (SELECT 1 FROM __EFMigrationsHistory);";
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
+    catch (Exception ex) { Console.Error.WriteLine("[STARTUP] Table repair failed: " + ex.Message); }
+
     // (table, column, type-and-constraints) tuples for anything V179 might
     // have dropped. Keep this list narrow — repairs are a last-resort
     // safety net, not a substitute for real migrations.
@@ -563,6 +627,10 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
         // V180 — never applied on instances that ran with the wrong
         // MigrationsAssembly. NOT NULL DEFAULT 0 matches the migration.
         ("Users", "ShowAvatarOnLandings", "INTEGER NOT NULL DEFAULT 0"),
+        // V181 — belt-and-braces; MigrateAsync now handles new migrations
+        // correctly, but this catches instances that upgrade past a broken
+        // window. Note: adding a column, NOT the whole FilePins table (that
+        // MigrateAsync WILL create fresh since it's un-stamped in baseline).
     };
     try
     {

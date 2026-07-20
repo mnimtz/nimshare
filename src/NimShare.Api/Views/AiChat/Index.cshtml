@@ -1,6 +1,6 @@
 @using NimShare.Api.Services
 @{
-    ViewData["Title"] = @T["chat.title"];
+    ViewData["Title"] = T["chat.title"];
     Layout = "_AppShell";
     var enabled = (bool)(ViewData["Enabled"] ?? false);
     var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());

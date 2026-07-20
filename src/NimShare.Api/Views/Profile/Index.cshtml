@@ -1,6 +1,6 @@
 @model NimShare.Core.Entities.User
 @{
-    ViewData["Title"] = @T["profile.title"];
+    ViewData["Title"] = T["profile.title"];
     Layout = "_AppShell";
     string initials;
     var parts = Model.DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);

@@ -1,6 +1,6 @@
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = @T["activity.title"];
+    ViewData["Title"] = T["activity.title"];
     Layout = "_AppShell";
     var items = (List<ActivityEvent>)ViewData["Items"]!;
     var showAll = (bool)(ViewData["ShowAll"] ?? false);

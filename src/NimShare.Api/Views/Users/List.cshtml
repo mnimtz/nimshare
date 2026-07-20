@@ -1,6 +1,6 @@
 @model IEnumerable<NimShare.Core.Entities.User>
 @{
-    ViewData["Title"] = @T["users.title"]; Layout = "_AppShell";
+    ViewData["Title"] = T["users.title"]; Layout = "_AppShell";
     var groups = (List<NimShare.Core.Entities.Group>)(ViewData["Groups"] ?? new List<NimShare.Core.Entities.Group>());
 }
 <div class="page-header">

@@ -92,7 +92,7 @@ public class ShareController : Controller
             _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
             Request.Headers.UserAgent, Request.Headers.Referer, ct);
 
-        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, ct);
+        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, link.OwnerId, ct);
         return View("Landing", new LandingViewModel(
             link.Slug,
             link.File.Name,
@@ -119,18 +119,37 @@ public class ShareController : Controller
     }
 
     /// <summary>
-    /// Pick the applicable landing-template snapshot. Personal-scope files use
-    /// the owner's personal template; Public and Group files use the global
-    /// (admin-authored) one. A missing template returns an empty theme so the
-    /// view falls back to the built-in NimShare look.
+    /// Pick the applicable landing-template snapshot. Preference order:
+    /// (1) LINK CREATOR's personal template — lets user B publish a Public
+    ///     file under their own branding without duplicating the blob (v1.10.2
+    ///     "A" fix per user request). This unlocks the reuse-Public-in-Personal
+    ///     use case with zero storage cost.
+    /// (2) File-scope template — Personal → file-owner's personal template;
+    ///     Public/Group → global admin template. Historical fallback that
+    ///     still matches direct-owner-shares.
+    /// A missing template returns an empty theme so the view falls back to
+    /// the built-in NimShare look.
     /// </summary>
-    private async Task<LandingTheme> ResolveThemeAsync(NimShare.Core.Entities.FileScope scope, Guid ownerId, CancellationToken ct)
+    private async Task<LandingTheme> ResolveThemeAsync(
+        NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, Guid linkOwnerId, CancellationToken ct)
     {
-        NimShare.Core.Entities.LandingTemplate? t = scope == NimShare.Core.Entities.FileScope.Personal
-            ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == ownerId, ct)
-            : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+        NimShare.Core.Entities.LandingTemplate? t = null;
+        // Only look for the link-creator's template if they are NOT the file
+        // owner (otherwise it's the same lookup as path 2's Personal branch,
+        // saved a DB round-trip).
+        if (linkOwnerId != fileOwnerId)
+        {
+            t = await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == linkOwnerId, ct);
+        }
+        if (t is null)
+        {
+            t = scope == NimShare.Core.Entities.FileScope.Personal
+                ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                    x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
+                : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                    x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+        }
         return new LandingTheme(
             t?.Title, t?.Subtitle, t?.BodyMarkdown, t?.FooterText,
             t?.PrimaryColor, t?.LogoUrl, t?.HeroUrl);

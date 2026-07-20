@@ -1,6 +1,6 @@
 @model NimShare.Core.Entities.OfficeSettings
 @{
-    ViewData["Title"] = @T["office.title"];
+    ViewData["Title"] = T["office.title"];
     Layout = "_AppShell";
     var hasSecret = (bool)(ViewData["HasSecret"] ?? false);
 }

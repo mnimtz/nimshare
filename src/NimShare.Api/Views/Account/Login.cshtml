@@ -1,6 +1,6 @@
 @model NimShare.Api.Controllers.LoginViewModel
 @{
-    ViewData["Title"] = @T["login.title"];
+    ViewData["Title"] = T["login.title"];
     Layout = "_Layout";
     var entra = Context.Items["EntraConfigured"] as bool? ?? false;
 }

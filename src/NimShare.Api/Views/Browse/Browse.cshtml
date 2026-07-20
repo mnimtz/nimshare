@@ -8,6 +8,9 @@
     var ancestry = (List<Folder>)ViewData["Ancestry"]!;
     var subs = (List<Folder>)ViewData["Subfolders"]!;
     var files = (List<StorageFile>)ViewData["Files"]!;
+    var pinnedFiles = (ViewData["PinnedFiles"] as List<StorageFile>) ?? new();
+    var pinnedIds = (ViewData["PinnedIds"] as HashSet<Guid>) ?? new();
+    var me = ViewData["Me"] as User;
     var canWrite = (bool)(ViewData["CanWrite"] ?? false);
     var canManage = (bool)(ViewData["CanManage"] ?? false);
     var urlBase = (string)ViewData["UrlBase"]!;
@@ -180,7 +183,9 @@
                     }
                     @foreach (var f in files)
                     {
-                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-content-type="@f.ContentType" data-date="@f.CreatedAt.ToUnixTimeSeconds()" ondblclick="openPreview('@f.Id')">
+                        var isMine = me != null && f.OwnerId == me.Id;
+                        var alreadyPinned = pinnedIds.Contains(f.Id);
+                        <tr class="ctx fm-row fm-row-file" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-content-type="@f.ContentType" data-date="@f.CreatedAt.ToUnixTimeSeconds()" data-owner-id="@f.OwnerId" data-mine="@(isMine ? "1" : "0")" data-pinned="@(alreadyPinned ? "1" : "0")" ondblclick="openPreview('@f.Id')">
                             <td class="col-check"><input type="checkbox" class="row-check" value="@f.Id" onclick="event.stopPropagation()"/></td>
                             <td class="col-name">
                                 <div class="fm-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
@@ -211,6 +216,28 @@
                             </td>
                         </tr>
                     }
+                    @* Angepinnte Files nur im Personal-Root — als Referenz-Zeilen mit 📌 Badge. *@
+                    @foreach (var f in pinnedFiles)
+                    {
+                        <tr class="ctx fm-row fm-row-file fm-row-pinned" data-kind="file" data-id="@f.Id" data-name="@f.Name" data-size="@f.SizeBytes" data-content-type="@f.ContentType" data-date="@f.CreatedAt.ToUnixTimeSeconds()" data-owner-id="@f.OwnerId" data-mine="0" data-pinned="1" ondblclick="openPreview('@f.Id')">
+                            <td class="col-check"></td>
+                            <td class="col-name">
+                                <div class="fm-name" style="cursor:pointer" onclick="openPreview('@f.Id')">
+                                    <span class="fm-icon fm-icon-file @TypeClass(f.Name)">@TypeLabel(f.Name)</span>
+                                    <span class="fm-name-text">@f.Name</span>
+                                    <span class="ai-tag" title="@T["pin.badge_hint"]">📌 @T["pin.badge"]</span>
+                                </div>
+                            </td>
+                            <td class="col-size">@Bytes(f.SizeBytes)</td>
+                            <td class="col-date muted">@f.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="col-actions">
+                                <div class="fm-row-actions">
+                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
+                                    <button title="@T["pin.unpin"]" onclick="event.stopPropagation();unpinFile('@f.Id')">📌✕</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         }
@@ -237,6 +264,8 @@
     <button data-act="favorite">⭐ @T["actions.star"]</button>
     <div class="divider"></div>
     <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
+    <button data-act="pin" style="display:none">📌 @T["pin.copy_to_personal"]</button>
+    <button data-act="unpin" style="display:none">📌✕ @T["pin.unpin"]</button>
     <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
     <button data-act="icon" style="display:none">🎨 @T["actions.change_icon"]</button>
     <button data-act="delete">🗑 @T["actions.delete"]</button>
@@ -405,22 +434,54 @@ async function deleteFile(id) {
     if (r.ok) location.reload(); else alert('Failed: ' + r.status);
 }
 
+// ── Pin (kopiere ohne Blob-Duplikat in Personal) ─────────────
+async function pinFile(fileId) {
+    const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+    const r = await fetch('/api/v1/file-pins', {
+        method: 'POST', credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(csrf ? { 'RequestVerificationToken': csrf.value } : {})
+        },
+        body: JSON.stringify({ fileId: fileId, note: null }),
+    });
+    if (r.ok) {
+        alert(@Json.Serialize(T["pin.copied_ok"].Value));
+    } else if (r.status === 409) {
+        alert(@Json.Serialize(T["pin.copy_conflict"].Value));
+    } else {
+        alert('Fehler: ' + r.status);
+    }
+}
+async function unpinFile(fileId) {
+    if (!confirm(@Json.Serialize(T["pin.unpin_confirm"].Value))) return;
+    const r = await fetch('/api/v1/file-pins/' + fileId, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok || r.status === 404) location.reload(); else alert('Fehler: ' + r.status);
+}
+
 // ── Right-click context menu ──────────────────────────────────
 const ctxMenu = document.getElementById('ctxMenu');
 let ctxTarget = null;
 document.querySelectorAll('tr.ctx').forEach(tr => {
     tr.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name };
+        ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name,
+                      mine: tr.dataset.mine === '1', pinned: tr.dataset.pinned === '1' };
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
         const isSignable = ctxTarget.kind === 'file' && (tr.dataset.contentType || '').toLowerCase() === 'application/pdf';
+        // "Pin" (=Kopieren-Verweis nach Personal): nur Files, die nicht mir gehören
+        // ODER die aus Public/Group stammen. Bereits gepinnte Files bekommen
+        // stattdessen "Unpin".
+        const canPin = ctxTarget.kind === 'file' && !ctxTarget.pinned && !(SCOPE === 'Personal' && ctxTarget.mine);
         showFor('open',        ctxTarget.kind === 'folder');
         showFor('preview',     ctxTarget.kind === 'file');
         showFor('sign',        isSignable);
         showFor('uploadReq',   ctxTarget.kind === 'folder');
         showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('icon',        ctxTarget.kind === 'folder' && CAN_MANAGE);
-        showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE);
+        showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE && !ctxTarget.pinned);
+        showFor('pin',         canPin);
+        showFor('unpin',       ctxTarget.kind === 'file'   && ctxTarget.pinned);
         // Stash colour + emoji on the ctxTarget so the icon modal knows the
         // current state without another server round-trip.
         ctxTarget.emoji = tr.dataset.emoji || '';
@@ -428,7 +489,11 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('share',       true);
         showFor('directShare', true);
         showFor('favorite',    true);
-        showFor('delete',      (ctxTarget.kind === 'file') || (ctxTarget.kind === 'folder' && CAN_MANAGE));
+        // Delete is destructive — it drops the underlying blob. On pinned
+        // "shortcut" rows we hide it (Unpin above is the correct action);
+        // otherwise the user could nuke a file they don't even own.
+        showFor('delete',      ((ctxTarget.kind === 'file' && !ctxTarget.pinned)
+                                || (ctxTarget.kind === 'folder' && CAN_MANAGE)));
         const vw = window.innerWidth, vh = window.innerHeight;
         const w = 220, h = ctxMenu.offsetHeight || 200;
         const x = Math.min(e.clientX, vw - w - 10);
@@ -462,6 +527,8 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
+        if (act === 'pin' && ctxTarget.kind === 'file') pinFile(ctxTarget.id);
+        if (act === 'unpin' && ctxTarget.kind === 'file') unpinFile(ctxTarget.id);
         if (act === 'delete') {
             if (ctxTarget.kind === 'file') deleteFile(ctxTarget.id);
             else {

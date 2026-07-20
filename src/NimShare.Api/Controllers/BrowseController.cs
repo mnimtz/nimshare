@@ -97,12 +97,36 @@ public class BrowseController : Controller
         var canWrite = await _folders.CanWriteAsync(current, me, ct);
         var canManage = await _folders.CanManageAsync(current, me, ct);
 
+        // Pins: we need the ID-set in every listing (so a row already pinned by
+        // the caller shows "Unpin" instead of "Pin" — regardless of which
+        // scope they're browsing). We only render the pinned-files ROWS on the
+        // Personal root, though — a pin is a shortcut, not a real location.
+        HashSet<Guid> pinnedIds = new(
+            await _db.FilePins.Where(p => p.UserId == me.Id).Select(p => p.FileId).ToListAsync(ct));
+        List<StorageFile> pinnedFiles = new();
+        if (scope == FileScope.Personal && current.ParentFolderId is null && pinnedIds.Count > 0)
+        {
+            var pins = await _db.FilePins
+                .Where(p => p.UserId == me.Id)
+                .Include(p => p.File).ThenInclude(f => f!.Owner)
+                .OrderByDescending(p => p.PinnedAt)
+                .ToListAsync(ct);
+            foreach (var p in pins)
+            {
+                if (p.File is null || p.File.Status != StorageFileStatus.Ready) continue;
+                pinnedFiles.Add(p.File);
+            }
+        }
+
         ViewData["Scope"] = scope;
         ViewData["GroupId"] = groupId;
         ViewData["Current"] = current;
         ViewData["Ancestry"] = ancestry;
         ViewData["Subfolders"] = subs;
         ViewData["Files"] = files;
+        ViewData["PinnedFiles"] = pinnedFiles;
+        ViewData["PinnedIds"] = pinnedIds;
+        ViewData["Me"] = me;
         ViewData["CanWrite"] = canWrite;
         ViewData["CanManage"] = canManage;
         ViewData["UrlBase"] = BuildUrlBase(scope, groupId);

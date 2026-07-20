@@ -326,6 +326,13 @@
   <data name="move.hint.single"><value>Ziel fuer die Datei waehlen.</value></data>
   <data name="move.hint.multi"><value>Ziel fuer {n} Dateien waehlen.</value></data>
   <data name="move.button"><value>Verschieben</value></data>
+  <data name="pin.copy_to_personal"><value>Nach Personal kopieren</value></data>
+  <data name="pin.unpin"><value>Aus Personal entfernen</value></data>
+  <data name="pin.badge"><value>Angepinnt</value></data>
+  <data name="pin.badge_hint"><value>Diese Datei liegt anderswo — die Zeile ist eine Verknüpfung.</value></data>
+  <data name="pin.copied_ok"><value>Als Verknüpfung in deine Personal-Ablage übernommen.</value></data>
+  <data name="pin.copy_conflict"><value>Bereits in deiner Personal-Ablage.</value></data>
+  <data name="pin.unpin_confirm"><value>Diese Verknüpfung aus Personal entfernen?</value></data>
   <data name="nav.ai_gateway"><value>KI-Gateway</value></data>
   <data name="ai.title"><value>KI-Gateway</value></data>
   <data name="ai.lede"><value>Anbieter einmal konfigurieren, dann Funktionen einzeln aktivieren.</value></data>

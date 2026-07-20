@@ -39,6 +39,7 @@ public class NimShareDbContext : DbContext
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<SigningCertificate> SigningCertificates => Set<SigningCertificate>();
+    public DbSet<FilePin> FilePins => Set<FilePin>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -316,6 +317,20 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Issuer).HasMaxLength(240);
             e.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
             e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<FilePin>(e =>
+        {
+            e.HasKey(x => x.Id);
+            // A user can only pin the same file once — the unique index also
+            // makes the "pin already exists?" check a single row lookup.
+            e.HasIndex(x => new { x.UserId, x.FileId }).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.PinnedAt });
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            // File-cascade means deleting the underlying file removes every pin
+            // in one shot; the app never sees a dangling pin.
+            e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<WikiPage>(e =>

@@ -1,6 +1,6 @@
 @model IEnumerable<NimShare.Core.Entities.ShareLink>
 @{
-    ViewData["Title"] = @T["links.title"];
+    ViewData["Title"] = T["links.title"];
     Layout = "_AppShell";
     var publicLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["PublicLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);

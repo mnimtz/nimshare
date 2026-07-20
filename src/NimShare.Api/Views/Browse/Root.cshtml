@@ -1,6 +1,6 @@
 @using NimShare.Api.Services
 @{
-    ViewData["Title"] = @T["browse.root.title"];
+    ViewData["Title"] = T["browse.root.title"];
     Layout = "_AppShell";
     var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
 }

@@ -1,6 +1,6 @@
 @model IEnumerable<NimShare.Core.Entities.SignatureRequest>
 @{
-    ViewData["Title"] = @T["sig.title"];
+    ViewData["Title"] = T["sig.title"];
     Layout = "_AppShell";
     var latestNote = (Dictionary<(Guid RequestId, Guid ParticipantId), string?>)(ViewData["LatestInviteNote"] ?? new Dictionary<(Guid, Guid), string?>());
 }

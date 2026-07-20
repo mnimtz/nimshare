@@ -1,6 +1,6 @@
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = @T["sig.new.title"];
+    ViewData["Title"] = T["sig.new.title"];
     Layout = "_AppShell";
     var pdfs = (List<StorageFile>)ViewData["Pdfs"]!;
     var preselectId = (Guid?)ViewData["PreselectFileId"];

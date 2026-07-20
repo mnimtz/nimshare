@@ -326,6 +326,13 @@
   <data name="move.hint.single"><value>Choose where to move this file.</value></data>
   <data name="move.hint.multi"><value>Choose where to move {n} files.</value></data>
   <data name="move.button"><value>Move</value></data>
+  <data name="pin.copy_to_personal"><value>Copy to my Personal</value></data>
+  <data name="pin.unpin"><value>Remove from Personal</value></data>
+  <data name="pin.badge"><value>Pinned</value></data>
+  <data name="pin.badge_hint"><value>This file lives elsewhere — this row is a shortcut.</value></data>
+  <data name="pin.copied_ok"><value>Added to your Personal library as a shortcut.</value></data>
+  <data name="pin.copy_conflict"><value>Already in your Personal library.</value></data>
+  <data name="pin.unpin_confirm"><value>Remove this shortcut from your Personal library?</value></data>
   <data name="nav.ai_gateway"><value>AI gateway</value></data>
   <data name="ai.title"><value>AI gateway</value></data>
   <data name="ai.lede"><value>Configure your AI provider once, then enable individual features. Keys are encrypted at rest.</value></data>

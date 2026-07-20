@@ -1,7 +1,7 @@
 @model NimShare.Core.Entities.User
 @using NimShare.Core.Entities
 @{
-    ViewData["Title"] = @T["users.edit"];
+    ViewData["Title"] = T["users.edit"];
     Layout = "_AppShell";
     var groups = (List<Group>)(ViewData["Groups"] ?? new List<Group>());
     var memberIds = (HashSet<Guid>)(ViewData["MemberIds"] ?? new HashSet<Guid>());

@@ -328,6 +328,13 @@
   <data name="move.hint.single"><value>Choose where to move this file.</value></data>
   <data name="move.hint.multi"><value>Choose where to move {n} files.</value></data>
   <data name="move.button"><value>Move</value></data>
+  <data name="pin.copy_to_personal"><value>Copia in Personale</value></data>
+  <data name="pin.unpin"><value>Rimuovi da Personale</value></data>
+  <data name="pin.badge"><value>Aggiunto</value></data>
+  <data name="pin.badge_hint"><value>Questo file si trova altrove — questa riga è un collegamento.</value></data>
+  <data name="pin.copied_ok"><value>Aggiunto alla tua libreria Personale come collegamento.</value></data>
+  <data name="pin.copy_conflict"><value>Già nella tua libreria Personale.</value></data>
+  <data name="pin.unpin_confirm"><value>Rimuovere questo collegamento da Personale?</value></data>
   <data name="nav.ai_gateway"><value>AI gateway</value></data>
   <data name="ai.title"><value>AI gateway</value></data>
   <data name="ai.lede"><value>Configure your AI provider once, then enable individual features. Keys are encrypted at rest.</value></data>
