@@ -557,8 +557,31 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
     // stamps every known migration as applied, so MigrateAsync would skip
     // CREATE TABLE ops for anything the baseline covered — this catches
     // instances that jumped past the release that introduced a new table.
+    // Add here every table introduced by a migration that might have been
+    // missed on old-DB installs (pre-v1.10.1 wrong-MigrationsAssembly window).
     var expectedTables = new (string Name, string CreateSql)[]
     {
+        // V178 — SigningCertificates (signature workflow, cert management).
+        // On instances that installed before v1.7.x AND never ran the
+        // migration due to the MigrationsAssembly bug, this table simply
+        // didn't exist — cert-generation crashed with "no such table".
+        ("SigningCertificates", @"CREATE TABLE IF NOT EXISTS SigningCertificates (
+            Id TEXT NOT NULL PRIMARY KEY,
+            OwnerUserId TEXT NOT NULL,
+            Name TEXT NOT NULL,
+            SubjectCommonName TEXT NOT NULL,
+            Issuer TEXT NOT NULL,
+            NotBefore INTEGER NOT NULL,
+            NotAfter INTEGER NOT NULL,
+            Thumbprint TEXT NOT NULL,
+            IsSelfIssued INTEGER NOT NULL,
+            PfxDataEncrypted BLOB NOT NULL,
+            IsDefault INTEGER NOT NULL,
+            CreatedAt INTEGER NOT NULL,
+            LastUsedAt INTEGER NULL,
+            UseCount INTEGER NOT NULL,
+            FOREIGN KEY (OwnerUserId) REFERENCES Users(Id) ON DELETE CASCADE
+        )"),
         // V181 — FilePins. Idempotent CREATE TABLE IF NOT EXISTS matches the
         // migration column-for-column (Sqlite types). Indexes below.
         ("FilePins", @"CREATE TABLE IF NOT EXISTS FilePins (
@@ -601,19 +624,63 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
             cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_FilePins_FileId ON FilePins(FileId)";
             await cmd.ExecuteNonQueryAsync();
         }
-        // If Repair just brought FilePins into existence on an instance that
-        // was baseline-stamped BEFORE V181 (history has rows but no V181 row),
-        // MigrateAsync would otherwise re-run V181's CREATE TABLE and crash on
-        // "table already exists". Stamp V181 as applied to keep the two in
-        // sync — the schema is already there, no work left to do.
+        // SigningCertificates indexes (v1.10.14 fix): match V178 exactly.
         await using (var cmd = conn0.CreateCommand())
         {
-            cmd.CommandText = @"INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion)
-                                SELECT '20260720055248_V181_FilePins', '8.0.0'
-                                WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory')
-                                  AND EXISTS (SELECT 1 FROM __EFMigrationsHistory);";
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_SigningCertificates_OwnerUserId_NotAfter ON SigningCertificates(OwnerUserId, NotAfter)";
             await cmd.ExecuteNonQueryAsync();
         }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_SigningCertificates_OwnerUserId_Thumbprint ON SigningCertificates(OwnerUserId, Thumbprint)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // If Repair just brought FilePins / SigningCertificates into existence
+        // on an instance that was baseline-stamped BEFORE these migrations
+        // (history has rows but no V178/V181 row), MigrateAsync would try to
+        // re-run their CREATE TABLE and crash on "table already exists".
+        // Stamp them as applied so history and schema agree.
+        var stampNames = new[]
+        {
+            "20260719145800_V178_SigningCertificates",
+            "20260720055248_V181_FilePins",
+        };
+        foreach (var mid in stampNames)
+        {
+            await using var cmd = conn0.CreateCommand();
+            cmd.CommandText = @"INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+                                SELECT $mid, '8.0.0'
+                                WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory')
+                                  AND EXISTS (SELECT 1 FROM __EFMigrationsHistory);";
+            var p = cmd.CreateParameter(); p.ParameterName = "$mid"; p.Value = mid; cmd.Parameters.Add(p);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // Diagnostic: list any table from the EF model that's STILL missing
+        // after repair. If Marcus sees something else 500 with "no such
+        // table", this log tells us exactly what to add here next.
+        try
+        {
+            var expectedFromModel = db.Model.GetEntityTypes()
+                .Select(e => e.GetTableName())
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            await using (var cmd = conn0.CreateCommand())
+            {
+                cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
+                await using var rd = await cmd.ExecuteReaderAsync();
+                while (await rd.ReadAsync()) existing.Add(rd.GetString(0));
+            }
+            var missing = expectedFromModel.Where(n => n is not null && !existing.Contains(n!)).ToList();
+            if (missing.Count > 0)
+            {
+                services.GetService<ILoggerFactory>()?.CreateLogger("Startup")
+                    ?.LogWarning("Sqlite schema drift: tables in EF model but missing from DB: {Missing}. Add to RepairSqliteMissingColumnsAsync.expectedTables.",
+                        string.Join(", ", missing));
+            }
+        }
+        catch { /* diagnostic only */ }
     }
     catch (Exception ex) { Console.Error.WriteLine("[STARTUP] Table repair failed: " + ex.Message); }
 
