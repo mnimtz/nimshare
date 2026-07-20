@@ -66,12 +66,22 @@ public class FilesController : ControllerBase
                 user, ct);
         }
 
-        var usedBytes = await _db.Files
-            .Where(f => f.OwnerId == user.Id && f.Status != StorageFileStatus.Deleted)
-            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
-        if (usedBytes + req.SizeBytes > user.QuotaBytes)
-            return Problem(statusCode: 413, title: "Quota exceeded",
-                detail: $"Uploading this file would exceed your quota of {user.QuotaBytes / 1024 / 1024} MiB.");
+        // v1.10.24: Quota gilt nur für PERSONAL-scope Uploads. Public und
+        // Group liegen im gemeinsamen Speicher — dort werden keine Quota-
+        // Limits erzwungen, die Verwaltung passiert über Group-Level bzw.
+        // Admin-Policy (später). Ein Personal-Upload zählt nur die anderen
+        // Personal-Dateien des Users, nicht seine Public/Group-Beiträge.
+        if (scope == FileScope.Personal)
+        {
+            var usedPersonalBytes = await _db.Files
+                .Where(f => f.OwnerId == user.Id
+                    && f.Scope == FileScope.Personal
+                    && f.Status != StorageFileStatus.Deleted)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            if (usedPersonalBytes + req.SizeBytes > user.QuotaBytes)
+                return Problem(statusCode: 413, title: "Quota exceeded",
+                    detail: $"Uploading this file would exceed your Personal quota of {user.QuotaBytes / 1024 / 1024} MiB.");
+        }
 
         var file = new StorageFile
         {

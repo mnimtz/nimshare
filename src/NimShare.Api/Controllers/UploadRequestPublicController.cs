@@ -59,12 +59,21 @@ public class UploadRequestPublicController : Controller
         if (req.SizeBytes <= 0 || req.SizeBytes > MaxUploadRequestBytes)
             return Problem(statusCode: 413, title: "File too large", detail: $"Max {MaxUploadRequestBytes / 1024 / 1024} MiB per upload-request link.");
 
-        // Enforce the owner's remaining quota before granting a write SAS.
-        var usedBytes = await _db.Files
-            .Where(f => f.OwnerId == link.OwnerId && f.Status != StorageFileStatus.Deleted)
-            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
-        if (usedBytes + req.SizeBytes > link.Owner.QuotaBytes)
-            return Problem(statusCode: 413, title: "Recipient is out of storage");
+        // v1.10.24: Quota gilt nur für Personal-Scope. Upload-Request-Links,
+        // die in einen Public/Group-Ordner zielen, laufen ohne Quota-Prüfung
+        // (dort ist der Speicher gemeinsam, nicht dem User zugerechnet).
+        // Ohne TargetFolder = Personal-Fallback → wir prüfen.
+        var targetScope = link.TargetFolderRef?.Scope ?? FileScope.Personal;
+        if (targetScope == FileScope.Personal)
+        {
+            var usedPersonalBytes = await _db.Files
+                .Where(f => f.OwnerId == link.OwnerId
+                    && f.Scope == FileScope.Personal
+                    && f.Status != StorageFileStatus.Deleted)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            if (usedPersonalBytes + req.SizeBytes > link.Owner.QuotaBytes)
+                return Problem(statusCode: 413, title: "Recipient is out of storage");
+        }
 
         // Atomically reserve one upload slot on the link. Prevents concurrent visitors
         // racing past MaxUploads and stops one visitor from creating hundreds of

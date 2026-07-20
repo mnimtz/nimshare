@@ -63,15 +63,21 @@ public class FileVersionsController : ControllerBase
         // managers, write-grant recipients).
         if (!await _access.CanDeleteAsync(me, file, ct)) return Forbid();
 
-        // Quota still counts against the owner, delta only.
-        var used = await _db.Files.Where(f => f.OwnerId == file.OwnerId && f.Status != StorageFileStatus.Deleted)
-            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
-        var extra = req.SizeBytes - file.SizeBytes;
-        if (extra > 0)
+        // Quota gilt nur für Personal-Scope (v1.10.24). Versions einer
+        // Public/Group-Datei liegen im gemeinsamen Speicher → keine Prüfung.
+        if (file.Scope == FileScope.Personal)
         {
-            var owner = await _db.Users.FindAsync(new object[] { file.OwnerId }, ct);
-            if (owner is not null && used + extra > owner.QuotaBytes)
-                return Problem(statusCode: 413, title: "Quota exceeded.");
+            var usedPersonal = await _db.Files.Where(f => f.OwnerId == file.OwnerId
+                    && f.Scope == FileScope.Personal
+                    && f.Status != StorageFileStatus.Deleted)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            var extra = req.SizeBytes - file.SizeBytes;
+            if (extra > 0)
+            {
+                var owner = await _db.Users.FindAsync(new object[] { file.OwnerId }, ct);
+                if (owner is not null && usedPersonal + extra > owner.QuotaBytes)
+                    return Problem(statusCode: 413, title: "Quota exceeded.");
+            }
         }
 
         // Freeze the current bytes into a versioned path — the caller uploads

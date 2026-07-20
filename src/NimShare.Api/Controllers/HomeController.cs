@@ -41,11 +41,17 @@ public class HomeController : Controller
             .OrderByDescending(f => f.CreatedAt).Take(10)
             .ToListAsync(ct);
         var linkCount = await _db.ShareLinks.CountAsync(l => l.OwnerId == user.Id, ct);
-        var totalBytes = files.Sum(f => f.SizeBytes);
+        // v1.10.24: Quota-Anzeige nur Personal-Scope. Public/Group-Dateien
+        // laufen im Shared-Storage, zählen nicht gegen das persönliche Limit.
+        var totalPersonalBytes = await _db.Files
+            .Where(f => f.OwnerId == user.Id
+                && f.Scope == NimShare.Core.Entities.FileScope.Personal
+                && f.Status == StorageFileStatus.Ready)
+            .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
         ViewData["UserName"] = user.DisplayName;
         ViewData["FileCount"] = files.Count;
         ViewData["LinkCount"] = linkCount;
-        ViewData["UsedBytes"] = totalBytes;
+        ViewData["UsedBytes"] = totalPersonalBytes;
         ViewData["QuotaBytes"] = user.QuotaBytes;
         return View(files);
     }
