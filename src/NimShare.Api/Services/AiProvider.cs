@@ -368,7 +368,7 @@ public class GeminiProvider : IAiProvider
             generationConfig = visionConfig,
             safetySettings = safety,
         };
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(_model)}:generateContent?key={Uri.EscapeDataString(_apiKey)}";
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         LastError = null;
         try
@@ -481,7 +481,7 @@ public class GeminiProvider : IAiProvider
     /// or safety block stops looking like a mystery 502.</summary>
     public async Task<(string? Text, string? Error)> GenerateWithDetailAsync(string prompt, double temperature, int maxTokens, CancellationToken ct)
     {
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(_model)}:generateContent?key={Uri.EscapeDataString(_apiKey)}";
         // Gemini 2.5 defaults thinkingBudget to "dynamic" — for 2.5-flash that
         // can burn 500-800 output tokens on internal reasoning before writing
         // anything, so a 1024 cap silently produces an empty response. Zero

@@ -47,7 +47,24 @@ public class AiGatewayController : Controller
             var key = _ai.GetApiKeyAsync().GetAwaiter().GetResult();
             if (string.IsNullOrEmpty(key))
                 return "Encrypt-Blob vorhanden aber Unprotect ergab leeren String — vermutlich DataProtection-Keys-Ring wurde regeneriert. Key neu eintragen.";
-            return $"OK — Key entschlüsselbar (Länge {key.Length} Zeichen, beginnt mit '{key[..Math.Min(4, key.Length)]}…').";
+            // v1.10.28: Zusätzliche Byte-Level-Diagnose. Standard Gemini-Keys
+            // sind 39 Zeichen "AIzaSy" + 33. Alles darüber ist verdächtig
+            // (Trailing-Whitespace, versehentlich zweiter Key drangehängt,
+            // Zero-Width-Chars aus Copy-Paste, etc.). Hex-Dump der ersten
+            // und letzten 4 Bytes deckt das schonungslos auf.
+            var bytes = System.Text.Encoding.UTF8.GetBytes(key);
+            string hexFirst = BitConverter.ToString(bytes, 0, Math.Min(4, bytes.Length)).Replace("-", "");
+            string hexLast = bytes.Length > 4
+                ? BitConverter.ToString(bytes, bytes.Length - 4, 4).Replace("-", "")
+                : "n/a";
+            bool suspicious = key.Length > 45; // 39 Std + kleine Toleranz
+            bool startsAIza = key.StartsWith("AIza", StringComparison.Ordinal);
+            var msg = $"OK — Key entschlüsselbar (Länge {key.Length}, startet '{key[..Math.Min(4, key.Length)]}…', erste 4 Bytes hex={hexFirst}, letzte 4 Bytes hex={hexLast}, UTF8-Bytes={bytes.Length}).";
+            if (!startsAIza)
+                msg += " ⚠ Kein AIza-Präfix — ist das WIRKLICH ein Gemini-Key? OpenAI-Keys beginnen mit 'sk-'.";
+            if (suspicious)
+                msg += $" ⚠ Länge {key.Length} ist ungewöhnlich (Standard Gemini-Keys sind 39 Zeichen). Möglicherweise hängt Whitespace / Newline / zweiter Key mit dran. Prüfe die letzten 4 Bytes hex — sind da 20/09/0A/0D drin, ist's Whitespace.";
+            return msg;
         }
         catch (Exception ex)
         {
