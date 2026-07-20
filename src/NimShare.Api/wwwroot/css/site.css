@@ -1380,6 +1380,30 @@ body.nav-open { position: relative; }
    drag that ends outside the panel still counts as an "inside" interaction. */
 .modal-panel { user-select: text; }
 
+/* ── Avatar popover (Profil / Abmelden) ─────────────────────── */
+.avatar-popover {
+    position: fixed;
+    z-index: 9600;
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    padding: 6px;
+    min-width: 180px;
+    animation: avatarPopIn .12s ease-out;
+}
+@keyframes avatarPopIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.avatar-popover a {
+    display: block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: var(--tw-text);
+    border-radius: 6px;
+    font-size: .92rem;
+}
+.avatar-popover a:hover { background: var(--tw-gray-100); }
+.avatar-popover a.logout { color: var(--status-critical, #d33); border-top: 1px solid var(--tw-gray-200); margin-top: 2px; padding-top: 10px; }
+
 /* ── Main file pane ────────────────────────────────────────────── */
 .fm-main {
     padding: 18px 24px 40px;

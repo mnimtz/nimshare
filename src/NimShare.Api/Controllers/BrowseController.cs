@@ -126,13 +126,19 @@ public class BrowseController : Controller
     // ── POST: create folder ────────────────────────────────────────────────
     [HttpPost("folders/create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateFolder(Guid parentId, string name, string returnUrl, CancellationToken ct)
+    public async Task<IActionResult> CreateFolder(Guid parentId, string name, string returnUrl,
+        [FromServices] IActivityLogger activity, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var parent = await _db.Folders.FindAsync(new object[] { parentId }, ct);
         if (parent is null) return NotFound();
         if (!await _folders.CanWriteAsync(parent, me, ct)) return Forbid();
-        try { await _folders.CreateChildAsync(parent, name, me, ct); }
+        try
+        {
+            var child = await _folders.CreateChildAsync(parent, name, me, ct);
+            await activity.LogAsync(ActivityKind.FolderCreated, me, $"Ordner erstellt: {name}",
+                folderId: child.Id, ct: ct);
+        }
         catch (Exception ex) { TempData["Error"] = ex.Message; }
         return Redirect(SafeReturn(returnUrl));
     }

@@ -96,7 +96,9 @@ public class FilesController : ControllerBase
 
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai,
-        [FromServices] IWebhookDispatcher hooks, CancellationToken ct)
+        [FromServices] IWebhookDispatcher hooks,
+        [FromServices] IActivityLogger activity,
+        CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id && f.OwnerId == user.Id, ct);
@@ -116,6 +118,9 @@ public class FilesController : ControllerBase
         ai.QueueForFile(file.Id);
         hooks.QueueEvent(user.Id, WebhookEvent.FileUploaded,
             new { fileId = file.Id, name = file.Name, sizeBytes = file.SizeBytes, folder = file.Folder });
+        // Fills the Aktivität feed. Best-effort; ActivityLogger swallows errors.
+        await activity.LogAsync(ActivityKind.FileUploaded, user, $"hochgeladen: {file.Name}",
+            fileId: file.Id, folderId: file.FolderId, ct: ct);
         return NoContent();
     }
 
@@ -262,7 +267,8 @@ public class FilesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, [FromServices] IFileAccessService access, CancellationToken ct)
+    public async Task<IActionResult> Delete(Guid id, [FromServices] IFileAccessService access,
+        [FromServices] IActivityLogger activity, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.Include(f => f.ShareLinks)
@@ -275,6 +281,8 @@ public class FilesController : ControllerBase
         file.DeletedAt = DateTimeOffset.UtcNow;
         foreach (var link in file.ShareLinks) link.IsRevoked = true;
         await _db.SaveChangesAsync(ct);
+        await activity.LogAsync(ActivityKind.FileDeleted, user, $"gelöscht: {file.Name}",
+            fileId: file.Id, folderId: file.FolderId, ct: ct);
         return NoContent();
     }
 

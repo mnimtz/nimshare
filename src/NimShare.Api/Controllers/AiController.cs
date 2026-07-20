@@ -342,11 +342,24 @@ public class AiController : ControllerBase
     {
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableChatWithFiles || settings.Provider == AiProvider.Disabled)
-            return Problem(statusCode: 503, title: "Chat is disabled.");
+            return Problem(statusCode: 503, title: "Chat mit Dateien ist deaktiviert.",
+                detail: "Einstellungen → AI-Gateway: 'Chat with your files' aktivieren und einen Provider konfigurieren.");
+        if (!settings.EnableSemanticSearch)
+            return Problem(statusCode: 503, title: "Chat braucht semantische Suche.",
+                detail: "Einstellungen → AI-Gateway: 'Semantische Suche' zusätzlich aktivieren — Chat findet Dokumente über Embeddings.");
         if (string.IsNullOrWhiteSpace(req.Question)) return BadRequest();
 
-        // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
+        // Check that the user actually has embeddings — otherwise the retrieval
+        // returns empty and the chat says "no context" which reads as broken.
         var me = await users.GetOrProvisionAsync(User, ct);
+        var anyEmbedding = await _db.FileEmbeddings
+            .Where(e => _db.Files.Any(f => f.Id == e.FileId && f.OwnerId == me.Id))
+            .AnyAsync(ct);
+        if (!anyEmbedding)
+            return Problem(statusCode: 503, title: "Noch keine indexierten Dokumente.",
+                detail: "Semantische Suche benötigt Embeddings, die beim Hochladen erzeugt werden. Nach dem Aktivieren neue Dateien hochladen oder ältere neu indexieren (Reindex-Button auf der AI-Gateway-Seite folgt).");
+
+        // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
         var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);
         if (!ok) return err!;
         if (hits.Count == 0)

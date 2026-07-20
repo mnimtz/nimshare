@@ -93,6 +93,14 @@ public class LinksController : ControllerBase
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(user.Id, WebhookEvent.LinkCreated,
                 new { linkId = link.Id, slug = link.Slug, fileId = link.FileId, folderId = link.FolderId });
+        var activity = HttpContext.RequestServices.GetService<IActivityLogger>();
+        if (activity is not null)
+        {
+            var subject = file?.Name ?? folder?.Name ?? "Element";
+            await activity.LogAsync(ActivityKind.ShareLinkCreated, user,
+                $"Share-Link erstellt: /s/{link.Slug} ({subject})",
+                fileId: link.FileId, folderId: link.FolderId, ct: ct);
+        }
         return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link));
     }
 

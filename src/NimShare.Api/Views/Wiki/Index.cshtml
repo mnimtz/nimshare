@@ -72,7 +72,11 @@
 <script>
 const wikiI18n = document.querySelector('[data-prompt-title]').dataset;
 async function createPage(scope, groupId) {
-    const title = prompt(wikiI18n.promptTitle);
+    // nsPrompt is the app-wide modal from _AppShell; falls back to the
+    // native prompt if the shell isn't loaded (e.g. print view).
+    const title = window.nsPrompt
+        ? await window.nsPrompt(wikiI18n.promptTitle, '', '')
+        : window.prompt(wikiI18n.promptTitle);
     if (!title) return;
     const body = { scope, ownerGroupId: groupId, parentPageId: null, title, contentMarkdown: '# ' + title + '\n\n' };
     const r = await fetch('/api/v1/wiki/pages', {

@@ -146,7 +146,12 @@ document.querySelectorAll('[data-copy]').forEach(b => {
     b.addEventListener('click', async () => {
         const url = location.origin + b.dataset.copy;
         try { await navigator.clipboard.writeText(url); b.textContent = '✓'; setTimeout(()=>b.textContent=@Json.Serialize(T["links.action.copy"].Value), 1200); }
-        catch { prompt('Copy this URL:', url); }
+        catch {
+            // Modern replacement — presents the URL in a proper modal input
+            // (selectable, copyable) instead of a native prompt bar.
+            if (window.nsPrompt) window.nsPrompt('Copy this URL', '', url);
+            else prompt('Copy this URL:', url);
+        }
     });
 });
 document.querySelectorAll('[data-email]').forEach(b => {

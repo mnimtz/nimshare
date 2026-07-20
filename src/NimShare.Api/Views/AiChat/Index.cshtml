@@ -61,7 +61,16 @@ async function chatSend() {
             body: JSON.stringify({ question: q, scope, groupId }),
         });
         document.querySelector('.msg.thinking')?.remove();
-        if (!r.ok) { appendMsg('assistant', @Json.Serialize(T["chat.error"].Value)); return; }
+        if (!r.ok) {
+            // Show the real reason so users know what to fix (AI disabled,
+            // 503, quota, safety, model unavailable). Parse Problem-details
+            // JSON, fall back to raw text.
+            let detail = '';
+            try { const p = await r.json(); detail = p.detail || p.title || ('HTTP ' + r.status); }
+            catch { try { detail = await r.text(); } catch { detail = 'HTTP ' + r.status; } }
+            appendMsg('assistant', @Json.Serialize(T["chat.error"].Value) + ' — ' + detail);
+            return;
+        }
         const d = await r.json();
         if (!d.answer) appendMsg('assistant', @Json.Serialize(T["chat.no_context"].Value));
         else {
