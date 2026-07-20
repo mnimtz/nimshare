@@ -128,13 +128,28 @@
                     <input type="text" name="typedName" required value="@Model.Me.Name" maxlength="120"/>
                 </div>
                 <div class="field">
-                    <label>Unterschrift (unten zeichnen)</label>
-                    <div style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
+                    <label style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                        <span>Unterschrift</span>
+                        <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
+                            <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
+                            <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
+                        </span>
+                    </label>
+                    <div id="sigDrawWrap" style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
                         <canvas id="sigPad" width="720" height="180" style="width:100%;height:180px;touch-action:none;display:block"></canvas>
                         <button type="button" onclick="clearSig()" style="position:absolute;top:6px;right:6px;background:var(--tw-gray-100);border:0;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.8rem">Löschen</button>
                     </div>
+                    <div id="sigCertWrap" style="display:none;border:2px solid var(--tw-gray-300);border-radius:8px;background:#fff;padding:14px">
+                        <div id="sigCertInfo" class="muted" style="font-size:.9rem">Lade Zertifikat …</div>
+                        <canvas id="sigCertPreview" width="720" height="180" style="width:100%;max-height:180px;border:1px solid var(--tw-gray-200);border-radius:6px;margin-top:10px;display:none"></canvas>
+                        <div id="sigCertHint" class="muted" style="font-size:.78rem;margin-top:8px">
+                            Wenn du eingeloggt bist und ein Default-Zertifikat unter <a href="/settings/certificates" target="_blank">Einstellungen › Zertifikate</a> hinterlegt hast, wird es hier verwendet.
+                            Der Stempel enthält deinen CN, den Thumbprint und Zeitstempel — er wird als Bild ins Signaturfeld eingebettet (wie eine handgezeichnete Unterschrift).
+                        </div>
+                    </div>
                 </div>
                 <input type="hidden" name="signatureData" id="signatureData"/>
+                <input type="hidden" name="signMode" id="signMode" value="draw"/>
             }
             <div class="row" style="justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px">
                 <button type="button" class="btn btn-ghost" onclick="declineOpen()">✕ Ablehnen</button>
@@ -390,12 +405,129 @@ render();
     // submitted in Chrome/Edge/Firefox (that was the "wird gesendet…" hang).
     // Wire the disable via setTimeout(…,0) so it runs AFTER the browser has
     // begun the actual POST.
-    document.getElementById('signForm').addEventListener('submit', () => {
-        if (!empty) document.getElementById('signatureData').value = c.toDataURL('image/png');
+    document.getElementById('signForm').addEventListener('submit', (ev) => {
+        const mode = document.getElementById('signMode')?.value || 'draw';
+        if (mode === 'cert') {
+            // Cert-Stempel-Modus: nutze die vorbereitete Preview-PNG.
+            const certCanvas = document.getElementById('sigCertPreview');
+            if (!certCanvas || certCanvas.style.display === 'none' || !window.__certReady) {
+                ev.preventDefault();
+                alert('Zertifikat konnte nicht geladen werden. Bitte auf "🖊 Zeichnen" wechseln oder Zertifikat unter Einstellungen › Zertifikate anlegen.');
+                return;
+            }
+            document.getElementById('signatureData').value = certCanvas.toDataURL('image/png');
+        } else {
+            if (!empty) document.getElementById('signatureData').value = c.toDataURL('image/png');
+        }
         const btn = document.getElementById('submitBtn');
         setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; } }, 0);
     });
 })();
+
+// ── Signatur-Modus: Zeichnen vs. Zertifikat-Stempel ────────────────
+window.__certReady = false;
+window.setSigMode = async function (mode) {
+    document.getElementById('signMode').value = mode;
+    const drawWrap = document.getElementById('sigDrawWrap');
+    const certWrap = document.getElementById('sigCertWrap');
+    const modeDrawBtn = document.getElementById('modeDraw');
+    const modeCertBtn = document.getElementById('modeCert');
+    if (!drawWrap || !certWrap) return;
+    if (mode === 'cert') {
+        drawWrap.style.display = 'none';
+        certWrap.style.display = '';
+        modeDrawBtn.setAttribute('aria-pressed', 'false');
+        modeCertBtn.setAttribute('aria-pressed', 'true');
+        modeCertBtn.style.background = 'var(--tw-white)';
+        modeCertBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,.1)';
+        modeDrawBtn.style.background = '';
+        modeDrawBtn.style.boxShadow = '';
+        await loadCertPreview();
+    } else {
+        drawWrap.style.display = '';
+        certWrap.style.display = 'none';
+        modeDrawBtn.setAttribute('aria-pressed', 'true');
+        modeCertBtn.setAttribute('aria-pressed', 'false');
+        modeDrawBtn.style.background = 'var(--tw-white)';
+        modeDrawBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,.1)';
+        modeCertBtn.style.background = '';
+        modeCertBtn.style.boxShadow = '';
+    }
+};
+setSigMode('draw'); // set initial pressed style
+
+async function loadCertPreview() {
+    const info = document.getElementById('sigCertInfo');
+    const canvas = document.getElementById('sigCertPreview');
+    window.__certReady = false;
+    if (!info || !canvas) return;
+    info.textContent = 'Lade Zertifikat …';
+    canvas.style.display = 'none';
+    try {
+        const r = await fetch('/api/v1/certificates/default', { credentials: 'same-origin' });
+        if (r.status === 401 || r.status === 403) {
+            info.innerHTML = '⚠ Zertifikat-Stempel nur für <strong>angemeldete NimShare-Nutzer</strong> mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.';
+            return;
+        }
+        if (r.status === 404) {
+            info.innerHTML = '⚠ Kein Default-Zertifikat gefunden. Lege eines unter <a href="/settings/certificates" target="_blank">Einstellungen › Zertifikate</a> an und setze es als Default.';
+            return;
+        }
+        if (!r.ok) { info.textContent = 'Fehler beim Laden: HTTP ' + r.status; return; }
+        const cert = await r.json();
+        renderCertStamp(canvas, cert);
+        info.innerHTML = `Verwendetes Zertifikat: <strong>${escapeHtml(cert.name || cert.subjectCommonName)}</strong> — Thumbprint <code>${escapeHtml((cert.thumbprint || '').slice(0, 16))}…</code>`;
+        canvas.style.display = '';
+        window.__certReady = true;
+    } catch (e) {
+        info.textContent = 'Fehler beim Laden des Zertifikats: ' + (e.message || e);
+    }
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderCertStamp(canvas, cert) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    // clear
+    ctx.clearRect(0, 0, w, h);
+    // background
+    ctx.fillStyle = '#f7fafc';
+    ctx.fillRect(0, 0, w, h);
+    // border
+    ctx.strokeStyle = '#002854';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+    // seal icon area (left)
+    ctx.fillStyle = '#002854';
+    ctx.font = 'bold 72px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔒', 30, h / 2);
+    // headline
+    ctx.fillStyle = '#002854';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText('Digital signiert', 130, 20);
+    // subject
+    ctx.font = '18px sans-serif';
+    ctx.fillStyle = '#1a202c';
+    ctx.fillText((cert.subjectCommonName || cert.name || '').slice(0, 60), 130, 54);
+    // meta lines
+    ctx.font = '13px "SF Mono", Menlo, monospace';
+    ctx.fillStyle = '#4a5568';
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    ctx.fillText('Zeitstempel: ' + ts, 130, 90);
+    ctx.fillText('Thumbprint:  ' + (cert.thumbprint || '').slice(0, 32).match(/.{1,4}/g)?.join(' '), 130, 110);
+    ctx.fillText('Aussteller:  ' + (cert.isSelfIssued ? 'Selbstausgestellt (NimShare)' : 'CA-signiert'), 130, 130);
+    // footer strip
+    ctx.font = 'italic 11px sans-serif';
+    ctx.fillStyle = '#718096';
+    ctx.fillText('Signiert via NimShare — Nachweis siehe Audit-Trail', 130, 154);
+}
 window.declineOpen = () => {
     const f = document.getElementById('signForm');
     const d = document.getElementById('declineForm');

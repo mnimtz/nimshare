@@ -246,6 +246,24 @@ public class CertificatesApiController : ControllerBase
         return c is null ? NotFound() : Ok(ToDto(c));
     }
 
+    /// <summary>Returns the caller's default signing certificate (or their
+    /// most-recently-created one if no default is set). Used by the Sign UI
+    /// to render a certificate-stamp preview (v1.10.15). Only public cert
+    /// metadata — the PFX bytes never leave the server.</summary>
+    [HttpGet("default")]
+    public async Task<IActionResult> GetDefault(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var now = DateTimeOffset.UtcNow;
+        var c = await _db.SigningCertificates
+            .Where(x => x.OwnerUserId == me.Id && x.NotAfter > now)
+            .OrderByDescending(x => x.IsDefault)
+            .ThenByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (c is null) return NotFound();
+        return Ok(ToDto(c));
+    }
+
     [HttpPost("{id:guid}/set-default")]
     public async Task<IActionResult> SetDefault(Guid id, CancellationToken ct)
     {

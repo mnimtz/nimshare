@@ -121,7 +121,7 @@ public class SignController : Controller
     [HttpPost("/sign/{pid:guid}/submit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(Guid pid, string t, string? typedName,
-        string? signatureData, CancellationToken ct)
+        string? signatureData, string? signMode, CancellationToken ct)
     {
         var (req, p) = await ResolveAsync(pid, t, ct);
         if (req is null || p is null) return View("Invalid");
@@ -224,6 +224,11 @@ public class SignController : Controller
         {
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Signed,
             IpHash = p.IpHash, UserAgent = p.UserAgent,
+            // v1.10.15: record which UI-mode produced the signature image so
+            // the audit trail can distinguish hand-drawn from cert-stamped.
+            Note = string.Equals(signMode, "cert", StringComparison.OrdinalIgnoreCase)
+                ? "signed via certificate stamp"
+                : null,
         });
 
         // Persist the Signed status BEFORE any long-running work.
