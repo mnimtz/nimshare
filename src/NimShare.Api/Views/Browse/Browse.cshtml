@@ -93,6 +93,12 @@
                 }
             </div>
             <div class="fm-toolbar">
+                @* v1.10.52: Mobile-Tree-Toggle. Auf Desktop weggeblendet
+                   (CSS media-query), auf Mobile öffnet er den fmTree als
+                   Bottom-Sheet-Overlay. *@
+                <button class="fm-btn fm-tree-toggle" type="button" title="@T["browse.tree.mobile_toggle"]" onclick="openMobileTree()" aria-label="@T["browse.tree.mobile_toggle"]">
+                    <span>📁</span>
+                </button>
                 @if (canWrite)
                 {
                     <button class="fm-btn" title="@T["browse.new_folder"]" onclick="openNewFolderModal()">
@@ -172,15 +178,15 @@
                             @if (scope != FileScope.Personal) { <td class="col-owner"></td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
-                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFolderModal('@sub.Id')">🔗</button>
-                                    <button title="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
+                                    <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFolderModal('@sub.Id')">🔗</button>
+                                    <button title="@T["actions.request_upload"]" aria-label="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
                                     @if (canManage)
                                     {
-                                        <button title="@T["actions.rename"]" onclick="event.stopPropagation();openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
+                                        <button title="@T["actions.rename"]" aria-label="@T["actions.rename"]" onclick="event.stopPropagation();openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
                                         <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline" onsubmit="return confirm('@T["actions.confirm_delete"]')" onclick="event.stopPropagation()">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="returnUrl" value="@currentUrl"/>
-                                            <button title="@T["actions.delete"]" type="submit">🗑</button>
+                                            <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" type="submit">🗑</button>
                                         </form>
                                     }
                                 </div>
@@ -215,9 +221,9 @@
                             @if (scope != FileScope.Personal) { <td class="col-owner muted">@f.Owner.DisplayName</td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
-                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
-                                    @if (canWrite) { <button title="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
-                                    <button title="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
+                                    <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
+                                    @if (canWrite) { <button title="@T["actions.move"]" aria-label="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
+                                    <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
                                 </div>
                             </td>
                         </tr>
@@ -238,8 +244,8 @@
                             <td class="col-date muted">@f.CreatedAt.ToDisplay()</td>
                             <td class="col-actions">
                                 <div class="fm-row-actions">
-                                    <button title="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
-                                    <button title="@T["pin.unpin"]" onclick="event.stopPropagation();unpinFile('@f.Id')">📌✕</button>
+                                    <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
+                                    <button title="@T["pin.unpin"]" aria-label="@T["pin.unpin"]" onclick="event.stopPropagation();unpinFile('@f.Id')">📌✕</button>
                                 </div>
                             </td>
                         </tr>
@@ -1172,4 +1178,32 @@ async function fi_save() {
         });
     });
 })();
+
+// v1.10.52: Mobile-Tree-Toggle. Auf Desktop ist das Panel immer sichtbar;
+// auf Mobile ist es per CSS ausgeblendet. Der 📁-Button in der Toolbar
+// setzt die Klasse `mobile-open` auf den Body — CSS schiebt das Panel
+// dann als Bottom-Sheet rein. Klick außerhalb (Overlay) schließt.
+window.openMobileTree = function () {
+    document.body.classList.add('fm-tree-mobile-open');
+};
+window.closeMobileTree = function () {
+    document.body.classList.remove('fm-tree-mobile-open');
+};
+// Overlay: klick außerhalb schließt. Wir docken einen Klick-Handler an
+// das dynamisch generierte Overlay-DIV weil wir eh CSS-only-Insertion
+// vermeiden wollen.
+document.addEventListener('click', function (ev) {
+    if (!document.body.classList.contains('fm-tree-mobile-open')) return;
+    // wenn Ziel innerhalb der Sidebar oder des Toggle-Buttons ist → nix
+    if (ev.target.closest('.fm-tree')) return;
+    if (ev.target.closest('.fm-tree-toggle')) return;
+    // sonst schließen
+    document.body.classList.remove('fm-tree-mobile-open');
+});
+// Nach jedem Tree-Node-Klick auch schließen — der User hat navigiert
+document.getElementById('fmTree')?.addEventListener('click', function (ev) {
+    if (ev.target.closest('a.ft-label') || ev.target.closest('.ft-row')) {
+        setTimeout(() => document.body.classList.remove('fm-tree-mobile-open'), 60);
+    }
+});
 </script>

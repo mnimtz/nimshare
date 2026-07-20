@@ -1109,4 +1109,5 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="sig.section.abandoned"><value>Abgelehnt / abgebrochen</value></data>
   <data name="sig.detail.forensics_title"><value>Signatur-Beweise</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadaten aus dem Moment der Signatur — Standort (aus IP), Gerätetyp, Zeitzone. Wird dem Unterzeichnenden nicht gezeigt.</value></data>
+  <data name="browse.tree.mobile_toggle"><value>Ordner anzeigen</value></data>
 </root>

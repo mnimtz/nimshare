@@ -1105,4 +1105,5 @@ Grazie per usare NimShare.</value></data>
   <data name="sig.section.abandoned"><value>Rifiutati / annullati</value></data>
   <data name="sig.detail.forensics_title"><value>Prove della firma</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadati raccolti al momento della firma — posizione (da IP), tipo di dispositivo, fuso orario. Non condivisi con il firmatario.</value></data>
+  <data name="browse.tree.mobile_toggle"><value>Mostra cartelle</value></data>
 </root>

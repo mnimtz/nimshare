@@ -1288,9 +1288,40 @@ body.nav-open { position: relative; }
     flex: 1;
 }
 .fm-tree .ft-children.collapsed { display: none; }
+/* Desktop-only: Tree-Toggle-Button versteckt */
+.fm-tree-toggle { display: none; }
+
 @media (max-width: 780px) {
     .fm-with-tree { grid-template-columns: 1fr; }
-    .fm-tree { display: none; }
+    /* v1.10.52: Tree als Bottom-Sheet-Overlay statt komplett weg.
+       Standard hidden, per body.fm-tree-mobile-open eingeblendet. */
+    .fm-tree {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(88vw, 340px);
+        max-width: 100vw;
+        background: var(--tw-surface, #fff);
+        z-index: 1000;
+        box-shadow: 4px 0 20px rgba(0,0,0,.15);
+        overflow-y: auto;
+        transform: translateX(-105%);
+        transition: transform 220ms ease;
+        padding: 12px 4px;
+    }
+    body.fm-tree-mobile-open .fm-tree {
+        transform: translateX(0);
+    }
+    body.fm-tree-mobile-open::after {
+        content: "";
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.35);
+        z-index: 999;
+        pointer-events: none; /* Klicks reichen an document durch → JS-Handler */
+    }
+    .fm-tree-toggle { display: inline-flex; }
 }
 
 /* ── Folder-icon picker grids ────────────────────────────────── */
@@ -1418,6 +1449,23 @@ body.nav-open { position: relative; }
         margin: 0 0 12px auto !important;
         display: block;
     }
+}
+
+/* v1.10.52 — PDF-Preview auf Sign-Landing: doppel-scroll auf iOS ist
+   frustrierend, oft "scroll gefangen". Auf Mobile lassen wir den
+   PDF-Container natürlich mitscrollen mit der Seite. */
+@media (max-width: 780px) {
+    #pdfPages {
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
+}
+
+/* v1.10.52 — Sig-Summary-Sprachwahl war schmaler als der Nachbar-Button.
+   Angleichen auf 40px Höhe, damit die Row visuell konsistent ist. */
+.sig-summary-card select {
+    min-height: 40px;
+    padding: 8px 12px;
 }
 
 @media (max-width: 640px) {
