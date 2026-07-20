@@ -73,9 +73,21 @@ builder.Services.AddDbContext<NimShareDbContext>(o =>
         // database file" errors when the mount is remounted or throttled. Two
         // guards: (1) enable WAL + a 15 s busy_timeout so brief locks don't
         // fault, (2) SqliteRecoveryMiddleware clears the pool + retries GETs.
+        //
+        // MigrationsAssembly is NimShare.Core because the migration .cs
+        // files physically live under src/NimShare.Core/Migrations/ and get
+        // compiled into NimShare.Core.dll (the SDK-style project auto-
+        // includes any .cs under the project folder). The old
+        // MigrationsAssembly("NimShare.Api") was WRONG — EF loaded Api.dll,
+        // found zero Migration subclasses, MigrateAsync did nothing, and
+        // every schema-change migration since V177 silently never ran. That
+        // pattern was the source of the recurring "no such column" 500s;
+        // the RepairSqliteMissingColumnsAsync helper below is a belt-and-
+        // braces catch-up for deployed DBs that missed columns during that
+        // window.
         o.UseSqlite(connString, b =>
         {
-            b.MigrationsAssembly("NimShare.Api");
+            b.MigrationsAssembly("NimShare.Core");
             b.CommandTimeout(45);
         });
     }
@@ -346,13 +358,15 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                // Rescue path for the v1.9.1-V179 mess: on Sqlite, V179
-                // (a scaffolded-with-wrong-factory garbage migration)
-                // triggered full-table rebuilds and dropped the
-                // Folder.Color / Folder.Emoji columns on deployed
-                // instances. Re-add them idempotently before MigrateAsync
-                // so the Ablage view starts working again.
+                // Rescue path 1: catch-up any columns that never made it in
+                // during the "MigrationsAssembly was wrong" era. Idempotent.
                 await RepairSqliteMissingColumnsAsync(db, scope.ServiceProvider);
+                // Rescue path 2: baseline-stamp __EFMigrationsHistory when
+                // it's empty on an already-populated schema. Without this,
+                // MigrateAsync now (with the corrected MigrationsAssembly)
+                // sees every V17x/V18x as "pending" and crashes on the first
+                // CREATE TABLE / ADD COLUMN whose target already exists.
+                await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
             }
             await db.Database.MigrateAsync();
             break;
@@ -546,6 +560,9 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
     {
         ("Folders", "Color", "TEXT"),
         ("Folders", "Emoji", "TEXT"),
+        // V180 — never applied on instances that ran with the wrong
+        // MigrationsAssembly. NOT NULL DEFAULT 0 matches the migration.
+        ("Users", "ShowAvatarOnLandings", "INTEGER NOT NULL DEFAULT 0"),
     };
     try
     {
@@ -583,6 +600,64 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
     {
         Console.Error.WriteLine("[STARTUP] Sqlite column repair failed: " + ex.Message);
         // Non-fatal — MigrateAsync will surface any real damage.
+    }
+}
+
+/// <summary>
+/// Sqlite counterpart to the SqlServer baseline stamper. On any instance
+/// where the Users table exists but <c>__EFMigrationsHistory</c> is empty
+/// (the case for every deployed DB from v1.7 through v1.10.0, because
+/// MigrationsAssembly pointed at NimShare.Api which contained ZERO Migration
+/// subclasses), stamp every migration currently known to the model as
+/// applied. Then MigrateAsync becomes a no-op for the current release and
+/// only future migrations added after this point actually run.
+///
+/// Combined with RepairSqliteMissingColumnsAsync (which ensures the schema
+/// really matches), this is safe: the DB and history agree.
+/// </summary>
+static async Task BaselineSqliteIfNeededAsync(NimShareDbContext db, IServiceProvider services)
+{
+    try
+    {
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        bool usersExists;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name='Users'";
+            usersExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+        }
+        if (!usersExists) return; // fresh DB — MigrateAsync will create everything cleanly
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                MigrationId TEXT NOT NULL PRIMARY KEY,
+                ProductVersion TEXT NOT NULL)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        long historyRows;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT COUNT(1) FROM __EFMigrationsHistory";
+            historyRows = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0);
+        }
+        if (historyRows > 0) return; // already stamped or partly migrated — leave alone
+        var toStamp = db.Database.GetMigrations().ToList();
+        foreach (var m in toStamp)
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ($id, $v)";
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "$id"; p1.Value = m; cmd.Parameters.Add(p1);
+            var p2 = cmd.CreateParameter(); p2.ParameterName = "$v"; p2.Value = "8.0.10"; cmd.Parameters.Add(p2);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        services.GetService<ILoggerFactory>()?.CreateLogger("Startup")
+            ?.LogWarning("Baseline-stamped {Count} Sqlite migrations. The MigrationsAssembly config used to point at the wrong assembly, so nothing was ever recorded; RepairSqliteMissingColumnsAsync already brought the schema in line with the model.",
+                toStamp.Count);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] Sqlite baseline-stamp failed: " + ex.Message);
     }
 }
 
