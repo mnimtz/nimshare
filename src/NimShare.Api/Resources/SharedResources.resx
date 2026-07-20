@@ -1095,4 +1095,9 @@ Thanks for using NimShare.</value></data>
   <data name="sig.finalize_pending"><value>Cannot finalize yet — the following participants have not signed / viewed:</value></data>
   <data name="sig.finalize_stuck"><value>Finalizer ran but the workflow did not complete. Please check the server logs.</value></data>
   <data name="sig.finalize_failed"><value>Finalize call failed:</value></data>
+  <data name="slug.available"><value>available</value></data>
+  <data name="slug.taken"><value>already taken</value></data>
+  <data name="slug.invalid"><value>not a valid slug (use lowercase letters, digits, - or _)</value></data>
+  <data name="slug.normalised_prefix"><value>will be saved as</value></data>
+  <data name="slug.suggestions"><value>try:</value></data>
 </root>

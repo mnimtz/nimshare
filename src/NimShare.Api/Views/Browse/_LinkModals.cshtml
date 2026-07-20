@@ -64,8 +64,10 @@
         <p class="muted" id="shareTargetHint"></p>
         <div class="field">
             <label>@T["upload.slug"]</label>
-            <input type="text" id="shareSlug" placeholder="project-x" autocomplete="off" spellcheck="false"/>
+            <input type="text" id="shareSlug" placeholder="project-x" autocomplete="off" spellcheck="false"
+                   oninput="slugLiveCheck('shareSlug', 'shareSlugStatus')"/>
             <div class="helper">@T["upload.slug_helper"]</div>
+            <div id="shareSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
         </div>
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
@@ -116,7 +118,9 @@
         <p class="muted">@T["modal.upload_request.lede"]</p>
         <div class="field">
             <label>@T["upload.slug"]</label>
-            <input type="text" id="urSlug" autocomplete="off" spellcheck="false"/>
+            <input type="text" id="urSlug" autocomplete="off" spellcheck="false"
+                   oninput="slugLiveCheck('urSlug', 'urSlugStatus')"/>
+            <div id="urSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
         </div>
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
@@ -152,6 +156,75 @@
 <script>
 let currentShareTarget = { type: null, id: null };
 let currentUploadReqFolder = null;
+
+// v1.10.41: Live-Slug-Check. Debounce 400ms pro Feld — jeder Keystroke
+// verwirft den vorherigen Timer. Ergebnis:
+//   ✓ grün "verfügbar" wenn frei
+//   ⚠ gelb "wird bereinigt zu 'foo-bar'" bei "Foo Bar" (auto-normalise)
+//   ✕ rot "belegt — Vorschläge: [foo-2] [foo-3] ..." bei Kollision
+// Klick auf einen Vorschlag übernimmt ihn ins Input.
+const _slugCheckTimers = {};
+function slugLiveCheck(inputId, statusId) {
+    if (_slugCheckTimers[inputId]) clearTimeout(_slugCheckTimers[inputId]);
+    const input = document.getElementById(inputId);
+    const status = document.getElementById(statusId);
+    if (!input || !status) return;
+    const val = input.value.trim();
+    if (!val) { status.textContent = ''; status.className = 'slug-status'; return; }
+    _slugCheckTimers[inputId] = setTimeout(async () => {
+        try {
+            const r = await fetch('/api/v1/links/slug-check?slug=' + encodeURIComponent(val),
+                { credentials: 'same-origin' });
+            if (!r.ok) { status.textContent = ''; return; }
+            const d = await r.json();
+            status.className = 'slug-status';
+            if (d.available) {
+                if (d.normalised !== val) {
+                    // Server hätte den Wert bereinigt (z.B. "Foo Bar" → "foo-bar"),
+                    // wir zeigen was tatsächlich gespeichert würde.
+                    status.style.color = '#a68000';
+                    status.innerHTML = '⚠ ' +
+                        @Json.Serialize(T["slug.normalised_prefix"].Value) +
+                        ' <code>' + escapeHtmlSlug(d.normalised) + '</code>';
+                } else {
+                    status.style.color = 'var(--status-ok, #2a7f2a)';
+                    status.textContent = '✓ ' + @Json.Serialize(T["slug.available"].Value);
+                }
+            } else if (d.reason === 'invalid') {
+                status.style.color = 'var(--status-critical, #c33)';
+                status.textContent = '✕ ' + @Json.Serialize(T["slug.invalid"].Value);
+            } else if (d.reason === 'taken') {
+                status.style.color = 'var(--status-critical, #c33)';
+                const label = @Json.Serialize(T["slug.taken"].Value);
+                let html = '✕ ' + label;
+                if (Array.isArray(d.suggestions) && d.suggestions.length > 0) {
+                    html += ' — ' + @Json.Serialize(T["slug.suggestions"].Value) + ' ';
+                    html += d.suggestions.map(s =>
+                        '<a href="#" onclick="return applySlug(\'' + inputId + '\',\'' + statusId +
+                        '\',\'' + escapeHtmlSlug(s).replace(/'/g,'&#39;') + '\')" ' +
+                        'style="display:inline-block;background:var(--tw-gray-100);padding:1px 8px;border-radius:4px;margin:0 2px;text-decoration:none">' +
+                        escapeHtmlSlug(s) + '</a>'
+                    ).join('');
+                }
+                status.innerHTML = html;
+            } else {
+                status.textContent = '';
+            }
+        } catch { status.textContent = ''; }
+    }, 400);
+}
+function applySlug(inputId, statusId, s) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = s;
+        input.focus();
+        slugLiveCheck(inputId, statusId);
+    }
+    return false;
+}
+function escapeHtmlSlug(s) {
+    return String(s || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -189,11 +262,15 @@ function resetShareModal() {
     ['shareSlug','sharePw','shareMax','shareExp','shareMsg'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('shareNotify').checked = false;
     document.getElementById('shareResult').style.display = 'none';
+    const st = document.getElementById('shareSlugStatus');
+    if (st) { st.textContent = ''; st.className = 'slug-status'; }
 }
 
 function openUploadRequestModal(folderId) {
     currentUploadReqFolder = folderId;
     ['urSlug','urPw','urMax','urExp','urMsg'].forEach(id => document.getElementById(id).value = '');
+    const st = document.getElementById('urSlugStatus');
+    if (st) { st.textContent = ''; st.className = 'slug-status'; }
     document.getElementById('urResult').style.display = 'none';
     openModal('modalUploadReq');
 }

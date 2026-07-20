@@ -1097,4 +1097,9 @@ Grazie per usare NimShare.</value></data>
   <data name="sig.finalize_pending"><value>Non è ancora possibile completare — i seguenti partecipanti mancano:</value></data>
   <data name="sig.finalize_stuck"><value>Il finalizer è stato eseguito ma il processo non è completato. Controlla i log del server.</value></data>
   <data name="sig.finalize_failed"><value>Chiamata di finalizzazione fallita:</value></data>
+  <data name="slug.available"><value>disponibile</value></data>
+  <data name="slug.taken"><value>già in uso</value></data>
+  <data name="slug.invalid"><value>slug non valido (minuscole, cifre, - o _)</value></data>
+  <data name="slug.normalised_prefix"><value>verrà salvato come</value></data>
+  <data name="slug.suggestions"><value>prova:</value></data>
 </root>

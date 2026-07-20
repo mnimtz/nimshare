@@ -11,6 +11,10 @@ public interface ISlugService
     bool IsValid(string slug);
     Task<bool> IsAvailableAsync(string slug, CancellationToken ct = default);
     Task<string> ResolveOrGenerateAsync(string? requested, CancellationToken ct = default);
+    // v1.10.41: für den Live-Check im Share-Dialog. Bei belegtem Slug
+    // liefert der Endpoint bis zu N freie Alternativen basierend auf dem
+    // Wunsch — als konkrete Klick-Angebote statt "denk dir was Neues aus".
+    Task<List<string>> SuggestAlternativesAsync(string requested, int count = 3, CancellationToken ct = default);
 }
 
 public class SlugService : ISlugService
@@ -93,5 +97,47 @@ public class SlugService : ISlugService
                 return candidate;
         }
         throw new InvalidOperationException("Could not generate a unique slug after 6 attempts.");
+    }
+
+    public async Task<List<string>> SuggestAlternativesAsync(string requested, int count = 3, CancellationToken ct = default)
+    {
+        // Zuerst normalisieren — dann arbeiten wir auf einem konsistenten Base.
+        var baseSlug = IsValid(requested) ? requested : Normalise(requested);
+        if (string.IsNullOrEmpty(baseSlug)) return new List<string>();
+        var out_ = new List<string>(count);
+        // 1) Wenn der Slug bereits auf "-N" endet, um eins hochzählen. Sonst
+        //    startet die Iteration bei -2 (menschlich intuitiver als -1).
+        //    Bis zu 20 Versuchen — mehr wird lächerlich.
+        var m = Regex.Match(baseSlug, @"^(?<stem>.+)-(?<n>\d+)$");
+        string stem;
+        int start;
+        if (m.Success && int.TryParse(m.Groups["n"].Value, out var n))
+        {
+            stem = m.Groups["stem"].Value;
+            start = n + 1;
+        }
+        else
+        {
+            stem = baseSlug;
+            start = 2;
+        }
+        for (int i = start; i < start + 20 && out_.Count < count; i++)
+        {
+            var candidate = $"{stem}-{i}";
+            if (!IsValid(candidate)) continue;
+            if (await IsAvailableAsync(candidate, ct)) out_.Add(candidate);
+        }
+        // 2) Wenn Zahlen-Iteration nicht reicht (extrem belegter Slug), fülle
+        //    mit einem kurzen Random-Suffix auf — 3 Zeichen aus dem
+        //    reduzierten Alphabet reichen für Nicht-Kollision bei 27k+ Slots.
+        for (int attempt = 0; attempt < 12 && out_.Count < count; attempt++)
+        {
+            var suffix = GenerateRandom(3);
+            var candidate = $"{stem}-{suffix}";
+            if (!IsValid(candidate)) continue;
+            if (await IsAvailableAsync(candidate, ct) && !out_.Contains(candidate))
+                out_.Add(candidate);
+        }
+        return out_;
     }
 }

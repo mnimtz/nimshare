@@ -45,6 +45,32 @@ public class LinksController : ControllerBase
         int DownloadCount, int HitCount, bool HasPassword,
         bool IsRevoked, DateTimeOffset CreatedAt);
 
+    // v1.10.41: Live-Check für den Share-Dialog. Während der User tippt
+    // fragt das Frontend hier an (debounce 400ms), zeigt sofort ob der
+    // Wunsch-Slug frei ist. Bei belegtem Slug liefern wir bis zu 3
+    // klickfertige Alternativen — keine 409 mehr beim "Speichern".
+    // Auth: der Route liegt bereits hinter ApiUser-Policy; ein Login-
+    // Nutzer darf naturgemäss wissen ob ein Slug frei ist (das ist
+    // auch beim Aufruf des Public-Landings sowieso sichtbar).
+    public record SlugCheckResponse(bool Available, string? Reason, string Normalised, List<string> Suggestions);
+
+    [HttpGet("slug-check")]
+    public async Task<ActionResult<SlugCheckResponse>> SlugCheck(string slug, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+            return Ok(new SlugCheckResponse(false, "empty", "", new List<string>()));
+        // Empty → passt: der Server generiert dann Random. Aber die UI
+        // zeigt bei leerem Feld sowieso nichts an, also 200/false ist OK.
+        var normalised = _slugs.IsValid(slug) ? slug : SlugService.Normalise(slug);
+        if (!_slugs.IsValid(normalised))
+            return Ok(new SlugCheckResponse(false, "invalid", normalised, new List<string>()));
+        var free = await _slugs.IsAvailableAsync(normalised, ct);
+        if (free)
+            return Ok(new SlugCheckResponse(true, null, normalised, new List<string>()));
+        var suggestions = await _slugs.SuggestAlternativesAsync(normalised, 3, ct);
+        return Ok(new SlugCheckResponse(false, "taken", normalised, suggestions));
+    }
+
     [HttpPost]
     public async Task<ActionResult<LinkDto>> Create([FromBody] CreateLinkRequest req,
         [FromServices] IFileAccessService access,

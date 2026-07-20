@@ -1096,4 +1096,9 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="sig.finalize_pending"><value>Kan nog niet worden afgerond — de volgende deelnemers ontbreken:</value></data>
   <data name="sig.finalize_stuck"><value>Finalizer liep maar het proces is niet afgerond. Controleer de serverlogs.</value></data>
   <data name="sig.finalize_failed"><value>Finalize-aanroep mislukt:</value></data>
+  <data name="slug.available"><value>beschikbaar</value></data>
+  <data name="slug.taken"><value>al in gebruik</value></data>
+  <data name="slug.invalid"><value>geen geldige slug (kleine letters, cijfers, - of _)</value></data>
+  <data name="slug.normalised_prefix"><value>wordt opgeslagen als</value></data>
+  <data name="slug.suggestions"><value>probeer:</value></data>
 </root>
