@@ -3,7 +3,12 @@
     ViewData["Title"] = Model.FolderName;
     Layout = "_Layout";
     var theme = Model.Theme;
-    var brandColor = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? null : theme!.PrimaryColor;
+    // Same style pattern as Share/Landing.cshtml — inline `style="background:@accent;color:#fff"`
+    // on the button instead of a `<style>` block with !important. The old
+    // !important approach only overrode `background`, leaving the base
+    // `color: var(--tw-primary)` (dark blue) — so a dark-blue brand became
+    // dark-blue button + dark-blue text = looked "komplett schwarz".
+    var accent = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? "#002854" : theme!.PrimaryColor!;
     string Bytes(long b)
     {
         string[] u = { "B", "KB", "MB", "GB", "TB" };
@@ -12,15 +17,12 @@
         return $"{v:0.##} {u[i]}";
     }
 }
-@if (brandColor is not null)
+@if (!string.IsNullOrEmpty(theme?.HeroUrl))
 {
-    <style>
-        .landing-shell { --tw-primary: @brandColor; --tw-primary-alt: @brandColor; }
-        .btn-primary { background: @brandColor !important; border-color: @brandColor !important; }
-    </style>
+    <div style="height:180px;background:@accent url('@theme.HeroUrl') center/cover;margin-bottom:-40px"></div>
 }
 <div class="landing-shell">
-    <div class="landing-card" style="max-width:720px;position:relative">
+    <div class="landing-card" style="max-width:720px;position:relative;border-top:4px solid @accent">
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
@@ -37,19 +39,15 @@
             }
             <small>@T["landing.shared_by"] @Model.OwnerName</small>
         </div>
-        @if (!string.IsNullOrWhiteSpace(theme?.HeroUrl))
-        {
-            <img src="@theme.HeroUrl" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:var(--sp-4)"/>
-        }
-        <h1>📁 @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
+        <h1 style="color:@accent">📁 @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
         @if (!string.IsNullOrWhiteSpace(theme?.Subtitle))
         {
-            <p class="landing-meta">@theme.Subtitle</p>
+            <p class="lede">@theme.Subtitle</p>
         }
         <p class="landing-meta">@T["landing.folder.lede"] @Model.Files.Count</p>
         @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
         {
-            <div class="card" style="background:var(--tw-gray-100);margin-top:var(--sp-4)">
+            <div style="margin:var(--sp-4) 0;line-height:1.55">
                 @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
             </div>
         }
@@ -72,11 +70,11 @@
                             @if (Model.HasPassword)
                             {
                                 <input type="hidden" name="password" id="pw-@f.Id" required/>
-                                <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm">@T["landing.download.button"]</button>
+                                <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
                             }
                             else
                             {
-                                <button type="submit" class="btn btn-primary btn-sm">@T["landing.download.button"]</button>
+                                <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
                             }
                         </form>
                     </td>

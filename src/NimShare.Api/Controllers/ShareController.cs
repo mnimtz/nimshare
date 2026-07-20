@@ -64,10 +64,15 @@ public class ShareController : Controller
                 _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
                 Request.Headers.UserAgent, Request.Headers.Referer, ct);
             // Folder shares now honour the same template-resolution as file
-            // shares (v1.10.3 fix): link creator's personal template wins,
-            // then the folder-owner's, then Global.
+            // shares: link creator's personal template ALWAYS wins first, then
+            // the folder-owner's (Personal-scope only), else Global. Passing
+            // Guid.Empty as fileOwnerId forces the (linkOwner != fileOwner)
+            // guard so the link creator's brand is checked even for Public
+            // folders where OwnerUserId is null (v1.10.7 — previously
+            // Public/Group folder shares fell through to Global-only lookup
+            // and looked un-themed if no admin-global template existed).
             var folderTheme = await ResolveThemeAsync(folder.Scope,
-                folder.OwnerUserId ?? link.OwnerId, link.OwnerId, ct);
+                folder.OwnerUserId ?? Guid.Empty, link.OwnerId, ct);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,

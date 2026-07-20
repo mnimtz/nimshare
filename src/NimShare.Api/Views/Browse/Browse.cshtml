@@ -1132,16 +1132,27 @@ async function fi_save() {
     const urlBase = panel.dataset.urlBase;
     panel.querySelectorAll('.ft-label').forEach(a => {
         const parts = idToPath[a.dataset.id] || [];
-        a.href = parts.length ? (urlBase + '/' + parts.map(encodeURIComponent).join('/')) : urlBase;
+        const href = parts.length ? (urlBase + '/' + parts.map(encodeURIComponent).join('/')) : urlBase;
+        a.href = href;
+        // Explicit click handler on the label — some browsers (or extensions)
+        // suppress default anchor navigation on programmatically-added <a>
+        // inside dynamically-rendered lists. Belt-and-braces: force the nav.
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            location.href = href;
+        });
     });
-    // Whole row is clickable — otherwise the user has to hit the small
-    // label to navigate; icon/toggle padding "ate" the click on many rows.
+    // Whole row is clickable too — click on the icon/toggle-padding region
+    // still navigates. Toggle keeps its own click handler.
     panel.querySelectorAll('.ft-row').forEach(row => {
         row.style.cursor = 'pointer';
         row.addEventListener('click', (e) => {
-            if (e.target.closest('.ft-toggle')) return; // toggle handles its own click
+            if (e.target.closest('.ft-toggle')) return;
+            if (e.target.closest('.ft-label')) return; // label handles its own
             const a = row.querySelector('.ft-label');
-            if (a && a.href && a.href !== '#') location.href = a.href;
+            if (a && a.href && a.href !== '#' && !a.href.endsWith('#')) {
+                location.href = a.href;
+            }
         });
     });
 })();
