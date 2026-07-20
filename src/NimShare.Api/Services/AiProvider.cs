@@ -508,7 +508,15 @@ public class GeminiProvider : IAiProvider
     }
 
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)
-        => (await GenerateWithDetailAsync(prompt, temperature, 4096, ct)).Text;
+    {
+        // v1.10.32: den Fehler-String durchreichen an LastError damit Controller
+        // die konkrete Ursache anzeigen können (bisher schluckte GenerateAsync
+        // den Error-Teil der Tuple, deshalb sah Sign-Summary immer die generic
+        // "Modell wechseln"-Meldung).
+        var (text, error) = await GenerateWithDetailAsync(prompt, temperature, 4096, ct);
+        if (error is not null) LastError = error;
+        return text;
+    }
 
     /// <summary>True when the model belongs to a Gemini generation that emits
     /// internal "thinking" tokens (2.5 family). Those eat the output budget

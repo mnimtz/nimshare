@@ -405,8 +405,19 @@ public class SignController : Controller
         var provider = await ai.CreateProviderAsync(ct);
         var summary = await provider.SummarizeAsync(text, language, ct);
         if (string.IsNullOrWhiteSpace(summary))
+        {
+            // v1.10.32: Konkrete Ursache aus dem Provider abfragen statt
+            // generic "Modell wechseln". Deckt alle Fehlerpfade ab (Safety-
+            // Block, MAX_TOKENS, HTTP 4xx, NullAiProvider).
+            var openErr = (provider as OpenAiProvider)?.LastError;
+            var geminiErr = (provider as GeminiProvider)?.LastError;
+            var anthErr = (provider as AnthropicProvider)?.LastError;
+            var nullErr = provider is NullAiProvider ? ai.LastProviderCreationFailure : null;
+            var detail = openErr ?? geminiErr ?? anthErr ?? nullErr
+                ?? "Modell wechseln (im AI-Gateway) oder Prompt/Modell-Verfügbarkeit prüfen.";
             return Problem(statusCode: 502, title: "AI hat keine Zusammenfassung geliefert.",
-                detail: "Modell wechseln (im AI-Gateway) oder Prompt/Modell-Verfügbarkeit prüfen.");
+                detail: detail);
+        }
         return Ok(new { text = summary, language, doc = req.SourceFile.Name });
     }
 
