@@ -122,14 +122,31 @@ public class AiGatewayController : Controller
 
     private static async Task<string[]> ListGeminiAsync(HttpClient http, string key, CancellationToken ct)
     {
-        // Gemini also supports the API key via header, which keeps it out of
-        // access logs / request telemetry. Query-string path is only there
-        // for platforms without header support.
+        // v1.10.27: Weder pageSize noch der x-goog-api-key-Header werden vom
+        // v1beta/models-Endpoint zuverlässig unterstützt — beide führen zu
+        // 400 (Bad Request) auf manchen Regionen/Projekten. Zurück auf den
+        // offiziell dokumentierten Weg: Key als ?key= query-Parameter,
+        // keine zusätzlichen Parameter.
         using var req = new HttpRequestMessage(HttpMethod.Get,
-            "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200");
-        req.Headers.Add("x-goog-api-key", key);
+            $"https://generativelanguage.googleapis.com/v1beta/models?key={Uri.EscapeDataString(key)}");
         var resp = await http.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+        {
+            // Google's error body enthält bei 400/401/403 eine sprechende
+            // "message" — die statt EnsureSuccessStatusCode's generic Text
+            // durchreichen.
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            string reason = body.Length > 400 ? body[..400] : body;
+            try
+            {
+                using var errDoc = System.Text.Json.JsonDocument.Parse(body);
+                if (errDoc.RootElement.TryGetProperty("error", out var e)
+                    && e.TryGetProperty("message", out var m))
+                    reason = m.GetString() ?? reason;
+            }
+            catch { }
+            throw new HttpRequestException($"Gemini list-models HTTP {(int)resp.StatusCode}: {reason}");
+        }
         var doc = await System.Text.Json.JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
         var names = new List<string>();
         if (doc.RootElement.TryGetProperty("models", out var arr))
