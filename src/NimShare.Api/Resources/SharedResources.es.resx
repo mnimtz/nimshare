@@ -595,7 +595,7 @@ Abre el enlace:
   <data name="nav.notifications"><value>Notificaciones</value></data>
   <data name="settings.2fa"><value>2FA</value></data>
   <data name="settings.download_page"><value>Página de descarga</value></data>
-  <data name="settings.dev"><value>Desarrollador</value></data>
+  <data name="settings.dev"><value>Tokens API y webhooks</value></data>
   <data name="settings.public_download_page"><value>Página de descarga pública</value></data>
   <data name="settings.office"><value>OnlyOffice</value></data>
   <data name="users.public.heading"><value>Área pública</value></data>
@@ -739,6 +739,20 @@ Abre el enlace:
   <data name="notifications.mark_read"><value>Marcar como leída</value></data>
   <data name="notifications.mark_all_read"><value>Marcar todas como leídas</value></data>
   <data name="notifications.open"><value>Abrir</value></data>
+  <data name="sig.declined_reason_short"><value>rechazada</value></data>
+  <data name="sig.declined.notif.body"><value>Motivo: {0}</value></data>
+  <data name="sig.declined.notif.body_noreason"><value>Sin motivo indicado.</value></data>
+  <data name="sig.declined.no_reason_given"><value>(sin motivo indicado)</value></data>
+  <data name="sig.declined.mail.body"><value>Hola {0},
+
+{1} &lt;{2}&gt; ha rechazado tu solicitud de firma «{3}».
+
+Motivo:
+{4}
+
+Puedes ver la solicitud y el rastro de auditoría completo en NimShare.
+
+— NimShare</value></data>
 
   <data name="nav.sig.overview"><value>Resumen</value></data>
   <data name="nav.sig.templates"><value>Plantillas de correo</value></data>

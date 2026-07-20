@@ -59,6 +59,18 @@ public class SignController : Controller
             .Where(f => f.RequestId == req.Id && f.ParticipantId == pid)
             .ToListAsync(ct);
         ViewData["MyFields"] = myFields;
+
+        // Full audit trail for the audit sidebar on the landing page.
+        // Anonymized: we show the participant Name/Email that already lives
+        // in the request (visible to the participant anyway), plus verb +
+        // timestamp. IP hashes stay out of the UI.
+        var participants = req.Participants.ToDictionary(x => x.Id);
+        var audits = await _db.SignatureAudits
+            .Where(a => a.RequestId == req.Id)
+            .OrderBy(a => a.At)
+            .ToListAsync(ct);
+        ViewData["Audits"] = audits;
+        ViewData["ParticipantsById"] = participants;
         return View("Sign", new SignViewModel(req, p, t));
     }
 
@@ -257,9 +269,30 @@ public class SignController : Controller
         catch { System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en"); }
         try
         {
+            var declTitle = declLocalizer["sig.declined.notif.title", p.Name, req.Title].Value;
+            var declBody = string.IsNullOrWhiteSpace(reason)
+                ? declLocalizer["sig.declined.notif.body_noreason"].Value
+                : declLocalizer["sig.declined.notif.body", reason].Value;
             await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
-                declLocalizer["sig.declined.notif.title", p.Name, req.Title].Value,
-                body: reason, href: "/signatures", ct: ct);
+                declTitle, body: declBody, href: $"/signatures/{req.Id}", ct: ct);
+
+            // ALSO send an email — the in-app notification alone is easy to
+            // miss and the initiator needs to know the workflow is stuck.
+            var initiatorEmail = req.Initiator?.Email;
+            if (!string.IsNullOrWhiteSpace(initiatorEmail))
+            {
+                var notif = HttpContext.RequestServices.GetService(typeof(INotificationService)) as INotificationService;
+                if (notif is not null)
+                {
+                    var subject = declTitle;
+                    var body = declLocalizer["sig.declined.mail.body",
+                        req.Initiator?.DisplayName ?? "",
+                        p.Name, p.Email, req.Title,
+                        string.IsNullOrWhiteSpace(reason) ? declLocalizer["sig.declined.no_reason_given"].Value : reason].Value;
+                    try { await notif.SendShareLinkAsync(initiatorEmail, "NimShare", subject, body, ct); }
+                    catch { /* best-effort; in-app notification is the source of truth */ }
+                }
+            }
         }
         finally { System.Globalization.CultureInfo.CurrentUICulture = declPrev; }
         return View("Done", new SignDoneViewModel(req, p, false));

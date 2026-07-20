@@ -594,7 +594,7 @@ Open de link:
   <data name="nav.notifications"><value>Meldingen</value></data>
   <data name="settings.2fa"><value>2FA</value></data>
   <data name="settings.download_page"><value>Downloadpagina</value></data>
-  <data name="settings.dev"><value>Ontwikkelaar</value></data>
+  <data name="settings.dev"><value>API-tokens &amp; webhooks</value></data>
   <data name="settings.public_download_page"><value>Openbare downloadpagina</value></data>
   <data name="settings.office"><value>OnlyOffice</value></data>
   <data name="users.public.heading"><value>Openbare ruimte</value></data>
@@ -738,6 +738,20 @@ Open de link:
   <data name="notifications.mark_read"><value>Als gelezen markeren</value></data>
   <data name="notifications.mark_all_read"><value>Alle als gelezen markeren</value></data>
   <data name="notifications.open"><value>Openen</value></data>
+  <data name="sig.declined_reason_short"><value>afgewezen</value></data>
+  <data name="sig.declined.notif.body"><value>Reden: {0}</value></data>
+  <data name="sig.declined.notif.body_noreason"><value>Geen reden opgegeven.</value></data>
+  <data name="sig.declined.no_reason_given"><value>(geen reden opgegeven)</value></data>
+  <data name="sig.declined.mail.body"><value>Hallo {0},
+
+{1} &lt;{2}&gt; heeft je handtekeningverzoek "{3}" afgewezen.
+
+Reden:
+{4}
+
+Je kunt het verzoek en het volledige auditlog in NimShare bekijken.
+
+— NimShare</value></data>
 
   <data name="nav.sig.overview"><value>Overzicht</value></data>
   <data name="nav.sig.templates"><value>E-mailtemplates</value></data>

@@ -595,7 +595,7 @@ Ouvrez le lien :
   <data name="nav.notifications"><value>Notifications</value></data>
   <data name="settings.2fa"><value>2FA</value></data>
   <data name="settings.download_page"><value>Page de téléchargement</value></data>
-  <data name="settings.dev"><value>Développeur</value></data>
+  <data name="settings.dev"><value>Jetons API &amp; webhooks</value></data>
   <data name="settings.public_download_page"><value>Page de téléchargement publique</value></data>
   <data name="settings.office"><value>OnlyOffice</value></data>
   <data name="users.public.heading"><value>Espace public</value></data>
@@ -739,6 +739,20 @@ Ouvrez le lien :
   <data name="notifications.mark_read"><value>Marquer comme lu</value></data>
   <data name="notifications.mark_all_read"><value>Tout marquer comme lu</value></data>
   <data name="notifications.open"><value>Ouvrir</value></data>
+  <data name="sig.declined_reason_short"><value>refusé</value></data>
+  <data name="sig.declined.notif.body"><value>Raison : {0}</value></data>
+  <data name="sig.declined.notif.body_noreason"><value>Aucune raison indiquée.</value></data>
+  <data name="sig.declined.no_reason_given"><value>(aucune raison indiquée)</value></data>
+  <data name="sig.declined.mail.body"><value>Bonjour {0},
+
+{1} &lt;{2}&gt; a refusé votre demande de signature « {3} ».
+
+Raison :
+{4}
+
+Vous pouvez consulter la demande et l'audit complet dans NimShare.
+
+— NimShare</value></data>
 
   <data name="nav.sig.overview"><value>Aperçu</value></data>
   <data name="nav.sig.templates"><value>Modèles d'e-mail</value></data>

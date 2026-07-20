@@ -593,7 +593,7 @@ Open the link:
   <data name="nav.notifications"><value>Notifications</value></data>
   <data name="settings.2fa"><value>2FA</value></data>
   <data name="settings.download_page"><value>Download page</value></data>
-  <data name="settings.dev"><value>Developer</value></data>
+  <data name="settings.dev"><value>API tokens &amp; webhooks</value></data>
   <data name="settings.public_download_page"><value>Public download page</value></data>
   <data name="settings.office"><value>OnlyOffice</value></data>
   <data name="users.public.heading"><value>Public area</value></data>
@@ -737,6 +737,20 @@ Open the link:
   <data name="notifications.mark_read"><value>Mark as read</value></data>
   <data name="notifications.mark_all_read"><value>Mark all as read</value></data>
   <data name="notifications.open"><value>Open</value></data>
+  <data name="sig.declined_reason_short"><value>declined</value></data>
+  <data name="sig.declined.notif.body"><value>Reason: {0}</value></data>
+  <data name="sig.declined.notif.body_noreason"><value>No reason given.</value></data>
+  <data name="sig.declined.no_reason_given"><value>(no reason given)</value></data>
+  <data name="sig.declined.mail.body"><value>Hi {0},
+
+{1} &lt;{2}&gt; has declined your signature request "{3}".
+
+Reason:
+{4}
+
+You can review the request and its full audit trail in NimShare.
+
+— NimShare</value></data>
 
   <data name="nav.sig.overview"><value>Overview</value></data>
   <data name="nav.sig.templates"><value>Email templates</value></data>

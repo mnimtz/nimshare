@@ -1424,6 +1424,81 @@ body.nav-open { position: relative; }
     background: rgba(0,160,251,.04);
 }
 
+/* ── Signer landing: two-column layout with audit sidebar ─── */
+.sig-shell { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.sig-two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+}
+.sig-audit {
+    background: var(--tw-white);
+    border: 1px solid var(--tw-gray-200);
+    border-radius: 12px;
+    padding: 16px;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.sig-audit-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+}
+.sig-audit-list::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--tw-gray-200);
+}
+.sig-audit-item {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    position: relative;
+}
+.sig-audit-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--tw-white);
+    border: 2px solid var(--tw-gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    z-index: 1;
+    flex-shrink: 0;
+}
+.sig-audit-item.sig-audit-signed .sig-audit-icon { border-color: var(--status-ok, #22a05a); background: rgba(34,160,90,.10); }
+.sig-audit-item.sig-audit-declined .sig-audit-icon { border-color: var(--status-critical, #d33); background: rgba(211,51,51,.10); }
+.sig-audit-item.sig-audit-viewed .sig-audit-icon { border-color: var(--tw-primary-alt, #00a0fb); background: rgba(0,160,251,.10); }
+.sig-audit-item.sig-audit-finalized .sig-audit-icon { border-color: var(--tw-yellow, #ffc600); background: rgba(255,198,0,.15); }
+.sig-audit-body { flex: 1; min-width: 0; }
+.sig-audit-title { font-weight: 600; font-size: .9rem; }
+.sig-audit-who { font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sig-audit-when { font-size: .72rem; margin-top: 2px; }
+.sig-audit-note {
+    font-size: .82rem;
+    background: var(--tw-gray-100);
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    font-style: italic;
+    color: var(--tw-text);
+}
+@media (max-width: 900px) {
+    .sig-two-col { grid-template-columns: 1fr; }
+    .sig-audit { position: static; max-height: none; }
+}
+
 /* ── Main file pane ────────────────────────────────────────────── */
 .fm-main {
     padding: 18px 24px 40px;

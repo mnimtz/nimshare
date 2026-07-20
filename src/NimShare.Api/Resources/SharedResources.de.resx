@@ -595,7 +595,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
 
   <data name="settings.2fa"><value>2FA</value></data>
   <data name="settings.download_page"><value>Download-Seite</value></data>
-  <data name="settings.dev"><value>Entwickler</value></data>
+  <data name="settings.dev"><value>API-Tokens &amp; Webhooks</value></data>
   <data name="settings.public_download_page"><value>Öffentliche Download-Seite</value></data>
   <data name="settings.office"><value>OnlyOffice</value></data>
 
@@ -743,6 +743,20 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notifications.mark_read"><value>Als gelesen markieren</value></data>
   <data name="notifications.mark_all_read"><value>Alle als gelesen markieren</value></data>
   <data name="notifications.open"><value>Öffnen</value></data>
+  <data name="sig.declined_reason_short"><value>abgelehnt</value></data>
+  <data name="sig.declined.notif.body"><value>Grund: {0}</value></data>
+  <data name="sig.declined.notif.body_noreason"><value>Kein Grund angegeben.</value></data>
+  <data name="sig.declined.no_reason_given"><value>(kein Grund angegeben)</value></data>
+  <data name="sig.declined.mail.body"><value>Hallo {0},
+
+{1} &lt;{2}&gt; hat deine Signatur-Anforderung „{3}" abgelehnt.
+
+Grund:
+{4}
+
+Du kannst die Anforderung und den vollständigen Audit-Verlauf in NimShare einsehen.
+
+— NimShare</value></data>
 
   <data name="nav.sig.overview"><value>Übersicht</value></data>
   <data name="nav.sig.templates"><value>Email-Templates</value></data>
