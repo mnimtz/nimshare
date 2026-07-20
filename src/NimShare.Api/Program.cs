@@ -185,19 +185,14 @@ builder.Services.AddAntiforgery(o => o.HeaderName = "X-XSRF-TOKEN");
     var configured = !string.IsNullOrWhiteSpace(keysPath);
     if (!configured)
     {
-        // Prefer /home/data/dp-keys on any environment where /home exists
-        // (App Service Linux / Windows both mount it, backed by Azure Files).
-        // Fall back to ContentRoot-relative for local dev.
-        if (Directory.Exists("/home") || OperatingSystem.IsWindows() && Directory.Exists(@"C:\home"))
-        {
-            keysPath = OperatingSystem.IsWindows() ? @"C:\home\data\dp-keys" : "/home/data/dp-keys";
-        }
-        else
-        {
-            keysPath = Path.Combine(
-                builder.Environment.ContentRootPath,
-                "..", "..", "data", "dp-keys");
-        }
+        // v1.10.26: Zurück zum PRE-v1.10.21-Verhalten (ContentRoot-relativ).
+        // Der /home-Pfad in v1.10.21 hat auf Marcus' App Service offenbar
+        // Sekundäreffekte ausgelöst (existierende Keys blieben nicht lesbar).
+        // Wer /home/data/dp-keys will, setzt DataProtection__KeysPath explizit
+        // in den App-Settings.
+        keysPath = Path.Combine(
+            builder.Environment.ContentRootPath,
+            "..", "..", "data", "dp-keys");
     }
     // Normalize
     keysPath = Path.GetFullPath(keysPath);
