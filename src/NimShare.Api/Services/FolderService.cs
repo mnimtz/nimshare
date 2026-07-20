@@ -55,7 +55,12 @@ public class FolderService : IFolderService
             FileScope.Public => q.Where(f => f.OwnerUserId == null && f.OwnerGroupId == null),
             _ => q,
         };
-        var root = await q.SingleOrDefaultAsync(ct);
+        // v1.10.37: SingleOrDefaultAsync warf, wenn irgendwann in der DB-Historie
+        // ein zweiter Root pro (Scope, Owner) landete (Race-Condition beim
+        // ersten Erst-Anlegen, Import, Migration). FirstOrDefault mit stabiler
+        // Sortierung nimmt den ältesten — konsistent mit dem, was der Tree-
+        // Endpoint als "offiziellen" Root anzeigt.
+        var root = await q.OrderBy(f => f.CreatedAt).ThenBy(f => f.Id).FirstOrDefaultAsync(ct);
         if (root is not null) return root;
 
         root = new Folder

@@ -304,21 +304,51 @@ public class BrowseController : Controller
             FileScope.Public => q.Where(f => f.OwnerUserId == null && f.OwnerGroupId == null),
             _ => q.Where(f => false),
         };
+        // v1.10.37: Wir haben genau EINEN offiziellen Scope-Root (den, den
+        // FolderService.GetOrCreateRootAsync einmalig anlegt). In gealterten
+        // Datenbanken existieren aber gelegentlich mehrere Ordner mit
+        // ParentFolderId == null pro Scope — Race-Conditions bei parallelem
+        // Erstverwendung, Migrations-Artefakte, oder Legacy-Code. Vorher
+        // erschienen die alle als getrennte Wurzeln UND alle bekamen den
+        // Scope-Namen ("Public"), weshalb Marcus zwei Zeilen "Public"
+        // untereinander sah und der Klick zwischen ihnen loopte (beide
+        // Links zeigten auf dieselbe pretty-URL /browse/public).
+        //
+        // Fix: den ältesten Root als offizielle Wurzel wählen (deterministisch
+        // per CreatedAt), alle weiteren Root-Kandidaten als seine Kinder
+        // rendern. Nur der offizielle Root wird mit dem Scope-Namen benannt;
+        // andere behalten ihren tatsächlichen Ordner-Namen — sonst sieht man
+        // "Public / Public" statt "Public / <realer-Name>".
         var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
-        var byParent = all.GroupBy(f => f.ParentFolderId ?? Guid.Empty).ToDictionary(g => g.Key, g => g.ToList());
+        var rootCandidates = all.Where(f => f.ParentFolderId is null)
+                                .OrderBy(f => f.CreatedAt)
+                                .ThenBy(f => f.Id)
+                                .ToList();
+        if (rootCandidates.Count == 0) return Ok(new List<object>());
+        var officialRoot = rootCandidates[0];
+        var byParent = all.GroupBy(f => f.ParentFolderId ?? Guid.Empty)
+                          .ToDictionary(g => g.Key, g => g.ToList());
+        if (rootCandidates.Count > 1)
+        {
+            if (!byParent.TryGetValue(officialRoot.Id, out var kids))
+            {
+                kids = new List<Folder>();
+                byParent[officialRoot.Id] = kids;
+            }
+            kids.AddRange(rootCandidates.Skip(1));
+        }
 
-        object Build(Folder f) => new
+        object Build(Folder f, bool isOfficialRoot) => new
         {
             id = f.Id,
-            name = f.ParentFolderId is null ? (s.ToString()) : f.Name,
+            name = isOfficialRoot ? s.ToString() : f.Name,
             emoji = f.Emoji,
             color = f.Color,
             children = byParent.TryGetValue(f.Id, out var kids)
-                ? kids.Select(Build).ToArray()
+                ? kids.Select(k => Build(k, false)).ToArray()
                 : Array.Empty<object>(),
         };
-        var roots = all.Where(f => f.ParentFolderId is null).Select(Build).ToList();
-        return Ok(roots);
+        return Ok(new[] { Build(officialRoot, true) });
     }
 
     // ── JSON browse for mobile clients ────────────────────────────────────
