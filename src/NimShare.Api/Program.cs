@@ -217,10 +217,20 @@ builder.Services.AddAntiforgery(o => o.HeaderName = "X-XSRF-TOKEN");
     {
         Console.Error.WriteLine($"[STARTUP] DataProtection keys directory '{keysPath}' NOT writable: {ex.Message}. Encrypted values (API keys, tokens) will be LOST on every restart. Fix: set App-Setting DataProtection__KeysPath to a persistent path (e.g. /home/data/dp-keys on Azure App Service).");
     }
-    builder.Services.AddDataProtection()
-        .SetApplicationName("NimShare")
-        .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
-    Console.WriteLine($"[STARTUP] DataProtection KeysPath={keysPath} (configured={configured}, persistent={persistent}). Existing key files: {(Directory.Exists(keysPath) ? Directory.GetFiles(keysPath, "*.xml").Length.ToString() : "n/a")}.");
+    try
+    {
+        builder.Services.AddDataProtection()
+            .SetApplicationName("NimShare")
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        int keyCount = 0;
+        try { if (Directory.Exists(keysPath)) keyCount = Directory.GetFiles(keysPath, "*.xml").Length; } catch { }
+        Console.WriteLine($"[STARTUP] DataProtection KeysPath={keysPath} (configured={configured}, persistent={persistent}). Existing key files: {keyCount}.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[STARTUP] DataProtection PersistKeysToFileSystem failed for '{keysPath}': {ex.Message}. Falling back to ephemeral (in-memory) keys — encrypted values will not survive a restart.");
+        builder.Services.AddDataProtection().SetApplicationName("NimShare");
+    }
 }
 
 // SameSite=Strict on the auth cookie combined with SameOrigin JSON APIs
@@ -348,8 +358,17 @@ var app = builder.Build();
 
 // Wire the extension-method holder so Razor views can call `.ToDisplay()`
 // on any DateTimeOffset without threading ITimeService through every model.
-NimShare.Api.Services.TimeDisplay.Register(
-    app.Services.GetRequiredService<NimShare.Api.Services.ITimeService>());
+// Catch anything — a broken TimeService must NEVER take the whole app
+// down at startup; extension falls back to UTC-formatted output.
+try
+{
+    NimShare.Api.Services.TimeDisplay.Register(
+        app.Services.GetRequiredService<NimShare.Api.Services.ITimeService>());
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"[STARTUP] TimeService registration failed: {ex.Message}. Timestamps will fall back to raw UTC.");
+}
 
 // Refuse to boot in Production with the default IP-hash salt — otherwise
 // visitor IPs would be pseudonymised with a public constant, and anyone who

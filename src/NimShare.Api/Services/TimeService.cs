@@ -37,22 +37,39 @@ public class TimeService : ITimeService
     {
         var configured = config["NimShare:DisplayTimeZone"];
         var azureTz = Environment.GetEnvironmentVariable("WEBSITE_TIME_ZONE");
-        var candidate = !string.IsNullOrWhiteSpace(configured) ? configured
-            : !string.IsNullOrWhiteSpace(azureTz) ? azureTz
-            : "Europe/Berlin"; // sensible EFIGS+NL default for the current user base
-        try
+        // Try each candidate in order — first that resolves wins.
+        // "Europe/Berlin" is IANA; on Windows the fallback "W. Europe Standard Time"
+        // catches Windows-format containers. UTC is the last-resort.
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(configured)) candidates.Add(configured);
+        if (!string.IsNullOrWhiteSpace(azureTz)) candidates.Add(azureTz);
+        candidates.AddRange(new[] { "Europe/Berlin", "W. Europe Standard Time", "UTC" });
+
+        TimeZoneInfo? resolved = null;
+        string? resolvedId = null;
+        foreach (var cand in candidates)
         {
-            DisplayZone = TimeZoneInfo.FindSystemTimeZoneById(candidate);
-            ZoneId = candidate;
+            try
+            {
+                resolved = TimeZoneInfo.FindSystemTimeZoneById(cand);
+                resolvedId = cand;
+                break;
+            }
+            catch (Exception ex) when (ex is TimeZoneNotFoundException
+                                       || ex is InvalidTimeZoneException)
+            {
+                log.LogInformation("TimeZone '{Cand}' not found on this OS, trying next: {Msg}",
+                    cand, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                // Unknown exception type — log and keep trying rather than
+                // taking the whole app down at DI-resolution time.
+                log.LogWarning(ex, "Unexpected error resolving timezone '{Cand}'.", cand);
+            }
         }
-        catch (TimeZoneNotFoundException)
-        {
-            log.LogWarning(
-                "TimeZone '{Candidate}' not resolvable on this OS. Falling back to UTC. On Azure App Service set app-setting NimShare__DisplayTimeZone=Europe/Berlin.",
-                candidate);
-            DisplayZone = TimeZoneInfo.Utc;
-            ZoneId = "UTC";
-        }
+        DisplayZone = resolved ?? TimeZoneInfo.Utc;
+        ZoneId = resolvedId ?? "UTC";
         log.LogInformation("TimeService display zone = {ZoneId} (Offset={Offset}).",
             ZoneId, DisplayZone.GetUtcOffset(DateTimeOffset.UtcNow));
     }
