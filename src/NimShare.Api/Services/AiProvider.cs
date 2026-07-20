@@ -118,6 +118,7 @@ public class OpenAiProvider : IAiProvider
 
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
     {
+        LastError = null;
         var url = _isAzure
             ? _endpoint.Replace("chat/completions", "embeddings")
             : "https://api.openai.com/v1/embeddings";
@@ -126,15 +127,34 @@ public class OpenAiProvider : IAiProvider
         try
         {
             var resp = await _http.PostAsync(url, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
-            var s = await resp.Content.ReadAsStringAsync(ct);
-            var doc = JsonDocument.Parse(s);
+            var respText = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                string reason = respText.Length > 400 ? respText[..400] : respText;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(respText);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                LastError = $"OpenAI Embed HTTP {(int)resp.StatusCode}: {reason}";
+                Console.Error.WriteLine($"[OpenAIEmbed] {LastError}");
+                return null;
+            }
+            var doc = JsonDocument.Parse(respText);
             var arr = doc.RootElement.GetProperty("data")[0].GetProperty("embedding");
             var vec = new float[arr.GetArrayLength()];
             for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
             return vec;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LastError = $"OpenAI Embed Exception: {ex.Message}";
+            Console.Error.WriteLine($"[OpenAIEmbed] {LastError}");
+            return null;
+        }
     }
 
     public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
@@ -447,21 +467,44 @@ public class GeminiProvider : IAiProvider
 
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
     {
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={_apiKey}";
+        LastError = null;
+        // v1.10.30: URL-Encode Key + Logging von HTTP-Fehlern. Bisher schluckte
+        // EmbedAsync jeden Fehler still → jede Reindex-Runde mit einem ungültigen
+        // Key erzeugte 0 Embeddings ohne dass irgendwas im Log stand.
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={Uri.EscapeDataString(_apiKey)}";
         var payload = new { content = new { parts = new[] { new { text = text.Length > 8000 ? text[..8000] : text } } } };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         try
         {
             var resp = await _http.PostAsync(url, body, ct);
-            if (!resp.IsSuccessStatusCode) return null;
-            var s = await resp.Content.ReadAsStringAsync(ct);
-            var doc = JsonDocument.Parse(s);
+            var respText = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                string reason = respText.Length > 400 ? respText[..400] : respText;
+                try
+                {
+                    var errDoc = JsonDocument.Parse(respText);
+                    if (errDoc.RootElement.TryGetProperty("error", out var e)
+                        && e.TryGetProperty("message", out var m))
+                        reason = m.GetString() ?? reason;
+                }
+                catch { }
+                LastError = $"Gemini Embed HTTP {(int)resp.StatusCode}: {reason}";
+                Console.Error.WriteLine($"[GeminiEmbed] {LastError}");
+                return null;
+            }
+            var doc = JsonDocument.Parse(respText);
             var arr = doc.RootElement.GetProperty("embedding").GetProperty("values");
             var vec = new float[arr.GetArrayLength()];
             for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
             return vec;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LastError = $"Gemini Embed Exception: {ex.Message}";
+            Console.Error.WriteLine($"[GeminiEmbed] {LastError}");
+            return null;
+        }
     }
 
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)

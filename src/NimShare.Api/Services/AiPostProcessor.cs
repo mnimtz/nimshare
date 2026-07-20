@@ -102,6 +102,19 @@ public class AiPostProcessor : IAiPostProcessor
                         existing.CreatedAt = DateTimeOffset.UtcNow;
                     }
                     await db.SaveChangesAsync();
+                    _log.LogInformation("Embedding created/updated for {FileId} ({Dim} dimensions).", fileId, vec.Length);
+                }
+                else
+                {
+                    // v1.10.30: Provider hat kein Vector geliefert. Provider-LastError
+                    // reflektiert warum (HTTP 400 API key not valid, quota, model
+                    // not found, safety). Bislang war das ein stiller Fehlschlag,
+                    // Reindex-Runs erzeugten 0 Embeddings ohne Spur.
+                    var openErr = (provider as OpenAiProvider)?.LastError;
+                    var geminiErr = (provider as GeminiProvider)?.LastError;
+                    _log.LogWarning(
+                        "Embed returned null for {FileId}. Provider={ProviderType} Model={Model} OpenErr={OpenErr} GeminiErr={GeminiErr}",
+                        fileId, provider.GetType().Name, settings.Model, openErr, geminiErr);
                 }
             }
         }
