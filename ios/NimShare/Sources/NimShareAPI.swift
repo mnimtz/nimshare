@@ -206,6 +206,58 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // v1.10.56 iOS: neue Endpoints aus Web-v1.10.40+ nachgezogen.
+    // Force-Finalize für Vorgänge die auf "Sent" hängen. Antwort:
+    // entweder pending-Liste (wer fehlt), oder success. Server-side
+    // ist die Response-Struktur ein loses Dict, wir mappen die
+    // wichtigsten Felder als optional in einem Response-Struct.
+    struct FinalizeResponse: Decodable {
+        let status: String?
+        let finalFileId: UUID?
+        let note: String?
+        let pending: [PendingParticipant]?
+        let detail: String?
+        struct PendingParticipant: Decodable {
+            let id: UUID?
+            let name: String?
+            let email: String?
+            let role: String?
+            let status: String?
+        }
+    }
+    func forceFinalizeSignature(_ id: UUID) async throws -> FinalizeResponse {
+        let req = request("POST", "api/v1/signatures/\(id)/finalize")
+        let (data, _) = try await perform(req)
+        return try decode(FinalizeResponse.self, data)
+    }
+
+    // Signed-PDF-Download — direkter Zugriff auf das finalisierte PDF
+    // via API (statt Umweg über /browse/personal). Gibt Data + suggested
+    // Filename zurück. Der iOS-Aufrufer schickt das an QuickLook oder
+    // in einen Share-Sheet.
+    func downloadSignedPdf(_ id: UUID) async throws -> (Data, String) {
+        let req = request("GET", "api/v1/signatures/\(id)/signed-pdf")
+        let (data, resp) = try await perform(req)
+        // Content-Disposition parsen für den Dateinamen, sonst
+        // Fallback auf "signed-<id>.pdf"
+        var filename = "signed-\(id.uuidString).pdf"
+        if let cd = resp.value(forHTTPHeaderField: "Content-Disposition") {
+            if let range = cd.range(of: "filename=\"") {
+                let rest = cd[range.upperBound...]
+                if let end = rest.firstIndex(of: "\"") {
+                    filename = String(rest[..<end])
+                }
+            }
+        }
+        return (data, filename)
+    }
+
+    // Delete für Signatur-Vorgänge (Web-UI hat sig.confirm_delete).
+    func deleteSignatureRequest(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/signatures/\(id)")
+        _ = try await perform(req)
+    }
+
     func unreadNotificationCount() async throws -> Int {
         let req = request("GET", "api/v1/notifications/unread-count")
         let (data, _) = try await perform(req)

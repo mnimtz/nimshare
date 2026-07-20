@@ -18,22 +18,30 @@ struct SignaturesView: View {
                     systemImage: "signature",
                     description: Text("Sende ein PDF an eine Person, damit sie unterschreibt."))
             } else {
+                // v1.10.56: 3 Sektionen wie im Web — "In Bearbeitung"
+                // (Draft+Sent), "Abgeschlossen" (Completed), "Abgelehnt/
+                // Abgebrochen" (Declined+Cancelled). Tap → SignatureDetailView.
+                let active = items.filter { $0.status == "Draft" || $0.status == "Sent" }
+                let completed = items.filter { $0.status == "Completed" }
+                let abandoned = items.filter { $0.status == "Declined" || $0.status == "Cancelled" }
                 List {
-                    ForEach(items) { r in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(r.title).font(.body.weight(.semibold)).lineLimit(2)
-                                Spacer()
-                                statusBadge(r.status)
-                            }
-                            Text("\(r.participants.filter { $0.status == "Signed" || ($0.role == "Viewer" && $0.status == "Viewed") }.count) / \(r.participants.count) fertig")
-                                .font(.caption).foregroundStyle(.secondary)
-                            Text(r.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption2).foregroundStyle(.secondary)
+                    if !active.isEmpty {
+                        Section("🔄 In Bearbeitung") {
+                            ForEach(active) { r in rowLink(r) }
                         }
-                        .padding(.vertical, 2)
+                    }
+                    if !completed.isEmpty {
+                        Section("✅ Abgeschlossen") {
+                            ForEach(completed) { r in rowLink(r) }
+                        }
+                    }
+                    if !abandoned.isEmpty {
+                        Section("✕ Abgelehnt / abgebrochen") {
+                            ForEach(abandoned) { r in rowLink(r) }
+                        }
                     }
                 }
+                .listStyle(.insetGrouped)
             }
             if let e = error {
                 Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
@@ -54,6 +62,24 @@ struct SignaturesView: View {
                 showNew = false
                 Task { await load() }
             })
+        }
+    }
+
+    @ViewBuilder
+    private func rowLink(_ r: SignatureRequestDto) -> some View {
+        NavigationLink(destination: SignatureDetailView(requestId: r.id, initialTitle: r.title)) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(r.title).font(.body.weight(.semibold)).lineLimit(2)
+                    Spacer()
+                    statusBadge(r.status)
+                }
+                Text("\(r.participants.filter { $0.status == "Signed" || ($0.role == "Viewer" && $0.status == "Viewed") }.count) / \(r.participants.count) fertig")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(r.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
         }
     }
 
