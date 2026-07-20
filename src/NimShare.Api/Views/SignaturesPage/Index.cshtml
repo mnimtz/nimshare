@@ -3,18 +3,25 @@
     ViewData["Title"] = T["sig.title"];
     Layout = "_AppShell";
     var latestNote = (Dictionary<(Guid RequestId, Guid ParticipantId), string?>)(ViewData["LatestInviteNote"] ?? new Dictionary<(Guid, Guid), string?>());
-    // v1.10.39: Split into "in progress" vs. "completed" sections. Terminal
-    // states (Completed, Declined, Cancelled) drop into the lower table so
-    // the top of the page always shows what still needs attention.
-    var terminal = new HashSet<NimShare.Core.Entities.SignatureRequestStatus> {
-        NimShare.Core.Entities.SignatureRequestStatus.Completed,
-        NimShare.Core.Entities.SignatureRequestStatus.Declined,
-        NimShare.Core.Entities.SignatureRequestStatus.Cancelled,
-    };
-    var activeList = Model.Where(r => !terminal.Contains(r.Status))
-                          .OrderByDescending(r => r.CreatedAt).ToList();
-    var doneList = Model.Where(r => terminal.Contains(r.Status))
-                        .OrderByDescending(r => r.CompletedAt ?? r.CreatedAt).ToList();
+    // v1.10.46: Drei Sektionen statt zwei. Marcus's Feedback: unter
+    // "Abgeschlossen" sollte NUR Completed stehen, nicht auch abgelehnte /
+    // abgebrochene Vorgänge — die verwirren, weil sie nicht "fertig
+    // unterschrieben" sind. Aufteilung:
+    //   🔄 In Bearbeitung: Draft + Sent
+    //   ✅ Abgeschlossen: Completed
+    //   ✕ Abgelehnt/Abgebrochen: Declined + Cancelled (eigene Sektion,
+    //      kollabierbar denkbar, aber erstmal einfach unten)
+    var activeList = Model.Where(r =>
+        r.Status == NimShare.Core.Entities.SignatureRequestStatus.Draft
+        || r.Status == NimShare.Core.Entities.SignatureRequestStatus.Sent)
+        .OrderByDescending(r => r.CreatedAt).ToList();
+    var doneList = Model.Where(r =>
+        r.Status == NimShare.Core.Entities.SignatureRequestStatus.Completed)
+        .OrderByDescending(r => r.CompletedAt ?? r.CreatedAt).ToList();
+    var abandonedList = Model.Where(r =>
+        r.Status == NimShare.Core.Entities.SignatureRequestStatus.Declined
+        || r.Status == NimShare.Core.Entities.SignatureRequestStatus.Cancelled)
+        .OrderByDescending(r => r.CompletedAt ?? r.CreatedAt).ToList();
 }
 <div class="page-header">
     <div>
@@ -52,6 +59,16 @@ else
     else
     {
         @await Html.PartialAsync("_SignatureTable", doneList, new ViewDataDictionary(ViewData) { ["LatestInviteNote"] = latestNote })
+    }
+
+    @* v1.10.46: dritte Sektion — abgelehnte/abgebrochene Vorgänge, klar
+       getrennt von "abgeschlossen" (Marcus's Feedback). Nur einblenden
+       wenn's welche gibt — auf einer sauberen Übersicht kein leeres
+       Section-Rauschen. *@
+    @if (abandonedList.Count > 0)
+    {
+        <h2 style="margin-top:32px;font-size:1.05rem;color:var(--tw-muted-blue,#5a6b7f)">✕ @T["sig.section.abandoned"]</h2>
+        @await Html.PartialAsync("_SignatureTable", abandonedList, new ViewDataDictionary(ViewData) { ["LatestInviteNote"] = latestNote })
     }
 }
 

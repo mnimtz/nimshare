@@ -1102,4 +1102,5 @@ Grazie per usare NimShare.</value></data>
   <data name="slug.invalid"><value>slug non valido (minuscole, cifre, - o _)</value></data>
   <data name="slug.normalised_prefix"><value>verrà salvato come</value></data>
   <data name="slug.suggestions"><value>prova:</value></data>
+  <data name="sig.section.abandoned"><value>Rifiutati / annullati</value></data>
 </root>

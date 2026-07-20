@@ -494,6 +494,50 @@ using (var scope = app.Services.CreateScope())
 // Ensuring the blob container exists can take 30+ s of retry when the storage
 // endpoint isn't reachable (dev without Azurite, prod during a brief outage).
 // Fire-and-forget so Kestrel starts serving immediately.
+// v1.10.46 — Rescue-Pass für gestrandete Signatur-Vorgänge.
+// Marcus's Fall: er hat einen Vorgang unterschrieben, aber der Finalizer
+// lief nicht durch (Exception, Timeout, oder Row-Refresh-Miss). Der
+// SignatureRequest steht auf Status=Sent obwohl alle Participants schon
+// Signed sind → er landet in "In Bearbeitung" statt "Abgeschlossen",
+// keine Complete-Mail geht raus. Beim Startup scannen wir alle Sent-
+// Vorgänge und retry-triggern den Finalizer für die, wo tatsächlich
+// alles fertig ist. Fire-and-forget, damit Kestrel nicht wartet.
+_ = Task.Run(async () =>
+{
+    // Kleiner Delay, damit die App zuerst richtig hochkommt bevor wir
+    // den Background-Finalizer belasten (der Blob-SAS + PDF-Merge macht).
+    await Task.Delay(TimeSpan.FromSeconds(10));
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+    var finalizer = scope.ServiceProvider.GetRequiredService<ISignatureFinalizerService>();
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var stuck = await db.SignatureRequests
+            .Where(r => r.Status == SignatureRequestStatus.Sent)
+            .Include(r => r.Participants)
+            .ToListAsync();
+        var candidates = stuck.Where(r => r.Participants.All(p =>
+            (p.Role == SignatureParticipantRole.Signer && p.Status == SignatureParticipantStatus.Signed)
+            || (p.Role == SignatureParticipantRole.Viewer
+                && (p.Status == SignatureParticipantStatus.Viewed || p.Status == SignatureParticipantStatus.Signed))
+        )).ToList();
+        if (candidates.Count > 0)
+        {
+            log.LogInformation("[STARTUP] Retrying finalize for {Count} stuck signature request(s).", candidates.Count);
+            foreach (var r in candidates)
+            {
+                try { await finalizer.TryFinalizeAsync(r.Id); }
+                catch (Exception ex) { log.LogWarning(ex, "Retry-finalize threw for {Id}", r.Id); }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        log.LogWarning(ex, "[STARTUP] Retry-finalize pass failed.");
+    }
+});
+
 _ = Task.Run(async () =>
 {
     using var scope = app.Services.CreateScope();

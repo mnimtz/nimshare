@@ -1100,4 +1100,5 @@ Thanks for using NimShare.</value></data>
   <data name="slug.invalid"><value>not a valid slug (use lowercase letters, digits, - or _)</value></data>
   <data name="slug.normalised_prefix"><value>will be saved as</value></data>
   <data name="slug.suggestions"><value>try:</value></data>
+  <data name="sig.section.abandoned"><value>Declined / cancelled</value></data>
 </root>
