@@ -48,7 +48,8 @@ public class AiController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpPost("summary")]
-    public async Task<IActionResult> Summary([FromBody] SummaryReq req, CancellationToken ct)
+    public async Task<IActionResult> Summary([FromBody] SummaryReq req,
+        [FromServices] ILogger<AiController> log, CancellationToken ct)
     {
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableAutoSummary || settings.Provider == AiProvider.Disabled)
@@ -88,13 +89,18 @@ public class AiController : ControllerBase
             summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
             {
-                // Check both concrete providers — the earlier code only asked
-                // OpenAI, so Gemini users saw the generic fallback ("may not
-                // support image input") even when the actual reason was a
-                // safety block, MAX_TOKENS, or a model-not-found 404.
-                var detail = (provider as OpenAiProvider)?.LastError
-                    ?? (provider as GeminiProvider)?.LastError
-                    ?? "The configured AI model may not support image input.";
+                // v1.10.18: include the concrete provider TYPE in the fallback
+                // so we can see server-side (and now client-side too) what's
+                // actually configured — the previous "may not support image
+                // input" message was ambiguous when the real cause was e.g.
+                // provider Disabled or API-key missing (→ NullAiProvider).
+                var openErr = (provider as OpenAiProvider)?.LastError;
+                var geminiErr = (provider as GeminiProvider)?.LastError;
+                var detail = openErr ?? geminiErr
+                    ?? $"AI provider is {provider.GetType().Name} (model: {settings.Model ?? "-"}). No error text was returned — the provider likely lacks vision support at this model, or the SDK ate an exception. Check server logs.";
+                log.LogWarning(
+                    "Vision returned no result. Provider={ProviderType} Model={Model} File={FileId} ContentType={ContentType} OpenErr={OpenErr} GeminiErr={GeminiErr}",
+                    provider.GetType().Name, settings.Model, file.Id, contentTypeLower, openErr, geminiErr);
                 return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
             }
         }

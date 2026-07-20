@@ -6,6 +6,7 @@
     Layout = "_Layout";
     var isSigner = Model.Me.Role == SignatureParticipantRole.Signer;
     var myFields = (List<SignatureField>)(ViewData["MyFields"] ?? new List<SignatureField>());
+    var otherFields = myFields.Where(f => f.Type != SignatureFieldType.Signature).ToList();
     var audits = (List<SignatureAudit>)(ViewData["Audits"] ?? new List<SignatureAudit>());
     var participantsById = (Dictionary<Guid, SignatureParticipant>)(ViewData["ParticipantsById"] ?? new Dictionary<Guid, SignatureParticipant>());
     var theme = ViewData["Theme"] as NimShare.Api.Controllers.SignLandingTheme;
@@ -46,7 +47,12 @@
 {
     <style>
         .landing-shell { --tw-primary: @brandColor; --tw-primary-alt: @brandColor; }
-        .btn-primary { background: @brandColor !important; border-color: @brandColor !important; }
+        .landing-shell .btn-primary {
+            background: @brandColor !important;
+            border-color: @brandColor !important;
+            color: #fff !important;
+        }
+        .landing-shell .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
     </style>
 }
 <div class="landing-shell sig-shell">
@@ -128,12 +134,16 @@
                     <input type="text" name="typedName" required value="@Model.Me.Name" maxlength="120"/>
                 </div>
                 <div class="field">
+                    @{ var isAuthed = User?.Identity?.IsAuthenticated ?? false; }
                     <label style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                         <span>Unterschrift</span>
-                        <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
-                            <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
-                            <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
-                        </span>
+                        @if (isAuthed)
+                        {
+                            <span style="display:inline-flex;gap:4px;background:var(--tw-gray-100);border-radius:6px;padding:3px" role="tablist">
+                                <button type="button" id="modeDraw" onclick="setSigMode('draw')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="true">🖊 Zeichnen</button>
+                                <button type="button" id="modeCert" onclick="setSigMode('cert')" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:.82rem" aria-pressed="false">📜 Zertifikat</button>
+                            </span>
+                        }
                     </label>
                     <div id="sigDrawWrap" style="border:2px dashed var(--tw-gray-300);border-radius:8px;background:#fff;position:relative">
                         <canvas id="sigPad" width="720" height="180" style="width:100%;height:180px;touch-action:none;display:block"></canvas>
@@ -150,6 +160,43 @@
                 </div>
                 <input type="hidden" name="signatureData" id="signatureData"/>
                 <input type="hidden" name="signMode" id="signMode" value="draw"/>
+
+                @* Sonstige Felder (Text/Datum/Checkbox), die der Initiator platziert hat —
+                   der Signer muss sie hier ausfüllen. Signature-Felder werden über die
+                   Zeichen-/Cert-Bild-Logik gefüllt, also hier nur die anderen zeigen. *@
+                @if (otherFields.Count > 0)
+                {
+                    <div class="field">
+                        <label>Zusätzliche Felder ausfüllen</label>
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px">
+                        @foreach (var f in otherFields)
+                        {
+                            var lbl = string.IsNullOrWhiteSpace(f.Label)
+                                ? (f.Type == SignatureFieldType.Date ? "Datum" : (f.Type == SignatureFieldType.Checkbox ? "Bestätigung" : "Text"))
+                                : f.Label;
+                            <div style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--tw-gray-300);border-radius:6px;background:#fff">
+                                <span class="muted" style="font-size:.75rem">Seite @f.Page · @f.Type</span>
+                                <label style="font-weight:500;font-size:.9rem">@lbl</label>
+                                @if (f.Type == SignatureFieldType.Checkbox)
+                                {
+                                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+                                        <input type="checkbox" name="fieldValue_@f.Id" value="true" style="width:18px;height:18px"/>
+                                        <span>Bestätigt</span>
+                                    </label>
+                                }
+                                else if (f.Type == SignatureFieldType.Date)
+                                {
+                                    <input type="date" name="fieldValue_@f.Id" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")"/>
+                                }
+                                else
+                                {
+                                    <input type="text" name="fieldValue_@f.Id" maxlength="500" placeholder="@lbl"/>
+                                }
+                            </div>
+                        }
+                        </div>
+                    </div>
+                }
             }
             <div class="row" style="justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px">
                 <button type="button" class="btn btn-ghost" onclick="declineOpen()">✕ Ablehnen</button>
@@ -464,7 +511,18 @@ async function loadCertPreview() {
     info.textContent = 'Lade Zertifikat …';
     canvas.style.display = 'none';
     try {
-        const r = await fetch('/api/v1/certificates/default', { credentials: 'same-origin' });
+        const r = await fetch('/api/v1/certificates/default', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        // Anonymous signers get redirected to /account/login (HTML) —
+        // JSON.parse would throw on "<!DOCTYPE html>". Detect early via
+        // content-type or the redirect chain.
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            info.innerHTML = '⚠ Zertifikat-Stempel nur für <strong>angemeldete NimShare-Nutzer</strong> mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.';
+            return;
+        }
         if (r.status === 401 || r.status === 403) {
             info.innerHTML = '⚠ Zertifikat-Stempel nur für <strong>angemeldete NimShare-Nutzer</strong> mit hinterlegtem Default-Zertifikat verfügbar. Wechsle zurück auf "🖊 Zeichnen", oder öffne die Signatur-Seite eingeloggt.';
             return;

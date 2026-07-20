@@ -204,6 +204,12 @@ public class SignController : Controller
         }
 
         var now = DateTimeOffset.UtcNow;
+        // v1.10.18: honour user-entered values for Text / Date / Checkbox
+        // fields. The form posts them as `fieldValue_{fieldGuid}` — pre-1.10.18
+        // these values were ignored and non-signature fields stayed empty in
+        // the final PDF. Signer had no way to fill them in the UI either
+        // (also fixed in v1.10.18 Sign.cshtml).
+        var form = Request.HasFormContentType ? Request.Form : null;
         foreach (var f in fields)
         {
             if (f.Type == SignatureFieldType.Signature)
@@ -211,9 +217,21 @@ public class SignController : Controller
                 f.SignatureImagePath = sigPath;
                 f.Value = typedName;
             }
+            else if (f.Type == SignatureFieldType.Text)
+            {
+                var v = form?[$"fieldValue_{f.Id}"].ToString();
+                if (!string.IsNullOrWhiteSpace(v)) f.Value = v.Length > 500 ? v[..500] : v;
+            }
             else if (f.Type == SignatureFieldType.Date)
             {
-                f.Value = now.ToString("yyyy-MM-dd");
+                var v = form?[$"fieldValue_{f.Id}"].ToString();
+                // If the signer set a date, use it; otherwise auto-stamp today.
+                f.Value = !string.IsNullOrWhiteSpace(v) ? v : now.ToString("yyyy-MM-dd");
+            }
+            else if (f.Type == SignatureFieldType.Checkbox)
+            {
+                var v = form?[$"fieldValue_{f.Id}"].ToString();
+                f.Value = !string.IsNullOrWhiteSpace(v) && v != "false" ? "☑" : "☐";
             }
             f.FilledAt = now;
         }

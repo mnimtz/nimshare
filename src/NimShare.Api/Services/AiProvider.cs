@@ -297,8 +297,21 @@ public class GeminiProvider : IAiProvider
         // or the token budget is consumed by internal reasoning before any
         // text is emitted (leaves parts[] empty and the caller sees "empty").
         object visionConfig = ModelHasThinkingTokens()
-            ? new { temperature = 0.3, maxOutputTokens = 1024, thinkingConfig = new { thinkingBudget = 0 } }
-            : new { temperature = 0.3, maxOutputTokens = 1024 };
+            ? new { temperature = 0.3, maxOutputTokens = 2048, thinkingConfig = new { thinkingBudget = 0 } }
+            : new { temperature = 0.3, maxOutputTokens = 2048 };
+        // v1.10.18: Safety-Filter auf BLOCK_ONLY_HIGH herunterschrauben. Der
+        // Default (BLOCK_MEDIUM_AND_ABOVE) blockt Bilder mit Personen / Gesichtern
+        // sehr aggressiv → "keine candidates" ohne verwertbaren Grund. Für ein
+        // Auto-Summary-Feature ist "beschreibe was im Bild ist" harmlos genug
+        // dass wir den mildesten Schwellwert nutzen. HARM_CATEGORY_CIVIC_INTEGRITY
+        // gibt es nicht als Kategorie — nur die vier klassischen.
+        var safety = new object[]
+        {
+            new { category = "HARM_CATEGORY_HARASSMENT", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_HATE_SPEECH", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold = "BLOCK_ONLY_HIGH" },
+            new { category = "HARM_CATEGORY_DANGEROUS_CONTENT", threshold = "BLOCK_ONLY_HIGH" },
+        };
         var payload = new
         {
             contents = new[]
@@ -313,6 +326,7 @@ public class GeminiProvider : IAiProvider
                 }
             },
             generationConfig = visionConfig,
+            safetySettings = safety,
         };
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -336,10 +350,20 @@ public class GeminiProvider : IAiProvider
                 return null;
             }
             var doc = JsonDocument.Parse(text);
+            // Check promptFeedback first — safety blocks return here with no
+            // candidates and the blockReason is more useful than a generic
+            // "no candidates" message.
+            string? promptBlockReason = null;
+            if (doc.RootElement.TryGetProperty("promptFeedback", out var pf)
+                && pf.TryGetProperty("blockReason", out var br))
+                promptBlockReason = br.GetString();
             if (!doc.RootElement.TryGetProperty("candidates", out var cands)
                 || cands.GetArrayLength() == 0)
             {
-                LastError = $"Gemini Vision {_model}: keine candidates (Safety-Block, Modell ohne Vision-Support, oder ungültiges Bild).";
+                LastError = promptBlockReason is not null
+                    ? $"Gemini Vision {_model}: durch Safety-Filter blockiert (Grund: {promptBlockReason}). safetySettings=BLOCK_ONLY_HIGH ist bereits gesetzt — Google's Modell filtert das Bild trotzdem raus. Anderes Modell / anderes Bild versuchen."
+                    : $"Gemini Vision {_model}: keine candidates + kein blockReason (Modell ohne Vision-Support, ungültiges Bild, oder Quota erschöpft). Prüfe Response im Server-Log.";
+                Console.Error.WriteLine($"[GeminiVision] no-candidates. Model={_model} full-response={(text.Length > 1500 ? text[..1500] : text)}");
                 return null;
             }
             var c0 = cands[0];
@@ -349,20 +373,27 @@ public class GeminiProvider : IAiProvider
             if (doc.RootElement.TryGetProperty("usageMetadata", out var um)
                 && um.TryGetProperty("thoughtsTokenCount", out var tt))
                 thinkingTokens = tt.GetInt32();
+            // finishReason=SAFETY means the model refused mid-generation.
+            if (string.Equals(finishReason, "SAFETY", StringComparison.OrdinalIgnoreCase))
+            {
+                LastError = $"Gemini Vision {_model}: durch Safety-Filter mid-generation abgebrochen (finishReason=SAFETY). Bild enthält Content, den das Modell nicht beschreiben will.";
+                return null;
+            }
             if (!c0.TryGetProperty("content", out var ct2)
                 || !ct2.TryGetProperty("parts", out var ps)
                 || ps.GetArrayLength() == 0
                 || !ps[0].TryGetProperty("text", out var tx))
             {
                 LastError = string.Equals(finishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase)
-                    ? $"Gemini Vision {_model}: Output-Budget verbraucht ({thinkingTokens} thinking-tokens von 1024). thinkingBudget=0 ist gesetzt — falls trotzdem MAX_TOKENS: gemini-2.5-pro versuchen (mehr Kapazität)."
+                    ? $"Gemini Vision {_model}: Output-Budget verbraucht ({thinkingTokens} thinking-tokens). thinkingBudget=0 ist gesetzt — falls trotzdem MAX_TOKENS: gemini-2.5-pro versuchen (mehr Kapazität)."
                     : $"Gemini Vision {_model}: Antwort ohne text-Feld (finishReason={finishReason ?? "unknown"}).";
+                Console.Error.WriteLine($"[GeminiVision] no-text. Model={_model} finishReason={finishReason} response={(text.Length > 1500 ? text[..1500] : text)}");
                 return null;
             }
             var value = tx.GetString();
             if (string.IsNullOrWhiteSpace(value))
             {
-                LastError = $"Gemini Vision {_model}: leerer Text (evtl. Safety-Filter oder Bild nicht analysierbar).";
+                LastError = $"Gemini Vision {_model}: leerer Text (finishReason={finishReason}) — vermutlich Safety-Soft-Filter.";
                 return null;
             }
             return value;
