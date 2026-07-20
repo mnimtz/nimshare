@@ -1092,4 +1092,9 @@ Gracias por usar NimShare.</value></data>
   <data name="sig.section.active" xml:space="preserve"><value>En curso</value></data>
   <data name="sig.section.completed" xml:space="preserve"><value>Completadas</value></data>
   <data name="sig.section.completed_empty" xml:space="preserve"><value>Las firmas completadas aparecerán aquí.</value></data>
+  <data name="sig.finalize"><value>Forzar cierre</value></data>
+  <data name="sig.finalize_hint"><value>Ejecuta el finalizador manualmente si el proceso se quedó atascado en « en curso ».</value></data>
+  <data name="sig.finalize_pending"><value>Aún no se puede completar — faltan los siguientes participantes:</value></data>
+  <data name="sig.finalize_stuck"><value>El finalizador se ejecutó pero el proceso no se completó. Revisa los logs del servidor.</value></data>
+  <data name="sig.finalize_failed"><value>La llamada de finalización falló:</value></data>
 </root>

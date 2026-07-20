@@ -65,5 +65,35 @@ async function sigDelete(id) {
     if (r.ok) location.reload();
     else alert('Fehler: ' + r.status + ' — ' + (await r.text()));
 }
+
+// v1.10.40: manueller Finalize-Trigger für gestrandete Vorgänge.
+// Der Endpoint liefert ein strukturiertes JSON mit Diagnose (welche
+// Beteiligten noch fehlen, oder eine Exception-Details wenn's beim
+// Merge kracht). Wir zeigen dem User beides in Klartext.
+async function sigFinalize(id) {
+    const r = await fetch('/api/v1/signatures/' + id + '/finalize', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+    });
+    let d;
+    try { d = await r.json(); } catch { d = null; }
+    if (!r.ok || !d) {
+        alert(@Json.Serialize(T["sig.finalize_failed"].Value) + '\n\n' +
+            (d && d.detail ? d.detail : ('HTTP ' + r.status)));
+        return;
+    }
+    if (d.status === 'Completed') {
+        // Fertig — Seite neu laden, dann steht der Vorgang unten in
+        // "Abgeschlossen" und der 📥-Button geht direkt aufs PDF.
+        location.reload();
+        return;
+    }
+    if (Array.isArray(d.pending) && d.pending.length > 0) {
+        const lines = d.pending.map(p => `• ${p.name || p.email} (${p.role}) — ${p.status}`);
+        alert(@Json.Serialize(T["sig.finalize_pending"].Value) + '\n\n' + lines.join('\n'));
+        return;
+    }
+    alert(@Json.Serialize(T["sig.finalize_stuck"].Value) + '\n\n' + (d.note || ''));
+}
 </script>
 }

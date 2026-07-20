@@ -566,6 +566,102 @@ public class SignaturesController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// v1.10.40 — download / inline-view the final signed PDF. Vorher ging
+    /// der "📥 Signiertes PDF" Button auf /browse/personal — man musste den
+    /// Dateinamen kennen. Jetzt direkter Zugriff über die Request-Id.
+    /// </summary>
+    [HttpGet("{id:guid}/signed-pdf")]
+    public async Task<IActionResult> SignedPdf(Guid id,
+        [FromServices] IBlobStorageService blobs, bool download = false, CancellationToken ct = default)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests.Include(x => x.FinalFile)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r is null) return NotFound();
+        // Alle Beteiligten (Initiator + Participants) dürfen das signierte
+        // Endprodukt sehen — bei einem regulären Signaturvorgang ist das ja
+        // genau das Ergebnis das alle geteilt bekommen sollten.
+        var isParticipant = await _db.SignatureParticipants
+            .AnyAsync(p => p.RequestId == id && p.Email == me.Email, ct);
+        if (r.InitiatorUserId != me.Id && me.Role != UserRole.Admin && !isParticipant)
+            return Forbid();
+        if (r.FinalFile is null)
+            return Problem(statusCode: 409, title: "Request not finalized yet.",
+                detail: $"Status is {r.Status}. Try /finalize first.");
+        var ms = new MemoryStream();
+        await blobs.DownloadToAsync(r.FinalFile.BlobPath, ms, ct);
+        ms.Position = 0;
+        var fn = r.FinalFile.Name;
+        // Inline by default → Browser zeigt PDF direkt an. ?download=true
+        // erzwingt Content-Disposition: attachment.
+        if (download)
+            return File(ms, "application/pdf", fn);
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{fn}\"";
+        return File(ms, "application/pdf");
+    }
+
+    /// <summary>
+    /// v1.10.40 — Diagnose + Trigger. Marcus's Fall "Status bleibt auf läuft
+    /// nach signieren": entweder fehlt ein Beteiligter (allDone=false), oder
+    /// der Background-Finalizer ist an einer Exception gestorben ohne dass
+    /// jemand die Logs liest. Der Endpoint sagt Marcus was los ist UND
+    /// versucht bei Bedarf synchron zu finalisieren.
+    /// </summary>
+    [HttpPost("{id:guid}/finalize")]
+    public async Task<IActionResult> ForceFinalize(Guid id,
+        [FromServices] ISignatureFinalizerService finalizer, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests.Include(x => x.Participants)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r is null) return NotFound();
+        if (r.InitiatorUserId != me.Id && me.Role != UserRole.Admin) return Forbid();
+        if (r.Status == SignatureRequestStatus.Completed)
+            return Ok(new { status = "Completed", finalFileId = r.FinalFileId, note = "Already completed." });
+
+        // Zunächst prüfen wer noch aussteht — das ist die häufigste Ursache
+        // für "steckt auf läuft".
+        var pending = r.Participants
+            .Where(p => !(
+                (p.Role == SignatureParticipantRole.Signer && p.Status == SignatureParticipantStatus.Signed)
+                || (p.Role == SignatureParticipantRole.Viewer
+                    && (p.Status == SignatureParticipantStatus.Viewed || p.Status == SignatureParticipantStatus.Signed))
+            ))
+            .Select(p => new { p.Id, p.Name, p.Email, p.Role, p.Status })
+            .ToList();
+        if (pending.Count > 0)
+        {
+            return Ok(new
+            {
+                status = r.Status.ToString(),
+                message = "Waiting on participants — finalize deferred.",
+                pending,
+            });
+        }
+
+        // Alle sind fertig, aber Status hängt → Finalizer synchron nochmal
+        // laufen lassen und Fehler an den Aufrufer geben.
+        try
+        {
+            await finalizer.TryFinalizeAsync(r.Id, ct);
+        }
+        catch (Exception ex)
+        {
+            return Problem(statusCode: 500, title: "Finalizer threw.", detail: ex.ToString());
+        }
+        var after = await _db.SignatureRequests.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        return Ok(new
+        {
+            status = after?.Status.ToString() ?? "?",
+            finalFileId = after?.FinalFileId,
+            note = after?.Status == SignatureRequestStatus.Completed
+                ? "Finalized successfully."
+                : "Finalizer ran but state did not change to Completed — check server logs.",
+        });
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {

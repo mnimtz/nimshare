@@ -1091,4 +1091,9 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="sig.section.active" xml:space="preserve"><value>Bezig</value></data>
   <data name="sig.section.completed" xml:space="preserve"><value>Afgerond</value></data>
   <data name="sig.section.completed_empty" xml:space="preserve"><value>Afgeronde handtekeningaanvragen verschijnen hier.</value></data>
+  <data name="sig.finalize"><value>Afsluiting forceren</value></data>
+  <data name="sig.finalize_hint"><value>Start de finalizer handmatig als het proces vastzit op „bezig".</value></data>
+  <data name="sig.finalize_pending"><value>Kan nog niet worden afgerond — de volgende deelnemers ontbreken:</value></data>
+  <data name="sig.finalize_stuck"><value>Finalizer liep maar het proces is niet afgerond. Controleer de serverlogs.</value></data>
+  <data name="sig.finalize_failed"><value>Finalize-aanroep mislukt:</value></data>
 </root>

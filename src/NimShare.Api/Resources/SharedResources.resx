@@ -1090,4 +1090,9 @@ Thanks for using NimShare.</value></data>
   <data name="sig.section.active" xml:space="preserve"><value>In progress</value></data>
   <data name="sig.section.completed" xml:space="preserve"><value>Completed</value></data>
   <data name="sig.section.completed_empty" xml:space="preserve"><value>Completed signature workflows will appear here.</value></data>
+  <data name="sig.finalize"><value>Force complete</value></data>
+  <data name="sig.finalize_hint"><value>Trigger the finalizer manually if the workflow got stuck on Sent.</value></data>
+  <data name="sig.finalize_pending"><value>Cannot finalize yet — the following participants have not signed / viewed:</value></data>
+  <data name="sig.finalize_stuck"><value>Finalizer ran but the workflow did not complete. Please check the server logs.</value></data>
+  <data name="sig.finalize_failed"><value>Finalize call failed:</value></data>
 </root>

@@ -71,7 +71,19 @@
                 <div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:wrap">
                     @if (r.FinalFileId is Guid ff)
                     {
-                        <a class="btn btn-secondary btn-sm" href="/browse/personal">📥 @T["sig.signed_pdf"]</a>
+                        @* v1.10.40: direkter Klick öffnet das signierte PDF
+                           inline im Browser — kein Umweg mehr über "geh in
+                           deinen Persönlichen Bereich und such die Datei". *@
+                        <a class="btn btn-secondary btn-sm" href="/api/v1/signatures/@r.Id/signed-pdf" target="_blank" rel="noopener">📥 @T["sig.signed_pdf"]</a>
+                    }
+                    else if (r.Status == NimShare.Core.Entities.SignatureRequestStatus.Sent)
+                    {
+                        @* v1.10.40: Marcus's "Status bleibt auf läuft"-Case.
+                           Ein Klick ruft /finalize — der Endpoint sagt was
+                           gerade blockiert (noch ausstehende Beteiligte),
+                           oder finalisiert synchron wenn nichts fehlt. *@
+                        <button class="btn btn-secondary btn-sm" onclick="sigFinalize('@r.Id')" title="@T["sig.finalize_hint"]">🏁 @T["sig.finalize"]</button>
+                        <a class="btn btn-ghost btn-sm" href="/signatures/@r.Id">@T["sig.detail.title"]</a>
                     }
                     else
                     {

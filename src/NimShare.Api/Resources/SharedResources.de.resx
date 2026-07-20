@@ -1096,4 +1096,9 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="sig.section.active" xml:space="preserve"><value>In Bearbeitung</value></data>
   <data name="sig.section.completed" xml:space="preserve"><value>Abgeschlossen</value></data>
   <data name="sig.section.completed_empty" xml:space="preserve"><value>Abgeschlossene Signatur-Vorgänge erscheinen hier.</value></data>
+  <data name="sig.finalize"><value>Abschluss erzwingen</value></data>
+  <data name="sig.finalize_hint"><value>Löst den Finalizer manuell aus, falls der Vorgang auf „läuft" hängengeblieben ist.</value></data>
+  <data name="sig.finalize_pending"><value>Kann noch nicht abgeschlossen werden — folgende Beteiligte fehlen:</value></data>
+  <data name="sig.finalize_stuck"><value>Finalizer lief, aber der Vorgang ist nicht abgeschlossen. Bitte Server-Logs prüfen.</value></data>
+  <data name="sig.finalize_failed"><value>Finalize-Aufruf fehlgeschlagen:</value></data>
 </root>
