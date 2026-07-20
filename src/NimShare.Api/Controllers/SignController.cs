@@ -298,6 +298,40 @@ public class SignController : Controller
         return View("Done", new SignDoneViewModel(req, p, false));
     }
 
+    /// <summary>AI-drafted summary of the source PDF in the requested language,
+    /// so a signer / viewer can quickly grasp what they're being asked to sign
+    /// without reading the whole document. Token-gated (same as landing /
+    /// preview / submit); refuses if the AI gateway is off or the summary
+    /// feature disabled.</summary>
+    [HttpGet("/sign/{pid:guid}/summary")]
+    public async Task<IActionResult> Summary(Guid pid, string t, string? lang,
+        [FromServices] IAiGatewayService ai,
+        CancellationToken ct)
+    {
+        var (req, p) = await ResolveAsync(pid, t, ct);
+        if (req is null || p is null) return Problem(statusCode: 404);
+        if (req.SourceFile is null) return Problem(statusCode: 404);
+        var settings = await ai.LoadAsync(ct);
+        if (settings.Provider == NimShare.Core.Entities.AiProvider.Disabled)
+            return Problem(statusCode: 503, title: "AI-Zusammenfassungen sind serverseitig deaktiviert.");
+        if (!settings.EnableAutoSummary)
+            return Problem(statusCode: 503, title: "AI-Zusammenfassung ist im AI-Gateway nicht aktiviert.");
+
+        var text = await ai.ExtractTextAsync(req.SourceFile.BlobPath, req.SourceFile.ContentType, _blobs, ct);
+        if (string.IsNullOrWhiteSpace(text))
+            return Problem(statusCode: 422, title: "Text-Extraktion ergab nichts.",
+                detail: "Das PDF könnte gescannt / bildbasiert sein. OCR ist auf dem Roadmap.");
+
+        // Language: browser hint → participant email domain → German fallback.
+        var language = string.IsNullOrWhiteSpace(lang) ? "de" : lang.Trim().Split('-')[0];
+        var provider = await ai.CreateProviderAsync(ct);
+        var summary = await provider.SummarizeAsync(text, language, ct);
+        if (string.IsNullOrWhiteSpace(summary))
+            return Problem(statusCode: 502, title: "AI hat keine Zusammenfassung geliefert.",
+                detail: "Modell wechseln (im AI-Gateway) oder Prompt/Modell-Verfügbarkeit prüfen.");
+        return Ok(new { text = summary, language, doc = req.SourceFile.Name });
+    }
+
     /// <summary>Reassign / delegate — the recipient says "I'm not the right
     /// person, please forward to X" (DocuSign-style). We mark the current
     /// participant as Declined with a reassigned-to marker, spawn a fresh

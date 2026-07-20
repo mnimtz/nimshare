@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NimShare.Core.Data;
 
@@ -11,9 +12,11 @@ using NimShare.Core.Data;
 namespace NimShare.Migrations.SqlServer.Migrations
 {
     [DbContext(typeof(NimShareDbContext))]
-    partial class NimShareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720051547_V180_UserShowAvatarOnLandings")]
+    partial class V180_UserShowAvatarOnLandings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

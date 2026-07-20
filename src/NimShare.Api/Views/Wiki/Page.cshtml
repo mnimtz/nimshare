@@ -42,8 +42,38 @@
                 <input type="text" id="editTitle" value="@Model.Title"/>
             </div>
             <div class="field">
-                <label>@T["wiki.page.content_label"]</label>
-                <textarea id="editContent" rows="20" style="font-family:var(--font-mono);font-size:.9rem">@Model.ContentMarkdown</textarea>
+                <label style="display:flex;justify-content:space-between;align-items:center">
+                    <span>@T["wiki.page.content_label"]</span>
+                    <span class="wiki-editor-tabs">
+                        <button type="button" class="wiki-tab active" data-tab="edit">✎ @T["wiki.editor.tab_edit"]</button>
+                        <button type="button" class="wiki-tab" data-tab="split">⇆ @T["wiki.editor.tab_split"]</button>
+                        <button type="button" class="wiki-tab" data-tab="preview">👁 @T["wiki.editor.tab_preview"]</button>
+                    </span>
+                </label>
+                <div class="wiki-editor-toolbar">
+                    <button type="button" title="@T["wiki.editor.tt_bold"]" data-md="**|**">𝐁</button>
+                    <button type="button" title="@T["wiki.editor.tt_italic"]" data-md="_|_">𝐼</button>
+                    <button type="button" title="@T["wiki.editor.tt_strike"]" data-md="~~|~~">S̶</button>
+                    <span class="wiki-sep"></span>
+                    <button type="button" title="H1" data-md-line="# ">H1</button>
+                    <button type="button" title="H2" data-md-line="## ">H2</button>
+                    <button type="button" title="H3" data-md-line="### ">H3</button>
+                    <span class="wiki-sep"></span>
+                    <button type="button" title="@T["wiki.editor.tt_ul"]" data-md-line="- ">• @T["wiki.editor.tt_ul_short"]</button>
+                    <button type="button" title="@T["wiki.editor.tt_ol"]" data-md-line="1. ">1.</button>
+                    <button type="button" title="@T["wiki.editor.tt_quote"]" data-md-line="> ">❝</button>
+                    <button type="button" title="@T["wiki.editor.tt_check"]" data-md-line="- [ ] ">☐</button>
+                    <span class="wiki-sep"></span>
+                    <button type="button" title="@T["wiki.editor.tt_code"]" data-md="`|`">&lt;/&gt;</button>
+                    <button type="button" title="@T["wiki.editor.tt_codeblock"]" data-md-block="```">```</button>
+                    <button type="button" title="@T["wiki.editor.tt_link"]" data-action="link">🔗</button>
+                    <button type="button" title="@T["wiki.editor.tt_image"]" data-action="image">🖼</button>
+                    <button type="button" title="@T["wiki.editor.tt_hr"]" data-md-line-block="---">─</button>
+                </div>
+                <div class="wiki-editor-body" id="wikiEditorBody">
+                    <textarea id="editContent" rows="20" style="font-family:var(--font-mono);font-size:.9rem">@Model.ContentMarkdown</textarea>
+                    <div id="editPreview" class="wiki-body" style="display:none"></div>
+                </div>
             </div>
             <div class="actions">
                 <button class="btn btn-ghost" onclick="toggleEdit()">@T["common.cancel"]</button>
@@ -60,6 +90,56 @@
 .wiki-body pre { background: var(--tw-gray-100); padding: 12px; border-radius: 6px; overflow-x: auto; font-family: var(--font-mono); font-size: .88rem; }
 .wiki-body code { background: var(--tw-gray-100); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono); font-size: .88rem; }
 .wiki-body blockquote { border-left: 3px solid var(--tw-gray-300); padding-left: 12px; color: var(--tw-muted-blue); }
+.wiki-body ul, .wiki-body ol { padding-left: 22px; }
+.wiki-body table { border-collapse: collapse; margin: 12px 0; }
+.wiki-body th, .wiki-body td { border: 1px solid var(--tw-gray-300); padding: 4px 10px; }
+.wiki-body a { color: var(--tw-primary-alt); }
+.wiki-body img { max-width: 100%; height: auto; }
+
+.wiki-editor-tabs { display: inline-flex; gap: 4px; }
+.wiki-editor-tabs .wiki-tab {
+    padding: 3px 10px; font-size: .78rem; background: var(--tw-gray-100);
+    border: 1px solid var(--tw-gray-200); border-radius: 5px; cursor: pointer;
+    color: var(--tw-muted-blue);
+}
+.wiki-editor-tabs .wiki-tab.active {
+    background: var(--tw-primary); color: #fff; border-color: var(--tw-primary);
+}
+.wiki-editor-toolbar {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    padding: 6px; background: var(--tw-gray-100);
+    border: 1px solid var(--tw-gray-200); border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+}
+.wiki-editor-toolbar button {
+    padding: 4px 9px; font-size: .82rem; background: var(--tw-white);
+    border: 1px solid var(--tw-gray-200); border-radius: 4px; cursor: pointer;
+    min-width: 30px; font-weight: 600; color: var(--tw-text);
+}
+.wiki-editor-toolbar button:hover { background: rgba(0,160,251,.08); border-color: var(--tw-primary-alt); }
+.wiki-editor-toolbar .wiki-sep { width: 1px; background: var(--tw-gray-300); margin: 0 4px; }
+.wiki-editor-body {
+    display: grid;
+    grid-template-columns: 1fr;
+    border: 1px solid var(--tw-gray-200);
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+}
+.wiki-editor-body textarea {
+    border: 0; border-radius: 0; padding: 12px;
+    min-height: 400px; resize: vertical; outline: none;
+    font-family: var(--font-mono); font-size: .9rem; line-height: 1.55;
+}
+.wiki-editor-body #editPreview {
+    border-left: 1px solid var(--tw-gray-200);
+    padding: 16px; overflow-y: auto; max-height: 60vh;
+    background: var(--tw-white);
+}
+.wiki-editor-body.mode-split { grid-template-columns: 1fr 1fr; }
+.wiki-editor-body.mode-preview textarea { display: none; }
+.wiki-editor-body.mode-preview #editPreview {
+    display: block; border-left: 0; grid-column: 1 / -1;
+}
 </style>
 
 <script>
@@ -113,4 +193,114 @@ async function delPage() {
     if (r.ok) location.href = '/wiki';
     else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
 }
+</script>
+
+<!-- Client-side Markdown renderer for the live preview + toolbar wiring. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+<script>
+(function () {
+    const ta = document.getElementById('editContent');
+    const preview = document.getElementById('editPreview');
+    const body = document.getElementById('wikiEditorBody');
+    if (!ta || !preview || !body) return;
+
+    // Markdown → sanitized HTML.
+    function renderMd() {
+        if (!window.marked || !window.DOMPurify) { preview.textContent = ta.value; return; }
+        preview.innerHTML = window.DOMPurify.sanitize(
+            window.marked.parse(ta.value || '', { breaks: true, gfm: true }));
+    }
+    let previewPending = false;
+    function schedulePreview() {
+        if (previewPending) return;
+        previewPending = true;
+        requestAnimationFrame(() => { previewPending = false; renderMd(); });
+    }
+    ta.addEventListener('input', schedulePreview);
+
+    // Tab switching (edit / split / preview).
+    document.querySelectorAll('.wiki-editor-tabs .wiki-tab').forEach(t => {
+        t.addEventListener('click', () => {
+            document.querySelectorAll('.wiki-editor-tabs .wiki-tab').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            const mode = t.dataset.tab;
+            body.classList.remove('mode-split', 'mode-preview');
+            preview.style.display = mode === 'edit' ? 'none' : 'block';
+            if (mode === 'split') body.classList.add('mode-split');
+            if (mode === 'preview') body.classList.add('mode-preview');
+            if (mode !== 'edit') renderMd();
+        });
+    });
+
+    // Toolbar actions — three flavours: wrap selection (data-md), prefix each
+    // selected line (data-md-line), insert a fenced/hr block (data-md-block /
+    // data-md-line-block), or run a custom prompt (data-action=link/image).
+    function wrap(before, after) {
+        const [s, e] = [ta.selectionStart, ta.selectionEnd];
+        const sel = ta.value.slice(s, e);
+        const insert = before + sel + after;
+        ta.setRangeText(insert, s, e, 'end');
+        ta.focus();
+        schedulePreview();
+    }
+    function prefixLines(prefix) {
+        const [s, e] = [ta.selectionStart, ta.selectionEnd];
+        const before = ta.value.slice(0, s);
+        const lineStart = before.lastIndexOf('\n') + 1;
+        const region = ta.value.slice(lineStart, e);
+        const newRegion = region.split('\n').map(l => prefix + l).join('\n');
+        ta.setRangeText(newRegion, lineStart, e, 'end');
+        ta.focus();
+        schedulePreview();
+    }
+    function insertBlock(fence) {
+        const [s, e] = [ta.selectionStart, ta.selectionEnd];
+        const sel = ta.value.slice(s, e) || 'code';
+        const insert = `\n${fence}\n${sel}\n${fence}\n`;
+        ta.setRangeText(insert, s, e, 'end');
+        ta.focus();
+        schedulePreview();
+    }
+    function insertLineBlock(str) {
+        const [s, e] = [ta.selectionStart, ta.selectionEnd];
+        ta.setRangeText('\n' + str + '\n', s, e, 'end');
+        ta.focus();
+        schedulePreview();
+    }
+    document.querySelectorAll('.wiki-editor-toolbar button').forEach(b => {
+        b.addEventListener('click', async () => {
+            if (b.dataset.md) {
+                const [before, after] = b.dataset.md.split('|');
+                wrap(before, after || '');
+            } else if (b.dataset.mdLine) {
+                prefixLines(b.dataset.mdLine);
+            } else if (b.dataset.mdBlock) {
+                insertBlock(b.dataset.mdBlock);
+            } else if (b.dataset.mdLineBlock) {
+                insertLineBlock(b.dataset.mdLineBlock);
+            } else if (b.dataset.action === 'link') {
+                const url = window.nsPrompt
+                    ? await window.nsPrompt('Link', 'URL:', 'https://')
+                    : prompt('Link URL', 'https://');
+                if (!url) return;
+                const [s, e] = [ta.selectionStart, ta.selectionEnd];
+                const sel = ta.value.slice(s, e) || 'Link';
+                ta.setRangeText(`[${sel}](${url})`, s, e, 'end');
+                ta.focus(); schedulePreview();
+            } else if (b.dataset.action === 'image') {
+                const url = window.nsPrompt
+                    ? await window.nsPrompt('Bild', 'URL:', 'https://')
+                    : prompt('Image URL', 'https://');
+                if (!url) return;
+                const alt = ta.value.slice(ta.selectionStart, ta.selectionEnd) || 'Bild';
+                const [s, e] = [ta.selectionStart, ta.selectionEnd];
+                ta.setRangeText(`![${alt}](${url})`, s, e, 'end');
+                ta.focus(); schedulePreview();
+            }
+        });
+    });
+
+    renderMd(); // initial render
+})();
 </script>

@@ -66,7 +66,8 @@ public class ShareController : Controller
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
-                files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList()));
+                files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
+                ResolveOwnerAvatar(link.Owner)));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -103,7 +104,18 @@ public class ShareController : Controller
             link.DownloadCount,
             link.ExpiresAt,
             link.Owner.DisplayName,
-            theme));
+            theme,
+            ResolveOwnerAvatar(link.Owner)));
+    }
+
+    /// <summary>Returns the owner's avatar URL for public rendering, but only
+    /// when they've opted in via profile settings. Prefers the uploaded blob
+    /// (served through /avatars/{userId}) over any external AvatarUrl.</summary>
+    private static string? ResolveOwnerAvatar(NimShare.Core.Entities.User owner)
+    {
+        if (owner is null || !owner.ShowAvatarOnLandings) return null;
+        if (!string.IsNullOrEmpty(owner.AvatarBlobPath)) return $"/avatars/{owner.Id:N}";
+        return string.IsNullOrEmpty(owner.AvatarUrl) ? null : owner.AvatarUrl;
     }
 
     /// <summary>
@@ -278,7 +290,7 @@ public class ShareController : Controller
 public record FolderLandingViewModel(
     string Slug, string FolderName, string MessageHtml,
     bool HasPassword, string OwnerName,
-    List<FolderLandingFile> Files);
+    List<FolderLandingFile> Files, string? OwnerAvatarUrl);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,
@@ -299,7 +311,8 @@ public record LandingViewModel(
     int DownloadCount,
     DateTimeOffset? ExpiresAt,
     string OwnerName,
-    LandingTheme Theme);
+    LandingTheme Theme,
+    string? OwnerAvatarUrl);
 
 public record GateViewModel(string Slug, bool RequireOtp, bool otpSent, string? error);
 

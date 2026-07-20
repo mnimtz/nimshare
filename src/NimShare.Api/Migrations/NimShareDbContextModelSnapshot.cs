@@ -1394,6 +1394,9 @@ namespace NimShare.Api.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ShowAvatarOnLandings")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("TotpEnabled")
                         .HasColumnType("INTEGER");
 

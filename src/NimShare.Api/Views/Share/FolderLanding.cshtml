@@ -11,7 +11,12 @@
     }
 }
 <div class="landing-shell">
-    <div class="landing-card" style="max-width:720px">
+    <div class="landing-card" style="max-width:720px;position:relative">
+        @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
+        {
+            <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
+                 style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(0,0,0,.15);border:2px solid #fff"/>
+        }
         <div class="landing-brand">
             <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
             <small>@T["landing.shared_by"] @Model.OwnerName</small>

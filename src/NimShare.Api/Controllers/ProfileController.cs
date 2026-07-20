@@ -24,7 +24,8 @@ public class ProfileController : Controller
     }
 
     public record ProfileFormModel(string DisplayName,
-        string? CurrentPassword, string? NewPassword, string? NewPasswordConfirm);
+        string? CurrentPassword, string? NewPassword, string? NewPasswordConfirm,
+        bool ShowAvatarOnLandings = false);
 
     [HttpGet("/settings/profile")]
     public async Task<IActionResult> Index(CancellationToken ct)
@@ -40,6 +41,9 @@ public class ProfileController : Controller
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (!string.IsNullOrWhiteSpace(form.DisplayName))
             me.DisplayName = form.DisplayName.Trim();
+        // Landing-Avatar opt-in — always overwritten (checkbox POSTs "on" or
+        // is absent; the bool binds true/false accordingly).
+        me.ShowAvatarOnLandings = form.ShowAvatarOnLandings;
 
         // Optional password change: only apply if all three password fields are filled.
         if (!string.IsNullOrEmpty(form.NewPassword) || !string.IsNullOrEmpty(form.CurrentPassword))

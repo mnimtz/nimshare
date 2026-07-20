@@ -9,7 +9,12 @@
     <div style="height:180px;background:@accent url('@Model.Theme.HeroUrl') center/cover;margin-bottom:-40px"></div>
 }
 <div class="landing-shell">
-    <div class="landing-card" style="border-top:4px solid @accent">
+    <div class="landing-card" style="border-top:4px solid @accent;position:relative">
+        @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
+        {
+            <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
+                 style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(0,0,0,.15);border:2px solid #fff"/>
+        }
         <div class="landing-brand">
             @if (!string.IsNullOrEmpty(Model.Theme.LogoUrl))
             {

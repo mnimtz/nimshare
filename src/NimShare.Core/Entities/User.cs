@@ -28,6 +28,13 @@ public class User
     /// <summary>Blob path of the user's uploaded avatar; served via /avatars/{userId}.</summary>
     public string? AvatarBlobPath { get; set; }
 
+    /// <summary>
+    /// If true, the user's avatar is rendered top-right on every public share
+    /// landing (/s/{slug}) they own. Off by default — most users share
+    /// impersonally under the Tungsten mark. Opt-in from the profile page.
+    /// </summary>
+    public bool ShowAvatarOnLandings { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     /// <summary>Per-user storage quota in bytes.</summary>
