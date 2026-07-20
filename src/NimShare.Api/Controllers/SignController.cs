@@ -355,7 +355,7 @@ public class SignController : Controller
         p.Status = SignatureParticipantStatus.Signed;
         p.SignedAt = now;
         p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
-        var f = await ForensicsAsync(ct);
+        var forensics = await ForensicsAsync(ct);
         _db.SignatureAudits.Add(new SignatureAudit
         {
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Signed,
@@ -368,8 +368,8 @@ public class SignController : Controller
                     ? "signed via own certificate"
                     : null),
             // v1.10.42 — forensische Zusatzdaten für Beweiskraft.
-            Country = f.Country, City = f.City,
-            DeviceType = f.Device, Timezone = f.Timezone,
+            Country = forensics.Country, City = forensics.City,
+            DeviceType = forensics.Device, Timezone = forensics.Timezone,
         });
 
         // Persist the Signed status BEFORE any long-running work.
