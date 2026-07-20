@@ -361,12 +361,21 @@
 
     // ── Avatar-popover with profile shortcut ─────────────────────
     // Wraps the sidebar footer avatar in a click-to-open menu (Profil, Log-out).
+    // v1.10.9: der alte Selector .sidebar-user existierte nicht im DOM — die
+    // sidebar heißt .user-card mit .avatar+.name-block darin. Klick war
+    // deswegen NIE gebunden, Marcus's "Profil verschwunden"-Report war
+    // korrekt. Bindet jetzt Avatar UND Name (beides Klick-Ziel).
     (function () {
-        document.querySelectorAll('.sidebar-user').forEach(sf => {
-            const avatar = sf.querySelector('.sidebar-user-avatar, img, .avatar');
-            if (!avatar) return;
-            avatar.style.cursor = 'pointer';
-            avatar.addEventListener('click', (e) => {
+        const card = document.querySelector('.sidebar-footer .user-card');
+        if (!card) return;
+        const clickable = [card.querySelector('.avatar'), card.querySelector('.name-block')];
+        for (const el of clickable) {
+            if (!el) continue;
+            el.style.cursor = 'pointer';
+            el.title = window.T_profile || 'Profil';
+            el.addEventListener('click', (e) => {
+                // Don't intercept the sign-out button on the right of the card.
+                if (e.target.closest('.signout')) return;
                 e.preventDefault(); e.stopPropagation();
                 let pop = document.getElementById('avatarPop');
                 if (pop) { pop.remove(); return; }
@@ -376,14 +385,14 @@
                 pop.innerHTML = '<a href="/settings/profile">👤 ' + (window.T_profile || 'Profil') + '</a>' +
                     '<a href="/logout" class="logout">↩ ' + (window.T_logout || 'Abmelden') + '</a>';
                 document.body.appendChild(pop);
-                const rect = avatar.getBoundingClientRect();
+                const rect = card.getBoundingClientRect();
                 pop.style.left = (rect.right + 8) + 'px';
                 pop.style.bottom = (window.innerHeight - rect.bottom - 4) + 'px';
                 setTimeout(() => document.addEventListener('click', function close(ev) {
                     if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', close); }
                 }), 0);
             });
-        });
+        }
     })();
 </script>
 @await RenderSectionAsync("Scripts", required: false)
