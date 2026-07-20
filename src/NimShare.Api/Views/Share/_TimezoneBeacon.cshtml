@@ -1,0 +1,19 @@
+@model string
+@* v1.10.51: gemeinsame Timezone-Beacon-Partial. Landing + FolderLanding
+   nutzen sie um duplicate JS-Blöcke zu vermeiden. Der Model-String ist
+   der Slug für den Beacon-Endpoint. Fehler werden geschluckt — das
+   Beacon ist reine Analytics-Anreicherung. *@
+<script>
+(function () {
+    try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        if (!tz) return;
+        fetch('/s/@Model/beacon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timezone: tz }),
+            keepalive: true,
+        }).catch(() => {});
+    } catch { /* Legacy-Browser ohne Intl.timeZone → skip */ }
+})();
+</script>
