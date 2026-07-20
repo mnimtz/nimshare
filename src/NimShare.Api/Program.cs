@@ -11,6 +11,7 @@ using NimShare.Api;
 using NimShare.Api.Middleware;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
+using NimShare.Core.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
