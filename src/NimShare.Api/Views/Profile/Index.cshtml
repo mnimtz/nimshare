@@ -223,6 +223,6 @@ async function uploadCrop() {
     if (tokenInput) fd.append('__RequestVerificationToken', tokenInput.value);
     const r = await fetch('/settings/profile/avatar', { method: 'POST', body: fd, credentials: 'same-origin' });
     if (r.ok) { location.reload(); }
-    else alert('Upload failed: ' + r.status);
+    else nimAlert('Upload failed: ' + r.status, { kind: 'error' });
 }
 </script>

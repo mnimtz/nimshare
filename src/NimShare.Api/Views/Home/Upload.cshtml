@@ -114,7 +114,7 @@ document.getElementById('create-link').addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-    if (!r.ok) { alert('Failed: ' + (await r.text())); return; }
+    if (!r.ok) { nimAlert('Failed: ' + (await r.text()), { kind: 'error' }); return; }
     const link = await r.json();
     document.getElementById('result-url').value = link.url;
     document.getElementById('qr').src = link.qrCodeUrl;

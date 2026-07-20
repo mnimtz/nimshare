@@ -83,7 +83,7 @@ async function createPage(scope, groupId) {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify(body)
     });
-    if (!r.ok) { alert(wikiI18n.error + ': ' + r.status); return; }
+    if (!r.ok) { nimAlert(wikiI18n.error + ': ' + r.status, { kind: 'error' }); return; }
     const d = await r.json();
     location.href = '/wiki/' + d.id;
 }

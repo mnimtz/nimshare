@@ -111,10 +111,10 @@ async function submitToken(ev){ev.preventDefault();const f=ev.target;const body=
         document.getElementById('new-token').value=r.rawToken;document.getElementById('show-token-dlg').showModal();
         const cp=document.getElementById('tokenCopyBtn');cp.onclick=()=>{navigator.clipboard.writeText(r.rawToken);cp.textContent=DT.tCopied};
         loadTokens()}
-    catch(e){alert(DT.tError+': '+e.message)}return false}
+    catch(e){nimAlert(DT.tError+': '+e.message,{kind:'error'})}return false}
 async function submitHook(ev){ev.preventDefault();const f=ev.target;const body={url:f.url.value,secret:f.secret.value,events:f.events.value||null}
     try{await api('POST','/api/v1/dev/webhooks',body);document.getElementById('create-hook-dlg').close();f.reset();loadHooks()}
-    catch(e){alert(DT.tError+': '+e.message)}return false}
+    catch(e){nimAlert(DT.tError+': '+e.message,{kind:'error'})}return false}
 async function revokeToken(id){if(!await nimConfirm(DT.tConfirmRevoke,{danger:true}))return;try{await api('DELETE','/api/v1/dev/tokens/'+id);loadTokens()}catch(e){nimAlert(e.message,{kind:'error'})}}
 async function deleteHook(id){if(!await nimConfirm(DT.tConfirmDelete,{danger:true}))return;try{await api('DELETE','/api/v1/dev/webhooks/'+id);loadHooks()}catch(e){nimAlert(e.message,{kind:'error'})}}
 loadTokens();loadHooks()

@@ -121,13 +121,13 @@ async function saveContact(ev) {
         else await api('POST', '/api/v1/contacts', body);
         closeDlg('editor');
         reload();
-    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    } catch (e) { nimAlert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message, { kind: 'error' }); }
     return false;
 }
 async function delContact(id) {
     if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
     try { await api('DELETE', '/api/v1/contacts/' + id); reload(); }
-    catch (e) { alert(e.message); }
+    catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }
 reload();
 </script>

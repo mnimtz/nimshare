@@ -538,7 +538,7 @@ render();
             const certCanvas = document.getElementById('sigCertPreview');
             if (!certCanvas || certCanvas.style.display === 'none' || !window.__certReady) {
                 ev.preventDefault();
-                alert(window.__sig_i18n.cert_missing_alert);
+                nimAlert(window.__sig_i18n.cert_missing_alert, { kind: 'error' });
                 return;
             }
             document.getElementById('signatureData').value = certCanvas.toDataURL('image/png');
@@ -552,7 +552,7 @@ render();
             const byoCanvas = document.getElementById('byoPreview');
             if (!byoCanvas || byoCanvas.style.display === 'none' || !window.__byoReady) {
                 ev.preventDefault();
-                alert(window.__sig_i18n.byo_invalid);
+                nimAlert(window.__sig_i18n.byo_invalid, { kind: 'error' });
                 return;
             }
             document.getElementById('signatureData').value = byoCanvas.toDataURL('image/png');

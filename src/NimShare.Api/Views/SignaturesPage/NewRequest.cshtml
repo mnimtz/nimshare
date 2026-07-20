@@ -217,13 +217,13 @@ function switchTab(m) {
 async function ensureUploadedSourceId() {
     if (uploadMode === 'existing') {
         const sel = document.getElementById('pdf');
-        if (!sel.value) { alert(T.tPickPdf); return null; }
+        if (!sel.value) { nimAlert(T.tPickPdf); return null; }
         return sel.value;
     }
     const f = document.getElementById('uploadFile').files[0];
-    if (!f) { alert(T.tPickPdf); return null; }
+    if (!f) { nimAlert(T.tPickPdf); return null; }
     if (!f.name.toLowerCase().endsWith('.pdf') && f.type !== 'application/pdf') {
-        alert(T.tPdfOnly); return null;
+        nimAlert(T.tPdfOnly); return null;
     }
     document.getElementById('uploadProgress').style.display = '';
     document.getElementById('uploadStatus').textContent = T.tUploadPrep;
@@ -233,7 +233,7 @@ async function ensureUploadedSourceId() {
         method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({ name: f.name, sizeBytes: f.size, contentType: 'application/pdf' })
     });
-    if (!init.ok) { alert(T.tUploadInit + await init.text()); return null; }
+    if (!init.ok) { nimAlert(T.tUploadInit + await init.text()); return null; }
     const iData = await init.json();
 
     document.getElementById('uploadStatus').textContent = T.tUploadRunning;
@@ -258,7 +258,7 @@ async function ensureUploadedSourceId() {
     const done = await fetch('/api/v1/files/' + iData.fileId + '/complete', {
         method:'POST', credentials:'same-origin',
     });
-    if (!done.ok) { alert(T.tUploadFinalize); return null; }
+    if (!done.ok) { nimAlert(T.tUploadFinalize); return null; }
     document.getElementById('uploadBar').style.width = '100%';
     document.getElementById('uploadStatus').textContent = T.tUploadDone;
     return iData.fileId;
@@ -280,7 +280,7 @@ async function goStep2() {
             deliveryOrder: 'Parallel',
         })
     });
-    if (!r.ok) { alert(T.tError + ': ' + r.status); return; }
+    if (!r.ok) { nimAlert(T.tError + ': ' + r.status, { kind: 'error' }); return; }
     const d = await r.json();
     requestId = d.id;
     show(2);
@@ -290,12 +290,12 @@ async function addP() {
     const email = document.getElementById('pEmail').value.trim();
     const name = document.getElementById('pName').value.trim();
     const role = document.getElementById('pRole').value;
-    if (!email || !name) { alert(T.tEmailName); return; }
+    if (!email || !name) { nimAlert(T.tEmailName); return; }
     const r = await fetch('/api/v1/signatures/' + requestId + '/participants', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
         body: JSON.stringify({ email, name, role, order: participants.length }),
     });
-    if (!r.ok) return alert(T.tError + ': ' + r.status);
+    if (!r.ok) return nimAlert(T.tError + ': ' + r.status, { kind: 'error' });
     const p = await r.json();
     participants.push({ id: p.id, email, name, role });
     document.getElementById('pEmail').value = '';
@@ -317,7 +317,7 @@ function renderPList() {
 }
 
 async function goStep3() {
-    if (participants.filter(p => p.role === 'Signer').length === 0) return alert(T.tMinSigner);
+    if (participants.filter(p => p.role === 'Signer').length === 0) return nimAlert(T.tMinSigner);
     show(3);
     const src = '/api/v1/signatures/' + requestId + '/source-pdf';
     pdfDoc = await pdfjsLib.getDocument(src).promise;
@@ -406,7 +406,7 @@ function setupDrag(overlay) {
             body: JSON.stringify({ participantId, type, page: curPage, anchor: 'BottomCenter',
                 x: pdfX, y: pdfY, width: pdfW, height: pdfH })
         });
-        if (!r.ok) { alert(T.tError + ': ' + r.status); box.remove(); return; }
+        if (!r.ok) { nimAlert(T.tError + ': ' + r.status, { kind: 'error' }); box.remove(); return; }
         const d = await r.json();
         fields.push({ id: d.id, participantId, type, page: curPage, x, y, w, h });
         styleField(box, type, participantId);
@@ -515,7 +515,7 @@ async function sendReq() {
     const r = await fetch('/api/v1/signatures/' + requestId + '/send' + (tpl ? '?templateId=' + encodeURIComponent(tpl) : ''), {
         method: 'POST', credentials: 'same-origin',
     });
-    if (!r.ok) { alert(T.tError + ': ' + r.status + ' ' + await r.text()); return; }
+    if (!r.ok) { nimAlert(T.tError + ': ' + r.status + ' ' + await r.text(), { kind: 'error' }); return; }
     // Show per-recipient email-delivery status before navigating away —
     // the wizard is the LAST chance to warn "email failed to X".
     try {
@@ -524,10 +524,11 @@ async function sendReq() {
             const failed = d.delivery.filter(x => !x.ok);
             if (failed.length > 0) {
                 const lines = failed.map(x => `• ${x.name} (${x.email}): ${x.error}`).join('\n');
-                alert(
+                nimAlert(
                     (@Json.Serialize(@T["sig.new.send.email_failed_prefix"].Value)) +
                     '\n\n' + lines +
-                    '\n\n' + (@Json.Serialize(@T["sig.new.send.check_email_gateway"].Value))
+                    '\n\n' + (@Json.Serialize(@T["sig.new.send.check_email_gateway"].Value)),
+                    { kind: 'error' }
                 );
             }
         }

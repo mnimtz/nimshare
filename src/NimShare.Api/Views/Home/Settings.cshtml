@@ -67,16 +67,16 @@ document.getElementById('add-domain').addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hostname: host })
     });
-    if (!r.ok) { alert('Rejected: ' + r.status); return; }
+    if (!r.ok) { nimAlert('Rejected: ' + r.status); return; }
     const d = await r.json();
-    alert(`Add this DNS record:\n\nHost: ${d.txtRecordHost}\nType: TXT\nValue: ${d.verificationToken}\n\nThen CNAME ${d.cnameHost} → ${d.cnameTarget}\n\nThen click Verify.`);
+    nimAlert(`Add this DNS record:\n\nHost: ${d.txtRecordHost}\nType: TXT\nValue: ${d.verificationToken}\n\nThen CNAME ${d.cnameHost} → ${d.cnameTarget}\n\nThen click Verify.`);
     location.reload();
 });
 document.querySelectorAll('[data-verify]').forEach(b => {
     b.addEventListener('click', async () => {
         const id = b.getAttribute('data-verify');
         const r = await fetch(`/api/v1/custom-domains/${id}/verify`, { method: 'POST' });
-        alert(r.ok ? 'Kicked off' : 'Failed');
+        nimAlert(r.ok ? 'Kicked off' : 'Failed', { kind: 'error' });
         location.reload();
     });
 });

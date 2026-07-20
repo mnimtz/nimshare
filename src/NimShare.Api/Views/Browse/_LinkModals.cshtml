@@ -295,7 +295,7 @@ async function createShareLink() {
         credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { alert('Failed: ' + r.status + ' ' + await r.text()); return; }
+    if (!r.ok) { nimAlert('Failed: ' + r.status + ' ' + await r.text(), { kind: 'error' }); return; }
     const link = await r.json();
 
     // If the user filled in the allow-list details, PATCH them onto the fresh
@@ -335,7 +335,7 @@ async function createUploadRequest() {
         credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
     const link = await r.json();
     document.getElementById('urUrl').value = link.url;
     document.getElementById('urResult').style.display = 'block';

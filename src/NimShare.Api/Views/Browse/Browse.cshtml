@@ -400,7 +400,7 @@ async function bulkDelete() {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify({ ids }),
     });
-    if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+    if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
 }
 
 async function bulkZip() {
@@ -408,7 +408,7 @@ async function bulkZip() {
     const fileIds = Array.from(document.querySelectorAll('tr.ctx.selected[data-kind="file"]'))
         .map(tr => tr.dataset.id);
     if (!fileIds.length) {
-        alert(@Json.Serialize(T["bulk.zip.no_files"].Value));
+        nimAlert(@Json.Serialize(T["bulk.zip.no_files"].Value));
         return;
     }
     // POST returns a chunked zip stream — use a hidden form so the browser
@@ -429,7 +429,7 @@ async function bulkZip() {
             credentials: 'same-origin',
             body: JSON.stringify({ fileIds, archiveName: null })
         });
-        if (!r.ok) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + r.status); return; }
+        if (!r.ok) { nimAlert(@Json.Serialize(T["common.error"].Value) + ': ' + r.status, { kind: 'error' }); return; }
         const blob = await r.blob();
         const cd = r.headers.get('Content-Disposition') || '';
         const m = /filename="?([^"]+)"?/.exec(cd);
@@ -445,7 +445,7 @@ async function bulkZip() {
 async function deleteFile(id) {
     if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
     const r = await fetch('/api/v1/files/' + id, { method: 'DELETE', credentials: 'same-origin' });
-    if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+    if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
 }
 
 // ── Pin (kopiere ohne Blob-Duplikat in Personal) ─────────────
@@ -460,17 +460,17 @@ async function pinFile(fileId) {
         body: JSON.stringify({ fileId: fileId, note: null }),
     });
     if (r.ok) {
-        alert(@Json.Serialize(T["pin.copied_ok"].Value));
+        nimToast(@Json.Serialize(T["pin.copied_ok"].Value), { kind: 'success' });
     } else if (r.status === 409) {
-        alert(@Json.Serialize(T["pin.copy_conflict"].Value));
+        nimAlert(@Json.Serialize(T["pin.copy_conflict"].Value));
     } else {
-        alert('Fehler: ' + r.status);
+        nimAlert('Fehler: ' + r.status, { kind: 'error' });
     }
 }
 async function unpinFile(fileId) {
     if (!await nimConfirm(@Json.Serialize(T["pin.unpin_confirm"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/file-pins/' + fileId, { method: 'DELETE', credentials: 'same-origin' });
-    if (r.ok || r.status === 404) location.reload(); else alert('Fehler: ' + r.status);
+    if (r.ok || r.status === 404) location.reload(); else nimAlert('Fehler: ' + r.status, { kind: 'error' });
 }
 
 // ── Right-click context menu ──────────────────────────────────
@@ -597,7 +597,7 @@ async function performMove() {
         if (r.ok) ok++; else fail++;
     }
     document.getElementById('modalMove').classList.remove('open');
-    if (fail) alert(ok + ' moved, ' + fail + ' failed'); else location.reload();
+    if (fail) nimAlert(ok + ' moved, ' + fail + ' failed'); else location.reload(, { kind: 'error' });
 }
 
 // ── Semantic search ───────────────────────────────────────────
@@ -923,7 +923,7 @@ async function ds_add() {
     if (kind === 'user') {
         const val = document.getElementById('dsPicker').value;
         const uid = dsUserCache.get(val);
-        if (!uid) { alert('Pick a user from the suggestions.'); return; }
+        if (!uid) { nimAlert('Pick a user from the suggestions.'); return; }
         body.userId = uid;
     } else {
         body.groupId = document.getElementById('dsGroupSel').value;
@@ -932,7 +932,7 @@ async function ds_add() {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
     document.getElementById('dsPicker').value = '';
     await ds_loadShares();
 }
@@ -1065,7 +1065,7 @@ async function fi_save() {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify({ emoji: emoji || null, color: color || null }),
     });
-    if (!r.ok) { alert('Speichern fehlgeschlagen: ' + r.status); return; }
+    if (!r.ok) { nimAlert('Speichern fehlgeschlagen: ' + r.status); return; }
     location.reload();
 }
 

@@ -185,13 +185,13 @@ async function saveTpl(ev) {
         else await api('POST', '/api/v1/email-templates', body);
         closeDlg('editor');
         location.reload();
-    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    } catch (e) { nimAlert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message, { kind: 'error' }); }
     return false;
 }
 async function deleteTpl(id) {
     if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
     try { await api('DELETE', '/api/v1/email-templates/' + id); location.reload(); }
-    catch (e) { alert(e.message); }
+    catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }
 async function preview() {
     try {
@@ -202,7 +202,7 @@ async function preview() {
         document.getElementById('p-subject').textContent = d.subject;
         document.getElementById('p-body').textContent = d.body;
         document.getElementById('preview-box').style.display = '';
-    } catch (e) { alert(e.message); }
+    } catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }
 function draftWithAi() {
     document.getElementById('ai-prompt').value = '';
@@ -232,7 +232,7 @@ async function runAiDraft(ev) {
         if (d.subject) document.getElementById('e-subject').value = d.subject;
         if (d.body) document.getElementById('e-body').value = d.body;
         closeDlg('ai-dlg');
-    } catch (e) { alert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message); }
+    } catch (e) { nimAlert(@Json.Serialize(T["common.error"].Value) + ': ' + e.message, { kind: 'error' }); }
     finally { btn.disabled = false; btn.textContent = @Json.Serialize(T["email_tpl.ai_generate"].Value); }
     return false;
 }

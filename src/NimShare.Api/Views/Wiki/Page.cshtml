@@ -179,7 +179,7 @@ async function save() {
             contentMarkdown: document.getElementById('editContent').value,
         })
     });
-    if (!r.ok) { alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status); return; }
+    if (!r.ok) { nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' }); return; }
     // Clear the dirty state so beforeunload doesn't block the reload.
     originalTitle = document.getElementById('editTitle').value;
     originalBody = document.getElementById('editContent').value;
@@ -191,7 +191,7 @@ async function delPage() {
         method: 'DELETE', credentials: 'same-origin'
     });
     if (r.ok) location.href = '/wiki';
-    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+    else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 </script>
 

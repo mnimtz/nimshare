@@ -145,21 +145,21 @@ async function doGenerate() {
         validityYears: parseInt(document.getElementById('genYears').value, 10) || 3,
         setAsDefault: document.getElementById('genDefault').checked,
     };
-    if (!body.name || !body.commonName) { alert(@Json.Serialize(T["certs.err.missing"].Value)); return; }
+    if (!body.name || !body.commonName) { nimAlert(@Json.Serialize(T["certs.err.missing"].Value), { kind: 'error' }); return; }
     const r = await fetch('/api/v1/certificates/generate', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { const p = await r.json().catch(() => ({})); alert('Fehler: ' + (p.detail || p.title || r.status)); return; }
+    if (!r.ok) { const p = await r.json().catch(() => ({})); nimAlert('Fehler: ' + (p.detail || p.title || r.status), { kind: 'error' }); return; }
     closeModal('modalGen'); reload();
 }
 
 async function doImport() {
     const f = document.getElementById('impFile').files[0];
     const name = document.getElementById('impName').value.trim();
-    if (!f) { alert(@Json.Serialize(T["certs.err.no_file"].Value)); return; }
-    if (!name) { alert(@Json.Serialize(T["certs.err.missing"].Value)); return; }
-    if (f.size > 512 * 1024) { alert('PFX > 512 KB'); return; }
+    if (!f) { nimAlert(@Json.Serialize(T["certs.err.no_file"].Value), { kind: 'error' }); return; }
+    if (!name) { nimAlert(@Json.Serialize(T["certs.err.missing"].Value), { kind: 'error' }); return; }
+    if (f.size > 512 * 1024) { nimAlert('PFX > 512 KB'); return; }
     const b64 = await new Promise((res, rej) => {
         const r = new FileReader();
         r.onload = () => res(r.result.split(',')[1]);
@@ -174,7 +174,7 @@ async function doImport() {
             setAsDefault: document.getElementById('impDefault').checked,
         }),
     });
-    if (!r.ok) { const p = await r.json().catch(() => ({})); alert('Fehler: ' + (p.detail || p.title || r.status)); return; }
+    if (!r.ok) { const p = await r.json().catch(() => ({})); nimAlert('Fehler: ' + (p.detail || p.title || r.status), { kind: 'error' }); return; }
     closeModal('modalImp'); reload();
 }
 

@@ -125,21 +125,21 @@ document.querySelectorAll('[data-revoke]').forEach(b => {
     b.addEventListener('click', async () => {
         if (!await nimConfirm(@Json.Serialize(T["links.confirm.revoke"].Value), { danger: true })) return;
         const r = await api('PATCH', `/api/v1/links/${b.dataset.revoke}`, { isRevoked: true });
-        if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });
 document.querySelectorAll('[data-toggle-public]').forEach(b => {
     b.addEventListener('click', async () => {
         const currentlyPublic = b.dataset.current === 'true';
         const r = await api('PATCH', `/api/v1/links/${b.dataset.togglePublic}`, { isPublic: !currentlyPublic });
-        if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });
 document.querySelectorAll('[data-delete]').forEach(b => {
     b.addEventListener('click', async () => {
         if (!await nimConfirm(@Json.Serialize(T["links.confirm.delete"].Value), { danger: true })) return;
         const r = await api('DELETE', `/api/v1/links/${b.dataset.delete}`);
-        if (r.ok) location.reload(); else alert('Failed: ' + r.status);
+        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });
 document.querySelectorAll('[data-copy]').forEach(b => {
@@ -172,8 +172,8 @@ async function draftWithAi() {
         body: JSON.stringify({ linkId, context: document.getElementById('emailTo').value || null }),
     });
     btn.disabled = false; btn.textContent = @Json.Serialize(T["links.email.draft_ai"].Value);
-    if (r.status === 503) { alert(@Json.Serialize(T["links.email.ai_disabled"].Value)); return; }
-    if (!r.ok) { alert('Failed: ' + r.status); return; }
+    if (r.status === 503) { nimAlert(@Json.Serialize(T["links.email.ai_disabled"].Value)); return; }
+    if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
     const d = await r.json();
     document.getElementById('emailMsg').value = d.draft || '';
 }
@@ -184,7 +184,7 @@ async function sendEmail() {
     if (!to) return;
     const r = await api('POST', `/api/v1/links/${linkId}/send-email`, { toEmail: to, message: msg });
     document.getElementById('modalEmail').classList.remove('open');
-    if (r.ok) alert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status);
+    if (r.ok) nimAlert(@Json.Serialize(T["links.email.sent"].Value)); else alert('Failed: ' + r.status, { kind: 'error' });
 }
 </script>
 

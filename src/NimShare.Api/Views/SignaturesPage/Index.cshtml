@@ -80,7 +80,7 @@ async function sigDelete(id) {
         method: 'DELETE', credentials: 'same-origin',
     });
     if (r.ok) location.reload();
-    else alert('Fehler: ' + r.status + ' — ' + (await r.text()));
+    else nimAlert('Fehler: ' + r.status + ' — ' + (await r.text()), { kind: 'error' });
 }
 
 // v1.10.40: manueller Finalize-Trigger für gestrandete Vorgänge.
@@ -95,8 +95,8 @@ async function sigFinalize(id) {
     let d;
     try { d = await r.json(); } catch { d = null; }
     if (!r.ok || !d) {
-        alert(@Json.Serialize(T["sig.finalize_failed"].Value) + '\n\n' +
-            (d && d.detail ? d.detail : ('HTTP ' + r.status)));
+        nimAlert(@Json.Serialize(T["sig.finalize_failed"].Value) + '\n\n' +
+            (d && d.detail ? d.detail : ('HTTP ' + r.status)), { kind: 'error' });
         return;
     }
     if (d.status === 'Completed') {
@@ -107,10 +107,10 @@ async function sigFinalize(id) {
     }
     if (Array.isArray(d.pending) && d.pending.length > 0) {
         const lines = d.pending.map(p => `• ${p.name || p.email} (${p.role}) — ${p.status}`);
-        alert(@Json.Serialize(T["sig.finalize_pending"].Value) + '\n\n' + lines.join('\n'));
+        nimAlert(@Json.Serialize(T["sig.finalize_pending"].Value) + '\n\n' + lines.join('\n'));
         return;
     }
-    alert(@Json.Serialize(T["sig.finalize_stuck"].Value) + '\n\n' + (d.note || ''));
+    nimAlert(@Json.Serialize(T["sig.finalize_stuck"].Value) + '\n\n' + (d.note || ''));
 }
 </script>
 }

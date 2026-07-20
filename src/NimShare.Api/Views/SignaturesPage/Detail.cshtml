@@ -319,7 +319,7 @@ async function remindOne(pid) {
         method: 'POST', credentials: 'same-origin'
     });
     if (r.ok) location.reload();
-    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+    else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 async function remindAll() {
     if (!confirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
@@ -327,7 +327,7 @@ async function remindAll() {
         method: 'POST', credentials: 'same-origin'
     });
     if (r.ok) location.reload();
-    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+    else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 async function cancelReq() {
     if (!confirm(@Json.Serialize(@T["sig.detail.confirm_cancel"].Value))) return;
@@ -335,6 +335,6 @@ async function cancelReq() {
         method: 'POST', credentials: 'same-origin'
     });
     if (r.ok) location.reload();
-    else alert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status);
+    else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 </script>
