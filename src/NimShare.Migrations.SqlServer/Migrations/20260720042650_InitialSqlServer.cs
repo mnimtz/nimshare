@@ -273,14 +273,12 @@ namespace NimShare.Migrations.SqlServer.Migrations
                         name: "FK_Folders_Groups_OwnerGroupId",
                         column: x => x.OwnerGroupId,
                         principalTable: "Groups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Folders_Users_OwnerUserId",
                         column: x => x.OwnerUserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(

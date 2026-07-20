@@ -241,8 +241,15 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Emoji).HasMaxLength(8);
             e.Property(x => x.Color).HasMaxLength(8);
             e.HasOne(x => x.Parent).WithMany(p => p.Children).HasForeignKey(x => x.ParentFolderId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.Cascade);
+            // NoAction rather than Cascade: Users also cascades directly into
+            // Files (OwnerId), and Folder → Files is Restrict. Cascading Users
+            // → Folders would give SqlServer two cascade paths ending in
+            // File-side cleanup and it refuses ("may cause cycles or multiple
+            // cascade paths"). App-layer already deletes folders explicitly
+            // when purging a user, so runtime behaviour is unchanged; only
+            // the referential-integrity policy on hard-delete flips.
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
+            e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.NoAction);
         });
 
         // Wire the new StorageFile.FolderId (nullable, restrict on delete — the app

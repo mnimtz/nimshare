@@ -12,7 +12,7 @@ using NimShare.Core.Data;
 namespace NimShare.Migrations.SqlServer.Migrations
 {
     [DbContext(typeof(NimShareDbContext))]
-    [Migration("20260719180245_InitialSqlServer")]
+    [Migration("20260720042650_InitialSqlServer")]
     partial class InitialSqlServer
     {
         /// <inheritdoc />
@@ -1721,12 +1721,12 @@ namespace NimShare.Migrations.SqlServer.Migrations
                     b.HasOne("NimShare.Core.Entities.Group", "OwnerGroup")
                         .WithMany()
                         .HasForeignKey("OwnerGroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NimShare.Core.Entities.User", "OwnerUser")
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NimShare.Core.Entities.Folder", "Parent")
                         .WithMany("Children")

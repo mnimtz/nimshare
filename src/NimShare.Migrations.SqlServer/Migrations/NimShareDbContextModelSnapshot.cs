@@ -1718,12 +1718,12 @@ namespace NimShare.Migrations.SqlServer.Migrations
                     b.HasOne("NimShare.Core.Entities.Group", "OwnerGroup")
                         .WithMany()
                         .HasForeignKey("OwnerGroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NimShare.Core.Entities.User", "OwnerUser")
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NimShare.Core.Entities.Folder", "Parent")
                         .WithMany("Children")

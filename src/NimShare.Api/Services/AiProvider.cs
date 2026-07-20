@@ -390,8 +390,16 @@ public class GeminiProvider : IAiProvider
                 || !content.TryGetProperty("parts", out var parts)
                 || parts.GetArrayLength() == 0
                 || !parts[0].TryGetProperty("text", out var t))
-                return (null, "Gemini-Antwort ohne text.");
-            return (t.GetString(), null);
+                return (null, "Gemini-Antwort ohne text-Feld.");
+            var textValue = t.GetString();
+            // Gemini can respond with an empty string + finishReason=STOP when
+            // the model decided the prompt yielded nothing useful (e.g. a
+            // safety soft-block, or the model interpreted the task as "no
+            // template is needed"). Treat that as an error so the UI shows
+            // something actionable instead of the generic "Draft empty".
+            if (string.IsNullOrWhiteSpace(textValue))
+                return (null, "Gemini lieferte leeren Text (evtl. Safety-Filter, unpassender Prompt oder Modell nicht verfügbar). Modell im AI-Gateway wechseln (2.5-pro / 2.5-flash) oder Prompt weniger allgemein formulieren.");
+            return (textValue, null);
         }
         catch (Exception ex)
         {
