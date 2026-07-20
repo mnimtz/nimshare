@@ -387,6 +387,38 @@ public class AiController : ControllerBase
         return Ok(new { answer, citations = hits });
     }
 
+    /// <summary>Backfill embeddings for existing files owned by the caller.
+    /// The upload-time post-processor only runs for NEW uploads; without this,
+    /// enabling "Chat mit Dateien" on a mature account leaves the semantic
+    /// search table empty and the chat looks broken. Fires each file at the
+    /// existing IAiPostProcessor pipeline — same tags/embeds/summaries as at
+    /// upload time.</summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("reindex")]
+    public async Task<IActionResult> Reindex(
+        [FromServices] ICurrentUserService users,
+        [FromServices] IAiPostProcessor post,
+        CancellationToken ct)
+    {
+        var settings = await _ai.LoadAsync(ct);
+        if (settings.Provider == AiProvider.Disabled)
+            return Problem(statusCode: 503, title: "AI Gateway ist deaktiviert.");
+        var me = await users.GetOrProvisionAsync(User, ct);
+        // Missing embeddings only — no point re-crunching every file if the
+        // model didn't change. Admins get the full backfill (everything
+        // without an embedding row across scopes they can already see).
+        IQueryable<StorageFile> q = _db.Files.Where(f =>
+            f.Status == StorageFileStatus.Ready
+            && !_db.FileEmbeddings.Any(e => e.FileId == f.Id));
+        if (me.Role != UserRole.Admin)
+            q = q.Where(f => f.OwnerId == me.Id);
+        // Cap the batch — anything larger and the async queue would swamp the
+        // provider quota. Callers can re-hit this endpoint later.
+        var ids = await q.OrderByDescending(f => f.CreatedAt).Take(500).Select(f => f.Id).ToListAsync(ct);
+        foreach (var id in ids) post.QueueForFile(id);
+        return Ok(new { queued = ids.Count });
+    }
+
     // ── #4 Guided upload-request cover email ───────────────────────────────
 
     public record GuidedUrReq(Guid LinkId, string RecipientEmail, string? Context);

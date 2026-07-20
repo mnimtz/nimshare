@@ -191,6 +191,12 @@ h4 { font-size: 1rem;    font-weight: 500; }
     padding: var(--sp-6);
 }
 .card + .card { margin-top: var(--sp-6); }
+/* Row / flex / grid layouts arrange cards side-by-side; the vertical
+   .card + .card rule doesn't apply then and would push adjacent cards
+   visually out of alignment. */
+.row > .card + .card,
+[style*="display:flex"] > .card + .card,
+[style*="display:grid"] > .card + .card { margin-top: 0; }
 .card-title { font-size: 1.1rem; font-weight: 700; color: var(--tw-primary); margin-bottom: var(--sp-4); }
 
 /* ── Buttons ───────────────────────────────────────────────────── */
@@ -1245,7 +1251,10 @@ body.nav-open { position: relative; }
 .fm-tree {
     border-right: 1px solid var(--tw-gray-200);
     background: var(--tw-gray-100);
-    padding: 12px 6px;
+    /* First row lines up with the file table's first row (below the header
+       + search + table thead in .fm-main). Approx: header 60 + search 46 +
+       thead 32 ≈ 138px minus the row's own 4px top-pad. */
+    padding: 134px 6px 12px;
     overflow-y: auto;
     max-height: calc(100vh - 12px);
     position: sticky;

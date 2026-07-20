@@ -349,6 +349,11 @@
   <data name="ai.status.preview"><value>Vorschau</value></data>
   <data name="ai.status.ready"><value>Verfuegbar</value></data>
   <data name="ai.save"><value>Speichern</value></data>
+  <data name="ai.reindex.title"><value>Bestehende Dateien neu indexieren</value></data>
+  <data name="ai.reindex.lede"><value>Nur Dateien, die NACH Aktivierung von semantischer Suche / Smart Tags hochgeladen wurden, haben ein Embedding. Nach dem Aktivieren einmal ausführen, um die Bibliothek nachzuindizieren — bis zu 500 Dateien pro Klick.</value></data>
+  <data name="ai.reindex.button"><value>Meine Dateien neu indexieren</value></data>
+  <data name="ai.reindex.running"><value>Wird eingereiht…</value></data>
+  <data name="ai.reindex.done"><value>{0} Dateien in die Indexierungs-Queue eingereiht. Embeddings sind in den nächsten Minuten verfügbar.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-Zusammenfassung auf Freigabe-Landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Empfaenger koennen vor dem Download eine 2-3 Satz-Zusammenfassung generieren.</value></data>
   <data name="ai.feat.smart_tags"><value>Intelligente Tags</value></data>

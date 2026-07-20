@@ -200,6 +200,24 @@ public class SignaturesController : ControllerBase
         return Ok(new { id = f.Id });
     }
 
+    /// <summary>Remove a single field from a Draft request — used by the
+    /// wizard's × button so the user can undo a mis-placed box without
+    /// re-doing the whole placement.</summary>
+    [HttpDelete("{id:guid}/fields/{fieldId:guid}")]
+    public async Task<IActionResult> RemoveField(Guid id, Guid fieldId, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var reqRow = await _db.SignatureRequests.FindAsync(new object[] { id }, ct);
+        if (reqRow is null) return NotFound();
+        if (reqRow.InitiatorUserId != me.Id) return Forbid();
+        if (reqRow.Status != SignatureRequestStatus.Draft) return Problem(statusCode: 409);
+        var f = await _db.SignatureFields.SingleOrDefaultAsync(x => x.Id == fieldId && x.RequestId == id, ct);
+        if (f is null) return NotFound();
+        _db.SignatureFields.Remove(f);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpPost("{id:guid}/send")]
     public async Task<IActionResult> Send(Guid id, [FromQuery] Guid? templateId, CancellationToken ct = default)
     {

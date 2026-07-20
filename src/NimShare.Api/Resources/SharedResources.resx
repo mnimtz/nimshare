@@ -349,6 +349,11 @@
   <data name="ai.status.preview"><value>Preview</value></data>
   <data name="ai.status.ready"><value>Ready</value></data>
   <data name="ai.save"><value>Save</value></data>
+  <data name="ai.reindex.title"><value>Re-index existing files</value></data>
+  <data name="ai.reindex.lede"><value>Only files uploaded AFTER you enabled semantic search / smart tags get an embedding. Run this once after activating a provider to backfill your existing library — up to 500 files per click.</value></data>
+  <data name="ai.reindex.button"><value>Re-index my files</value></data>
+  <data name="ai.reindex.running"><value>Queuing…</value></data>
+  <data name="ai.reindex.done"><value>{0} files queued for indexing. Embeddings will appear over the next few minutes.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-summary on share landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Recipients can generate a 2-3 sentence summary before downloading.</value></data>
   <data name="ai.feat.smart_tags"><value>Smart tags</value></data>

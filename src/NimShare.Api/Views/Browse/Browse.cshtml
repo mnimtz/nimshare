@@ -1134,5 +1134,15 @@ async function fi_save() {
         const parts = idToPath[a.dataset.id] || [];
         a.href = parts.length ? (urlBase + '/' + parts.map(encodeURIComponent).join('/')) : urlBase;
     });
+    // Whole row is clickable — otherwise the user has to hit the small
+    // label to navigate; icon/toggle padding "ate" the click on many rows.
+    panel.querySelectorAll('.ft-row').forEach(row => {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.ft-toggle')) return; // toggle handles its own click
+            const a = row.querySelector('.ft-label');
+            if (a && a.href && a.href !== '#') location.href = a.href;
+        });
+    });
 })();
 </script>

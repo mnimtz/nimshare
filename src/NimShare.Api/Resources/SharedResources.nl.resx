@@ -350,6 +350,11 @@
   <data name="ai.status.preview"><value>Preview</value></data>
   <data name="ai.status.ready"><value>Ready</value></data>
   <data name="ai.save"><value>Save</value></data>
+  <data name="ai.reindex.title"><value>Bestaande bestanden opnieuw indexeren</value></data>
+  <data name="ai.reindex.lede"><value>Alleen bestanden die NA activering zijn geüpload krijgen een embedding. Voer dit eenmaal uit na activering van een provider om je bestaande bibliotheek te indexeren — tot 500 bestanden per klik.</value></data>
+  <data name="ai.reindex.button"><value>Mijn bestanden opnieuw indexeren</value></data>
+  <data name="ai.reindex.running"><value>In wachtrij…</value></data>
+  <data name="ai.reindex.done"><value>{0} bestanden in wachtrij. Embeddings verschijnen in de komende minuten.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-summary on share landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Recipients can generate a 2-3 sentence summary before downloading.</value></data>
   <data name="ai.feat.smart_tags"><value>Smart tags</value></data>

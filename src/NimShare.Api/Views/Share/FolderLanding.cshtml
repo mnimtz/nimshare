@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = Model.FolderName;
     Layout = "_Layout";
+    var theme = Model.Theme;
+    var brandColor = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? null : theme!.PrimaryColor;
     string Bytes(long b)
     {
         string[] u = { "B", "KB", "MB", "GB", "TB" };
@@ -9,6 +11,13 @@
         while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
         return $"{v:0.##} {u[i]}";
     }
+}
+@if (brandColor is not null)
+{
+    <style>
+        .landing-shell { --tw-primary: @brandColor; --tw-primary-alt: @brandColor; }
+        .btn-primary { background: @brandColor !important; border-color: @brandColor !important; }
+    </style>
 }
 <div class="landing-shell">
     <div class="landing-card" style="max-width:720px;position:relative">
@@ -18,11 +27,32 @@
                  style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 2px 6px rgba(0,0,0,.15);border:2px solid #fff"/>
         }
         <div class="landing-brand">
-            <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            @if (!string.IsNullOrWhiteSpace(theme?.LogoUrl))
+            {
+                <img src="@theme.LogoUrl" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain"/>
+            }
+            else
+            {
+                <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            }
             <small>@T["landing.shared_by"] @Model.OwnerName</small>
         </div>
-        <h1>📁 @Model.FolderName</h1>
+        @if (!string.IsNullOrWhiteSpace(theme?.HeroUrl))
+        {
+            <img src="@theme.HeroUrl" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:var(--sp-4)"/>
+        }
+        <h1>📁 @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
+        @if (!string.IsNullOrWhiteSpace(theme?.Subtitle))
+        {
+            <p class="landing-meta">@theme.Subtitle</p>
+        }
         <p class="landing-meta">@T["landing.folder.lede"] @Model.Files.Count</p>
+        @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
+        {
+            <div class="card" style="background:var(--tw-gray-100);margin-top:var(--sp-4)">
+                @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
+            </div>
+        }
         @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
         {
             <div class="card" style="background:var(--tw-gray-100);margin-top:var(--sp-4)">
@@ -55,7 +85,14 @@
             </tbody>
         </table>
         <p class="landing-meta" style="margin-top:var(--sp-6)">
-            @T["landing.powered_by"] <strong>NimShare</strong>
+            @if (!string.IsNullOrWhiteSpace(theme?.FooterText))
+            {
+                @theme.FooterText
+            }
+            else
+            {
+                <text>@T["landing.powered_by"] <strong>NimShare</strong></text>
+            }
         </p>
     </div>
 </div>

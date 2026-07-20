@@ -351,6 +351,11 @@
   <data name="ai.status.preview"><value>Preview</value></data>
   <data name="ai.status.ready"><value>Ready</value></data>
   <data name="ai.save"><value>Save</value></data>
+  <data name="ai.reindex.title"><value>Ri-indicizzare i file esistenti</value></data>
+  <data name="ai.reindex.lede"><value>Solo i file caricati DOPO l'attivazione ottengono un embedding. Esegui una volta dopo aver attivato un provider per indicizzare la libreria esistente — fino a 500 file per clic.</value></data>
+  <data name="ai.reindex.button"><value>Ri-indicizza i miei file</value></data>
+  <data name="ai.reindex.running"><value>In coda…</value></data>
+  <data name="ai.reindex.done"><value>{0} file in coda per l'indicizzazione. Gli embedding saranno disponibili nei prossimi minuti.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-summary on share landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Recipients can generate a 2-3 sentence summary before downloading.</value></data>
   <data name="ai.feat.smart_tags"><value>Smart tags</value></data>

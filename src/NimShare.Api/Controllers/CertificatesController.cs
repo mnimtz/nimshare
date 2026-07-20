@@ -142,11 +142,14 @@ public class CertificatesApiController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Log the full exception (type + stack) server-side; return only a
-            // localized short message to the client — no exception-type
-            // fingerprint or stack details leaked into the browser.
+            // Log the full exception (type + stack) server-side; return the
+            // exception-type + short message to the client. Cert-gen used to
+            // return a generic 500 with no clue why (RSA/Pfx export failures
+            // on hardened Linux containers are hard to diagnose blind).
             _log.LogError(ex, "Certificate generation failed for user {UserId}", me.Id);
-            return Problem(statusCode: 500, title: _l["certs.err.generate_failed"].Value);
+            var msg = ex.Message?.Length > 240 ? ex.Message[..240] : ex.Message;
+            return Problem(statusCode: 500, title: _l["certs.err.generate_failed"].Value,
+                detail: $"{ex.GetType().Name}: {msg}");
         }
     }
 

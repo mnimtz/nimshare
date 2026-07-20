@@ -63,11 +63,16 @@ public class ShareController : Controller
             await _access.LogAsync(link, ShareLinkAccessKind.Landing,
                 _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
                 Request.Headers.UserAgent, Request.Headers.Referer, ct);
+            // Folder shares now honour the same template-resolution as file
+            // shares (v1.10.3 fix): link creator's personal template wins,
+            // then the folder-owner's, then Global.
+            var folderTheme = await ResolveThemeAsync(folder.Scope,
+                folder.OwnerUserId ?? link.OwnerId, link.OwnerId, ct);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
                 files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
-                ResolveOwnerAvatar(link.Owner)));
+                ResolveOwnerAvatar(link.Owner), folderTheme));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -309,7 +314,7 @@ public class ShareController : Controller
 public record FolderLandingViewModel(
     string Slug, string FolderName, string MessageHtml,
     bool HasPassword, string OwnerName,
-    List<FolderLandingFile> Files, string? OwnerAvatarUrl);
+    List<FolderLandingFile> Files, string? OwnerAvatarUrl, LandingTheme Theme);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,

@@ -119,9 +119,10 @@
 <div id="wizStep3" class="card" style="display:none">
     <h2 class="card-title">@T["sig.new.step3"]</h2>
     <p class="muted">@T["sig.new.step3_lede"]</p>
+    <div id="fieldSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <label>@T["sig.new.for_label"]</label>
-        <select id="fParticipant"></select>
+        <select id="fParticipant" onchange="updateFieldSummary()"></select>
         <label>@T["sig.new.type_label"]</label>
         <select id="fType">
             <option value="Signature">@T["sig.new.type_signature"]</option>
@@ -390,6 +391,16 @@ function setupDrag(overlay) {
         const pdfW = w / pageViewport.scale, pdfH = h / pageViewport.scale;
         const participantId = document.getElementById('fParticipant').value;
         const type = document.getElementById('fType').value;
+        // Only 1 signature field per signer makes sense — a person doesn't sign
+        // in two spots. Warn (not block) so power-users can still add multiple
+        // for edge cases (initials + full signature).
+        if (type === 'Signature'
+            && fields.some(f => f.participantId === participantId && f.type === 'Signature')) {
+            const p = participants.find(x => x.id === participantId);
+            if (!confirm((T.tDuplicateSigField || 'Es gibt bereits ein Signaturfeld für {0}. Trotzdem hinzufügen?').replace('{0}', p ? p.name : '?'))) {
+                box.remove(); return;
+            }
+        }
         const r = await fetch('/api/v1/signatures/' + requestId + '/fields', {
             method: 'POST', headers: {'Content-Type':'application/json'}, credentials:'same-origin',
             body: JSON.stringify({ participantId, type, page: curPage, anchor: 'BottomCenter',
@@ -398,18 +409,63 @@ function setupDrag(overlay) {
         if (!r.ok) { alert(T.tError + ': ' + r.status); box.remove(); return; }
         const d = await r.json();
         fields.push({ id: d.id, participantId, type, page: curPage, x, y, w, h });
-        box.textContent = type === 'Signature' ? '✍' : (type === 'Text' ? 'Text' : (type === 'Date' ? '📅' : '☑'));
-        box.style.borderStyle = 'solid';
-        box.style.color = '#002854'; box.style.fontWeight = '700';
-        box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.justifyContent = 'center';
+        styleField(box, type, participantId);
         // Delete affordance: visible × button on top-right + tap/right-click.
         const del = document.createElement('button');
         del.type = 'button';
         del.textContent = '×';
-        del.style.cssText = 'position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;background:#c22;color:#fff;border:0;font-size:16px;line-height:1;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.3)';
-        del.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); box.remove(); });
+        del.style.cssText = 'position:absolute;top:-10px;right:-10px;width:22px;height:22px;border-radius:50%;background:#c22;color:#fff;border:0;font-size:16px;line-height:1;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:2';
+        del.addEventListener('click', async ev => {
+            ev.preventDefault(); ev.stopPropagation();
+            const idx = fields.findIndex(x => x.id === d.id);
+            if (idx >= 0) {
+                await fetch('/api/v1/signatures/' + requestId + '/fields/' + d.id, {
+                    method: 'DELETE', credentials: 'same-origin'
+                });
+                fields.splice(idx, 1);
+            }
+            box.remove();
+            updateFieldSummary();
+        });
         box.appendChild(del);
-        box.addEventListener('contextmenu', ev => { ev.preventDefault(); box.remove(); });
+        box.addEventListener('contextmenu', ev => { ev.preventDefault(); del.click(); });
+        updateFieldSummary();
+    }
+
+    // Colour rotation so each participant's fields are visually distinct on
+    // the PDF — solves "wer gehört zu welchem Feld".
+    const PALETTE = [
+        { border: '#002854', bg: 'rgba(0,40,84,.14)', fg: '#002854' },   // Tungsten blue
+        { border: '#c53030', bg: 'rgba(197,48,48,.12)', fg: '#c53030' },  // red
+        { border: '#2f855a', bg: 'rgba(47,133,90,.12)', fg: '#2f855a' },  // green
+        { border: '#805ad5', bg: 'rgba(128,90,213,.14)', fg: '#805ad5' },  // purple
+        { border: '#d69e2e', bg: 'rgba(214,158,46,.14)', fg: '#8a5a00' },  // amber
+        { border: '#0987a0', bg: 'rgba(9,135,160,.14)', fg: '#0987a0' },   // teal
+    ];
+    function colorFor(participantId) {
+        const idx = Math.max(0, participants.findIndex(p => p.id === participantId));
+        return PALETTE[idx % PALETTE.length];
+    }
+    function styleField(box, type, participantId) {
+        const col = colorFor(participantId);
+        const p = participants.find(x => x.id === participantId);
+        const icon = type === 'Signature' ? '✍' : (type === 'Text' ? 'T' : (type === 'Date' ? '📅' : '☑'));
+        box.style.borderStyle = 'solid';
+        box.style.borderColor = col.border;
+        box.style.background = col.bg;
+        box.style.color = col.fg;
+        box.style.fontWeight = '700';
+        box.style.display = 'flex';
+        box.style.alignItems = 'center';
+        box.style.justifyContent = 'center';
+        box.style.fontSize = '.75rem';
+        box.style.textAlign = 'center';
+        box.style.lineHeight = '1.1';
+        box.style.padding = '2px 4px';
+        box.textContent = ''; // reset — we're rebuilding with icon + name
+        const label = document.createElement('div');
+        label.innerHTML = `<div style="font-size:1.15rem">${icon}</div><div style="font-size:.65rem;font-weight:600;opacity:.85">${esc((p && p.name) || '?')}</div>`;
+        box.appendChild(label);
     }
 
     overlay.addEventListener('mousedown', begin);
@@ -423,10 +479,29 @@ function setupDrag(overlay) {
 function redrawFields(overlay) {
     for (const f of fields.filter(x => x.page === curPage)) {
         const b = document.createElement('div');
-        b.style.cssText = `position:absolute;left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px;border:2px solid #002854;background:rgba(0,160,251,.12);color:#002854;font-weight:700;display:flex;align-items:center;justify-content:center`;
-        b.textContent = f.type === 'Signature' ? '✍' : (f.type === 'Text' ? 'Text' : (f.type === 'Date' ? '📅' : '☑'));
+        b.style.cssText = `position:absolute;left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px;border:2px solid #002854`;
+        styleField(b, f.type, f.participantId);
         overlay.appendChild(b);
     }
+    updateFieldSummary();
+}
+
+// Live "who has how many fields" summary above the PDF so you know what's
+// still missing without scrolling every page.
+function updateFieldSummary() {
+    const el = document.getElementById('fieldSummary');
+    if (!el) return;
+    if (!participants.length) { el.innerHTML = ''; return; }
+    const parts = participants.map(p => {
+        const sigCount = fields.filter(f => f.participantId === p.id && f.type === 'Signature').length;
+        const otherCount = fields.filter(f => f.participantId === p.id && f.type !== 'Signature').length;
+        const col = colorFor(p.id);
+        const badge = p.role === 'Signer'
+            ? (sigCount > 0 ? `✍ ${sigCount}` : '⚠ ' + (T.tNoSigYet || 'kein Feld'))
+            : '👁';
+        return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;border:1.5px solid ${col.border};background:${col.bg};color:${col.fg};font-size:.78rem;font-weight:600">${badge} ${esc(p.name)}${otherCount ? ` <span style="opacity:.7">+${otherCount}</span>` : ''}</span>`;
+    }).join(' ');
+    el.innerHTML = parts;
 }
 
 function prevPage() { if (curPage > 1) { curPage--; renderPage(); } }
