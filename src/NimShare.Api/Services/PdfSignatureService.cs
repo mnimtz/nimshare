@@ -70,9 +70,10 @@ public class PdfSignatureService : IPdfSignatureService
         failure = null;
         if (pdfBytes.Length < 100) { failure = "PDF too short"; return pdfBytes; }
 
-        // 1. Decrypt PFX and load the key + cert.
+        // 1. Decrypt PFX and load the key + full cert chain.
         AsymmetricKeyParameter privateKey;
         BcX509.X509Certificate bcCert;
+        List<BcX509.X509Certificate> chain = new();
         try
         {
             var (pfxBytes, pfxPassword) = UnbundlePfx(protector.Unprotect(cert.PfxDataEncrypted));
@@ -87,6 +88,13 @@ public class PdfSignatureService : IPdfSignatureService
             if (alias is null) { failure = "PFX contains no private key entry"; return pdfBytes; }
             privateKey = store.GetKey(alias).Key;
             bcCert = store.GetCertificate(alias).Certificate;
+            // Include intermediate + root certs from the chain so Adobe can
+            // build trust up to a known anchor (v1.10.17 fix). Self-signed
+            // certs return a single-element chain — still fine.
+            var storeChain = store.GetCertificateChain(alias);
+            if (storeChain is not null && storeChain.Length > 0)
+                foreach (var e in storeChain) chain.Add(e.Certificate);
+            else chain.Add(bcCert);
         }
         catch (Exception ex) { failure = "PFX unwrap failed: " + ex.Message; return pdfBytes; }
 
@@ -97,17 +105,22 @@ public class PdfSignatureService : IPdfSignatureService
         // <>. contentsHexEnd is start + reserve.
         int contentsHexEnd = contentsHexStart + ContentsHexReserve;
 
-        // ByteRange = [0, contentsHexStart-1, contentsHexEnd+1, totalLen - (contentsHexEnd+1)]
-        // where "-1" and "+1" account for the '<' and '>' delimiters around the
-        // hex payload (they are OUTSIDE the /Contents value and MUST be
-        // included in the hashed region).
+        // ByteRange per ISO 32000-2 §12.8.1: two ranges of the file that are
+        // signed, EXCLUDING the /Contents hex payload but INCLUDING the '<'
+        // and '>' delimiters around it. Adobe and other conformant verifiers
+        // require the delimiters inside the hash range (v1.10.17 fix).
         int startOfLead = 0;
-        int lenOfLead = contentsHexStart - 1;                    // covers up to and including '<'
-        int startOfTail = contentsHexEnd + 1;                    // starts at '>'
+        int lenOfLead = contentsHexStart;                        // covers 0..contentsHexStart-1 (includes '<')
+        int startOfTail = contentsHexEnd;                        // '>' is at contentsHexEnd
         int lenOfTail = updated.Length - startOfTail;
         var byteRangeStr = $"[{startOfLead} {lenOfLead} {startOfTail} {lenOfTail}]";
-        // Rewrite the /ByteRange placeholder in the bytes.
-        var brPlaceholder = "/ByteRange [0 0 0 0]";
+        // Rewrite the /ByteRange placeholder in the bytes. Reserve room for
+        // ByteRange values up to 10 digits each (2 GB PDF ceiling) — the
+        // pre-v1.10.17 placeholder was 20 chars, overflowed for any PDF with
+        // more than 10 bytes total, and the whole signing step silently fell
+        // back to unsigned. Padding with lots of '0's here; replacement is
+        // shorter and gets padded with spaces via WritePlaceholderReplacement.
+        var brPlaceholder = "/ByteRange [00000000000000 00000000000000 00000000000000 00000000000000]";
         WritePlaceholderReplacement(updated, brPlaceholder, "/ByteRange " + byteRangeStr);
 
         // 3. Hash the covered ranges with SHA-256.
@@ -122,7 +135,7 @@ public class PdfSignatureService : IPdfSignatureService
         try
         {
             var gen = new CmsSignedDataGenerator();
-            var certs = CollectionUtilities.CreateStore(new[] { bcCert });
+            var certs = CollectionUtilities.CreateStore(chain);
             gen.AddCertificates(certs);
             var sigFactory = new Asn1SignatureFactory("SHA256WITHRSA", privateKey);
             gen.AddSignerInfoGenerator(new SignerInfoGeneratorBuilder()
@@ -184,8 +197,13 @@ public class PdfSignatureService : IPdfSignatureService
             int gtIdx = ltIdx + 1;
             while (gtIdx < pdfBytes.Length && pdfBytes[gtIdx] != (byte)'>') gtIdx++;
             if (gtIdx >= pdfBytes.Length) return new(false, false, null, null, null, null, null, "Contents unterminated");
-            var hex = text[(ltIdx + 1)..gtIdx].TrimEnd('0');
-            if ((hex.Length & 1) == 1) hex = hex[..^1]; // trailing half-byte from padding trim
+            // Do NOT TrimEnd('0') here — that would eat legitimate zero bytes
+            // at the end of the CMS ~0.4% of the time (v1.10.17 fix). ASN.1
+            // DER carries its own length prefix, so BouncyCastle consumes
+            // exactly the bytes that belong to the SignedData structure and
+            // ignores trailing zero padding.
+            var hex = text[(ltIdx + 1)..gtIdx];
+            if ((hex.Length & 1) == 1) return new(false, false, null, null, null, null, null, "Contents hex has odd length");
             var cmsBytes = new byte[hex.Length / 2];
             for (int i = 0; i < cmsBytes.Length; i++)
                 cmsBytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
@@ -257,9 +275,14 @@ public class PdfSignatureService : IPdfSignatureService
         if (!long.TryParse(offsetStr, out var prevXref))
             throw new InvalidOperationException("Invalid startxref value: " + offsetStr);
 
-        // We need three new indirect objects with fresh IDs. Scan for the
-        // highest existing object number so we don't collide.
-        int nextObjNum = FindMaxObjectNumber(original) + 1;
+        // We need three new indirect objects with fresh IDs. Prefer the /Size
+        // trailer entry (authoritative); fall back to a text scan if that
+        // can't be parsed. Text-scan is imperfect because compressed streams
+        // may contain byte sequences that look like "N G obj" (v1.10.17
+        // hardening — see review note MED-4). To be extra safe on top of
+        // that, floor at 100000: even a colliding stream byte can only match
+        // 1-6 digit numbers, so a 6-digit floor guarantees no clash.
+        int nextObjNum = Math.Max(100000, ReadSizeFromTrailer(original)) + 1;
         int sigObjNum = nextObjNum;
         int annotObjNum = nextObjNum + 1;
         int acroFormObjNum = nextObjNum + 2;
@@ -287,7 +310,9 @@ public class PdfSignatureService : IPdfSignatureService
         sigDict.Append("/Reason (").Append(EscapePdfString(reason)).Append(")\n");
         sigDict.Append("/Location (").Append(EscapePdfString(location)).Append(")\n");
         sigDict.Append("/M (D:").Append(nowStr).Append(")\n");
-        sigDict.Append("/ByteRange [0 0 0 0]\n");
+        // Wide placeholder — must match brPlaceholder in SignPdf. Actual
+        // values are written in-place later; unused chars pad with spaces.
+        sigDict.Append("/ByteRange [00000000000000 00000000000000 00000000000000 00000000000000]\n");
         sigDict.Append("/Contents <").Append(contentsPlaceholder).Append(">\n");
         sigDict.Append(">>\n");
 
@@ -393,8 +418,8 @@ public class PdfSignatureService : IPdfSignatureService
         // Try to preserve /Root and /Size from the original trailer, plus
         // append /Prev to the previous xref offset.
         var oldTrailer = ReadTrailerDict(original);
-        int newSize = FindMaxObjectNumber(original) + 4; // +3 new objects
-        if (newSize <= FindMaxObjectNumber(original)) newSize = FindMaxObjectNumber(original) + 1;
+        // /Size must be higher than the highest object number in use.
+        int newSize = Math.Max(acroFormObjNum, catalogObjNum) + 1;
         xref.Append("/Size ").Append(newSize).Append('\n');
         xref.Append("/Root ").Append(catalogObjNum).Append(" 0 R\n");
         if (oldTrailer.TryGetValue("Info", out var info)) xref.Append("/Info ").Append(info).Append('\n');
@@ -439,6 +464,21 @@ public class PdfSignatureService : IPdfSignatureService
             if (match) return i;
         }
         return -1;
+    }
+
+    /// <summary>Reads the /Size entry from the last trailer dict — the
+    /// authoritative "next object number" per PDF spec. Returns 0 if not
+    /// found (caller handles floor).</summary>
+    private static int ReadSizeFromTrailer(byte[] pdf)
+    {
+        try
+        {
+            var dict = ReadTrailerDict(pdf);
+            if (dict.TryGetValue("Size", out var s) && int.TryParse(s.Trim(), out var n))
+                return n;
+        }
+        catch { }
+        return 0;
     }
 
     private static int FindMaxObjectNumber(byte[] pdf)
