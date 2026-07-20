@@ -21,6 +21,12 @@ public interface ILinkAccessService
     /// active — returns false if the cap has been reached in the meantime (races).
     /// </summary>
     Task<bool> TryConsumeDownloadAsync(ShareLink link, CancellationToken ct = default);
+
+    // v1.10.48: nachträglich Timezone auf das letzte Landing-Event dieser
+    // (slug, ipHash) setzen. Der Landing-Log läuft server-side beim GET,
+    // ohne Client-JS ist die TZ dort nicht bekannt — deshalb schickt ein
+    // kleiner JS-Beacon post-render die TZ nach.
+    Task StampTimezoneOnLatestLandingAsync(ShareLink link, string ipHash, string timezone, CancellationToken ct = default);
 }
 
 public class LinkAccessService : ILinkAccessService
@@ -55,6 +61,27 @@ public class LinkAccessService : ILinkAccessService
         });
         link.HitCount++;
         link.LastAccessAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task StampTimezoneOnLatestLandingAsync(ShareLink link, string ipHash, string timezone, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(timezone) || timezone.Length > 60) return;
+        // Guard-Validation: nur IANA-ähnliche Zeichen erlauben, sonst könnte
+        // ein böser Client die DB mit beliebigem String füllen.
+        foreach (var c in timezone)
+        {
+            if (!(char.IsLetterOrDigit(c) || c == '/' || c == '_' || c == '-' || c == '+')) return;
+        }
+        var latest = await _db.ShareLinkAccesses
+            .Where(a => a.ShareLinkId == link.Id
+                     && a.IpHash == ipHash
+                     && a.Kind == ShareLinkAccessKind.Landing
+                     && a.Timezone == null)
+            .OrderByDescending(a => a.At)
+            .FirstOrDefaultAsync(ct);
+        if (latest is null) return;
+        latest.Timezone = timezone;
         await _db.SaveChangesAsync(ct);
     }
 

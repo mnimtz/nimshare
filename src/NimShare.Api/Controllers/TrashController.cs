@@ -82,7 +82,11 @@ public class TrashController : Controller
 
     [HttpPost("/trash/empty")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Empty(CancellationToken ct)
+    // v1.10.48: `new` keyword unterdrückt die CS0108 Warning — unsere Route-
+    // Action "Empty" versteckt Controller.Empty() (die 204-Helper-Methode)
+    // absichtlich. Kein Feature-Loss weil unsere Action HttpPost ist und der
+    // Controller.Empty()-Helper eh im Body als Return-Statement genutzt wird.
+    public new async Task<IActionResult> Empty(CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var query = _db.Files.Where(f => f.Status == StorageFileStatus.Deleted);

@@ -116,6 +116,22 @@
             out.textContent = d.summary || '';
             btn.style.display='none';
         }
+        // v1.10.48: Timezone-Beacon. Postet die Browser-TZ auf das
+        // Landing-Access-Log-Event, damit der Link-Report nicht nur Land
+        // + Device sondern auch die Zeitzone kennt. Fehler ignoriert —
+        // ist reine Analytics-Anreicherung.
+        (function () {
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (!tz) return;
+                fetch('/s/@Model.Slug/beacon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timezone: tz }),
+                    keepalive: true,
+                }).catch(() => {});
+            } catch { /* Legacy-Browser ohne Intl.timeZone → skip */ }
+        })();
         </script>
 
         <form method="post" asp-controller="Share" asp-action="Submit" asp-route-slug="@Model.Slug" class="stack">

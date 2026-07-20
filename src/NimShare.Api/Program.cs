@@ -475,6 +475,23 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] EnsureForensicColumnsAsync threw: " + ex);
     }
 
+    // v1.10.48: einmalige Aufräum-Pass für alte Duplikate von "Scope-Root"-
+    // Ordnern (ParentFolderId==null) pro (Scope, OwnerUserId, OwnerGroupId).
+    // v1.10.37/38 haben Anzeige+Navigation entkoppelt, aber die DB behält die
+    // Dubletten. Diese Funktion re-parented alle nicht-offiziellen Roots
+    // unter den offiziellen (ältesten) Root. Idempotent — bei sauberen DBs
+    // findet sie keine Kandidaten.
+    try
+    {
+        Console.Error.WriteLine("[STARTUP] Running RepairDuplicateFolderRootsAsync…");
+        await RepairDuplicateFolderRootsAsync(db);
+        Console.Error.WriteLine("[STARTUP] RepairDuplicateFolderRootsAsync done.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] RepairDuplicateFolderRootsAsync threw: " + ex);
+    }
+
     // WAL journal mode lets readers proceed while a writer holds the lock,
     // which stops "upload complete" from freezing the /browse pages. 15 s
     // busy_timeout absorbs brief lock contention (each connection retries
@@ -696,6 +713,39 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
             // der App-Start weiterlaufen. Marcus sieht die Fehler im Log.
             Console.Error.WriteLine($"[STARTUP] EnsureForensicColumns for {w.Table}.{w.Column} failed: {ex.Message}");
         }
+    }
+}
+
+// v1.10.48: Sortiert Legacy-Duplikate von Scope-Root-Ordnern in einen
+// einzigen offiziellen Root pro (Scope, OwnerUserId, OwnerGroupId). Der
+// älteste Ordner (per CreatedAt / dann Id) gewinnt. Alle jüngeren Roots
+// werden zu Kindern des offiziellen Roots. Speichert nur wenn was
+// verschoben wurde.
+static async Task RepairDuplicateFolderRootsAsync(NimShareDbContext db)
+{
+    var allRoots = await db.Folders
+        .Where(f => f.ParentFolderId == null)
+        .ToListAsync();
+    // Gruppierung nach dem "logischen Owner": Scope + OwnerUserId + OwnerGroupId.
+    // Personal/Group haben Owner, Public hat beide null.
+    var groups = allRoots.GroupBy(f => (f.Scope, f.OwnerUserId, f.OwnerGroupId)).ToList();
+    int moved = 0;
+    foreach (var g in groups)
+    {
+        if (g.Count() <= 1) continue;
+        var ordered = g.OrderBy(f => f.CreatedAt).ThenBy(f => f.Id).ToList();
+        var official = ordered[0];
+        for (int i = 1; i < ordered.Count; i++)
+        {
+            var dup = ordered[i];
+            dup.ParentFolderId = official.Id;
+            moved++;
+        }
+    }
+    if (moved > 0)
+    {
+        await db.SaveChangesAsync();
+        Console.Error.WriteLine($"[STARTUP] Re-parented {moved} legacy duplicate root folder(s) under their official scope-root.");
     }
 }
 

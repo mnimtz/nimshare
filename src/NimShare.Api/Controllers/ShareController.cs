@@ -185,6 +185,23 @@ public class ShareController : Controller
 
     /// <summary>Inline preview stream (image or pdf). Only for password-less links —
     /// otherwise the download page still gates the file behind the password prompt.</summary>
+    // v1.10.48 — kleiner Beacon-Endpoint. Landing.cshtml postet nach dem
+    // Rendern per fetch die Browser-Timezone hierhin; wir schreiben sie
+    // auf die letzte Landing-Access-Zeile dieser (slug, ipHash). Keine
+    // AntiForgery (wäre für einen Beacon Overkill), nur Timezone-String
+    // wird validiert & auf 60 Zeichen begrenzt.
+    public record BeaconTz(string Timezone);
+
+    [HttpPost("{slug}/beacon")]
+    public async Task<IActionResult> Beacon(string slug, [FromBody] BeaconTz body, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return NotFound();
+        var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        await _access.StampTimezoneOnLatestLandingAsync(link, ipHash, body?.Timezone ?? "", ct);
+        return NoContent();
+    }
+
     [HttpGet("{slug}/preview")]
     public async Task<IActionResult> Preview(string slug, CancellationToken ct)
     {
