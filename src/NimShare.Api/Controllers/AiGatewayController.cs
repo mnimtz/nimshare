@@ -31,7 +31,28 @@ public class AiGatewayController : Controller
     {
         if (!await IsAdmin(ct)) return Forbid();
         var s = await _ai.LoadAsync(ct);
+        // v1.10.21: Key-Status live prüfen und im UI zeigen — sofort sichtbar
+        // ob der gespeicherte Key noch entschlüsselbar ist (DP-Ring stabil)
+        // oder ob er verloren gegangen ist. Kein Rätselraten mehr für Marcus.
+        ViewData["ApiKeyStatus"] = ComputeApiKeyStatus(s);
         return View(s);
+    }
+
+    private string ComputeApiKeyStatus(NimShare.Core.Entities.AiGatewaySettings s)
+    {
+        if (string.IsNullOrEmpty(s.ApiKeyEncrypted))
+            return "kein Key gespeichert. Bitte oben eintragen und speichern.";
+        try
+        {
+            var key = _ai.GetApiKeyAsync().GetAwaiter().GetResult();
+            if (string.IsNullOrEmpty(key))
+                return "Encrypt-Blob vorhanden aber Unprotect ergab leeren String — vermutlich DataProtection-Keys-Ring wurde regeneriert. Key neu eintragen.";
+            return $"OK — Key entschlüsselbar (Länge {key.Length} Zeichen, beginnt mit '{key[..Math.Min(4, key.Length)]}…').";
+        }
+        catch (Exception ex)
+        {
+            return $"Encrypt-Blob vorhanden aber Unprotect wirft ({ex.GetType().Name}: {ex.Message}). DataProtection-Keys-Ring wurde regeneriert — Key neu eintragen und speichern, dann wird er mit dem aktuellen Ring re-verschlüsselt.";
+        }
     }
 
     public record SaveForm(AiProvider Provider, string? Model, string? Endpoint, string? ApiKey,

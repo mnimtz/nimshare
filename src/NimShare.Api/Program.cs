@@ -173,21 +173,54 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddAntiforgery(o => o.HeaderName = "X-XSRF-TOKEN");
 
 // DataProtection keys must persist across container restarts — otherwise
-// every existing Webhook.SecretEncrypted and SignatureParticipant token stash
-// becomes undecryptable when Azure App Service recycles the instance.
-// Persist to the shared /home path (backed by Azure Files in production).
+// every existing Webhook.SecretEncrypted, AiGateway.ApiKeyEncrypted, and
+// SignatureParticipant token stash becomes undecryptable when Azure App
+// Service recycles the instance. On App Service Linux the app runs from
+// /home/site/wwwroot and /home is backed by Azure Files (persistent);
+// anywhere ELSE on the container filesystem is ephemeral.
+// v1.10.21 hardening: try harder to land on a persistent path AND log
+// clearly where we landed, so operators can catch mis-configuration.
 {
     var keysPath = builder.Configuration["DataProtection:KeysPath"];
-    if (string.IsNullOrWhiteSpace(keysPath))
+    var configured = !string.IsNullOrWhiteSpace(keysPath);
+    if (!configured)
     {
-        keysPath = Path.Combine(
-            builder.Environment.ContentRootPath,
-            "..", "..", "data", "dp-keys");
+        // Prefer /home/data/dp-keys on any environment where /home exists
+        // (App Service Linux / Windows both mount it, backed by Azure Files).
+        // Fall back to ContentRoot-relative for local dev.
+        if (Directory.Exists("/home") || OperatingSystem.IsWindows() && Directory.Exists(@"C:\home"))
+        {
+            keysPath = OperatingSystem.IsWindows() ? @"C:\home\data\dp-keys" : "/home/data/dp-keys";
+        }
+        else
+        {
+            keysPath = Path.Combine(
+                builder.Environment.ContentRootPath,
+                "..", "..", "data", "dp-keys");
+        }
     }
-    try { Directory.CreateDirectory(keysPath); } catch { }
+    // Normalize
+    keysPath = Path.GetFullPath(keysPath);
+    bool persistent = false;
+    try
+    {
+        Directory.CreateDirectory(keysPath);
+        // Sanity write — if this throws we're on a read-only FS and the
+        // whole scheme falls back to in-memory keys (which regenerate on
+        // every restart). Log that loudly.
+        var testFile = Path.Combine(keysPath, ".nimshare-dp-write-test");
+        File.WriteAllText(testFile, DateTimeOffset.UtcNow.ToString("o"));
+        File.Delete(testFile);
+        persistent = true;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[STARTUP] DataProtection keys directory '{keysPath}' NOT writable: {ex.Message}. Encrypted values (API keys, tokens) will be LOST on every restart. Fix: set App-Setting DataProtection__KeysPath to a persistent path (e.g. /home/data/dp-keys on Azure App Service).");
+    }
     builder.Services.AddDataProtection()
         .SetApplicationName("NimShare")
         .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    Console.WriteLine($"[STARTUP] DataProtection KeysPath={keysPath} (configured={configured}, persistent={persistent}). Existing key files: {(Directory.Exists(keysPath) ? Directory.GetFiles(keysPath, "*.xml").Length.ToString() : "n/a")}.");
 }
 
 // SameSite=Strict on the auth cookie combined with SameOrigin JSON APIs
