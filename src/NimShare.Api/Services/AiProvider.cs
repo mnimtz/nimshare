@@ -790,11 +790,18 @@ public class AiGatewayService : IAiGatewayService
         s.Provider = incoming.Provider;
         s.Model = incoming.Model;
         s.Endpoint = incoming.Endpoint;
-        // v1.10.22: Trim whitespace/newlines aus dem Key. Copy-Paste aus einem
-        // Password-Manager oder ein Enter am Ende hängt sonst ein "\n" dran, das
-        // Gemini/OpenAI mit "API key not valid" abweist obwohl der Key stimmt.
+        // v1.10.29: AGGRESSIVE Sanitize. Trim reicht nicht — Marcus's Key
+        // hatte 61 Zeichen statt der 39 die Google standardmäßig ausgibt.
+        // Klar: Copy-Paste-Reste, Zero-Width-Chars, NBSPs, wrap-artige Anführungs-
+        // zeichen oder ein zweiter Key hingen dran. Alle Provider-Keys folgen
+        // dem Muster `[A-Za-z0-9\-_.:/=]`. Wir behalten NUR diese ASCII-Chars
+        // (deckt Gemini AIza..., OpenAI sk-..., Azure keys, Anthropic sk-ant-...).
         if (!string.IsNullOrEmpty(plainApiKey))
-            s.ApiKeyEncrypted = _protector.Protect(plainApiKey.Trim());
+        {
+            var cleaned = SanitizeApiKey(plainApiKey);
+            if (!string.IsNullOrEmpty(cleaned))
+                s.ApiKeyEncrypted = _protector.Protect(cleaned);
+        }
         s.EnableAutoSummary = incoming.EnableAutoSummary;
         s.EnableSmartTags = incoming.EnableSmartTags;
         s.EnableSemanticSearch = incoming.EnableSemanticSearch;
@@ -812,8 +819,36 @@ public class AiGatewayService : IAiGatewayService
     {
         var s = await LoadAsync(ct);
         if (string.IsNullOrEmpty(s.ApiKeyEncrypted)) return null;
-        try { return _protector.Unprotect(s.ApiKeyEncrypted); }
+        try
+        {
+            // v1.10.29: Sanitize auch beim Read — falls die DB noch alte, un-
+            // trimmte Keys enthält (z.B. mit Trailing-Whitespace der vor
+            // v1.10.29 gespeichert wurde), waschen wir sie im Flug. Das
+            // vermeidet dass Marcus zusätzlich zum Deploy den Key nochmal
+            // eintragen muss.
+            var raw = _protector.Unprotect(s.ApiKeyEncrypted);
+            return SanitizeApiKey(raw);
+        }
         catch { return null; }
+    }
+
+    /// <summary>Provider-API-Keys sind alle strikt ASCII: AIza..., sk-...,
+    /// sk-ant-..., Azure-Base64-artige Strings. Alles außer den erlaubten
+    /// Chars ist Copy-Paste-Müll (Whitespace, Zero-Width-Space, NBSP,
+    /// Smart-Quotes, Newlines). Rausfiltern.</summary>
+    internal static string SanitizeApiKey(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+        var sb = new System.Text.StringBuilder(input.Length);
+        foreach (var ch in input)
+        {
+            bool allowed = (ch >= 'A' && ch <= 'Z')
+                || (ch >= 'a' && ch <= 'z')
+                || (ch >= '0' && ch <= '9')
+                || ch == '-' || ch == '_' || ch == '.' || ch == ':';
+            if (allowed) sb.Append(ch);
+        }
+        return sb.ToString();
     }
 
     public string? LastProviderCreationFailure { get; private set; }
