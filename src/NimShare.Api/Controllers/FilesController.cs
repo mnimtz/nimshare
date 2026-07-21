@@ -254,6 +254,94 @@ public class FilesController : ControllerBase
         return NoContent();
     }
 
+    // v1.10.62: echte Kopie einer Datei in einen anderen Ordner. Anders
+    // als /move (Original wandert) und /pin (Referenz auf denselben Blob),
+    // erzeugt /copy einen NEUEN Blob + neue File-Row. Beide Kopien sind
+    // unabhängig — Löschen der einen killt die andere nicht.
+    // Erforderlich: Lese-Recht auf Original, Schreib-Recht auf Target-
+    // Folder, und bei Personal-Target: Quota-Check des NEUEN Owners.
+    public record CopyRequest(Guid FolderId);
+
+    [HttpPost("{id:guid}/copy")]
+    public async Task<IActionResult> Copy(Guid id, [FromBody] CopyRequest req,
+        [FromServices] IFileAccessService access, [FromServices] IFolderService folders, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var source = await _db.Files.SingleOrDefaultAsync(f => f.Id == id && f.Status == StorageFileStatus.Ready, ct);
+        if (source is null) return NotFound();
+        if (!await access.CanReadAsync(user, source, ct)) return Forbid();
+        var target = await _db.Folders.FindAsync(new object[] { req.FolderId }, ct);
+        if (target is null) return NotFound();
+        if (!await folders.CanWriteAsync(target, user, ct)) return Forbid();
+
+        // Owner des neuen File-Rows bestimmen sich aus Target-Scope:
+        //  Personal → Target-Folder-OwnerUserId (= der Kopierende, wenn er
+        //             in seinen eigenen Personal-Bereich kopiert)
+        //  Group    → Target-Folder-OwnerGroupId; OwnerId der File-Row
+        //             bleibt der User (analog zu Upload in Group)
+        //  Public   → OwnerUserId = der Kopierende (er "reicht ein")
+        var newOwnerId = target.Scope == FileScope.Personal
+            ? (target.OwnerUserId ?? user.Id)
+            : user.Id;
+
+        // Quota-Check nur bei Personal-Target — Public/Group zählen nicht
+        // gegen User-Quota (siehe v1.10.24 Quota-Split).
+        if (target.Scope == FileScope.Personal)
+        {
+            var used = await _db.Files
+                .Where(f => f.OwnerId == newOwnerId
+                         && f.Scope == FileScope.Personal
+                         && f.Status != StorageFileStatus.Deleted)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            var owner = await _db.Users.FindAsync(new object[] { newOwnerId }, ct);
+            if (owner is not null && owner.QuotaBytes > 0
+                && used + source.SizeBytes > owner.QuotaBytes)
+            {
+                return Problem(statusCode: 413, title: "Quota exceeded",
+                    detail: $"Target owner has {(owner.QuotaBytes - used) / (1024 * 1024)} MB free, needs {source.SizeBytes / (1024 * 1024)} MB.");
+            }
+        }
+
+        // Neuer Blob-Path — analog zum Upload-Naming
+        var newFileId = Guid.NewGuid();
+        var safeName = source.Name.Replace('/', '_').Replace('\\', '_');
+        var newBlobPath = $"users/{newOwnerId:N}/{newFileId:N}/{safeName}";
+        try
+        {
+            await _blobs.CopyAsync(source.BlobPath, newBlobPath, ct);
+        }
+        catch (Exception ex)
+        {
+            return Problem(statusCode: 502, title: "Blob copy failed", detail: ex.Message);
+        }
+
+        var copy = new StorageFile
+        {
+            Id = newFileId,
+            OwnerId = newOwnerId,
+            Scope = target.Scope,
+            GroupId = target.OwnerGroupId,
+            FolderId = target.Id,
+            Name = source.Name,
+            SizeBytes = source.SizeBytes,
+            ContentType = source.ContentType,
+            BlobPath = newBlobPath,
+            ContainerName = source.ContainerName,
+            Status = StorageFileStatus.Ready,
+            CreatedAt = DateTimeOffset.UtcNow,
+            ReadyAt = DateTimeOffset.UtcNow,
+            // AI-Tags werden mit-kopiert damit der neue Owner sofort die
+            // gleiche Klassifikation hat — kein AI-Re-Run nötig.
+            AiTags = source.AiTags,
+            AiRiskFlag = source.AiRiskFlag,
+            AiSummary = source.AiSummary,
+            AiSummaryLang = source.AiSummaryLang,
+        };
+        _db.Files.Add(copy);
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { id = copy.Id });
+    }
+
     public record BulkDeleteRequest(Guid[] Ids);
 
     [HttpPost("bulk-delete")]

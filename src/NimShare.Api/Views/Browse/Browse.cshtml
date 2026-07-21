@@ -278,6 +278,7 @@
     <button data-act="favorite">⭐ @T["actions.star"]</button>
     <div class="divider"></div>
     <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
+    <button data-act="copy" style="display:none">📋 @T["actions.copy"]</button>
     <button data-act="pin" style="display:none">📌 @T["pin.copy_to_personal"]</button>
     <button data-act="unpin" style="display:none">📌✕ @T["pin.unpin"]</button>
     <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
@@ -351,6 +352,24 @@
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="closeModal('modalMove')">@T["modal.cancel"]</button>
             <button type="button" class="btn btn-primary" onclick="performMove()">@T["move.button"]</button>
+        </div>
+    </div>
+</div>
+
+@* v1.10.62 — Copy-Modal analog zu Move. Unterschied: Original bleibt,
+   neuer Blob wird erzeugt. Quota-Check läuft server-side. *@
+<div class="modal-backdrop" id="modalCopy" onclick="if(event.target===this)closeModal('modalCopy')">
+    <div class="modal-panel">
+        <h2>@T["copy.title"]</h2>
+        <p class="muted" id="copyHint"></p>
+        <div class="field">
+            <label>@T["move.target"]</label>
+            <select id="copyTarget"></select>
+            <div class="helper">@T["copy.helper"]</div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalCopy')">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="performCopy()">@T["copy.button"]</button>
         </div>
     </div>
 </div>
@@ -494,6 +513,7 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('icon',        ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE && !ctxTarget.pinned);
+        showFor('copy',        ctxTarget.kind === 'file'   && !ctxTarget.pinned);
         showFor('pin',         canPin);
         showFor('unpin',       ctxTarget.kind === 'file'   && ctxTarget.pinned);
         // Stash colour + emoji on the ctxTarget so the icon modal knows the
@@ -541,6 +561,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
+        if (act === 'copy' && ctxTarget.kind === 'file') openCopySingle(ctxTarget.id);
         if (act === 'pin' && ctxTarget.kind === 'file') pinFile(ctxTarget.id);
         if (act === 'unpin' && ctxTarget.kind === 'file') unpinFile(ctxTarget.id);
         if (act === 'delete') {
@@ -598,6 +619,77 @@ async function performMove() {
     }
     document.getElementById('modalMove').classList.remove('open');
     if (fail) nimAlert(ok + ' moved, ' + fail + ' failed', { kind: 'warning' }); else location.reload();
+}
+
+// v1.10.62 — Copy analog zu Move. Zwei Unterschiede:
+//   1) Anders als /move erlaubt /copy auch cross-scope (Personal→Public,
+//      Public→Group). Deshalb kein exclude=FOLDER_ID beim populate — der
+//      User könnte in denselben Ordner "kopieren" wollen (Duplikat).
+//   2) Response ist { id: newFileId } — wir könnten das nutzen um zur
+//      Kopie zu navigieren, aber reload reicht.
+let copyIds = [];
+async function openCopySingle(id) {
+    copyIds = [id];
+    await populateCopyTargets();
+    document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single"].Value);
+    document.getElementById('modalCopy').classList.add('open');
+}
+async function populateCopyTargets() {
+    // Alle Ordner listen wo der User schreiben darf — Personal + Public +
+    // seine Groups. Kein exclude damit auch "in demselben Ordner kopieren"
+    // geht (praktisch für "Kopie mit gleichem Namen als Backup" o.ä.).
+    const r = await fetch('/api/v1/folders/writable-all', { credentials: 'same-origin' });
+    if (!r.ok) {
+        // Fallback: nur der aktuelle Scope wenn der neue Endpoint noch nicht deployed ist
+        const r2 = await fetch('/api/v1/folders/writable?scope=' + SCOPE, { credentials: 'same-origin' });
+        if (!r2.ok) return;
+        const items2 = await r2.json();
+        const sel2 = document.getElementById('copyTarget');
+        sel2.innerHTML = '';
+        items2.forEach(x => { const opt = document.createElement('option'); opt.value = x.id; opt.textContent = x.path; sel2.appendChild(opt); });
+        return;
+    }
+    const items = await r.json();
+    const sel = document.getElementById('copyTarget');
+    sel.innerHTML = '';
+    // Nach Scope gruppieren für bessere Übersicht
+    const byScope = { Personal: [], Public: [], Group: [] };
+    items.forEach(x => { (byScope[x.scope] || byScope.Personal).push(x); });
+    ['Personal', 'Public', 'Group'].forEach(scope => {
+        if (!byScope[scope].length) return;
+        const grp = document.createElement('optgroup');
+        grp.label = scope === 'Personal' ? @Json.Serialize(T["browse.tile.personal"].Value)
+                   : scope === 'Public'  ? @Json.Serialize(T["browse.tile.public"].Value)
+                   : @Json.Serialize(T["browse.tile.groups"].Value);
+        byScope[scope].forEach(x => {
+            const opt = document.createElement('option');
+            opt.value = x.id;
+            opt.textContent = x.path;
+            grp.appendChild(opt);
+        });
+        sel.appendChild(grp);
+    });
+}
+async function performCopy() {
+    const folderId = document.getElementById('copyTarget').value;
+    if (!folderId) return;
+    let ok = 0, fail = 0, errMsg = '';
+    for (const id of copyIds) {
+        const r = await fetch('/api/v1/files/' + id + '/copy', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify({ folderId }),
+        });
+        if (r.ok) ok++; else {
+            fail++;
+            if (!errMsg) {
+                try { const d = await r.json(); errMsg = d.detail || d.title || ('HTTP ' + r.status); }
+                catch { errMsg = 'HTTP ' + r.status; }
+            }
+        }
+    }
+    document.getElementById('modalCopy').classList.remove('open');
+    if (fail) nimAlert(ok + ' kopiert, ' + fail + ' fehlgeschlagen: ' + errMsg, { kind: 'error' });
+    else { nimToast(ok === 1 ? @Json.Serialize(T["copy.done_single"].Value) : (ok + ' ' + @Json.Serialize(T["copy.done_many"].Value)), { kind: 'success' }); setTimeout(() => location.reload(), 500); }
 }
 
 // ── Semantic search ───────────────────────────────────────────

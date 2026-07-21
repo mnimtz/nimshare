@@ -1107,4 +1107,11 @@ Thanks for using NimShare.</value></data>
   <data name="links.private.section"><value>Private</value></data>
   <data name="links.group.section"><value>Groups</value></data>
   <data name="links.group.lede"><value>Links to files or folders in group libraries — visible to group members.</value></data>
+  <data name="actions.copy"><value>Copy to…</value></data>
+  <data name="copy.title"><value>Copy file</value></data>
+  <data name="copy.button"><value>Copy</value></data>
+  <data name="copy.helper"><value>The original stays where it is. A new copy is created in the target folder.</value></data>
+  <data name="copy.hint.single"><value>Choose the target folder for the copy.</value></data>
+  <data name="copy.done_single"><value>Copied.</value></data>
+  <data name="copy.done_many"><value>copied.</value></data>
 </root>

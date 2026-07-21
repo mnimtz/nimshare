@@ -289,6 +289,41 @@ public class BrowseController : Controller
         return Ok(items);
     }
 
+    /// <summary>
+    /// v1.10.62 — writable-all: alle beschreibbaren Ordner ÜBER alle Scopes
+    /// hinweg. Fürs Copy-Modal, das Cross-Scope-Kopien erlaubt (z.B. Datei
+    /// aus Group → Public). Rückgabe enthält Scope für Client-side Grouping.
+    /// </summary>
+    [HttpGet("/api/v1/folders/writable-all")]
+    public async Task<IActionResult> WritableFoldersAll(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var myGroupIds = await _db.GroupMemberships
+            .Where(m => m.UserId == me.Id).Select(m => m.GroupId).ToListAsync(ct);
+        // Personal (nur eigene) + Public (alle) + Group (nur wo Mitglied
+        // oder Admin — Admin sieht alle Group-Ordner).
+        var q = _db.Folders.Where(f =>
+            (f.Scope == FileScope.Personal && f.OwnerUserId == me.Id)
+         || (f.Scope == FileScope.Public)
+         || (f.Scope == FileScope.Group && (myGroupIds.Contains(f.OwnerGroupId!.Value) || me.Role == UserRole.Admin)));
+        var all = await q.OrderBy(f => f.Scope).ThenBy(f => f.Name).ToListAsync(ct);
+        var byId = all.ToDictionary(f => f.Id);
+        string PathOf(Folder f)
+        {
+            var parts = new List<string> { f.Name };
+            var cur = f;
+            while (cur.ParentFolderId is Guid pid && byId.TryGetValue(pid, out var p)) { parts.Insert(0, p.Name); cur = p; }
+            return string.Join(" / ", parts);
+        }
+        var items = all.Select(f => new
+        {
+            id = f.Id,
+            path = PathOf(f),
+            scope = f.Scope.ToString(),
+        }).ToList();
+        return Ok(items);
+    }
+
     /// <summary>Full folder tree for the current scope — used by the left tree panel.</summary>
     [HttpGet("/api/v1/folders/tree")]
     public async Task<IActionResult> Tree(string scope, Guid? groupId, CancellationToken ct)
