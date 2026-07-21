@@ -598,10 +598,8 @@ final class NimShareAPI: ObservableObject {
         let req = request("POST", "api/v1/signatures/\(id)/remind")
         _ = try await perform(req)
     }
-    func cancelSignature(_ id: UUID) async throws {
-        let req = request("POST", "api/v1/signatures/\(id)/cancel")
-        _ = try await perform(req)
-    }
+    // v1.10.79: cancelSignature entfernt — Duplikat von cancelSignatureRequest
+    // (Zeile 208). Beide Methoden riefen exakt denselben Endpoint auf.
 
     // MARK: - File-Versions (v1.10.72 iOS parity)
 

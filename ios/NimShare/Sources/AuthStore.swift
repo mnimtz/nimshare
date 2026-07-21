@@ -57,16 +57,26 @@ final class AuthStore: ObservableObject {
         serverURL = url
         let token = Keychain.get(tokenKey)
         api = NimShareAPI(baseURL: url, token: token)
-        if token != nil {
+        if token != nil, let api = api {
             do {
-                let me = try await api!.me()
+                let me = try await api.me()
                 user = me
                 state = .signedIn
                 return
-            } catch {
+            } catch ApiError.notAuthorized {
+                // v1.10.79: NUR bei echtem 401 den Token wegwerfen. Vorher
+                // haben transiente Netzwerkfehler (DNS, 5xx, Server down)
+                // die Session komplett gekillt — User musste beim nächsten
+                // Launch neu einloggen ohne dass es einen Auth-Grund gab.
                 Keychain.remove(forKey: tokenKey)
-                api?.setToken(nil)
+                api.setToken(nil)
                 state = .needsLogin
+                return
+            } catch {
+                // Netzwerkfehler / Server down → wir GLAUBEN dem lokalen
+                // Token und tun so als wären wir signedIn. Beim nächsten
+                // API-Call kommt der echte Auth-Check.
+                state = .signedIn
                 return
             }
         }

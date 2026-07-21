@@ -53,9 +53,9 @@ struct FilePreviewView: View {
             let resp = try await api.previewUrl(fileId: file.id)
             guard let url = URL(string: resp.url) else { throw ApiError.network("Bad SAS URL") }
             let (tmp, _) = try await URLSession.shared.download(from: url)
-            // Rename with original filename so QuickLook picks the right renderer.
-            let dest = FileManager.default.temporaryDirectory.appendingPathComponent(file.name)
-            try? FileManager.default.removeItem(at: dest)
+            // v1.10.79: TmpFile-Helper — UUID-Unterordner verhindert
+            // Kollision bei gleichnamigen Files aus verschiedenen Ordnern.
+            let dest = TmpFile.destinationURL(for: file.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
             localURL = dest
         } catch let e as ApiError { error = e.localizedDescription }

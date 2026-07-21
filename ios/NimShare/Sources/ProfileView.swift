@@ -101,15 +101,11 @@ struct AvatarView: View {
 
     private func fullURL(_ s: String) -> URL? {
         if s.hasPrefix("http") { return URL(string: s) }
-        // Relative path — resolve against configured server.
-        if let base = (UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
-            .first as Any?),
-           let baseStr = UserDefaults.standard.string(forKey: "nimshare.serverURL"),
-           let baseURL = URL(string: baseStr) {
-            _ = base
-            return URL(string: s, relativeTo: baseURL)
-        }
-        return nil
+        // v1.10.79: totes Root-VC-Lookup entfernt — hatte nur `_ = base`
+        // und diente keinem Zweck. Relative URLs werden direkt gegen den
+        // konfigurierten Server aufgelöst.
+        guard let baseStr = UserDefaults.standard.string(forKey: "nimshare.serverURL"),
+              let baseURL = URL(string: baseStr) else { return nil }
+        return URL(string: s, relativeTo: baseURL)
     }
 }

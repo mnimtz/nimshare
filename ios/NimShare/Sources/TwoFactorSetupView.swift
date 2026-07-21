@@ -74,11 +74,19 @@ struct TwoFactorSetupView: View {
                 Text("Öffne deine Authenticator-App und scanne diesen Link:")
                     .font(.caption).foregroundStyle(.secondary)
                 if let s = setup {
-                    Link(destination: URL(string: s.otpAuthUri)!) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("otpauth-URL öffnen")
+                    // v1.10.79: schützt gegen Server-mit-malformer-URI
+                    // (Unicode-Issuer, fehlendes Scheme etc.) — vorher
+                    // crashte force-unwrap den ganzen 2FA-Screen.
+                    if let uri = URL(string: s.otpAuthUri) {
+                        Link(destination: uri) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("otpauth-URL öffnen")
+                            }
                         }
+                    } else {
+                        Text(s.otpAuthUri).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                     }
                     Text("Manuell (Base32):").font(.caption).foregroundStyle(.secondary)
                     Text(s.secret)

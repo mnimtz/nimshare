@@ -203,7 +203,10 @@ struct SignatureDetailView: View {
         busy = true; defer { busy = false }
         do {
             let (data, filename) = try await api.downloadSignedPdf(requestId)
-            let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+            // v1.10.79: TmpFile für Kollisionsschutz — signierte PDFs vom
+            // selben Request wurden vorher überschrieben, was den PDF-
+            // Viewer beim Öffnen mehrerer Signaturen durcheinanderbrachte.
+            let tmp = TmpFile.destinationURL(for: filename)
             try data.write(to: tmp, options: .atomic)
             pdfURL = tmp
         } catch let ex {

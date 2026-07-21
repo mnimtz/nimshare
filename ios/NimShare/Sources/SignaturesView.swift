@@ -327,7 +327,12 @@ struct NewSignatureRequestSheet: View {
             // erscheinen) einmalig zeigen.
             var seen = Set<UUID>()
             files = collected.filter { seen.insert($0.id).inserted }
-        } catch { }
+        } catch let ex {
+            // v1.10.79: äußerer Fehler (scopes()) war komplett silent —
+            // User sah leere Datei-Liste ohne Ursache. Jetzt via error-
+            // State sichtbar, damit man wenigstens weiß dass es hakt.
+            error = ex.localizedDescription
+        }
     }
 
     private func createDraft() async {

@@ -166,7 +166,15 @@ struct ContactsView: View {
     private func loadDirRaw() async -> Void {
         guard let api = auth.api else { return }
         do { directory = try await api.listDirectoryUsers(query: nil) }
-        catch { /* Directory kann bei alter Server-Version 404 werfen — dann leer lassen */ }
+        catch ApiError.notFound {
+            // v1.10.79: alter Server ohne /directory-Endpoint → leer lassen,
+            // aber echte Fehler (5xx, Netzwerk) durchreichen damit User sieht
+            // dass irgendwas kaputt ist.
+            directory = []
+        }
+        catch let ex {
+            error = ex.localizedDescription
+        }
     }
 
     private func deleteContact(_ id: UUID) async {

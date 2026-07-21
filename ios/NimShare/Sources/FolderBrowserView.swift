@@ -45,6 +45,8 @@ struct FolderBrowserView: View {
             switch self { case .move(let f, _): return "m-\(f)"; case .copy(let f, _): return "c-\(f)" }
         }
     }
+    // v1.10.79: Delete-Confirmation. Kein One-Tap-Datenverlust mehr.
+    @State private var pendingDelete: (id: UUID, name: String)?
 
     struct LinkResult: Identifiable {
         let id = UUID()
@@ -169,6 +171,36 @@ struct FolderBrowserView: View {
             Text("Name für den neuen Unterordner")
         }
         .overlay { if busy { ProgressView().padding(24).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12)) } }
+        // v1.10.79: Delete-Confirmation für Datei-Löschen. Kein One-Tap-
+        // Datenverlust mehr aus Kontext-Menü oder Swipe.
+        .confirmationDialog(
+            pendingDelete.map { "\"\($0.name)\" in Papierkorb?" } ?? "",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let d = pendingDelete {
+                Button("Löschen", role: .destructive) {
+                    let id = d.id; pendingDelete = nil
+                    Task { await deleteFile(id) }
+                }
+                Button("Abbrechen", role: .cancel) { pendingDelete = nil }
+            }
+        } message: {
+            Text("Die Datei landet im Papierkorb und kann von dort wiederhergestellt werden.")
+        }
+        // v1.10.79: Aktion-Fehler-Alert. Vorher wurden Fehler aus Move/Copy/
+        // Rename/Delete nur in `error` geschrieben, aber nur im initial-
+        // Load-State (`data == nil`) angezeigt. Nach erfolgreichem Load
+        // waren alle Folgefehler unsichtbar — User dachte alles OK, obwohl
+        // z.B. „5 OK, 3 fehlgeschlagen" nirgendwo auftauchte.
+        .alert("Fehler", isPresented: Binding(
+            get: { error != nil && data != nil },
+            set: { if !$0 { error = nil } }
+        )) {
+            Button("OK", role: .cancel) { error = nil }
+        } message: {
+            Text(error ?? "")
+        }
     }
 
     private func list(_ d: BrowseResponse) -> some View {
@@ -258,12 +290,12 @@ struct FolderBrowserView: View {
                             Button { Task { await toggleFav(fileId: f.id) } } label: {
                                 Label("Favorit", systemImage: "star")
                             }
-                            Button(role: .destructive) { Task { await deleteFile(f.id) } } label: {
+                            Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
                                 Label("In Papierkorb", systemImage: "trash")
                             }
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) { Task { await deleteFile(f.id) } } label: {
+                            Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
                                 Label("Löschen", systemImage: "trash")
                             }
                             Button { Task { await toggleFav(fileId: f.id) } } label: {
@@ -391,17 +423,12 @@ struct FolderBrowserView: View {
         busy = true; defer { busy = false }
         do {
             let (bytes, name) = try await api.bulkZipFiles(Array(selection))
-            let dest = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-            try? FileManager.default.removeItem(at: dest)
+            // v1.10.79: TmpFile + iPad-safe Share-Sheet via zentralem Helper
+            let dest = TmpFile.destinationURL(for: name)
             try bytes.write(to: dest)
             selection.removeAll()
             editMode = .inactive
-            await MainActor.run {
-                let av = UIActivityViewController(activityItems: [dest], applicationActivities: nil)
-                UIApplication.shared.connectedScenes
-                    .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
-                    .first?.present(av, animated: true)
-            }
+            await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
         } catch let ex { error = ex.localizedDescription }
     }
 
@@ -437,8 +464,13 @@ struct FolderBrowserView: View {
     private func performCopy(fileId: UUID, targetId: UUID, targetPath: String) async {
         guard let api = auth.api else { return }
         busy = true; defer { busy = false }
-        do { try await api.copyFile(id: fileId, targetFolderId: targetId) }
-        catch let ex { error = ex.localizedDescription }
+        do {
+            try await api.copyFile(id: fileId, targetFolderId: targetId)
+            // v1.10.79: fehlender load() — vorher zeigte der Browser die
+            // Kopie nur nach manuellem Refresh. Bei Kopie in denselben
+            // Ordner (Duplikat) blieb es scheinbar wirkungslos.
+            await load()
+        } catch let ex { error = ex.localizedDescription }
     }
     private func performRename() async {
         guard let api = auth.api, let r = renaming else { return }
@@ -474,18 +506,10 @@ struct FolderBrowserView: View {
             let r = try await api.previewUrl(fileId: f.id)
             guard let src = URL(string: r.url) else { throw ApiError.network("Bad URL") }
             let (tmp, _) = try await URLSession.shared.download(from: src)
-            let dest = FileManager.default.temporaryDirectory.appendingPathComponent(f.name)
-            try? FileManager.default.removeItem(at: dest)
+            // v1.10.79: TmpFile + iPad-safe Share-Sheet via zentralem Helper
+            let dest = TmpFile.destinationURL(for: f.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
-            // Share-Sheet öffnen mit dem lokalen File — von dort kann der
-            // User "In Dateien sichern" wählen.
-            await MainActor.run {
-                let av = UIActivityViewController(activityItems: [dest], applicationActivities: nil)
-                UIApplication.shared.connectedScenes
-                    .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
-                    .first?
-                    .present(av, animated: true)
-            }
+            await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
         } catch let ex { error = ex.localizedDescription }
     }
 }
