@@ -1439,15 +1439,23 @@ body.nav-open { position: relative; }
     .sig-detail-cols table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
-/* v1.10.49 — Sign-Owner-Avatar auf Mobile aus dem Header lösen, sonst
-   überlappt er das Logo + den Titel-Block. */
+/* v1.10.58 — jede Landing-Karte (Share/Folder/Sign/Done) hat einen
+   absolut positionierten Owner-Avatar oben rechts. Auf Mobile überlappt
+   der Logo + Titel — deshalb auf Mobile flat-layouten: static + block,
+   kleiner (48px), sitzt rechtsbündig oberhalb des Inhalts. Wir nutzen
+   Attributselektoren um jeden position:absolute-Avatar in .landing-card
+   automatisch mitzunehmen — kein einzelnes Retrofitting nötig. */
 @media (max-width: 640px) {
-    .sig-owner-avatar {
+    .sig-owner-avatar,
+    .landing-card img[style*="position:absolute"],
+    .landing-shell img[style*="position:absolute"] {
         position: static !important;
         width: 48px !important;
         height: 48px !important;
         margin: 0 0 12px auto !important;
-        display: block;
+        display: block !important;
+        top: auto !important;
+        right: auto !important;
     }
 }
 
@@ -1485,11 +1493,14 @@ body.nav-open { position: relative; }
         max-width: 100%;
     }
     /* Innerhalb der Tabelle bleiben die Zellen als table-row angeordnet,
-       damit Spalten korrekt aligned bleiben. */
+       damit Spalten korrekt aligned bleiben. table-layout:auto (default)
+       damit Content-basierte Spaltenbreite gilt — sonst würde eine
+       Actions-Spalte mit einem 90px-Button gleich breit sein wie eine
+       800px Name-Spalte, was den Button abschneidet. */
     .table thead, .table tbody, .table tr {
         display: table;
         width: 100%;
-        table-layout: fixed;
+        table-layout: auto;
     }
     /* Lange Strings (E-Mails, URLs, Slugs) brechen statt zu overflow'n. */
     .table td, .table th {
