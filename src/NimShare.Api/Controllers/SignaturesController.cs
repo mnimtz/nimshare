@@ -373,6 +373,18 @@ public class SignaturesController : ControllerBase
             };
             subject = EmailTemplateRenderer.Render(template.Subject, ctx);
             body = EmailTemplateRenderer.Render(template.BodyMarkdown, ctx);
+            // v1.10.75: Selbstheilung für User-Templates die durch den
+            // AI-Draft-Bug in v1.10.74 kaputt gespeichert wurden (Subject
+            // leer, "SUBJECT: xxx" als erste Zeile im BodyMarkdown).
+            // Ohne diesen Fix landet "SUBJECT: xxx" im Empfänger-Inbox als
+            // Body und der Betreff ist leer. Marcus's Bug-Report.
+            if (string.IsNullOrWhiteSpace(subject) || body.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase))
+            {
+                var combined = string.IsNullOrWhiteSpace(subject) ? body : (subject + "\n" + body);
+                var (subj, bod) = NimShare.Api.Controllers.AiController.SplitSubjectBody(combined);
+                if (!string.IsNullOrWhiteSpace(subj)) subject = subj;
+                body = bod;
+            }
         }
         else
         {

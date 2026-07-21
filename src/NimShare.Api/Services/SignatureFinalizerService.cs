@@ -41,23 +41,48 @@ public class SignatureFinalizerService : ISignatureFinalizerService
 
     public async Task TryFinalizeAsync(Guid requestId, CancellationToken ct = default)
     {
+        // v1.10.75: EXTENSIVES Logging jedes early-return-Pfads. Marcus's
+        // Report v1.10.74: "1/1 signiert, bleibt trotzdem auf Läuft" —
+        // Finalizer wurde entweder gar nicht getriggert ODER er stieg
+        // stumm aus. Ohne konkrete Log-Zeilen war die Root-Cause nicht
+        // identifizierbar. Jetzt sagt der Log konkret WO er ausstieg.
+        _log.LogInformation("Finalizer-Start für Request {Id}", requestId);
         var req = await _db.SignatureRequests
             .Include(r => r.SourceFile)
             .Include(r => r.Participants)
             .Include(r => r.Initiator)
             .SingleOrDefaultAsync(r => r.Id == requestId, ct);
-        if (req is null) return;
+        if (req is null) { _log.LogWarning("Finalizer-Abort {Id}: Request not found", requestId); return; }
         if (req.Status is SignatureRequestStatus.Completed
             or SignatureRequestStatus.Cancelled
-            or SignatureRequestStatus.Declined) return;
-        if (req.SourceFile is null) return;
+            or SignatureRequestStatus.Declined)
+        {
+            _log.LogInformation("Finalizer-Skip {Id}: bereits {Status}", requestId, req.Status);
+            return;
+        }
+        if (req.SourceFile is null)
+        {
+            _log.LogWarning("Finalizer-Abort {Id}: SourceFile ist null", requestId);
+            return;
+        }
 
         var allDone = req.Participants.All(x =>
             (x.Role == SignatureParticipantRole.Signer && x.Status == SignatureParticipantStatus.Signed)
             || (x.Role == SignatureParticipantRole.Viewer
                 && (x.Status == SignatureParticipantStatus.Viewed
                     || x.Status == SignatureParticipantStatus.Signed)));
-        if (!allDone) return;
+        if (!allDone)
+        {
+            var openList = string.Join(", ", req.Participants
+                .Where(x => !(
+                    (x.Role == SignatureParticipantRole.Signer && x.Status == SignatureParticipantStatus.Signed)
+                    || (x.Role == SignatureParticipantRole.Viewer
+                        && (x.Status == SignatureParticipantStatus.Viewed
+                            || x.Status == SignatureParticipantStatus.Signed))))
+                .Select(x => $"{x.Name}({x.Role}={x.Status})"));
+            _log.LogInformation("Finalizer-Skip {Id}: offene Beteiligte: {Open}", requestId, openList);
+            return;
+        }
 
         try
         {
@@ -205,10 +230,16 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             }
             finally { CultureInfo.CurrentUICulture = prev; }
             await _db.SaveChangesAsync(ct);
+            _log.LogInformation("Finalizer-OK {Id}: FinalFileId={FinalId}, cryptoSig={Crypto}",
+                req.Id, req.FinalFileId, cryptoSigInfo ?? "(none)");
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Signature finalisation failed for {ReqId}", req.Id);
+            // v1.10.75: LogError statt LogWarning — Finalize-Fehler bedeuten
+            // dass ein Signatur-Vorgang auf "läuft" hängen bleibt obwohl er
+            // fertig ist. Marcus's Bug in v1.10.74. Muss im Log-Stream
+            // sofort auffallen, nicht in der Rauschzone.
+            _log.LogError(ex, "Finalisierung fehlgeschlagen für {ReqId} — Vorgang bleibt auf {Status}. Der Startup-Rescue oder /remind + \"Abschluss erzwingen\" retriggern den Finalizer.", req.Id, req.Status);
         }
     }
 }

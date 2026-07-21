@@ -80,13 +80,60 @@
     <div class="field">
         <label style="display:flex;justify-content:space-between;align-items:center">
             <span>✉ @T["sig.new.email_template"]</span>
-            <a href="/signatures/templates" target="_blank" class="muted" style="font-size:.85rem">@T["sig.new.manage_templates"] →</a>
+            <span style="display:flex;gap:12px">
+                <a href="#" onclick="openNewTemplateModal();return false" class="muted" style="font-size:.85rem">+ @T["sig.new.new_template"]</a>
+                <a href="/signatures/templates" target="_blank" class="muted" style="font-size:.85rem">@T["sig.new.manage_templates"] →</a>
+            </span>
         </label>
         <select id="templateId">
             <option value="">— @T["sig.new.default_template"] —</option>
         </select>
         <div class="helper" style="margin-top:6px">@T["sig.new.template_hint"]</div>
     </div>
+
+@* v1.10.75: Inline-Modal für neues Email-Template — Marcus's Wunsch,
+   nicht immer zu /signatures/templates springen zu müssen. Nach Save
+   wird das neue Template automatisch im Dropdown selektiert. *@
+<div class="modal-backdrop" id="modalNewTemplate" onclick="if(event.target===this)closeNewTemplateModal()">
+    <div class="modal-panel" style="max-width:640px">
+        <h2>✉ @T["sig.new.new_template"]</h2>
+        <p class="muted">@T["sig.new.new_template_hint"]</p>
+        <div class="field">
+            <label>@T["templates.name"]</label>
+            <input type="text" id="ntName" placeholder="z.B. Formal Kundschaft"/>
+        </div>
+        <div class="field">
+            <label>@T["templates.subject"]</label>
+            <input type="text" id="ntSubject" placeholder="Bitte um Unterschrift: {{doc.title}}"/>
+        </div>
+        <div class="field">
+            <label>@T["templates.body"]</label>
+            <textarea id="ntBody" rows="8" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace">Hallo {{recipient.name}},
+
+{{sender.name}} bittet Sie um Ihre Unterschrift für „{{doc.title}}".
+
+{{message}}
+
+Zum Signieren: {{url}}
+
+Danke!</textarea>
+            <div class="helper" style="margin-top:4px">
+                @T["templates.placeholder_hint"]
+                <code>{{recipient.name}}</code>, <code>{{sender.name}}</code>, <code>{{doc.title}}</code>, <code>{{url}}</code>, <code>{{message}}</code>
+            </div>
+        </div>
+        <div class="field">
+            <label style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="ntDefault"/> @T["templates.set_default"]
+            </label>
+        </div>
+        <div id="ntErr" class="muted" style="color:var(--status-critical);display:none"></div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeNewTemplateModal()">@T["common.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="saveNewTemplate()">💾 @T["common.save"]</button>
+        </div>
+    </div>
+</div>
     <div class="row" style="justify-content:flex-end">
         <button class="btn btn-primary" onclick="goStep2()">@T["sig.new.next"]</button>
     </div>
@@ -159,19 +206,27 @@ let pdfDoc = null;
 let curPage = 1;
 let pageViewport = null;
 
-// Load email templates + contacts on page open so the dropdowns are ready.
-(async () => {
+// v1.10.75: Reusable Loader — auch nach Neu-Anlegen wird das Dropdown
+// aufgefrischt und der neue Eintrag automatisch selektiert.
+async function loadTemplates(preselectId) {
     try {
         const tpls = await fetch('/api/v1/email-templates?kind=SignatureInvite', { credentials: 'same-origin' }).then(r => r.json());
         const sel = document.getElementById('templateId');
+        // Ersten Placeholder-Option behalten, Rest neu
+        while (sel.options.length > 1) sel.remove(1);
         for (const t of tpls) {
             const o = document.createElement('option');
             o.value = t.id;
             o.textContent = t.name + ' (' + t.locale + ')' + (t.isDefault ? ' ★' : '');
-            if (t.isDefault) o.selected = true;
+            if (preselectId ? t.id === preselectId : t.isDefault) o.selected = true;
             sel.appendChild(o);
         }
     } catch {}
+}
+
+// Load email templates + contacts on page open so the dropdowns are ready.
+(async () => {
+    await loadTemplates();
     try {
         const contacts = await fetch('/api/v1/contacts?limit=200', { credentials: 'same-origin' }).then(r => r.json());
         const dl = document.getElementById('contactsList');
@@ -537,4 +592,52 @@ async function sendReq() {
 }
 
 document.getElementById('fType').addEventListener('change', renderPList);
+
+// v1.10.75: Inline-Template-Anlegen ohne Seitensprung.
+function openNewTemplateModal() {
+    document.getElementById('ntErr').style.display = 'none';
+    document.getElementById('modalNewTemplate').classList.add('open');
+}
+function closeNewTemplateModal() {
+    document.getElementById('modalNewTemplate').classList.remove('open');
+}
+async function saveNewTemplate() {
+    const name = document.getElementById('ntName').value.trim();
+    const subject = document.getElementById('ntSubject').value.trim();
+    const body = document.getElementById('ntBody').value;
+    const isDefault = document.getElementById('ntDefault').checked;
+    const err = document.getElementById('ntErr');
+    err.style.display = 'none';
+    if (!name || !subject) {
+        err.textContent = @Json.Serialize(T["templates.err_name_subject"].Value);
+        err.style.display = 'block';
+        return;
+    }
+    try {
+        const r = await fetch('/api/v1/email-templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                name, subject, bodyMarkdown: body,
+                kind: 'SignatureInvite',
+                locale: (document.documentElement.lang || 'de').substring(0, 2),
+                isDefault
+            })
+        });
+        if (!r.ok) {
+            const b = await r.json().catch(() => ({}));
+            err.textContent = b.detail || b.title || ('HTTP ' + r.status);
+            err.style.display = 'block';
+            return;
+        }
+        const created = await r.json();
+        closeNewTemplateModal();
+        await loadTemplates(created.id);
+        nimToast(@Json.Serialize(T["templates.saved_ok"].Value), { kind: 'success' });
+    } catch (e) {
+        err.textContent = String(e);
+        err.style.display = 'block';
+    }
+}
 </script>

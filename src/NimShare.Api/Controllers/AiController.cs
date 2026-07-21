@@ -235,22 +235,55 @@ public class AiController : ControllerBase
                 detail: err ?? $"AI-Provider {provider.GetType().Name} (Model={settings.Model ?? "-"}) lieferte keinen Text und keine Fehlerursache. Server-Log prüfen.");
         }
 
-        // Split on "BODY:" (case-insensitive) — the model usually complies.
-        var text = raw.Trim();
-        string subject = "", body = text;
+        var (subject, body) = SplitSubjectBody(raw);
+        return Ok(new { subject, body });
+    }
+
+    /// <summary>
+    /// v1.10.75: Robuster Parser für LLM-Antworten die Subject + Body
+    /// zurückliefern. Deckt 3 Varianten ab:
+    ///  1. Klassisch: "SUBJECT: xxx\nBODY:\nBody..." — der Idealfall.
+    ///  2. Nur SUBJECT-Präfix, kein BODY-Marker: erste Zeile ab "SUBJECT:"
+    ///     ist der Betreff, alles danach ist Body. Marcus's Fall in
+    ///     v1.10.74 — Email kam mit "SUBJECT: Kaffee-Maschine" als
+    ///     erste Body-Zeile und leerem Betreff-Header raus.
+    ///  3. Kein Marker: alles ist Body, erster non-empty Line als Subject.
+    /// Wird auch von EmailInviteAsync/ManualRemind aufgerufen wenn der User
+    /// ein Template hat wo Subject leer und BodyMarkdown ein "SUBJECT:…"
+    /// Präfix enthält — dann fixen wir es beim Rendern.
+    /// </summary>
+    public static (string Subject, string Body) SplitSubjectBody(string raw)
+    {
+        var text = (raw ?? "").Trim();
+        if (string.IsNullOrEmpty(text)) return ("", "");
         var idx = text.IndexOf("BODY:", StringComparison.OrdinalIgnoreCase);
         if (idx > 0)
         {
             var before = text[..idx].Trim();
             var after = text[(idx + "BODY:".Length)..].Trim();
-            if (before.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase))
-                subject = before["SUBJECT:".Length..].Trim();
-            else
-                subject = before;
-            body = after;
+            var subject = before.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase)
+                ? before["SUBJECT:".Length..].Trim() : before;
+            return (subject, after);
         }
-        return Ok(new { subject, body });
+        // Kein BODY-Marker — Präfix-Parse
+        if (text.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase))
+        {
+            var afterSubj = text["SUBJECT:".Length..];
+            var nl = afterSubj.IndexOf('\n');
+            if (nl > 0)
+            {
+                var subject = afterSubj[..nl].Trim();
+                var body = afterSubj[(nl + 1)..].TrimStart('\r', '\n');
+                return (subject, body);
+            }
+            return (afterSubj.Trim(), "");
+        }
+        // Kein Marker, kein Präfix — Fallback: alles bleibt Body, kein Betreff
+        return ("", text);
     }
+
+    private (string Subject, string Body) SplitSubjectBodyLegacy(string raw) => SplitSubjectBody(raw);
+
 
     // ── #3 Semantic search ─────────────────────────────────────────────────
 

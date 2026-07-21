@@ -972,6 +972,15 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="browse.tree.loading"><value>Baum wird geladen…</value></data>
 
   <data name="sig.new.email_template"><value>Email-Template</value></data>
+  <data name="sig.new.new_template"><value>Neues Template</value></data>
+  <data name="sig.new.new_template_hint"><value>Wiederverwendbares Email-Template direkt hier anlegen. Nutze Platzhalter wie {{doc.title}} — sie werden beim Versand ersetzt.</value></data>
+  <data name="templates.name"><value>Name (intern)</value></data>
+  <data name="templates.subject"><value>Betreffzeile</value></data>
+  <data name="templates.body"><value>Body</value></data>
+  <data name="templates.placeholder_hint"><value>Verfügbare Platzhalter:</value></data>
+  <data name="templates.set_default"><value>Als Standard für diese Sprache setzen</value></data>
+  <data name="templates.err_name_subject"><value>Name und Betreffzeile sind erforderlich.</value></data>
+  <data name="templates.saved_ok"><value>Template gespeichert und ausgewählt.</value></data>
   <data name="sig.new.default_template"><value>Eingebauter NimShare-Text</value></data>
   <data name="sig.new.manage_templates"><value>Templates verwalten</value></data>
   <data name="sig.new.template_hint"><value>Wähle ein gespeichertes Template oder lasse leer für den eingebauten NimShare-Text.</value></data>

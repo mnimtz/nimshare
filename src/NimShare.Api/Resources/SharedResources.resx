@@ -966,6 +966,15 @@ Please open this link to sign:
   <data name="browse.tree.loading"><value>Loading tree…</value></data>
 
   <data name="sig.new.email_template"><value>Email template</value></data>
+  <data name="sig.new.new_template"><value>New template</value></data>
+  <data name="sig.new.new_template_hint"><value>Create a reusable email template right here. Use placeholders like {{doc.title}} — they'll be replaced when the invite is sent.</value></data>
+  <data name="templates.name"><value>Name (internal)</value></data>
+  <data name="templates.subject"><value>Subject line</value></data>
+  <data name="templates.body"><value>Body</value></data>
+  <data name="templates.placeholder_hint"><value>Available placeholders:</value></data>
+  <data name="templates.set_default"><value>Set as default for this locale</value></data>
+  <data name="templates.err_name_subject"><value>Name and subject line are required.</value></data>
+  <data name="templates.saved_ok"><value>Template saved and selected.</value></data>
   <data name="sig.new.default_template"><value>Built-in NimShare copy</value></data>
   <data name="sig.new.manage_templates"><value>Manage templates</value></data>
   <data name="sig.new.template_hint"><value>Use one of your saved templates, or leave empty to use the built-in localised copy.</value></data>
