@@ -474,14 +474,20 @@ public class BrowseController : Controller
     [HttpGet("/api/v1/browse/scopes")]
     public async Task<IActionResult> MobileScopes(CancellationToken ct)
     {
-        var me = await _users.GetOrProvisionAsync(User, ct);
-        var groups = await _access.ListMyGroupsAsync(me, ct);
+        // v1.10.102: Marcus's Präzisierung — Gruppen sind reine Verteiler für
+        // „Teilen mit → Gruppe" via DirectShare, keine eigene Team-Bibliothek.
+        // Tiles reduziert auf Personal + Public. Bestehende Group-Scope-Files
+        // bleiben in der DB und via /api/v1/browse/list?scope=Group&groupId=…
+        // weiter erreichbar (BC), aber tauchen nicht mehr als Tile auf. Für
+        // den Signatur-Wizard (SignaturesView.loadPersonalFiles) sammeln wir
+        // die Files trotzdem quer über alle Scopes — dort ist der Groups-Filter
+        // erwünscht damit auch PDFs aus alten Gruppen-Files signierbar bleiben.
+        await Task.CompletedTask;
         var tiles = new List<MobileScopeTile>
         {
             new("Personal", null, "Personal"),
             new("Public", null, "Public"),
         };
-        tiles.AddRange(groups.Select(g => new MobileScopeTile("Group", g.Id, g.Name)));
         return Ok(tiles);
     }
 

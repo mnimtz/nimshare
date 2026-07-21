@@ -107,13 +107,13 @@
                     <a href="/browse/public" class="nav-sub @(browseOpen && browseKind == "public" ? "active" : "")">
                         <span class="nav-sub-ic">🌐</span>@T["browse.libraries.shared"]
                     </a>
-                    @foreach (var (gId, gName) in myGroups)
-                    {
-                        var isCur = browseOpen && browseKind == "group" && browseGroupId == gId;
-                        <a href="/browse/group/@gId" class="nav-sub @(isCur ? "active" : "")">
-                            <span class="nav-sub-ic">👥</span>@gName
-                        </a>
-                    }
+                    @* v1.10.102: Group-Bibliotheken aus Sidebar entfernt.
+                       Marcus's Präzisierung: Gruppen sind nur noch Verteiler-
+                       Namen für „Teilen mit → Gruppe" (via 🤝), keine eigene
+                       Team-Bibliothek mehr. Bestehende Group-Scope-Files bleiben
+                       in der DB und via /browse/group/{id} erreichbar (BC), aber
+                       tauchen nicht mehr prominent auf. Ordner-ACL für Public
+                       kommt in v1.10.103 als eigener Feature-Umbau. *@
                     <a href="/favorites" class="nav-sub @Exact("/favorites")">
                         <span class="nav-sub-ic">⭐</span>@T["nav.favorites"]
                     </a>
