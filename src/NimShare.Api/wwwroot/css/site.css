@@ -1451,6 +1451,57 @@ body.nav-open { position: relative; }
     }
 }
 
+/* v1.10.56 — Mobile: jede breite Tabelle bekommt ihren eigenen
+   horizontal-scroll Container, statt die GANZE Seite zu overflow'n.
+   `display:block` bricht das Tabellen-Layout mit ein bisschen Reflow,
+   aber alle Zellen bleiben lesbar und die Seite scrollt vertikal
+   sauber. Als Notbremse verhindert `body { overflow-x: hidden }` dass
+   irgendein anderer Rogue-Container den Body zum horizontal-Scrollen
+   zwingt — Cards und Tables scrollen intern, die Seite selbst nie.
+   Explizit: die neue table-Regel gilt auf ALLE .table Klassen — die
+   dedizierten `.sig-detail-cols table` Regel weiter unten bleibt als
+   Verstärkung (falls jemand das wieder ändern sollte). */
+@media (max-width: 780px) {
+    /* Notbremse: NIEMALS horizontal-scroll auf dem Body. Wenn irgendein
+       Element trotzdem overflow'd, wird es intern gescrollt oder unsichtbar
+       — die Seite selbst bleibt fest. */
+    html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
+    }
+    /* Cards + Content-Container: nie über den Viewport ragen. */
+    .card, .page-header, .workspace, main.workspace {
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+    /* Jede Tabelle bekommt einen internen horizontal-scroll wenn sie zu
+       breit ist. display:block ist entscheidend damit overflow greift —
+       Tabellen sind default `display:table` und ignorieren overflow. */
+    .table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    /* Innerhalb der Tabelle bleiben die Zellen als table-row angeordnet,
+       damit Spalten korrekt aligned bleiben. */
+    .table thead, .table tbody, .table tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+    /* Lange Strings (E-Mails, URLs, Slugs) brechen statt zu overflow'n. */
+    .table td, .table th {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    /* Row-action-Button-Cluster dürfen umbrechen auf mehreren Zeilen. */
+    .table td .row, .table td div[style*="flex"] {
+        flex-wrap: wrap;
+    }
+}
+
 /* v1.10.53 — nimConfirm / nimAlert / nimToast Dialoge (siehe
    wwwroot/js/dialogs.js). Reuse .modal-backdrop/.modal-panel Basis
    und ergänzen Icon-Header + Danger-Variante + Toast-Container. */
