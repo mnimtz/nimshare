@@ -41,28 +41,44 @@
 
 <div class="card">
     <h2 class="card-title">@T["groups.members"] (@Model.Members.Count)</h2>
-    @if (canManage && candidates.Any())
+    @* v1.10.78: Add-Member-Sektion immer zeigen wenn canManage, damit der
+       Bereich sichtbar ist auch wenn temporär keine Kandidaten übrig sind.
+       Marcus's Report: "kein 'Mitglieder hinzufügen'-Button" — der war
+       weg weil candidates.Empty. *@
+    @if (canManage)
     {
-        <form method="post" action="/groups/@Model.Id/members/add" class="row" style="align-items:flex-end;margin-bottom:var(--sp-4);flex-wrap:wrap">
+        if (candidates.Any())
+        {
+            <form method="post" action="/groups/@Model.Id/members/add" class="row" style="align-items:flex-end;margin-bottom:var(--sp-4);flex-wrap:wrap">
     @Html.AntiForgeryToken()
-            <div class="field" style="flex:2;min-width:220px">
-                <label>@T["groups.add_member"]</label>
-                <select name="userId" required>
-                    @foreach (var u in candidates)
-                    {
-                        <option value="@u.Id">@u.DisplayName (@u.Email)</option>
-                    }
-                </select>
+                <div class="field" style="flex:2;min-width:220px">
+                    <label>@T["groups.add_member"]</label>
+                    <select name="userId" required>
+                        @foreach (var u in candidates)
+                        {
+                            <option value="@u.Id">@u.DisplayName (@u.Email)</option>
+                        }
+                    </select>
+                </div>
+                <div class="field" style="width:140px">
+                    <label>@T["users.role"]</label>
+                    <select name="role">
+                        <option value="Member">@T["groups.role.member"]</option>
+                        <option value="Manager">@T["groups.role.manager"]</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">@T["groups.add"]</button>
+            </form>
+        }
+        else
+        {
+            <div class="card" style="background:var(--tw-gray-100);margin-bottom:var(--sp-4);padding:12px">
+                <p class="muted" style="margin:0">
+                    @T["groups.no_candidates"]
+                    <a href="/settings/users">@T["groups.no_candidates.link"] →</a>
+                </p>
             </div>
-            <div class="field" style="width:140px">
-                <label>@T["users.role"]</label>
-                <select name="role">
-                    <option value="Member">@T["groups.role.member"]</option>
-                    <option value="Manager">@T["groups.role.manager"]</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">@T["groups.add"]</button>
-        </form>
+        }
     }
 
     <table class="table">

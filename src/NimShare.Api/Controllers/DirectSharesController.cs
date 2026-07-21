@@ -51,7 +51,7 @@ public class DirectSharesController : ControllerBase
         var escaped = q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
         var like = "%" + escaped + "%";
         var rows = await _db.Users
-            .Where(u => u.IsActive && u.Id != me.Id)
+            .Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System)
             .Where(u => EF.Functions.Like(u.DisplayName, like, "\\") || EF.Functions.Like(u.Email, like, "\\"))
             .OrderBy(u => u.DisplayName)
             .Take(20)

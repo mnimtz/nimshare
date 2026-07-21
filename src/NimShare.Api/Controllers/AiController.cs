@@ -433,7 +433,7 @@ public class AiController : ControllerBase
         var anyEmbedding = await _db.FileEmbeddings.AnyAsync(ct);
         if (!anyEmbedding)
             return Problem(statusCode: 503, title: "Noch keine indexierten Dokumente.",
-                detail: "Die semantische Suche braucht Embeddings. Klicke unter Einstellungen › AI-Gateway auf „Neu indexieren" — wenn danach immer noch nichts da ist, ist wahrscheinlich der AI-Provider (API-Key/Modell) nicht korrekt konfiguriert. Server-Log prüfen: die Zeile 'Embed returned null' zeigt den Provider-Fehler.");
+                detail: "Die semantische Suche braucht Embeddings. Klicke unter Einstellungen › AI-Gateway auf 'Neu indexieren' — wenn danach immer noch nichts da ist, ist wahrscheinlich der AI-Provider (API-Key/Modell) nicht korrekt konfiguriert. Server-Log prüfen: die Zeile 'Embed returned null' zeigt den Provider-Fehler.");
 
         // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
         var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);

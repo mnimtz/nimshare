@@ -154,7 +154,9 @@ public class ContactsApiController : ControllerBase
     public async Task<IActionResult> Directory(string? q, int limit = 500, CancellationToken ct = default)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
-        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id);
+        // v1.10.78: System-Rolle ausblenden — versteckte Service-Accounts
+        // sollen weder im Adressbuch noch als Empfänger auftauchen.
+        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System);
         if (!string.IsNullOrWhiteSpace(q))
         {
             var needle = q.Trim().ToLower();

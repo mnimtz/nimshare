@@ -117,6 +117,8 @@
   <data name="groups.create"><value>Gruppe anlegen</value></data>
   <data name="groups.members"><value>Mitglieder</value></data>
   <data name="groups.add_member"><value>Mitglied hinzufügen</value></data>
+  <data name="groups.no_candidates"><value>Alle aktiven Nutzer sind bereits Mitglied dieser Gruppe.</value></data>
+  <data name="groups.no_candidates.link"><value>Neuen Nutzer anlegen</value></data>
   <data name="groups.add"><value>Hinzufügen</value></data>
   <data name="groups.remove"><value>Entfernen</value></data>
   <data name="groups.role.member"><value>Mitglied</value></data>

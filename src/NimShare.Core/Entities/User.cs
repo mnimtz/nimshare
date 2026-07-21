@@ -3,7 +3,12 @@ namespace NimShare.Core.Entities;
 public enum UserRole
 {
     User = 0,
-    Admin = 1
+    Admin = 1,
+    /// <summary>v1.10.78: versteckter Service-Account — nicht sichtbar im
+    /// Adressbuch, User-Directory oder als Signatur-Empfänger. Für System-
+    /// Webhooks, API-Tokens, automatisierte Prozesse. Admin sieht ihn in
+    /// /settings/users und kann ihn verwalten wie jeden anderen User.</summary>
+    System = 2
 }
 
 public class User

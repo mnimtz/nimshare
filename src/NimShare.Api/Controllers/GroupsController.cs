@@ -90,8 +90,11 @@ public class GroupsController : Controller
             .Where(f => f.Scope == FileScope.Group && f.GroupId == g.Id && f.Status == StorageFileStatus.Ready)
             .OrderByDescending(f => f.CreatedAt)
             .ToListAsync(ct);
+        // v1.10.78: System-Rolle raus (versteckter Service-Account soll
+        // nicht als Gruppen-Mitglied auswählbar sein).
         var candidates = canManage
-            ? await _db.Users.Where(u => u.IsActive && !g.Members.Select(m => m.UserId).Contains(u.Id))
+            ? await _db.Users.Where(u => u.IsActive && u.Role != UserRole.System
+                                       && !g.Members.Select(m => m.UserId).Contains(u.Id))
                 .OrderBy(u => u.DisplayName).ToListAsync(ct)
             : new List<User>();
         ViewData["CanManage"] = canManage;

@@ -22,27 +22,21 @@ public class SignController : Controller
     private readonly ISignaturePdfService _sig;
     private readonly IUserNotifier _in;
     private readonly IGeoIpService _geo;
-    private readonly bool _storeFullIp;
 
     public SignController(NimShareDbContext db, IPasswordHasher hasher,
         IBlobStorageService blobs, IIpHashService iphash,
-        ISignaturePdfService sig, IUserNotifier inApp, IGeoIpService geo,
-        IConfiguration config)
+        ISignaturePdfService sig, IUserNotifier inApp, IGeoIpService geo)
     {
         _db = db; _hasher = hasher; _blobs = blobs; _iphash = iphash; _sig = sig; _in = inApp; _geo = geo;
-        // v1.10.77: Signatures:StoreFullIp = true → zusätzlich zur SHA-Hash
-        // wird die Klartext-IP im Audit gespeichert. DSGVO-Rechtfertigung:
-        // Art. 6(1)(f) berechtigtes Interesse bei elektronischen Signaturen
-        // (Beweis-Sicherung). Default false (privacy-first) — Admin muss
-        // bewusst einschalten. In appsettings.json setzen:
-        //   { "Signatures": { "StoreFullIp": true } }
-        _storeFullIp = config.GetValue<bool>("Signatures:StoreFullIp", false);
     }
 
-    /// <summary>v1.10.77: Klartext-IP nur wenn Admin-Flag an; sonst null.</summary>
-    private string? MaybeIp() => _storeFullIp
-        ? HttpContext.Connection.RemoteIpAddress?.ToString()
-        : null;
+    /// <summary>
+    /// v1.10.78: Klartext-IP wird IMMER gespeichert (zusätzlich zum SHA-Hash).
+    /// DSGVO-Rechtfertigung: Art. 6(1)(f) berechtigtes Interesse bei
+    /// elektronischen Signaturen — Standard bei allen eIDAS-Anbietern
+    /// (DocuSign, Adobe Sign etc.). Marcus's Entscheidung nach v1.10.77.
+    /// </summary>
+    private string? RealIp() => HttpContext.Connection.RemoteIpAddress?.ToString();
 
     // v1.10.42 — extrahiert die vom Client mitgeschickte Timezone (IANA-
     // Id) aus dem Form-Feld "clientTz". Vorsichtige Validation:
@@ -88,7 +82,7 @@ public class SignController : Controller
             // Slack link previews would silently satisfy a viewer's ack.
             p.ViewedAt = DateTimeOffset.UtcNow;
             p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
-            p.IpAddress = MaybeIp();
+            p.IpAddress = RealIp();
             p.UserAgent = Request.Headers.UserAgent;
             // v1.10.42 — beim Landing haben wir noch keinen Timezone-
             // Header (Landing ist GET, clientTz kommt nur mit Form-POST).
@@ -370,7 +364,7 @@ public class SignController : Controller
         p.Status = SignatureParticipantStatus.Signed;
         p.SignedAt = now;
         p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
-        p.IpAddress = MaybeIp();
+        p.IpAddress = RealIp();
         var forensics = await ForensicsAsync(ct);
         _db.SignatureAudits.Add(new SignatureAudit
         {
@@ -405,7 +399,7 @@ public class SignController : Controller
                                                        && x.Status == SignatureParticipantStatus.Signed);
                 var total = req.Participants.Count(x => x.Role == SignatureParticipantRole.Signer);
                 var title = $"✍ {p.Name} hat signiert";
-                var body = $"„{req.Title}" — {signed}/{total} Unterschrift(en) fertig.";
+                var body = $"\"{req.Title}\" — {signed}/{total} Unterschrift(en) fertig.";
                 await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
                     title, body: body, href: $"/signatures/{req.Id}", ct: ct);
             }
@@ -469,7 +463,7 @@ public class SignController : Controller
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Declined,
             Note = reason,
             IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
-            IpAddress = MaybeIp(),
+            IpAddress = RealIp(),
             UserAgent = HttpContext.Request.Headers.UserAgent.ToString(),
             Country = declF.Country, City = declF.City,
             DeviceType = declF.Device, Timezone = declF.Timezone,
@@ -647,7 +641,7 @@ public class SignController : Controller
             RequestId = req.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Declined,
             Note = $"reassigned:{toEmail}",
             IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
-            IpAddress = MaybeIp(),
+            IpAddress = RealIp(),
             UserAgent = Request.Headers.UserAgent,
         });
         _db.SignatureAudits.Add(new SignatureAudit
