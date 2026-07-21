@@ -151,12 +151,20 @@ public class ContactsApiController : ControllerBase
     public record DirectoryUserDto(Guid Id, string Name, string Email, bool IsSelf);
 
     [HttpGet("directory")]
-    public async Task<IActionResult> Directory(string? q, int limit = 500, CancellationToken ct = default)
+    public async Task<IActionResult> Directory(string? q, int limit = 500,
+        [FromServices] IModerationService? moderation = null, CancellationToken ct = default)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         // v1.10.78: System-Rolle ausblenden — versteckte Service-Accounts
         // sollen weder im Adressbuch noch als Empfänger auftauchen.
-        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System);
+        // v1.10.82: blockierte User ebenfalls raus (App-Store-Blocker 1.2 —
+        // ein blockierter User darf uns nicht mehr als Direct-Share-
+        // Empfänger vorgeschlagen werden).
+        var blocked = moderation is null
+            ? new HashSet<Guid>()
+            : await moderation.GetBlockedUserIdsAsync(me.Id, ct);
+        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System
+            && !blocked.Contains(u.Id));
         if (!string.IsNullOrWhiteSpace(q))
         {
             var needle = q.Trim().ToLower();

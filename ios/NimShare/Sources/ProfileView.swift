@@ -39,6 +39,10 @@ struct ProfileView: View {
                 NavigationLink { TwoFactorSetupView() } label: {
                     Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield")
                 }
+                // v1.10.82: App-Store-Blocker Apple 1.2 — Blockliste einsehbar.
+                NavigationLink { BlocksView() } label: {
+                    Label("Blockierte Nutzer", systemImage: "hand.raised")
+                }
             }
 
             Section("Server") {
@@ -50,6 +54,19 @@ struct ProfileView: View {
                 Button(role: .destructive, action: auth.signOut) {
                     Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
                 }
+            }
+
+            // v1.10.82: App-Store-Blocker Apple 5.1.1(v) — Account-Löschung
+            // MUSS aus der App heraus möglich sein. Eigene Section damit sie
+            // visuell klar getrennt vom normalen „Abmelden" steht.
+            Section {
+                NavigationLink { DeleteAccountView() } label: {
+                    Label("Account löschen", systemImage: "trash")
+                        .foregroundStyle(Theme.warnRed)
+                }
+            } footer: {
+                Text("Löscht deinen Account und alle deine Dateien unwiderruflich vom Server.")
+                    .font(.caption)
             }
 
             Section {

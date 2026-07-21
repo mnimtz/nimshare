@@ -9,6 +9,8 @@ struct FilePreviewView: View {
     @State private var localURL: URL?
     @State private var busy = true
     @State private var error: String?
+    // v1.10.82: App-Store-Blocker Apple 1.2 — Datei-Melden von hier aus.
+    @State private var showReport = false
 
     var body: some View {
         Group {
@@ -39,10 +41,23 @@ struct FilePreviewView: View {
                     if let url = localURL {
                         ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
                     }
+                    // v1.10.82: Menu mit Melden — App-Store-Blocker Apple 1.2
+                    Menu {
+                        Button(role: .destructive) {
+                            showReport = true
+                        } label: { Label("Datei melden…", systemImage: "flag") }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
             }
         }
         .task { await download() }
+        .sheet(isPresented: $showReport) {
+            ReportSheet(subjectKind: .file, subjectId: file.id,
+                        subjectLabel: file.name,
+                        subjectOwnerUserId: nil, subjectOwnerName: nil)
+        }
     }
 
     private func download() async {

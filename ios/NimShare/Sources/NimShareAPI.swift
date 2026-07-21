@@ -729,4 +729,85 @@ final class NimShareAPI: ObservableObject {
         let (data, _) = try await perform(req)
         return try decode([ActivityDto].self, data)
     }
+
+    // MARK: - v1.10.82 App-Store-Blocker: Account-Löschung + UGC-Moderation
+
+    struct DeleteAccountBody: Encodable { let password: String? }
+    struct DeleteAccountResult: Decodable {
+        let deleted: Bool
+        let filesRemoved: Int?
+        let bytesFreed: Int64?
+        let blobDeleteFailures: Int?
+    }
+    func deleteMyAccount(password: String?) async throws -> DeleteAccountResult {
+        let body = try Self.jsonEncoder.encode(DeleteAccountBody(password: password))
+        let req = request("DELETE", "api/v1/me", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(DeleteAccountResult.self, data)
+    }
+
+    struct BlockedUserDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let blockedUserId: UUID
+        let blockedName: String?
+        let blockedEmail: String?
+        let reason: String?
+        let createdAt: Date
+    }
+    func listBlocks() async throws -> [BlockedUserDto] {
+        let req = request("GET", "api/v1/moderation/blocks")
+        let (data, _) = try await perform(req)
+        return try decode([BlockedUserDto].self, data)
+    }
+    struct BlockBody: Encodable { let blockedUserId: UUID; let reason: String? }
+    func blockUser(_ blockedUserId: UUID, reason: String? = nil) async throws {
+        let body = try Self.jsonEncoder.encode(BlockBody(blockedUserId: blockedUserId, reason: reason))
+        let req = request("POST", "api/v1/moderation/blocks", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    func unblockUser(_ blockedUserId: UUID) async throws {
+        let req = request("DELETE", "api/v1/moderation/blocks/\(blockedUserId)")
+        _ = try await perform(req)
+    }
+
+    // Reasons müssen mit dem C#-Enum ContentReportReason übereinstimmen.
+    enum ReportReason: Int, Codable, CaseIterable, Identifiable {
+        case spam = 0, harassment = 1, illegalContent = 2, intellectualProperty = 3
+        case csamOrChildSafety = 4, impersonation = 5, malware = 6, other = 99
+        var id: Int { rawValue }
+        var germanLabel: String {
+            switch self {
+            case .spam: return "Spam"
+            case .harassment: return "Belästigung / Hass"
+            case .illegalContent: return "Rechtswidrige Inhalte"
+            case .intellectualProperty: return "Urheberrechtsverletzung"
+            case .csamOrChildSafety: return "Missbrauchsdarstellung / Kinderschutz"
+            case .impersonation: return "Identitätsdiebstahl"
+            case .malware: return "Malware / Phishing"
+            case .other: return "Sonstiges"
+            }
+        }
+    }
+    enum ReportSubjectKind: Int, Codable {
+        case file = 0, folder = 1, shareLink = 2, user = 3, contact = 4
+        case signatureRequest = 5, wikiPage = 6, chatMessage = 7
+    }
+    struct ReportBody: Encodable {
+        let subjectKind: Int
+        let subjectId: UUID
+        let reason: Int
+        let note: String?
+        let subjectLabel: String?
+        let subjectOwnerUserId: UUID?
+    }
+    func reportContent(kind: ReportSubjectKind, subjectId: UUID, reason: ReportReason,
+                       note: String? = nil, subjectLabel: String? = nil,
+                       subjectOwnerUserId: UUID? = nil) async throws {
+        let body = try Self.jsonEncoder.encode(ReportBody(
+            subjectKind: kind.rawValue, subjectId: subjectId,
+            reason: reason.rawValue, note: note,
+            subjectLabel: subjectLabel, subjectOwnerUserId: subjectOwnerUserId))
+        let req = request("POST", "api/v1/moderation/reports", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
 }

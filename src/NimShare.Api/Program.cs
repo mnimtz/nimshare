@@ -365,6 +365,9 @@ builder.Services.AddSingleton<IAiPostProcessor, AiPostProcessor>();
 // Scoped weil er den scoped IBlobStorageService braucht. Concurrency ist
 // intern per statischer SemaphoreSlim(2) geregelt.
 builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
+// v1.10.82: App-Store-Blocker — Account-Löschung + UGC-Moderation
+builder.Services.AddScoped<IUserDeletionService, UserDeletionService>();
+builder.Services.AddScoped<IModerationService, ModerationService>();
 // The old SmtpNotificationService is replaced by the gateway-backed adapter so
 // existing callers (link download/upload notifications, "send by email" button)
 // route through the persisted, per-tenant email configuration.
@@ -866,6 +869,36 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
             FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
             FOREIGN KEY (FileId) REFERENCES Files(Id) ON DELETE CASCADE
         )"),
+        // v1.10.82: UGC-Moderation — analog zum V181-Muster: idempotente
+        // CREATE-Statements matchen V183 exakt, damit baseline-stamped
+        // Instanzen ohne Explicit-Migrate ebenfalls die Tabellen bekommen.
+        ("BlockedUsers", @"CREATE TABLE IF NOT EXISTS BlockedUsers (
+            Id TEXT NOT NULL PRIMARY KEY,
+            UserId TEXT NOT NULL,
+            BlockedUserId TEXT NOT NULL,
+            CreatedAt INTEGER NOT NULL,
+            Reason TEXT NULL,
+            FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
+            FOREIGN KEY (BlockedUserId) REFERENCES Users(Id) ON DELETE CASCADE
+        )"),
+        ("ContentReports", @"CREATE TABLE IF NOT EXISTS ContentReports (
+            Id TEXT NOT NULL PRIMARY KEY,
+            ReporterUserId TEXT NOT NULL,
+            SubjectKind INTEGER NOT NULL,
+            SubjectId TEXT NOT NULL,
+            SubjectLabel TEXT NULL,
+            SubjectOwnerUserId TEXT NULL,
+            Reason INTEGER NOT NULL,
+            Note TEXT NULL,
+            CreatedAt INTEGER NOT NULL,
+            Status INTEGER NOT NULL,
+            ResolvedAt INTEGER NULL,
+            ResolvedByUserId TEXT NULL,
+            Resolution INTEGER NULL,
+            ResolutionNote TEXT NULL,
+            FOREIGN KEY (ReporterUserId) REFERENCES Users(Id) ON DELETE CASCADE,
+            FOREIGN KEY (ResolvedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+        )"),
     };
     try
     {
@@ -906,6 +939,37 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
         await using (var cmd = conn0.CreateCommand())
         {
             cmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_SigningCertificates_OwnerUserId_Thumbprint ON SigningCertificates(OwnerUserId, Thumbprint)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // v1.10.82: UGC-Moderation indexes (matches V183)
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS IX_BlockedUsers_UserId_BlockedUserId ON BlockedUsers(UserId, BlockedUserId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_BlockedUsers_BlockedUserId ON BlockedUsers(BlockedUserId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_ContentReports_Status_CreatedAt ON ContentReports(Status, CreatedAt)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_ContentReports_SubjectKind_SubjectId ON ContentReports(SubjectKind, SubjectId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_ContentReports_ReporterUserId ON ContentReports(ReporterUserId)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        await using (var cmd = conn0.CreateCommand())
+        {
+            cmd.CommandText = "CREATE INDEX IF NOT EXISTS IX_ContentReports_ResolvedByUserId ON ContentReports(ResolvedByUserId)";
             await cmd.ExecuteNonQueryAsync();
         }
         // If Repair just brought FilePins / SigningCertificates into existence

@@ -40,6 +40,9 @@ public class NimShareDbContext : DbContext
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<SigningCertificate> SigningCertificates => Set<SigningCertificate>();
     public DbSet<FilePin> FilePins => Set<FilePin>();
+    // v1.10.82: App-Store-Blocker (Apple 1.2 UGC-Guideline)
+    public DbSet<BlockedUser> BlockedUsers => Set<BlockedUser>();
+    public DbSet<ContentReport> ContentReports => Set<ContentReport>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -331,6 +334,32 @@ public class NimShareDbContext : DbContext
             // File-cascade means deleting the underlying file removes every pin
             // in one shot; the app never sees a dangling pin.
             e.HasOne(x => x.File).WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // v1.10.82: App-Store-Blocker (Apple Guideline 1.2 — UGC-Support)
+        b.Entity<BlockedUser>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.UserId, x.BlockedUserId }).IsUnique();
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            // BlockedUserRef nur Restrict — sonst würde das Löschen eines
+            // blockierten Users den Block-Eintrag mitreißen und der User könnte
+            // uns nach Neuanlage wieder ungeblockt kontaktieren. Löschung des
+            // Blocked-User räumt dessen Block-Zeilen im UserDeletionService auf.
+            e.HasOne(x => x.BlockedUserRef).WithMany().HasForeignKey(x => x.BlockedUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<ContentReport>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => new { x.SubjectKind, x.SubjectId });
+            e.HasIndex(x => x.ReporterUserId);
+            e.Property(x => x.SubjectLabel).HasMaxLength(500);
+            e.Property(x => x.Note).HasMaxLength(2000);
+            e.Property(x => x.ResolutionNote).HasMaxLength(2000);
+            e.HasOne(x => x.Reporter).WithMany().HasForeignKey(x => x.ReporterUserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ResolvedBy).WithMany().HasForeignKey(x => x.ResolvedByUserId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
         });
 
         b.Entity<WikiPage>(e =>

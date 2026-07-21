@@ -21,6 +21,8 @@ struct ContactsView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var showAdd = false
+    // v1.10.82: pending State für Report/Block-Sheet
+    @State private var pendingReportUser: (id: UUID, name: String)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,9 +58,31 @@ struct ContactsView: View {
         .sheet(isPresented: $showAdd) {
             AddContactSheet { Task { await loadMy() } }
         }
+        // v1.10.82: Report-Sheet für User-Meldungen aus dem Directory heraus.
+        .sheet(item: Binding(
+            get: { pendingReportUser.map { ReportContext(id: $0.id, name: $0.name) } },
+            set: { if $0 == nil { pendingReportUser = nil } })
+        ) { ctx in
+            ReportSheet(subjectKind: .user, subjectId: ctx.id,
+                        subjectLabel: ctx.name,
+                        subjectOwnerUserId: ctx.id,
+                        subjectOwnerName: ctx.name)
+        }
         .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+    }
+
+    // Wrapper damit .sheet(item:) einen Identifiable typ bekommt.
+    private struct ReportContext: Identifiable { let id: UUID; let name: String }
+
+    private func block(_ userId: UUID, name: String) async {
+        guard let api = auth.api else { return }
+        do {
+            try await api.blockUser(userId, reason: nil)
+            // Directory-Liste neu laden → blockierter User verschwindet.
+            await loadDirRaw()
+        } catch let ex { error = ex.localizedDescription }
     }
 
     @ViewBuilder
@@ -139,6 +163,25 @@ struct ContactsView: View {
                                 .foregroundStyle(Theme.tungstenBlue)
                         }
                         .padding(.vertical, 2)
+                        // v1.10.82: App-Store-Blocker Apple 1.2 — jeder User
+                        // muss meldbar und blockierbar sein.
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingReportUser = (u.id, u.name)
+                            } label: { Label("Melden…", systemImage: "flag") }
+                            Button(role: .destructive) {
+                                Task { await block(u.id, name: u.name) }
+                            } label: { Label("Blockieren", systemImage: "hand.raised") }
+                        }
+                        .swipeActions {
+                            Button {
+                                pendingReportUser = (u.id, u.name)
+                            } label: { Label("Melden", systemImage: "flag") }
+                                .tint(.orange)
+                            Button(role: .destructive) {
+                                Task { await block(u.id, name: u.name) }
+                            } label: { Label("Block", systemImage: "hand.raised") }
+                        }
                     }
                 } footer: {
                     Text("\(filtered.count) NimShare-User · nur lesend").font(.caption).foregroundStyle(.secondary)
