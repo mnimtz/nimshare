@@ -49,16 +49,17 @@ struct ChatView: View {
             }
 
             if let e = error {
-                // v1.10.71: der 503 "Noch keine indexierten Dokumente"
-                // kommt regelmäßig weil User erwarten Chat funktioniert
-                // ohne Setup. Zeigen wir freundlich statt roten Fehler-Blob.
-                let looksLikeNoIndex = e.contains("keine indexierten") || e.contains("no indexed") || e.contains("503")
+                // v1.10.97: Server-Text unverändert durchreichen — der ist seit
+                // v1.10.93 rollenabhängig (Admin sieht Reindex-Anleitung, User
+                // sieht „Admin muss indexieren"). Vorher hat iOS die Meldung
+                // mit eigenem, admin-orientiertem Text überschrieben — dadurch
+                // sah jeder User „bitte im Web unter Einstellungen indexieren"
+                // auch als Nicht-Admin, obwohl er dort gar keinen Zugriff hat.
+                let looksLikeNoIndex = e.contains("indexier") || e.contains("indexed") || e.contains("bereit")
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: looksLikeNoIndex ? "info.circle" : "exclamationmark.triangle")
                         .foregroundStyle(looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed)
-                    Text(looksLikeNoIndex
-                         ? #"Noch keine Datei-Embeddings — bitte im Web unter Einstellungen › KI-Gateway einmal „Neu indexieren" klicken."#
-                         : e)
+                    Text(e)
                         .font(.footnote)
                         .foregroundStyle(.primary)
                 }

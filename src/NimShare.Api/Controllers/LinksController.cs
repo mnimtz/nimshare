@@ -192,7 +192,11 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        // v1.10.97: Admin darf auch fremde Links moderieren (revoke/delete/…).
+        // Marcus's Report: „als Admin auch öffentlich Links löschen dürfen".
+        var link = user.Role == UserRole.Admin
+            ? await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id, ct)
+            : await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
         if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
         if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
@@ -214,7 +218,10 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        // v1.10.97: Admin darf auch fremde Links löschen (Moderation).
+        var link = user.Role == UserRole.Admin
+            ? await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id, ct)
+            : await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
         _db.ShareLinks.Remove(link);
         await _db.SaveChangesAsync(ct);

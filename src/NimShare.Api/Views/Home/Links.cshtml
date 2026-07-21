@@ -195,6 +195,17 @@ else
                 <td>
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
+                    @* v1.10.97: Admin-Moderation für öffentliche Links. Marcus's
+                       Report: „als Admin auch öffentlich links löschen dürfen". *@
+                    @if (isAdmin)
+                    {
+                        <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
+                        @if (!l.IsRevoked)
+                        {
+                            <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
+                        }
+                        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" data-delete="@l.Id">@T["links.action.delete"]</button>
+                    }
                 </td>
             </tr>
         }

@@ -13,7 +13,7 @@ struct SearchView: View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "sparkle.magnifyingglass").foregroundStyle(Theme.tungstenBlue)
-                TextField("Search files by meaning…", text: $query)
+                TextField("Dateien nach Bedeutung suchen…", text: $query)
                     .textFieldStyle(.plain)
                     .submitLabel(.search)
                     .onSubmit { Task { await run() } }
@@ -34,11 +34,11 @@ struct SearchView: View {
 
             if results.isEmpty {
                 ContentUnavailableView(
-                    hasSearched ? "No matches" : "Semantic search",
+                    hasSearched ? "Keine Treffer" : "Semantische Suche",
                     systemImage: hasSearched ? "magnifyingglass" : "sparkle.magnifyingglass",
                     description: Text(hasSearched
-                        ? "Try different keywords or a longer phrase."
-                        : "Ask like a search engine — “budget slides q4” or “vertrag lizenz”. Requires an AI provider configured in the server settings.")
+                        ? "Versuch andere Stichworte oder eine längere Formulierung."
+                        : "Frag wie bei einer Suchmaschine — „Budget-Folien Q4" oder „Vertrag Lizenz". Benötigt einen konfigurierten AI-Provider in den Server-Einstellungen.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -61,7 +61,7 @@ struct SearchView: View {
                 .listStyle(.plain)
             }
         }
-        .navigationTitle("Search")
+        .navigationTitle("Suche")
         .sheet(item: $previewFileItem) { f in
             NavigationStack { FilePreviewView(file: f) }
         }
