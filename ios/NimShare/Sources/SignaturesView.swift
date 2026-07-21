@@ -135,6 +135,9 @@ struct NewSignatureRequestSheet: View {
     @State private var deadline = Date().addingTimeInterval(60*60*24*7)
     // v1.10.71: Kontakt-Vorschläge aus Adressbuch
     @State private var contactSuggestions: [ContactDto] = []
+    // v1.10.88: Email-Template-Picker
+    @State private var emailTemplates: [NimShareAPI.EmailTemplateDto] = []
+    @State private var pickedTemplateId: UUID?
 
     @State private var requestId: UUID?
     @State private var busy = false
@@ -166,7 +169,15 @@ struct NewSignatureRequestSheet: View {
                     }
                 }
             }
-            .task { if scopes.isEmpty { await loadPersonalFiles() } }
+            .task {
+                if scopes.isEmpty { await loadPersonalFiles() }
+                // v1.10.88: Email-Templates für Signatur-Einladung nachladen
+                if let api = auth.api, emailTemplates.isEmpty {
+                    if let ts = try? await api.listEmailTemplates(kind: "SignatureInvite") {
+                        emailTemplates = ts
+                    }
+                }
+            }
             .overlay { if busy { ProgressView() } }
             .fileImporter(
                 isPresented: $showPicker,
@@ -238,6 +249,23 @@ struct NewSignatureRequestSheet: View {
             Section("Titel & Nachricht") {
                 TextField("Titel (Standard: Dateiname)", text: $title)
                 TextField("Nachricht an die Empfänger", text: $message, axis: .vertical).lineLimit(2...5)
+                // v1.10.88: Email-Template-Picker — Parität zum Web-Wizard.
+                // Zeigt die persönlichen Templates mit Kind=SignatureInvite;
+                // Auswahl übernimmt Subject → Titel, Body → Nachricht.
+                if !emailTemplates.isEmpty {
+                    Picker("Vorlage laden", selection: $pickedTemplateId) {
+                        Text("— keine —").tag(UUID?.none)
+                        ForEach(emailTemplates) { t in
+                            Text(t.name).tag(Optional(t.id))
+                        }
+                    }
+                    .onChange(of: pickedTemplateId) { _, new in
+                        if let id = new, let t = emailTemplates.first(where: { $0.id == id }) {
+                            if title.isEmpty { title = t.subject }
+                            if message.isEmpty { message = t.bodyMarkdown }
+                        }
+                    }
+                }
             }
             Section("Ablauf") {
                 Picker("Reihenfolge", selection: $deliveryOrder) {

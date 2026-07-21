@@ -810,4 +810,139 @@ final class NimShareAPI: ObservableObject {
         let req = request("POST", "api/v1/moderation/reports", body: body, contentType: "application/json")
         _ = try await perform(req)
     }
+
+    // MARK: - v1.10.88 iOS-Parität: File-Locks, Wiki, API-Tokens, Webhooks, Email-Templates
+
+    struct FileLockStatus: Decodable {
+        let locked: Bool
+        let byUserId: UUID?
+        let byUserName: String?
+        let until: Date?
+        let kind: String?
+    }
+    func fileLockStatus(_ id: UUID) async throws -> FileLockStatus {
+        let req = request("GET", "api/v1/files/\(id)/lock")
+        let (data, _) = try await perform(req)
+        return try decode(FileLockStatus.self, data)
+    }
+    func fileLockAcquire(_ id: UUID, kind: String = "manual") async throws {
+        let req = request("POST", "api/v1/files/\(id)/lock", query: [.init(name: "kind", value: kind)])
+        _ = try await perform(req)
+    }
+    func fileLockRelease(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/files/\(id)/lock")
+        _ = try await perform(req)
+    }
+
+    // ── Wiki (mapped to server PageDto) ──
+    struct WikiPageDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let scope: String
+        let ownerUserId: UUID?
+        let ownerGroupId: UUID?
+        let parentPageId: UUID?
+        let title: String
+        let slug: String
+        let contentMarkdown: String?
+        let sortOrder: Int
+        let createdByName: String
+        let lastEditedByName: String?
+        let createdAt: Date
+        let updatedAt: Date
+    }
+    /// Scope: "Personal" | "Public" | "Group".
+    func wikiPages(scope: String, groupId: UUID? = nil) async throws -> [WikiPageDto] {
+        var q: [URLQueryItem] = [.init(name: "scope", value: scope)]
+        if let g = groupId { q.append(.init(name: "groupId", value: g.uuidString)) }
+        let req = request("GET", "api/v1/wiki/pages", query: q)
+        let (data, _) = try await perform(req)
+        return try decode([WikiPageDto].self, data)
+    }
+    func wikiPage(_ id: UUID) async throws -> WikiPageDto {
+        let req = request("GET", "api/v1/wiki/pages/\(id)")
+        let (data, _) = try await perform(req)
+        return try decode(WikiPageDto.self, data)
+    }
+
+    // ── API-Tokens ──
+    struct ApiTokenDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let name: String
+        let prefix: String
+        let scopes: String?
+        let createdAt: Date
+        let expiresAt: Date?
+        let lastUsedAt: Date?
+        let revokedAt: Date?
+    }
+    struct CreatedApiTokenDto: Codable {
+        let token: ApiTokenDto
+        let rawToken: String
+    }
+    struct CreateApiTokenBody: Encodable {
+        let name: String; let scopes: String?; let expiresAt: Date?
+    }
+    func listApiTokens() async throws -> [ApiTokenDto] {
+        let req = request("GET", "api/v1/dev/tokens")
+        let (data, _) = try await perform(req)
+        return try decode([ApiTokenDto].self, data)
+    }
+    func createApiToken(name: String, scopes: String?, expiresAt: Date?) async throws -> CreatedApiTokenDto {
+        let body = try Self.jsonEncoder.encode(CreateApiTokenBody(name: name, scopes: scopes, expiresAt: expiresAt))
+        let req = request("POST", "api/v1/dev/tokens", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(CreatedApiTokenDto.self, data)
+    }
+    func revokeApiToken(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/dev/tokens/\(id)")
+        _ = try await perform(req)
+    }
+
+    // ── Webhooks ──
+    struct WebhookDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let url: String
+        let events: String?
+        let isActive: Bool
+        let createdAt: Date
+        let lastDeliveredAt: Date?
+        let failureCount: Int
+    }
+    struct CreateWebhookBody: Encodable {
+        let url: String; let secret: String; let events: String?
+    }
+    func listWebhooks() async throws -> [WebhookDto] {
+        let req = request("GET", "api/v1/dev/webhooks")
+        let (data, _) = try await perform(req)
+        return try decode([WebhookDto].self, data)
+    }
+    func createWebhook(url: String, secret: String, events: String?) async throws -> WebhookDto {
+        let body = try Self.jsonEncoder.encode(CreateWebhookBody(url: url, secret: secret, events: events))
+        let req = request("POST", "api/v1/dev/webhooks", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(WebhookDto.self, data)
+    }
+    func deleteWebhook(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/dev/webhooks/\(id)")
+        _ = try await perform(req)
+    }
+
+    // ── Email-Templates (für Signatur-Wizard-Picker) ──
+    struct EmailTemplateDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let name: String
+        let kind: String
+        let subject: String
+        let bodyMarkdown: String
+        let locale: String
+        let isDefault: Bool
+    }
+    func listEmailTemplates(kind: String? = nil, locale: String? = nil) async throws -> [EmailTemplateDto] {
+        var q: [URLQueryItem] = []
+        if let k = kind { q.append(.init(name: "kind", value: k)) }
+        if let l = locale { q.append(.init(name: "locale", value: l)) }
+        let req = request("GET", "api/v1/email-templates", query: q)
+        let (data, _) = try await perform(req)
+        return try decode([EmailTemplateDto].self, data)
+    }
 }

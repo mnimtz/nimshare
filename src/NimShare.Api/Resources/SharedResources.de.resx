@@ -1206,4 +1206,84 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Notiz</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Dieses Protokoll wird zum Zeitpunkt des Aufrufs aus der Datenbank generiert. Für einen unveränderlichen Nachweis den JSON-Export separat archivieren.</value></data>
+  <data name="nav.privacy" xml:space="preserve"><value>Datenschutz</value></data>
+  <data name="nav.support" xml:space="preserve"><value>Support</value></data>
+  <data name="nav.imprint" xml:space="preserve"><value>Impressum</value></data>
+  <data name="privacy.title" xml:space="preserve"><value>Datenschutzerklärung</value></data>
+  <data name="privacy.last_updated" xml:space="preserve"><value>Zuletzt aktualisiert</value></data>
+  <data name="privacy.intro.title" xml:space="preserve"><value>Wer wir sind</value></data>
+  <data name="privacy.intro.body" xml:space="preserve"><value>NimShare ist eine selbst-gehostete Datei-Sharing- und Signatur-Plattform. Diese Datenschutzerklärung beschreibt, wie die Betreiberin dieser Instanz Ihre Daten verarbeitet. Da NimShare selbst-gehostet ist, ist die verantwortliche Stelle die Organisation oder Person, die diese konkrete Instanz betreibt — nicht der Software-Autor.</value></data>
+  <data name="privacy.controller.title" xml:space="preserve"><value>Verantwortliche Stelle</value></data>
+  <data name="privacy.controller.body" xml:space="preserve"><value>Die verantwortliche Stelle für die Datenverarbeitung in dieser Instanz finden Sie im &lt;a href='/imprint'&gt;Impressum&lt;/a&gt;.</value></data>
+  <data name="privacy.data.title" xml:space="preserve"><value>Welche Daten wir verarbeiten</value></data>
+  <data name="privacy.data.intro" xml:space="preserve"><value>Abhängig von Ihrer Nutzung verarbeiten wir:</value></data>
+  <data name="privacy.data.account" xml:space="preserve"><value>Kontodaten</value></data>
+  <data name="privacy.data.account_desc" xml:space="preserve"><value>E-Mail-Adresse, Anzeigename, Passwort-Hash (nie im Klartext), Rolle, gewählte Sprache, optionaler 2FA-TOTP-Seed.</value></data>
+  <data name="privacy.data.files" xml:space="preserve"><value>Dateiinhalte</value></data>
+  <data name="privacy.data.files_desc" xml:space="preserve"><value>Alle Dateien und Ordner, die Sie hochladen, samt Metadaten (Name, Größe, Content-Type, Änderungsdatum, Ordnerstruktur, Versionen, Direct-Shares).</value></data>
+  <data name="privacy.data.usage" xml:space="preserve"><value>Nutzungsdaten</value></data>
+  <data name="privacy.data.usage_desc" xml:space="preserve"><value>Zugriffe auf öffentliche Share-Links werden mit einer gehashten IP, Country/City (falls GeoIP konfiguriert), User-Agent, Referrer und Zeitstempel protokolliert — als Missbrauchs- und Forensik-Nachweis.</value></data>
+  <data name="privacy.data.signatures" xml:space="preserve"><value>Signatur-Vorgänge</value></data>
+  <data name="privacy.data.signatures_desc" xml:space="preserve"><value>Bei jedem Signatur-Vorgang speichern wir vollständigen Audit-Trail: wer wann was signiert hat, IP-Adresse (Klartext + Hash), User-Agent, Country/City, Device-Typ, Zeitzone, gezeichnete Handschrift. Rechtsgrundlage: Art. 6(1)(f) DSGVO (berechtigtes Interesse — Beweiskraft der Signatur).</value></data>
+  <data name="privacy.data.contacts" xml:space="preserve"><value>Adressbuch</value></data>
+  <data name="privacy.data.contacts_desc" xml:space="preserve"><value>Von Ihnen manuell angelegte Kontakte (Name, E-Mail, Firma, Notiz) sowie die Sichtbarkeit anderer NimShare-User in Ihrer Instanz im internen Directory.</value></data>
+  <data name="privacy.data.moderation" xml:space="preserve"><value>Moderations-Daten</value></data>
+  <data name="privacy.data.moderation_desc" xml:space="preserve"><value>Wenn Sie einen User blockieren oder Inhalte melden, speichern wir die Beziehung bzw. den Report (Grund, Zeit, gemeldete Ressource) für die Admin-Sichtung.</value></data>
+  <data name="privacy.purposes.title" xml:space="preserve"><value>Zwecke der Verarbeitung</value></data>
+  <data name="privacy.purposes.body" xml:space="preserve"><value>Ausschließlich zur Erbringung der Datei-Sharing-, Signatur- und Kollaborations-Funktionalität, zur Missbrauchs-Prävention und zur Erfüllung rechtlicher Pflichten. Keine Werbung, kein Verkauf, kein Profil-Building.</value></data>
+  <data name="privacy.tracking.title" xml:space="preserve"><value>Tracking</value></data>
+  <data name="privacy.tracking.no_tracking" xml:space="preserve"><value>Kein Tracking. Kein Analytics. Keine Werbung.</value></data>
+  <data name="privacy.tracking.body" xml:space="preserve"><value>NimShare enthält keine Tracker, keine Werbe-SDKs, keine 3rd-Party-Analytics. Die iOS-App deklariert im App-Store-Manifest (PrivacyInfo.xcprivacy) NSPrivacyTracking=false.</value></data>
+  <data name="privacy.thirdparty.title" xml:space="preserve"><value>Datenempfänger und Auftragsverarbeiter</value></data>
+  <data name="privacy.thirdparty.body" xml:space="preserve"><value>Je nach Konfiguration Ihrer Instanz können folgende Dienstleister involviert sein:</value></data>
+  <data name="privacy.thirdparty.hoster" xml:space="preserve"><value>Hosting-Provider</value></data>
+  <data name="privacy.thirdparty.hoster_desc" xml:space="preserve"><value>Der Server, auf dem diese Instanz läuft (typischerweise Microsoft Azure). Die Dateien liegen in einem Azure-Blob-Storage-Container, die Datenbank in Azure SQL oder als SQLite-Datei auf einem verschlüsselten Volume.</value></data>
+  <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>E-Mail-Versand</value></data>
+  <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Der von der Instanz konfigurierte SMTP-Server oder Resend/SendGrid, um Signatur-Einladungen, Passwort-Resets und Benachrichtigungen zu verschicken.</value></data>
+  <data name="privacy.thirdparty.ai" xml:space="preserve"><value>KI-Anbieter (optional)</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Wenn KI-Features (Auto-Summary, Tags, Chat, OCR) im Admin-Bereich aktiviert sind, werden Dokumentinhalte an den konfigurierten Anbieter (OpenAI, Anthropic, Azure OpenAI) gesendet — nur für die konkrete Anfrage, kein Training.</value></data>
+  <data name="privacy.retention.title" xml:space="preserve"><value>Aufbewahrung</value></data>
+  <data name="privacy.retention.body" xml:space="preserve"><value>Dateien bleiben bis zur manuellen Löschung durch Sie oder bis zur Löschung Ihres Accounts. Signatur-Audits bleiben aus Beweiskraft-Gründen 10 Jahre erhalten (gesetzliche Aufbewahrungsfrist). Öffentliche Link-Zugriffs-Logs werden nach 12 Monaten anonymisiert.</value></data>
+  <data name="privacy.rights.title" xml:space="preserve"><value>Ihre Rechte</value></data>
+  <data name="privacy.rights.body" xml:space="preserve"><value>Sie haben folgende Rechte:</value></data>
+  <data name="privacy.rights.access" xml:space="preserve"><value>Auskunft über die verarbeiteten Daten (Art. 15)</value></data>
+  <data name="privacy.rights.rectify" xml:space="preserve"><value>Berichtigung unrichtiger Daten (Art. 16)</value></data>
+  <data name="privacy.rights.delete" xml:space="preserve"><value>Löschung Ihres Accounts + Daten IN-APP über 'Profil → Account löschen' (Art. 17)</value></data>
+  <data name="privacy.rights.export" xml:space="preserve"><value>Datenexport in maschinenlesbarem Format (Art. 20)</value></data>
+  <data name="privacy.rights.restrict" xml:space="preserve"><value>Einschränkung der Verarbeitung (Art. 18)</value></data>
+  <data name="privacy.rights.object" xml:space="preserve"><value>Widerspruch (Art. 21)</value></data>
+  <data name="privacy.rights.complaint" xml:space="preserve"><value>Beschwerde bei einer Datenschutz-Aufsichtsbehörde</value></data>
+  <data name="privacy.rights.how" xml:space="preserve"><value>Zur Wahrnehmung dieser Rechte wenden Sie sich an die im &lt;a href='/imprint'&gt;Impressum&lt;/a&gt; genannte verantwortliche Stelle. Die Löschung Ihres Accounts können Sie zusätzlich direkt in der App unter 'Profil → Account löschen' ausführen.</value></data>
+  <data name="privacy.security.title" xml:space="preserve"><value>Sicherheit</value></data>
+  <data name="privacy.security.body" xml:space="preserve"><value>Passwörter werden mit BCrypt (Salt + Cost-Faktor 11) gehasht. Alle Verbindungen über HTTPS/TLS. iOS speichert das JWT-Token in der System-Keychain mit kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly. Signatur-Zertifikate werden per DataProtection API AES-verschlüsselt gespeichert.</value></data>
+  <data name="privacy.minors.title" xml:space="preserve"><value>Minderjährige</value></data>
+  <data name="privacy.minors.body" xml:space="preserve"><value>NimShare ist für Nutzer ab 16 Jahren bestimmt. Wir sammeln nicht wissentlich Daten von jüngeren Personen.</value></data>
+  <data name="privacy.changes.title" xml:space="preserve"><value>Änderungen dieser Erklärung</value></data>
+  <data name="privacy.changes.body" xml:space="preserve"><value>Wir aktualisieren diese Erklärung, wenn sich Funktionalität oder gesetzliche Anforderungen ändern. Das Datum oben zeigt den letzten Stand.</value></data>
+  <data name="support.title" xml:space="preserve"><value>Support &amp; Hilfe</value></data>
+  <data name="support.intro" xml:space="preserve"><value>Willkommen im NimShare-Support. Antworten auf häufige Fragen unten, für alles andere die Kontakt-Optionen.</value></data>
+  <data name="support.contact.title" xml:space="preserve"><value>Kontakt</value></data>
+  <data name="support.contact.body" xml:space="preserve"><value>Für Support-Anfragen zu &lt;em&gt;dieser&lt;/em&gt; Instanz wende dich an die Betreiberin (siehe &lt;a href='/imprint'&gt;Impressum&lt;/a&gt;). Für Bugs oder Feature-Requests an der Open-Source-Software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
+  <data name="support.faq.title" xml:space="preserve"><value>Häufige Fragen</value></data>
+  <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ich habe mein Passwort vergessen.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klicke auf der Login-Seite auf 'Passwort vergessen'. Du bekommst per E-Mail einen Reset-Link. Falls dein Server keinen E-Mail-Gateway konfiguriert hat, wende dich an den Admin deiner Instanz.</value></data>
+  <data name="support.faq.delete_account.q" xml:space="preserve"><value>Wie lösche ich meinen Account?</value></data>
+  <data name="support.faq.delete_account.a" xml:space="preserve"><value>In der App unter 'Profil → Account löschen'. Alle deine Dateien, Kontakte, API-Tokens und Signatur-Vorgänge werden unwiderruflich gelöscht. Signatur-Audits bleiben aus rechtlichen Gründen erhalten.</value></data>
+  <data name="support.faq.2fa.q" xml:space="preserve"><value>Wie aktiviere ich Zwei-Faktor-Anmeldung?</value></data>
+  <data name="support.faq.2fa.a" xml:space="preserve"><value>Unter 'Profil → Zwei-Faktor-Anmeldung' scannst du einen QR-Code mit deiner Authenticator-App (Google Authenticator, 1Password, etc.) und bestätigst mit dem 6-stelligen Code.</value></data>
+  <data name="support.faq.share_link.q" xml:space="preserve"><value>Wie teile ich eine Datei per Link?</value></data>
+  <data name="support.faq.share_link.a" xml:space="preserve"><value>Rechtsklick auf die Datei → 'Teilen…'. Du kannst Passwort, Ablaufdatum, maximale Download-Anzahl und Empfänger-Whitelist setzen. Videos und Audios spielen direkt im Browser des Empfängers ab.</value></data>
+  <data name="support.faq.report_block.q" xml:space="preserve"><value>Wie melde ich einen anderen Nutzer oder blockiere ihn?</value></data>
+  <data name="support.faq.report_block.a" xml:space="preserve"><value>In der iOS-App: langer Druck (Kontext-Menü) auf den Nutzer im Adressbuch → 'Melden' oder 'Blockieren'. Blockierte Nutzer sehen dich nicht mehr im Directory und können dir nichts mehr direkt teilen. Meldungen landen in der Admin-Moderations-Queue.</value></data>
+  <data name="support.faq.signature.q" xml:space="preserve"><value>Wie sicher sind die Signaturen?</value></data>
+  <data name="support.faq.signature.a" xml:space="preserve"><value>Jeder Signatur-Vorgang wird lückenlos protokolliert (IP-Adresse, Zeitstempel, Geräte-Typ, Zeitzone). Ist ein Zertifikat hinterlegt, wird das finale PDF zusätzlich mit einer PAdES-B-kryptografischen Signatur versehen (SHA-256, PKCS#7), die Adobe Reader nativ verifiziert (grünes Schlosssymbol). Der Audit-Bericht ist als PDF-Anhang und JSON-Export verfügbar.</value></data>
+  <data name="imprint.title" xml:space="preserve"><value>Impressum</value></data>
+  <data name="imprint.operator" xml:space="preserve"><value>Betreiberin dieser Instanz</value></data>
+  <data name="imprint.operator_body" xml:space="preserve"><value>Diese NimShare-Instanz wird betrieben von:&lt;br&gt;&lt;em&gt;(Bitte hier die Kontaktdaten der Instanz-Betreiberin eintragen — Name/Firma, Anschrift, Handelsregister-Nummer, USt-IdNr.)&lt;/em&gt;</value></data>
+  <data name="imprint.contact.title" xml:space="preserve"><value>Kontakt</value></data>
+  <data name="imprint.contact.body" xml:space="preserve"><value>&lt;em&gt;(Bitte E-Mail-Adresse und ggf. Telefonnummer eintragen)&lt;/em&gt;</value></data>
+  <data name="imprint.tech.title" xml:space="preserve"><value>Technischer Betrieb</value></data>
+  <data name="imprint.tech.body" xml:space="preserve"><value>NimShare ist eine Open-Source-Software (github.com/mnimtz/nimshare). Diese Instanz wird selbstständig durch die oben genannte Stelle betrieben; die Entwickler der Software haben keinen Zugriff auf die hier verarbeiteten Daten.</value></data>
+  <data name="imprint.disclaimer.title" xml:space="preserve"><value>Haftungsausschluss für externe Links</value></data>
+  <data name="imprint.disclaimer.body" xml:space="preserve"><value>Für Inhalte externer Links wird trotz sorgfältiger Prüfung keine Haftung übernommen. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.</value></data>
 </root>

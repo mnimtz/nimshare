@@ -11,6 +11,8 @@ struct FilePreviewView: View {
     @State private var error: String?
     // v1.10.82: App-Store-Blocker Apple 1.2 — Datei-Melden von hier aus.
     @State private var showReport = false
+    // v1.10.88: File-Lock-Status + Actions (iOS-Parität zum Web-Lock)
+    @State private var lockStatus: NimShareAPI.FileLockStatus?
 
     var body: some View {
         Group {
@@ -42,22 +44,56 @@ struct FilePreviewView: View {
                         ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
                     }
                     // v1.10.82: Menu mit Melden — App-Store-Blocker Apple 1.2
+                    // v1.10.88: File-Lock-Actions unter demselben Menu.
                     Menu {
+                        if let s = lockStatus, s.locked {
+                            Label("Gesperrt von \(s.byUserName ?? "?")",
+                                  systemImage: "lock.fill")
+                            Button {
+                                Task { await releaseLock() }
+                            } label: { Label("Sperre lösen", systemImage: "lock.open") }
+                        } else {
+                            Button {
+                                Task { await acquireLock() }
+                            } label: { Label("Sperren (30 Min)", systemImage: "lock") }
+                        }
+                        Divider()
                         Button(role: .destructive) {
                             showReport = true
                         } label: { Label("Datei melden…", systemImage: "flag") }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: lockStatus?.locked == true ? "lock.circle.fill" : "ellipsis.circle")
+                            .foregroundStyle(lockStatus?.locked == true ? Color.orange : Color.accentColor)
                     }
                 }
             }
         }
-        .task { await download() }
+        .task {
+            await download()
+            await loadLock()
+        }
         .sheet(isPresented: $showReport) {
             ReportSheet(subjectKind: .file, subjectId: file.id,
                         subjectLabel: file.name,
                         subjectOwnerUserId: nil, subjectOwnerName: nil)
         }
+    }
+
+    // v1.10.88: File-Lock-Helpers
+    private func loadLock() async {
+        guard let api = auth.api else { return }
+        do { lockStatus = try await api.fileLockStatus(file.id) }
+        catch { /* 404 auf alten Server → egal */ }
+    }
+    private func acquireLock() async {
+        guard let api = auth.api else { return }
+        do { try await api.fileLockAcquire(file.id); await loadLock() }
+        catch let ex { error = ex.localizedDescription }
+    }
+    private func releaseLock() async {
+        guard let api = auth.api else { return }
+        do { try await api.fileLockRelease(file.id); await loadLock() }
+        catch let ex { error = ex.localizedDescription }
     }
 
     private func download() async {

@@ -35,6 +35,19 @@ struct ProfileView: View {
                 }
             }
 
+            // v1.10.88: iOS-Parität — Wiki, API-Tokens, Webhooks
+            Section("Wissen & Automatisierung") {
+                NavigationLink { WikiView() } label: {
+                    Label("Wiki", systemImage: "book")
+                }
+                NavigationLink { ApiTokensView() } label: {
+                    Label("API-Tokens", systemImage: "key")
+                }
+                NavigationLink { WebhooksView() } label: {
+                    Label("Webhooks", systemImage: "bolt.horizontal")
+                }
+            }
+
             Section("Sicherheit") {
                 NavigationLink { TwoFactorSetupView() } label: {
                     Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield")
@@ -67,6 +80,23 @@ struct ProfileView: View {
             } footer: {
                 Text("Löscht deinen Account und alle deine Dateien unwiderruflich vom Server.")
                     .font(.caption)
+            }
+
+            // v1.10.88: App-Store Round 3 — Privacy/Support/Impressum-Links.
+            // Öffnen im System-Browser gegen die eigene Server-Instanz —
+            // damit der User die Policy sieht die zu SEINEM Backend gehört.
+            Section("Rechtliches") {
+                if let base = auth.serverURL {
+                    Link(destination: base.appendingPathComponent("privacy")) {
+                        Label("Datenschutz", systemImage: "lock.doc")
+                    }
+                    Link(destination: base.appendingPathComponent("support")) {
+                        Label("Support & Hilfe", systemImage: "questionmark.circle")
+                    }
+                    Link(destination: base.appendingPathComponent("imprint")) {
+                        Label("Impressum", systemImage: "info.circle")
+                    }
+                }
             }
 
             Section {
