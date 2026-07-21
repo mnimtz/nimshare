@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NimShare.Api.Services;
 using NimShare.Core.Entities;
 
@@ -206,7 +207,8 @@ public class AiGatewayController : Controller
                 enableSemanticSearch = s.EnableSemanticSearch,
                 enableSmartTags = s.EnableSmartTags,
                 enableContentRiskDetection = s.EnableContentRiskDetection,
-                enableAiSummary = s.EnableAiSummary,
+                enableAutoSummary = s.EnableAutoSummary,
+                enableChatWithFiles = s.EnableChatWithFiles,
             },
             files = new
             {
