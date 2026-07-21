@@ -401,23 +401,26 @@ async function render() {
                 const height = f.height * scale;
                 const top = viewport.height - (f.y + f.height) * scale;
                 const box = document.createElement('div');
-                box.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;border:2px solid #ffc600;background:rgba(255,198,0,.25);border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#7a5b00;font-size:.85rem;pointer-events:none;text-shadow:0 0 3px #fff`;
+                box.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${width}px;height:${height}px;border:2px solid #ffc600;background:rgba(255,198,0,.25);border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#7a5b00;font-size:.85rem;pointer-events:none;text-shadow:0 0 3px #fff;overflow:hidden;padding:0 4px;text-align:center`;
+                // v1.10.84: jede Box kriegt id/typ, damit Live-Mirror später
+                // die richtige Box zum Form-Input findet (Text/Date/Checkbox).
+                box.dataset.fieldId = f.id;
+                box.dataset.fieldType = f.type;
+                box.dataset.fieldWidth = width;
+                box.dataset.fieldHeight = height;
+                box.classList.add('field-overlay');
                 let icon = '';
                 let label = '';
                 if (f.type === 'Signature') { icon = '✍'; label = window.__sig_i18n.placeholder_here; }
                 else if (f.type === 'Text') { icon = 'Aa'; label = window.__sig_i18n.field_type_text; }
                 else if (f.type === 'Date') { icon = '📅'; label = window.__sig_i18n.field_type_date; }
-                else if (f.type === 'Checkbox') { icon = '☑'; label = ''; }
+                else if (f.type === 'Checkbox') { icon = '☐'; label = ''; }
                 box.textContent = width > 100 ? `${icon} ${label}` : icon;
                 if (f.type === 'Signature') {
                     box.style.cursor = 'pointer';
                     box.style.pointerEvents = 'auto';
                     box.title = window.__sig_i18n.placeholder_jump;
-                    // Tag every signature placeholder so the sig-pad JS can
-                    // find them later and mirror the drawing live.
                     box.classList.add('sig-placeholder');
-                    box.dataset.fieldWidth = width;
-                    box.dataset.fieldHeight = height;
                     box.addEventListener('click', () => {
                         const pad = document.getElementById('sigPad');
                         if (pad) {
@@ -435,7 +438,79 @@ async function render() {
     } catch (e) {
         wrap.innerHTML = '<div class="muted" style="text-align:center;padding:40px;color:var(--status-critical)">' + window.__sig_i18n.doc_load_failed + ' ' + (e.message || e) + '</div>';
     }
+    // v1.10.84: Live-Mirror für Text/Date/Checkbox-Formularfelder in die
+    // gelben PDF-Overlays. Vorher waren nur Signatur-Boxen live — die
+    // anderen zeigten dauerhaft „📅 Datum" bzw. „Aa Text" statt der
+    // eingegebenen Werte. Marcus's Feedback nach v1.10.83.
+    wireFieldMirrors();
 }
+
+function wireFieldMirrors() {
+    // Finde jede Text/Date/Checkbox-Overlay-Box und binde sie an ihren
+    // Form-Input (`name="fieldValue_<fid>"`). Änderungen im Input werden
+    // sofort in die Box gerendert — der Signer sieht, was am Ende auf dem
+    // PDF steht, bevor er auf „Unterschreiben" klickt.
+    const i18n = window.__sig_i18n || {};
+    const dateFmt = (raw) => {
+        if (!raw) return '';
+        // <input type="date"> gibt "YYYY-MM-DD" — der Server macht daraus
+        // beim Rendern das lokal formatierte Datum. Hier für die Vorschau
+        // formatieren wir mit dem Browser-Locale des Signers.
+        const parts = raw.split('-');
+        if (parts.length !== 3) return raw;
+        try {
+            const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+            return d.toLocaleDateString();
+        } catch { return raw; }
+    };
+    const paint = (box, val) => {
+        const type = box.dataset.fieldType;
+        const w = parseFloat(box.dataset.fieldWidth || '0');
+        if (type === 'Checkbox') {
+            box.textContent = val ? '☑' : '☐';
+            box.style.background = val ? 'rgba(56,161,105,.20)' : 'rgba(255,198,0,.25)';
+            box.style.borderColor = val ? '#38a169' : '#ffc600';
+            box.style.color = val ? '#1a5637' : '#7a5b00';
+            box.style.fontSize = Math.max(14, Math.min(24, parseFloat(box.dataset.fieldHeight) * 0.65)) + 'px';
+            return;
+        }
+        // Text / Date: leerer Wert → Placeholder-Look wiederherstellen.
+        if (!val) {
+            let icon = type === 'Date' ? '📅' : 'Aa';
+            let label = type === 'Date' ? (i18n.field_type_date || 'Datum') : (i18n.field_type_text || 'Text');
+            box.textContent = w > 100 ? `${icon} ${label}` : icon;
+            box.style.background = 'rgba(255,198,0,.25)';
+            box.style.borderColor = '#ffc600';
+            box.style.color = '#7a5b00';
+            box.style.fontWeight = '700';
+            return;
+        }
+        // Ausgefüllt: dünne grüne Border, echter Wert.
+        box.textContent = type === 'Date' ? dateFmt(val) : val;
+        box.style.background = 'rgba(255,255,255,.85)';
+        box.style.borderColor = '#38a169';
+        box.style.color = '#001d3d';
+        box.style.fontWeight = '500';
+        box.style.textAlign = 'left';
+        box.style.justifyContent = 'flex-start';
+    };
+
+    document.querySelectorAll('.field-overlay').forEach(box => {
+        const type = box.dataset.fieldType;
+        if (type !== 'Text' && type !== 'Date' && type !== 'Checkbox') return;
+        const fid = box.dataset.fieldId;
+        const input = document.querySelector(`[name="fieldValue_${fid}"]`);
+        if (!input) return;
+        const read = () => type === 'Checkbox' ? input.checked : input.value;
+        const sync = () => paint(box, read());
+        input.addEventListener('input', sync);
+        input.addEventListener('change', sync);
+        // Initial-Paint: für Date ist das Feld schon mit dem heutigen Datum
+        // vorbelegt (siehe cshtml oben), also gleich in die Box spiegeln.
+        sync();
+    });
+}
+
 render();
 </script>
 
