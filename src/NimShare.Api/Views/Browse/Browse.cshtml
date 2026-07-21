@@ -158,7 +158,7 @@
                 <tbody>
                     @foreach (var sub in subs)
                     {
-                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-emoji="@(sub.Emoji ?? "")" data-color="@(sub.Color ?? "")" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" ondblclick="location.href='@FolderUrl(sub)'">
+                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-emoji="@(sub.Emoji ?? "")" data-color="@(sub.Color ?? "")" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" data-scope="@sub.Scope.ToString().ToLowerInvariant()" data-is-private="@(sub.IsPrivate ? "1" : "0")" data-mine="@(me != null && sub.CreatedByUserId == me.Id ? "1" : "0")" ondblclick="location.href='@FolderUrl(sub)'">
                             <td class="col-check"></td>
                             <td class="col-name">
                                 <a class="fm-name" href="@FolderUrl(sub)">
@@ -171,6 +171,12 @@
                                         <span class="fm-icon fm-icon-folder" style="@(string.IsNullOrEmpty(sub.Color) ? "" : $"background:#{sub.Color}")">📁</span>
                                     }
                                     <span class="fm-name-text">@sub.Name</span>
+                                    @if (sub.IsPrivate)
+                                    {
+                                        @* v1.10.104: Schloss-Badge — signalisiert dass dieser Public-
+                                           Ordner nur für explizit Berechtigte sichtbar ist. *@
+                                        <span class="ai-tag fm-badge-lock" title="@T["permissions.private_hint"]">🔒 @T["permissions.private"]</span>
+                                    }
                                 </a>
                             </td>
                             <td class="col-size muted">—</td>
@@ -185,6 +191,13 @@
                                        — im Web WAR das nur über Rechtsklick erreichbar, der 🤝-Button fehlte in der
                                        Hover-Row. Jetzt sichtbar auf allen Ordnern. *@
                                     <button title="@T["share.direct"]" aria-label="@T["share.direct"]" onclick="event.stopPropagation();openDirectShare({id:'@sub.Id', name:@Json.Serialize(sub.Name), kind:'folder'})">🤝</button>
+                                    @* v1.10.104: Berechtigungen-Icon nur im Public-Scope und nur für
+                                       Owner oder Admin — das sind die einzigen, die den Privacy-Toggle
+                                       und die Grants setzen dürfen. *@
+                                    @if (sub.Scope == FileScope.Public && me != null && (sub.CreatedByUserId == me.Id || me.Role == UserRole.Admin))
+                                    {
+                                        <button title="@T["actions.permissions"]" aria-label="@T["actions.permissions"]" onclick="event.stopPropagation();openPermissionsModal('@sub.Id')">🔒</button>
+                                    }
                                     <button title="@T["actions.request_upload"]" aria-label="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
                                     @if (canManage)
                                     {
@@ -282,6 +295,9 @@
     <button data-act="preview" style="display:none">👁 Preview</button>
     <button data-act="share">🔗 @T["actions.share_link"]</button>
     <button data-act="directShare">🤝 @T["share.direct"]</button>
+    @* v1.10.104: Berechtigungen (Windows-ACL-Style) — nur im Public-Scope für
+       Ordner-Owner/Admin sichtbar. Wird per JS ein-/ausgeblendet. *@
+    <button data-act="permissions" style="display:none">🔒 @T["actions.permissions"]</button>
     <button data-act="sign" style="display:none">✍ @T["nav.signatures"]</button>
     <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
     <button data-act="downloadZip" style="display:none">⬇ @T["actions.download_zip"]</button>
@@ -360,6 +376,47 @@
     </div>
 </div>
 
+@* v1.10.104 (Stage 2 „Windows-ACL"): Berechtigungen-Modal für Public-
+   Ordner. Nutzt PATCH /api/v1/folders/{id}/privacy für den Toggle und die
+   bestehende /api/v1/direct-shares-API für Grants. Ownership + Admin-Check
+   passieren serverseitig. *@
+<div class="modal-backdrop" id="modalPermissions" onclick="if(event.target===this)closeModal('modalPermissions')">
+    <div class="modal-panel" style="max-width:640px">
+        <h2>🔒 @T["permissions.title"] — <span id="pmFolderName" class="muted"></span></h2>
+        <p class="muted" style="margin-top:-6px">@T["permissions.explain"]</p>
+        <div class="field" style="margin-top:12px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                <input type="checkbox" id="pmPrivate" onchange="pm_togglePrivate()"/>
+                <span><strong>@T["permissions.private_toggle"]</strong><br/>
+                    <span class="muted" style="font-size:.85rem">@T["permissions.private_hint"]</span>
+                </span>
+            </label>
+        </div>
+        <hr style="margin:16px 0;border:none;border-top:1px solid var(--tw-gray-200)"/>
+        <div class="field">
+            <label>@T["permissions.add_row"]</label>
+            <div class="row" style="gap:6px">
+                <select id="pmKind">
+                    <option value="user">👤 @T["share.target.user"]</option>
+                    <option value="group">👥 @T["share.target.group"]</option>
+                </select>
+                <input type="text" id="pmPicker" placeholder="@T["share.search_users"]" style="flex:1" list="pmUserList"/>
+                <select id="pmGroupSel" style="flex:1;display:none"></select>
+                <datalist id="pmUserList"></datalist>
+                <select id="pmPerm">
+                    <option value="Read">@T["share.perm.read"]</option>
+                    <option value="Write">@T["share.perm.write"]</option>
+                </select>
+                <button class="btn btn-primary" onclick="pm_add()">@T["share.add"]</button>
+            </div>
+        </div>
+        <div class="stack" id="pmList" style="margin-top:12px"></div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('modalPermissions')">@T["modal.close"]</button>
+        </div>
+    </div>
+</div>
+
 <partial name="_LinkModals" model="@current" />
 
 @* v1.10.67: Move + Copy nutzen jetzt einen echten Ordner-Browser statt
@@ -405,6 +462,9 @@ const RETURN_URL = @Json.Serialize(currentUrl);
 const SCOPE = @Json.Serialize(scope.ToString());
 const CAN_WRITE = @(canWrite ? "true" : "false");
 const CAN_MANAGE = @(canManage ? "true" : "false");
+// v1.10.104: Admin-Flag für Kontext-Menü-Entscheidungen (Berechtigungen
+// im Public-Scope). Non-Admins ohne Ownership bekommen den Eintrag nicht.
+const IS_ADMIN = @(me != null && me.Role == UserRole.Admin ? "true" : "false");
 
 // ── Row selection ─────────────────────────────────────────────
 const bulkBar = document.getElementById('bulkBar');
@@ -629,7 +689,9 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
     tr.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name,
-                      mine: tr.dataset.mine === '1', pinned: tr.dataset.pinned === '1' };
+                      mine: tr.dataset.mine === '1', pinned: tr.dataset.pinned === '1',
+                      folderScope: tr.dataset.scope || '',
+                      isPrivate: tr.dataset.isPrivate === '1' };
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
         const isSignable = ctxTarget.kind === 'file' && (tr.dataset.contentType || '').toLowerCase() === 'application/pdf';
         // "Pin" (=Kopieren-Verweis nach Personal): nur Files, die nicht mir gehören
@@ -656,6 +718,13 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         ctxTarget.color = tr.dataset.color || '';
         showFor('share',       true);
         showFor('directShare', true);
+        // v1.10.104: Berechtigungen — nur für Public-Ordner, und nur wenn
+        // der aktuelle User Owner ist (data-mine=1) oder Admin (SCOPE=Public
+        // + CAN_MANAGE true auf Public deutet auf Admin hin, weil normale
+        // User dort ihre eigenen Ordner via data-mine haben).
+        showFor('permissions', ctxTarget.kind === 'folder'
+                              && ctxTarget.folderScope === 'public'
+                              && (ctxTarget.mine || IS_ADMIN));
         showFor('favorite',    true);
         // Delete is destructive — it drops the underlying blob. On pinned
         // "shortcut" rows we hide it (Unpin above is the correct action);
@@ -723,6 +792,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             else openShareFolderModal(ctxTarget.id);
         }
         if (act === 'directShare') openDirectShare(ctxTarget);
+        if (act === 'permissions' && ctxTarget.kind === 'folder') openPermissionsModal(ctxTarget.id);
         if (act === 'favorite') toggleFavorite(ctxTarget);
         if (act === 'sign' && ctxTarget.kind === 'file') {
             location.href = '/signatures/new?fileId=' + ctxTarget.id;
@@ -1307,6 +1377,125 @@ async function ds_loadShares() {
 async function ds_revoke(id) {
     const r = await fetch('/api/v1/direct-shares/' + id, { method: 'DELETE', credentials: 'same-origin' });
     if (r.ok) await ds_loadShares();
+}
+
+// ── v1.10.104: Permissions modal (Public-Folder ACL) ──────────
+let pmCurrent = null; // { id, name, isPrivate, canManage }
+let pmUserCache = new Map();
+async function openPermissionsModal(folderId) {
+    const r = await fetch('/api/v1/folders/' + folderId + '/permissions', { credentials: 'same-origin' });
+    if (!r.ok) { nimAlert(@Json.Serialize(T["permissions.load_failed"].Value) + ' (' + r.status + ')', { kind: 'error' }); return; }
+    const d = await r.json();
+    pmCurrent = { id: d.folderId, name: d.folderName, isPrivate: d.isPrivate, canManage: d.canManage };
+    document.getElementById('pmFolderName').textContent = d.folderName;
+    document.getElementById('pmPrivate').checked = d.isPrivate;
+    document.getElementById('pmPrivate').disabled = !d.canManage;
+    document.getElementById('pmKind').value = 'user';
+    pm_switchKind();
+    await pm_loadGroups();
+    pm_render(d);
+    document.getElementById('modalPermissions').classList.add('open');
+}
+document.getElementById('pmKind').addEventListener('change', pm_switchKind);
+function pm_switchKind() {
+    const kind = document.getElementById('pmKind').value;
+    document.getElementById('pmPicker').style.display = kind === 'user' ? '' : 'none';
+    document.getElementById('pmGroupSel').style.display = kind === 'group' ? '' : 'none';
+}
+document.getElementById('pmPicker').addEventListener('input', async (e) => {
+    const q = e.target.value;
+    const r = await fetch('/api/v1/direct-shares/users?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const items = await r.json();
+    const dl = document.getElementById('pmUserList');
+    dl.innerHTML = '';
+    pmUserCache.clear();
+    items.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.displayName + ' <' + u.email + '>';
+        dl.appendChild(o);
+        pmUserCache.set(o.value, u.id);
+    });
+});
+async function pm_loadGroups() {
+    const r = await fetch('/api/v1/direct-shares/groups', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    const items = await r.json();
+    const sel = document.getElementById('pmGroupSel');
+    sel.innerHTML = '';
+    items.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.textContent = g.name; sel.appendChild(o); });
+    const kindSel = document.getElementById('pmKind');
+    const groupOpt = kindSel.querySelector('option[value="group"]');
+    if (groupOpt) groupOpt.disabled = items.length === 0;
+    if (items.length === 0 && kindSel.value === 'group') { kindSel.value = 'user'; pm_switchKind(); }
+}
+async function pm_togglePrivate() {
+    if (!pmCurrent) return;
+    const wanted = document.getElementById('pmPrivate').checked;
+    const r = await fetch('/api/v1/folders/' + pmCurrent.id + '/privacy', {
+        method: 'PATCH', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ isPrivate: wanted }),
+    });
+    if (!r.ok) {
+        document.getElementById('pmPrivate').checked = pmCurrent.isPrivate;
+        nimAlert(@Json.Serialize(T["permissions.toggle_failed"].Value) + ' (' + r.status + ')', { kind: 'error' });
+        return;
+    }
+    const d = await r.json();
+    pmCurrent.isPrivate = d.isPrivate;
+    // Marcus's Ansage: die Sicht-Änderung ist wirkungsvoll erst nach Reload,
+    // weil die Row-Liste server-gerendert ist. Wir markieren die Row
+    // stattdessen sofort mit Badge, damit der User Feedback bekommt.
+    const row = document.querySelector('tr.ctx.fm-row-folder[data-id="' + pmCurrent.id + '"]');
+    if (row) row.dataset.isPrivate = d.isPrivate ? '1' : '0';
+}
+async function pm_add() {
+    if (!pmCurrent) return;
+    if (!pmCurrent.canManage) { nimAlert(@Json.Serialize(T["permissions.no_manage"].Value)); return; }
+    const kind = document.getElementById('pmKind').value;
+    const perm = document.getElementById('pmPerm').value;
+    const body = { permission: perm, folderId: pmCurrent.id };
+    if (kind === 'user') {
+        const val = document.getElementById('pmPicker').value;
+        const uid = pmUserCache.get(val);
+        if (!uid) { nimAlert(@Json.Serialize(T["share.pick_user"].Value)); return; }
+        body.userId = uid;
+    } else {
+        body.groupId = document.getElementById('pmGroupSel').value;
+    }
+    const r = await fetch('/api/v1/direct-shares', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) { nimAlert('HTTP ' + r.status, { kind: 'error' }); return; }
+    document.getElementById('pmPicker').value = '';
+    await pm_reload();
+}
+async function pm_reload() {
+    if (!pmCurrent) return;
+    const r = await fetch('/api/v1/folders/' + pmCurrent.id + '/permissions', { credentials: 'same-origin' });
+    if (!r.ok) return;
+    pm_render(await r.json());
+}
+function pm_render(d) {
+    const out = document.getElementById('pmList');
+    const rows = [];
+    (d.userGrants || []).forEach(g => rows.push({ id: g.id, label: '👤 ' + (g.displayName || g.email || '?'), perm: g.permission }));
+    (d.groupGrants || []).forEach(g => rows.push({ id: g.id, label: '👥 ' + (g.displayName || '?'), perm: g.permission }));
+    if (rows.length === 0) {
+        out.innerHTML = '<p class="muted">' + @Json.Serialize(T["permissions.no_grants"].Value) + '</p>';
+        return;
+    }
+    out.innerHTML = rows.map(r => `
+        <div class="row" style="justify-content:space-between;padding:6px 8px;border:1px solid var(--tw-gray-200);border-radius:6px">
+            <span>${escapeHtml(r.label)}</span>
+            <span class="chip ${r.perm === 'write' ? 'chip-warn' : ''}">${r.perm === 'write' ? @Json.Serialize(T["share.perm.write"].Value) : @Json.Serialize(T["share.perm.read"].Value)}</span>
+            <button class="btn btn-ghost" onclick="pm_revoke('${r.id}')">✕</button>
+        </div>`).join('');
+}
+async function pm_revoke(id) {
+    const r = await fetch('/api/v1/direct-shares/' + id, { method: 'DELETE', credentials: 'same-origin' });
+    if (r.ok) await pm_reload();
 }
 
 // ── Favorite toggle ───────────────────────────────────────────

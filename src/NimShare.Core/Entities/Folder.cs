@@ -42,6 +42,15 @@ public class Folder
     /// </summary>
     public string? Color { get; set; }
 
+    /// <summary>
+    /// v1.10.104 (Stage 2, „Windows-ACL"): only meaningful on Public-scope
+    /// folders. When true, the folder subtree is hidden from ordinary Public
+    /// browsers — visible only to the creator, an Admin, or a user with an
+    /// explicit DirectShare grant reaching this folder (or one of its
+    /// ancestors). Personal + Group scopes ignore this flag.
+    /// </summary>
+    public bool IsPrivate { get; set; }
+
     public ICollection<Folder> Children { get; set; } = new List<Folder>();
     public ICollection<StorageFile> Files { get; set; } = new List<StorageFile>();
 }

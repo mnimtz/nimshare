@@ -313,6 +313,40 @@ struct DirectShareGroupOption: Codable, Identifiable, Hashable {
     let name: String
 }
 
+// v1.10.104: Folder-Permissions Sheet.
+struct FolderPermissionsDto: Codable {
+    let folderId: UUID
+    let folderName: String
+    let scope: String
+    let isPrivate: Bool
+    let canManage: Bool
+    let userGrants: [FolderPermissionUserGrant]
+    let groupGrants: [FolderPermissionGroupGrant]
+}
+
+struct FolderPermissionUserGrant: Codable, Identifiable, Hashable {
+    let id: UUID
+    let userId: UUID?
+    let displayName: String?
+    let email: String?
+    let permission: String
+    let createdAt: Date
+
+    var label: String { displayName ?? email ?? "?" }
+    var permissionEnum: DirectSharePermission { DirectSharePermission(rawValue: permission.capitalized) ?? .read }
+}
+
+struct FolderPermissionGroupGrant: Codable, Identifiable, Hashable {
+    let id: UUID
+    let groupId: UUID?
+    let displayName: String?
+    let permission: String
+    let createdAt: Date
+
+    var label: String { displayName ?? "?" }
+    var permissionEnum: DirectSharePermission { DirectSharePermission(rawValue: permission.capitalized) ?? .read }
+}
+
 struct SharedWithMeItemDto: Codable, Identifiable, Hashable {
     let kind: String     // "file" | "folder"
     let id: UUID

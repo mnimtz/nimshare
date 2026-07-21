@@ -1281,4 +1281,16 @@ Thanks for using NimShare.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Moderation</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Permissions</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Permissions</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Switch this Public folder to private and only the people or groups you name below will see it. Everyone else is denied access — even from the browser tree, search, and AI chat.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Only for people I grant access to</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Private folder — hidden from everyone without an explicit grant.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Private</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Add a user or group</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>No one has been granted access yet.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>Could not load the permissions</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>Could not change the visibility</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>You cannot change permissions on this folder.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Pick a user from the suggestions.</value></data>
 </root>

@@ -421,6 +421,23 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // MARK: - v1.10.104: Folder permissions (Public „Windows-ACL")
+
+    func folderPermissions(id: UUID) async throws -> FolderPermissionsDto {
+        let req = request("GET", "api/v1/folders/\(id)/permissions")
+        let (data, _) = try await perform(req)
+        return try decode(FolderPermissionsDto.self, data)
+    }
+
+    struct SetFolderPrivacyBody: Encodable { let isPrivate: Bool }
+    struct SetFolderPrivacyResponse: Decodable { let id: UUID; let isPrivate: Bool }
+    func setFolderPrivacy(id: UUID, isPrivate: Bool) async throws -> Bool {
+        let body = try Self.jsonEncoder.encode(SetFolderPrivacyBody(isPrivate: isPrivate))
+        let req = request("PATCH", "api/v1/folders/\(id)/privacy", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(SetFolderPrivacyResponse.self, data).isPrivate
+    }
+
     func sharedWithMe() async throws -> [SharedWithMeItemDto] {
         let req = request("GET", "api/v1/direct-shares/shared-with-me")
         let (data, _) = try await perform(req)

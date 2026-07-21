@@ -126,6 +126,9 @@ public class BrowseController : Controller
     private async Task<IActionResult> RenderCurrentFolder(Folder current, User me, FileScope scope, Guid? groupId, CancellationToken ct)
     {
         var subs = await _folders.ListSubfoldersAsync(current, ct);
+        // v1.10.104: für den Public-Scope die für den User verborgenen
+        // Private-Subordner rausfiltern.
+        subs = await _folders.FilterVisibleSubfoldersAsync(subs, me, ct);
         var files = await _folders.ListFilesAsync(current, ct);
         var ancestry = await _folders.GetAncestryAsync(current, ct);
         var canWrite = await _folders.CanWriteAsync(current, me, ct);
@@ -305,6 +308,83 @@ public class BrowseController : Controller
     }
 
     /// <summary>
+    /// v1.10.104 (Stage 2 „Windows-ACL"): Owner + Admin schalten einen
+    /// Public-Ordner privat. Ist er privat, sehen ihn nur noch Owner,
+    /// Admin und User/Gruppen mit einem DirectShare-Grant. Grants selbst
+    /// werden über /api/v1/direct-shares verwaltet (existierende API).
+    /// </summary>
+    public record PrivacyReq(bool IsPrivate);
+
+    [HttpPatch("/api/v1/folders/{id:guid}/privacy")]
+    public async Task<IActionResult> UpdateFolderPrivacy(Guid id, [FromBody] PrivacyReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        // Nur Owner (CreatedByUserId) und Admin dürfen den Privacy-Toggle
+        // umlegen. CanManageAsync validiert genau das + verhindert dass
+        // wir einen Root oder Fremdordner umschalten.
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        if (folder.Scope != FileScope.Public)
+            return Problem(statusCode: 422, title: "Privacy is only meaningful on Public-scope folders.");
+        if (folder.ParentFolderId is null)
+            return Problem(statusCode: 422, title: "Cannot mark the Public root as private.");
+        folder.IsPrivate = req.IsPrivate;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { id = folder.Id, isPrivate = folder.IsPrivate });
+    }
+
+    /// <summary>
+    /// v1.10.104: Kombinierter Read-Endpoint für die Berechtigungen-UI:
+    /// aktueller IsPrivate-Zustand + alle Grants (User + Group) auf DIESEN
+    /// Ordner. Wir joinen DirectShare→User/Group für kompakte Anzeige.
+    /// </summary>
+    [HttpGet("/api/v1/folders/{id:guid}/permissions")]
+    public async Task<IActionResult> FolderPermissions(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanReadAsync(folder, me, ct)) return Forbid();
+
+        var userGrants = await _db.DirectShares
+            .Where(s => s.FolderId == id && s.TargetUserId != null)
+            .Include(s => s.TargetUser)
+            .Select(s => new {
+                id = s.Id,
+                kind = "user",
+                userId = s.TargetUserId,
+                displayName = s.TargetUser!.DisplayName,
+                email = s.TargetUser.Email,
+                permission = s.Permission.ToString().ToLowerInvariant(),
+                createdAt = s.CreatedAt,
+            })
+            .ToListAsync(ct);
+        var groupGrants = await _db.DirectShares
+            .Where(s => s.FolderId == id && s.TargetGroupId != null)
+            .Include(s => s.TargetGroup)
+            .Select(s => new {
+                id = s.Id,
+                kind = "group",
+                groupId = s.TargetGroupId,
+                displayName = s.TargetGroup!.Name,
+                permission = s.Permission.ToString().ToLowerInvariant(),
+                createdAt = s.CreatedAt,
+            })
+            .ToListAsync(ct);
+        var canManage = await _folders.CanManageAsync(folder, me, ct);
+        return Ok(new {
+            folderId = folder.Id,
+            folderName = folder.Name,
+            scope = folder.Scope.ToString(),
+            isPrivate = folder.IsPrivate,
+            canManage,
+            userGrants,
+            groupGrants,
+        });
+    }
+
+    /// <summary>
     /// v1.10.96: Count-Endpoint für die 2-stufige Löschbestätigung. Frontend
     /// ruft diesen vor dem Delete-Post; wenn Inhalt gefunden → Extra-Frage
     /// „X Dateien + Y Unterordner mit in den Papierkorb?"
@@ -343,6 +423,14 @@ public class BrowseController : Controller
             q = q.Where(f => myGroupIds.Contains(f.OwnerGroupId!.Value) || me.Role == UserRole.Admin);
         }
         var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
+        // v1.10.104: Copy/Move-Dropdown darf verborgene Private-Ordner
+        // nicht anbieten.
+        if (s == FileScope.Public && me.Role != UserRole.Admin)
+        {
+            var hidden = await _access.GetHiddenPublicFolderIdsAsync(me, ct);
+            if (hidden.Count > 0)
+                all = all.Where(f => !hidden.Contains(f.Id)).ToList();
+        }
         // Build path label per folder by walking up.
         var byId = all.ToDictionary(f => f.Id);
         string PathOf(Folder f)
@@ -374,6 +462,14 @@ public class BrowseController : Controller
          || (f.Scope == FileScope.Public)
          || (f.Scope == FileScope.Group && (myGroupIds.Contains(f.OwnerGroupId!.Value) || me.Role == UserRole.Admin)));
         var all = await q.OrderBy(f => f.Scope).ThenBy(f => f.Name).ToListAsync(ct);
+        // v1.10.104: Copy/Move-Modal darf keine Ziele in verborgenen
+        // Private-Public-Subtrees anbieten (der User kann sie nicht sehen).
+        if (me.Role != UserRole.Admin)
+        {
+            var hidden = await _access.GetHiddenPublicFolderIdsAsync(me, ct);
+            if (hidden.Count > 0)
+                all = all.Where(f => !hidden.Contains(f.Id)).ToList();
+        }
         var byId = all.ToDictionary(f => f.Id);
         string PathOf(Folder f)
         {
@@ -429,6 +525,15 @@ public class BrowseController : Controller
         // andere behalten ihren tatsächlichen Ordner-Namen — sonst sieht man
         // "Public / Public" statt "Public / <realer-Name>".
         var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
+        // v1.10.104: Private-Ordner im Public-Scope aus dem Tree entfernen,
+        // wenn der User keinen Grant hat. Personal + Group werden vom
+        // Endpoint sowieso vorgefiltert (own / member-of).
+        if (s == FileScope.Public && me.Role != UserRole.Admin)
+        {
+            var hidden = await _access.GetHiddenPublicFolderIdsAsync(me, ct);
+            if (hidden.Count > 0)
+                all = all.Where(f => !hidden.Contains(f.Id)).ToList();
+        }
         var rootCandidates = all.Where(f => f.ParentFolderId is null)
                                 .OrderBy(f => f.CreatedAt)
                                 .ThenBy(f => f.Id)
@@ -512,6 +617,8 @@ public class BrowseController : Controller
         if (current is null) return NotFound();
         if (!await _folders.CanReadAsync(current, me, ct)) return Forbid();
         var subs = await _folders.ListSubfoldersAsync(current, ct);
+        // v1.10.104: gleicher Privacy-Filter wie in der Web-Route.
+        subs = await _folders.FilterVisibleSubfoldersAsync(subs, me, ct);
         var files = await _folders.ListFilesAsync(current, ct);
         var ancestry = await _folders.GetAncestryAsync(current, ct);
         var canWrite = await _folders.CanWriteAsync(current, me, ct);

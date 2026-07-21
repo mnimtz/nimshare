@@ -1271,4 +1271,16 @@ Merci d'utiliser NimShare.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Modération</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Autorisations</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Autorisations</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Passe ce dossier public en privé : seules les personnes et les groupes ajoutés ci-dessous le verront. Toutes les autres visibilités (arborescence, recherche, chat IA) sont bloquées.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Visible uniquement pour les personnes autorisées</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Dossier privé — masqué à toute personne sans autorisation explicite.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Privé</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Ajouter un utilisateur ou un groupe</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>Personne n'a encore d'accès.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>Impossible de charger les autorisations</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>Impossible de modifier la visibilité</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>Tu ne peux pas modifier les autorisations de ce dossier.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Choisis un utilisateur dans les suggestions.</value></data>
 </root>

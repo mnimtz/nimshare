@@ -20,6 +20,14 @@ public interface IFolderService
     Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default);
     Task<List<StorageFile>> ListFilesAsync(Folder parent, CancellationToken ct = default);
 
+    /// <summary>
+    /// v1.10.104 — filtert eine bereits geladene Unterordner-Liste um
+    /// alle Public-Ordner, die für den User via IsPrivate + fehlendem
+    /// Grant verborgen sind. Personal + Group werden unverändert
+    /// durchgereicht.
+    /// </summary>
+    Task<List<Folder>> FilterVisibleSubfoldersAsync(List<Folder> subs, User user, CancellationToken ct = default);
+
     Task<bool> CanReadAsync(Folder folder, User user, CancellationToken ct = default);
     Task<bool> CanWriteAsync(Folder folder, User user, CancellationToken ct = default);
     Task<bool> CanManageAsync(Folder folder, User user, CancellationToken ct = default);
@@ -173,8 +181,31 @@ public class FolderService : IFolderService
         await _db.SaveChangesAsync(ct);
     }
 
-    public Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default) =>
-        _db.Folders.Where(f => f.ParentFolderId == parent.Id).OrderBy(f => f.Name).ToListAsync(ct);
+    public async Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default)
+    {
+        var subs = await _db.Folders
+            .Where(f => f.ParentFolderId == parent.Id)
+            .OrderBy(f => f.Name)
+            .ToListAsync(ct);
+        if (parent.Scope != FileScope.Public || subs.Count == 0) return subs;
+        // v1.10.104: Private-Ordner ohne Grant für den aktuellen User
+        // sind unsichtbar. Der Owner + Admin sehen alles (IsFolderHidden
+        // gibt für sie false zurück). Kein AuthContext hier — Filter ruft
+        // der Caller mit `FilterVisibleSubfoldersAsync`.
+        return subs;
+    }
+
+    public async Task<List<Folder>> FilterVisibleSubfoldersAsync(List<Folder> subs, User user, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin || subs.Count == 0) return subs;
+        var visible = new List<Folder>(subs.Count);
+        foreach (var f in subs)
+        {
+            if (f.Scope != FileScope.Public) { visible.Add(f); continue; }
+            if (!await _access.IsFolderHiddenByPrivacyAsync(user, f, ct)) visible.Add(f);
+        }
+        return visible;
+    }
 
     public Task<List<StorageFile>> ListFilesAsync(Folder parent, CancellationToken ct = default) =>
         _db.Files
@@ -185,7 +216,7 @@ public class FolderService : IFolderService
 
     public async Task<bool> CanReadAsync(Folder folder, User user, CancellationToken ct = default)
     {
-        return folder.Scope switch
+        var baseGrant = folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id || user.Role == UserRole.Admin,
             FileScope.Public => user.Role == UserRole.Admin || user.PublicCanRead,
@@ -193,6 +224,12 @@ public class FolderService : IFolderService
                 && (user.Role == UserRole.Admin || await _access.IsGroupMemberAsync(user, g, ct)),
             _ => false,
         };
+        if (!baseGrant) return false;
+        // v1.10.104: Private-Ordner im Public-Scope brauchen zusätzlich
+        // einen DirectShare-Grant (oder Ersteller/Admin).
+        if (folder.Scope == FileScope.Public
+            && await _access.IsFolderHiddenByPrivacyAsync(user, folder, ct)) return false;
+        return true;
     }
 
     public async Task<bool> CanWriteAsync(Folder folder, User user, CancellationToken ct = default)
@@ -205,6 +242,11 @@ public class FolderService : IFolderService
             _ => false,
         };
         if (!baseGrant) return false;
+
+        // v1.10.104: Private-Ordner im Public-Scope: Grant muss existieren
+        // (sonst siehst du den Ordner gar nicht → schreiben schon gar nicht).
+        if (folder.Scope == FileScope.Public
+            && await _access.IsFolderHiddenByPrivacyAsync(user, folder, ct)) return false;
 
         // Sub-folder permission override: if the caller (or any of their groups)
         // has a Read-max cap on this folder or any of its ancestors, they lose
@@ -219,11 +261,16 @@ public class FolderService : IFolderService
         var baseGrant = folder.Scope switch
         {
             FileScope.Personal => folder.OwnerUserId == user.Id,
-            FileScope.Public => false, // only admins manage public roots
+            // v1.10.104: Ordner-Ersteller im Public-Scope darf seinen
+            // Ordner managen — vor allem den IsPrivate-Toggle setzen.
+            // Vorher: nur Admin.
+            FileScope.Public => folder.CreatedByUserId == user.Id,
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupManagerAsync(user, g, ct),
             _ => false,
         };
         if (!baseGrant) return false;
+        if (folder.Scope == FileScope.Public
+            && await _access.IsFolderHiddenByPrivacyAsync(user, folder, ct)) return false;
         return !await HasReadOnlyOverrideAsync(folder, user, ct);
     }
 

@@ -1271,4 +1271,16 @@ Gracias por usar NimShare.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Moderación</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Permisos</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Permisos</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Convierte esta carpeta pública en privada: solo las personas y los grupos añadidos abajo podrán verla. Todo lo demás (árbol, búsqueda, chat de IA) queda oculto.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Solo visible para las personas autorizadas</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Carpeta privada — oculta para quien no tenga un permiso explícito.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Privada</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Añadir usuario o grupo</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>Nadie tiene acceso todavía.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>No se pudieron cargar los permisos</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>No se pudo cambiar la visibilidad</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>No puedes cambiar los permisos de esta carpeta.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Elige un usuario de las sugerencias.</value></data>
 </root>

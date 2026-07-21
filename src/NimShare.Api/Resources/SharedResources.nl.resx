@@ -1270,4 +1270,16 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Moderatie</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Machtigingen</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Machtigingen</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Zet deze openbare map op privé: alleen de personen en groepen die hieronder staan zien hem nog. Alle anderen worden geblokkeerd — ook uit boomweergave, zoeken en AI-chat.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Alleen zichtbaar voor uitgenodigde personen</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Privémap — verborgen voor iedereen zonder expliciete toegang.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Privé</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Gebruiker of groep toevoegen</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>Nog niemand heeft toegang.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>Machtigingen konden niet worden geladen</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>Zichtbaarheid kon niet worden gewijzigd</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>Je mag de machtigingen van deze map niet wijzigen.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Kies een gebruiker uit de suggesties.</value></data>
 </root>

@@ -1271,4 +1271,16 @@ Grazie per usare NimShare.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Moderazione</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Autorizzazioni</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Autorizzazioni</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Rendi privata questa cartella pubblica: solo le persone e i gruppi elencati qui sotto potranno vederla. Tutte le altre visualizzazioni (albero, ricerca, chat IA) restano bloccate.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Visibile solo alle persone autorizzate</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Cartella privata — nascosta a chiunque non abbia un permesso esplicito.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Privata</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Aggiungi utente o gruppo</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>Nessuno ha ancora accesso.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>Impossibile caricare le autorizzazioni</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>Impossibile modificare la visibilità</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>Non puoi modificare le autorizzazioni di questa cartella.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Scegli un utente tra i suggerimenti.</value></data>
 </root>

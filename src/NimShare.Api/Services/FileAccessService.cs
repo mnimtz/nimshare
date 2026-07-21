@@ -23,6 +23,30 @@ public interface IFileAccessService
 {
     IQueryable<StorageFile> ApplyReadFilter(IQueryable<StorageFile> q, User user);
 
+    /// <summary>
+    /// v1.10.104 — Variante mit einem vorbereiteten Set „vor dem Nutzer
+    /// versteckter Ordner-IDs" (Public-Scope + Ordner ist privat + kein
+    /// Grant). Nutz die für Bulk-Reads: Suche, RAG-Chat, Aktivität, damit
+    /// Files in privaten Public-Ordnern nicht durchsickern. Für einfache
+    /// Aufrufe kann der Overload ohne Set verwendet werden (kein Filter).
+    /// </summary>
+    IQueryable<StorageFile> ApplyReadFilter(IQueryable<StorageFile> q, User user, HashSet<Guid>? hiddenPublicFolderIds);
+
+    /// <summary>
+    /// v1.10.104 — Liefert alle Folder-IDs im Public-Scope, die für den
+    /// User verborgen sind, weil sie (oder ein Vorfahre) IsPrivate=true
+    /// gesetzt haben und der User weder Ersteller noch per DirectShare
+    /// berechtigt ist. Admin bekommt immer ein leeres Set.
+    /// </summary>
+    Task<HashSet<Guid>> GetHiddenPublicFolderIdsAsync(User user, CancellationToken ct = default);
+
+    /// <summary>
+    /// v1.10.104 — True, wenn dieser Ordner selbst oder ein Vorfahre
+    /// IsPrivate ist und der User weder Ersteller noch DirectShare-berechtigt
+    /// ist. Immer false für Nicht-Public-Scopes und für Admins.
+    /// </summary>
+    Task<bool> IsFolderHiddenByPrivacyAsync(User user, Folder folder, CancellationToken ct = default);
+
     Task<bool> CanReadAsync(User user, StorageFile file, CancellationToken ct = default);
     Task<bool> CanUploadIntoAsync(User user, FileScope scope, Guid? groupId, CancellationToken ct = default);
     Task<bool> CanDeleteAsync(User user, StorageFile file, CancellationToken ct = default);
@@ -48,6 +72,9 @@ public class FileAccessService : IFileAccessService
     public FileAccessService(NimShareDbContext db) => _db = db;
 
     public IQueryable<StorageFile> ApplyReadFilter(IQueryable<StorageFile> q, User user)
+        => ApplyReadFilter(q, user, hiddenPublicFolderIds: null);
+
+    public IQueryable<StorageFile> ApplyReadFilter(IQueryable<StorageFile> q, User user, HashSet<Guid>? hiddenPublicFolderIds)
     {
         if (user.Role == UserRole.Admin) return q;
         var myGroups = _db.GroupMemberships.Where(m => m.UserId == user.Id).Select(m => m.GroupId);
@@ -65,12 +92,104 @@ public class FileAccessService : IFileAccessService
             .Select(s => s.FolderId!.Value);
 
         var publicReadable = user.Role == UserRole.Admin || user.PublicCanRead;
+        // v1.10.104: Public + Private-Ordner unsichtbar für Nutzer ohne
+        // Grant. Der Guard wirkt zusätzlich zur Direct-Share-Beziehung —
+        // ein DirectShare auf die Datei oder den Ordner selbst hebt den
+        // Privacy-Filter nicht auf; wer den Private-Root nicht sehen darf,
+        // sieht auch Files darin nicht via Bulk-Reads.
+        var hidden = hiddenPublicFolderIds;
         return q.Where(f =>
             (f.Scope == FileScope.Personal && f.OwnerId == user.Id) ||
-            (f.Scope == FileScope.Public && publicReadable) ||
+            (f.Scope == FileScope.Public && publicReadable
+                && (hidden == null || f.FolderId == null || !hidden.Contains(f.FolderId.Value))) ||
             (f.Scope == FileScope.Group && f.GroupId != null && myGroups.Contains(f.GroupId.Value)) ||
             directFileIds.Contains(f.Id) ||
             (f.FolderId != null && directFolderIds.Contains(f.FolderId.Value)));
+    }
+
+    public async Task<HashSet<Guid>> GetHiddenPublicFolderIdsAsync(User user, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin) return new HashSet<Guid>();
+
+        // 1) Alle Private-Roots im Public-Scope
+        var privateRoots = await _db.Folders
+            .Where(f => f.Scope == FileScope.Public && f.IsPrivate)
+            .Select(f => new { f.Id, f.CreatedByUserId })
+            .ToListAsync(ct);
+        if (privateRoots.Count == 0) return new HashSet<Guid>();
+
+        // 2) Grants: hat der User (via self oder Group) einen DirectShare?
+        var myGroupIds = await _db.GroupMemberships
+            .Where(m => m.UserId == user.Id)
+            .Select(m => m.GroupId)
+            .ToListAsync(ct);
+        var rootIds = privateRoots.Select(r => r.Id).ToList();
+        var grantedFolderIds = await _db.DirectShares
+            .Where(s => s.FolderId != null && rootIds.Contains(s.FolderId!.Value)
+                && (s.TargetUserId == user.Id
+                    || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId!.Value))))
+            .Select(s => s.FolderId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+        var grantedSet = new HashSet<Guid>(grantedFolderIds);
+
+        // 3) Für den User inaccessible: Private-Root ohne Grant, dessen
+        //    Ersteller er nicht ist. (Ersteller sieht seinen eigenen
+        //    Private-Ordner immer — sonst könnte niemand den ACL setzen.)
+        var inaccessible = privateRoots
+            .Where(r => r.CreatedByUserId != user.Id && !grantedSet.Contains(r.Id))
+            .Select(r => r.Id)
+            .ToHashSet();
+        if (inaccessible.Count == 0) return new HashSet<Guid>();
+
+        // 4) BFS über Descendants — jedes Level in einer Query, damit wir
+        //    grosse Public-Bäume nicht komplett laden müssen.
+        var hidden = new HashSet<Guid>(inaccessible);
+        var frontier = inaccessible.ToList();
+        var safety = 64;
+        while (frontier.Count > 0 && safety-- > 0)
+        {
+            var parents = frontier;
+            var children = await _db.Folders
+                .Where(f => f.ParentFolderId != null && parents.Contains(f.ParentFolderId!.Value))
+                .Select(f => f.Id)
+                .ToListAsync(ct);
+            frontier = children.Where(id => hidden.Add(id)).ToList();
+        }
+        return hidden;
+    }
+
+    public async Task<bool> IsFolderHiddenByPrivacyAsync(User user, Folder folder, CancellationToken ct = default)
+    {
+        if (user.Role == UserRole.Admin) return false;
+        if (folder.Scope != FileScope.Public) return false;
+
+        // Walk ancestor chain (incl. this folder) und finde den ersten
+        // Private-Root. Wenn keiner → nicht hidden.
+        var visited = new HashSet<Guid>();
+        Folder? cursor = folder;
+        var safety = 64;
+        while (cursor != null && visited.Add(cursor.Id) && safety-- > 0)
+        {
+            if (cursor.IsPrivate)
+            {
+                if (cursor.CreatedByUserId == user.Id) return false;
+                // Grant-Check am Private-Root
+                var privateRootId = cursor.Id;
+                var myGroupIds = _db.GroupMemberships
+                    .Where(m => m.UserId == user.Id)
+                    .Select(m => m.GroupId);
+                var hasGrant = await _db.DirectShares.AnyAsync(s =>
+                    s.FolderId == privateRootId
+                    && (s.TargetUserId == user.Id
+                        || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId!.Value))),
+                    ct);
+                return !hasGrant;
+            }
+            if (cursor.ParentFolderId is not Guid pid) break;
+            cursor = await _db.Folders.FindAsync(new object[] { pid }, ct);
+        }
+        return false;
     }
 
     public async Task<bool> CanReadAsync(User user, StorageFile file, CancellationToken ct = default)
@@ -79,12 +198,25 @@ public class FileAccessService : IFileAccessService
         var byScope = file.Scope switch
         {
             FileScope.Personal => file.OwnerId == user.Id,
-            FileScope.Public => user.PublicCanRead,
+            FileScope.Public => user.PublicCanRead && !await IsFileInHiddenPrivateFolderAsync(user, file, ct),
             FileScope.Group => file.GroupId is Guid g && await IsGroupMemberAsync(user, g, ct),
             _ => false
         };
         if (byScope) return true;
         return await HasDirectShareAsync(user, file.Id, DirectSharePermission.Read, ct);
+    }
+
+    /// <summary>
+    /// v1.10.104 — Hilfsmethode: liegt die Datei in einem Public-Ordner,
+    /// dessen Private-Root für den User verborgen ist? Wenn ja, blockiert
+    /// die Scope-Berechtigung „Public"; DirectShare kann trotzdem greifen.
+    /// </summary>
+    private async Task<bool> IsFileInHiddenPrivateFolderAsync(User user, StorageFile file, CancellationToken ct)
+    {
+        if (file.FolderId is not Guid fid) return false;
+        var folder = await _db.Folders.FindAsync(new object[] { fid }, ct);
+        if (folder is null) return false;
+        return await IsFolderHiddenByPrivacyAsync(user, folder, ct);
     }
 
     public async Task<bool> CanUploadIntoAsync(User user, FileScope scope, Guid? groupId, CancellationToken ct = default)

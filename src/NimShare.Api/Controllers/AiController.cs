@@ -308,8 +308,12 @@ public class AiController : ControllerBase
         var escaped = q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
         var like = "%" + escaped + "%";
 
+        // v1.10.104: Private-Public-Ordner respektieren — sonst leakt
+        // die Volltextsuche Filenames+Snippets aus Ordnern, die der User
+        // im Browser gar nicht sehen darf.
+        var hidden = await access.GetHiddenPublicFolderIdsAsync(me, ct);
         var readable = access.ApplyReadFilter(
-            _db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me);
+            _db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me, hidden);
         if (Enum.TryParse<NimShare.Core.Entities.FileScope>(req.Scope, true, out var sc))
         {
             readable = sc == NimShare.Core.Entities.FileScope.Group && req.GroupId is Guid g
@@ -366,7 +370,9 @@ public class AiController : ControllerBase
         var qv = await provider.EmbedAsync(req.Query, ct);
         if (qv is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
 
-        var readable = access.ApplyReadFilter(_db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me);
+        // v1.10.104: siehe KeywordSearch — Private-Ordner filtern.
+        var hidden = await access.GetHiddenPublicFolderIdsAsync(me, ct);
+        var readable = access.ApplyReadFilter(_db.Files.Where(f => f.Status == NimShare.Core.Entities.StorageFileStatus.Ready), me, hidden);
         if (Enum.TryParse<NimShare.Core.Entities.FileScope>(req.Scope, true, out var sc))
         {
             readable = sc == NimShare.Core.Entities.FileScope.Group && req.GroupId is Guid g

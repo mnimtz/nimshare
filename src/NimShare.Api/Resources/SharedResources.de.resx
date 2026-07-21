@@ -1287,4 +1287,16 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>Haftungsausschluss für externe Links</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Für Inhalte externer Links wird trotz sorgfältiger Prüfung keine Haftung übernommen. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Moderation</value></data>
+  <data name="actions.permissions" xml:space="preserve"><value>Berechtigungen</value></data>
+  <data name="permissions.title" xml:space="preserve"><value>Berechtigungen</value></data>
+  <data name="permissions.explain" xml:space="preserve"><value>Schalte diesen öffentlichen Ordner auf privat und nur die Personen und Gruppen aus der Liste sehen ihn noch. Alle anderen fliegen raus — auch aus Baumansicht, Suche und AI-Chat.</value></data>
+  <data name="permissions.private_toggle" xml:space="preserve"><value>Nur für explizit Berechtigte sichtbar</value></data>
+  <data name="permissions.private_hint" xml:space="preserve"><value>Privater Ordner — unsichtbar für alle ohne expliziten Zugriff.</value></data>
+  <data name="permissions.private" xml:space="preserve"><value>Privat</value></data>
+  <data name="permissions.add_row" xml:space="preserve"><value>Person oder Gruppe hinzufügen</value></data>
+  <data name="permissions.no_grants" xml:space="preserve"><value>Noch niemand berechtigt.</value></data>
+  <data name="permissions.load_failed" xml:space="preserve"><value>Berechtigungen konnten nicht geladen werden</value></data>
+  <data name="permissions.toggle_failed" xml:space="preserve"><value>Sichtbarkeit konnte nicht geändert werden</value></data>
+  <data name="permissions.no_manage" xml:space="preserve"><value>Du darfst die Berechtigungen dieses Ordners nicht ändern.</value></data>
+  <data name="share.pick_user" xml:space="preserve"><value>Wähle eine Person aus den Vorschlägen.</value></data>
 </root>

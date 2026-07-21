@@ -47,6 +47,14 @@ struct FolderBrowserView: View {
     }
     // v1.10.79: Delete-Confirmation. Kein One-Tap-Datenverlust mehr.
     @State private var pendingDelete: (id: UUID, name: String)?
+    // v1.10.104: Berechtigungen-Sheet (Public „Windows-ACL"). Nur für
+    // Public-Scope-Ordner sinnvoll — Long-Press blendet den Eintrag
+    // in Personal/Group aus.
+    struct PermissionsTargetRef: Identifiable {
+        let id: UUID
+        let name: String
+    }
+    @State private var permissionsTarget: PermissionsTargetRef?
 
     struct LinkResult: Identifiable {
         let id = UUID()
@@ -115,6 +123,10 @@ struct FolderBrowserView: View {
         }
         .sheet(item: $directShareTarget) { target in
             DirectShareSheet(target: target, itemName: directShareName)
+        }
+        // v1.10.104: PermissionsSheet für Public-Ordner (Privacy-Toggle + ACL)
+        .sheet(item: $permissionsTarget) { ref in
+            PermissionsSheet(folderId: ref.id, folderName: ref.name)
         }
         .sheet(item: $linkResult) { r in
             NavigationStack {
@@ -234,6 +246,16 @@ struct FolderBrowserView: View {
                                 directShareName = f.name
                                 directShareTarget = .folder(f.id)
                             } label: { Label("Berechtigungen…", systemImage: "person.crop.circle.badge.plus") }
+                            // v1.10.104: Für Öffentliche Ordner zusätzlich der Windows-ACL-
+                            // Style Sheet — Privat-Schalter + Grants. Berechtigung wird
+                            // serverseitig validiert (nur Owner/Admin darf toggeln).
+                            if scope.lowercased() == "public" {
+                                Button {
+                                    permissionsTarget = PermissionsTargetRef(id: f.id, name: f.name)
+                                } label: {
+                                    Label("🔒 Windows-Berechtigungen", systemImage: "lock.shield")
+                                }
+                            }
                             Button {
                                 newFolderParent = f.id
                                 newFolderName = ""
