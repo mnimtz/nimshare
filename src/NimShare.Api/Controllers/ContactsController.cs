@@ -137,6 +137,37 @@ public class ContactsApiController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// v1.10.74: Öffentliches User-Directory. Marcus's Wunsch — im Adressbuch
+    /// sowohl private Kontakte (Contacts) als auch alle NimShare-User als
+    /// Read-Only-Einträge sichtbar. iOS zeigt die zwei Listen als getrennte
+    /// Segmente ("Meine" / "NimShare-User"). Auth: ApiUser reicht — jeder
+    /// eingeloggte User darf die Kollegen-Liste sehen (klassisches Directory-
+    /// Verhalten). Sensitive Felder (Role, Quota, LastLoginAt) sind nicht im
+    /// DTO — nur was für Signieren/Adressieren nötig ist: Name + E-Mail.
+    /// Gelöschte oder deaktivierte User werden ausgeblendet, der User selbst
+    /// auch (kein Sinn sich selbst als Kontakt zu haben).
+    /// </summary>
+    public record DirectoryUserDto(Guid Id, string Name, string Email, bool IsSelf);
+
+    [HttpGet("directory")]
+    public async Task<IActionResult> Directory(string? q, int limit = 500, CancellationToken ct = default)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var query = _db.Users.Where(u => u.IsActive && u.Id != me.Id);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var needle = q.Trim().ToLower();
+            query = query.Where(u =>
+                u.Email.ToLower().Contains(needle) || u.DisplayName.ToLower().Contains(needle));
+        }
+        query = query.OrderBy(u => u.DisplayName).ThenBy(u => u.Email);
+        var rows = await query.Take(Math.Clamp(limit, 1, 1000))
+            .Select(u => new DirectoryUserDto(u.Id, u.DisplayName, u.Email, false))
+            .ToListAsync(ct);
+        return Ok(rows);
+    }
+
     /// <summary>Called by the signature wizard on send to bump LastUsedAt +
     /// UseCount for participants that already exist in the address book, and
     /// silently create ones that don't. Safe to no-op if turned off later.</summary>

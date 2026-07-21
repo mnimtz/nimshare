@@ -940,6 +940,11 @@ Apri questo link per firmare:
   <data name="email_tpl.ai_generate"><value>Genera</value></data>
 
   <data name="contacts.title"><value>Rubrica</value></data>
+  <data name="contacts.tab_mine"><value>I miei contatti</value></data>
+  <data name="contacts.tab_directory"><value>Utenti NimShare</value></data>
+  <data name="contacts.directory_empty"><value>Nessun altro utente attivo.</value></data>
+  <data name="contacts.save_as_mine"><value>Salva come contatto</value></data>
+  <data name="contacts.saved_ok"><value>Contatto salvato.</value></data>
   <data name="contacts.lede"><value>Contatti personali per precompilare le richieste di firma. Autocomplete delle email nel wizard.</value></data>
   <data name="contacts.new"><value>Nuovo contatto</value></data>
   <data name="contacts.empty"><value>Nessun contatto. Ogni destinatario di una firma viene aggiunto automaticamente.</value></data>

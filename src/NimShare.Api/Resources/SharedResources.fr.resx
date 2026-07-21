@@ -940,6 +940,11 @@ Ouvrez ce lien pour signer :
   <data name="email_tpl.ai_generate"><value>Générer</value></data>
 
   <data name="contacts.title"><value>Carnet d'adresses</value></data>
+  <data name="contacts.tab_mine"><value>Mes contacts</value></data>
+  <data name="contacts.tab_directory"><value>Utilisateurs NimShare</value></data>
+  <data name="contacts.directory_empty"><value>Aucun autre utilisateur actif.</value></data>
+  <data name="contacts.save_as_mine"><value>Enregistrer comme contact</value></data>
+  <data name="contacts.saved_ok"><value>Contact enregistré.</value></data>
   <data name="contacts.lede"><value>Contacts personnels pour préremplir les demandes de signature. Autocomplétion des e-mails dans l'assistant.</value></data>
   <data name="contacts.new"><value>Nouveau contact</value></data>
   <data name="contacts.empty"><value>Aucun contact. Chaque destinataire d'une signature est ajouté automatiquement.</value></data>

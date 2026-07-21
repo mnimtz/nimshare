@@ -939,6 +939,11 @@ Please open this link to sign:
   <data name="email_tpl.ai_generate"><value>Generate</value></data>
 
   <data name="contacts.title"><value>Address book</value></data>
+  <data name="contacts.tab_mine"><value>My contacts</value></data>
+  <data name="contacts.tab_directory"><value>NimShare users</value></data>
+  <data name="contacts.directory_empty"><value>No other active users found.</value></data>
+  <data name="contacts.save_as_mine"><value>Save as contact</value></data>
+  <data name="contacts.saved_ok"><value>Contact saved.</value></data>
   <data name="contacts.lede"><value>Personal contacts used to pre-fill signature requests. Emails are autocompleted in the wizard.</value></data>
   <data name="contacts.new"><value>New contact</value></data>
   <data name="contacts.empty"><value>No contacts yet. Anyone you send a signature request to is added automatically.</value></data>

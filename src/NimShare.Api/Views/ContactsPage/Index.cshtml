@@ -12,8 +12,19 @@
     <button class="btn btn-primary" onclick="openEditor(null)">+ @T["contacts.new"]</button>
 </div>
 
+@* v1.10.74: Segmented Tabs — persönliche Kontakte vs. NimShare-User-Directory *@
 <div class="card" style="margin-bottom:12px">
-    <div class="row" style="gap:8px">
+    <div class="row" style="gap:8px;align-items:center">
+        <div class="seg" role="tablist" style="display:inline-flex;gap:2px;background:var(--tw-gray-100,#eef);padding:3px;border-radius:6px">
+            <button id="tab-mine" class="seg-btn active" role="tab" onclick="setMode('mine')"
+                    style="padding:6px 14px;border:0;background:var(--tw-primary,#085a9c);color:#fff;border-radius:4px;cursor:pointer">
+                👤 @T["contacts.tab_mine"]
+            </button>
+            <button id="tab-dir" class="seg-btn" role="tab" onclick="setMode('dir')"
+                    style="padding:6px 14px;border:0;background:transparent;color:var(--tw-text,#333);border-radius:4px;cursor:pointer">
+                🌍 @T["contacts.tab_directory"]
+            </button>
+        </div>
         <input id="q" placeholder="@T["contacts.search_ph"]" style="flex:1" oninput="reload()"/>
     </div>
 </div>
@@ -71,19 +82,51 @@ function closeDlg(id){ document.getElementById(id).classList.remove('open'); }
 async function api(m,u,b){const o={method:m,headers:{}};if(b){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}const r=await fetch(u,o);if(!r.ok)throw new Error(await r.text());return r.status===204?null:r.json()}
 function esc(s){return String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(d){return d?new Date(d).toLocaleDateString():'—'}
+// v1.10.74: zwei Modi — "mine" (persönlich, editierbar) und "dir"
+// (NimShare-User-Directory, read-only mit "Als Kontakt speichern"-Aktion).
+let currentMode = 'mine';
+function setMode(m) {
+    currentMode = m;
+    document.getElementById('tab-mine').style.background = m === 'mine' ? 'var(--tw-primary, #085a9c)' : 'transparent';
+    document.getElementById('tab-mine').style.color      = m === 'mine' ? '#fff' : 'var(--tw-text, #333)';
+    document.getElementById('tab-dir').style.background  = m === 'dir'  ? 'var(--tw-primary, #085a9c)' : 'transparent';
+    document.getElementById('tab-dir').style.color       = m === 'dir'  ? '#fff' : 'var(--tw-text, #333)';
+    reload();
+}
 async function reload() {
     const q = document.getElementById('q').value.trim();
-    const rows = await api('GET', '/api/v1/contacts' + (q ? '?q=' + encodeURIComponent(q) : ''));
     const el = document.getElementById('list');
-    if (rows.length === 0) { el.innerHTML = '<p class="muted">' + @Json.Serialize(T["contacts.empty"].Value) + '</p>'; return; }
-    el.innerHTML = '<table class="fm-list"><thead><tr><th>' +
-        @Json.Serialize(T["common.name"].Value) + '</th><th>' +
-        @Json.Serialize(T["contacts.email"].Value) + '</th><th>' +
-        @Json.Serialize(T["contacts.company"].Value) + '</th><th>' +
-        @Json.Serialize(T["contacts.tags"].Value) + '</th><th>' +
-        @Json.Serialize(T["contacts.last_used"].Value) + '</th><th></th></tr></thead><tbody>' +
-        rows.map(c => `<tr><td><strong>${esc(c.name)}</strong></td><td class="mono">${esc(c.email)}</td><td class="muted">${esc(c.company||'')}</td><td>${(c.tags||'').split(',').filter(t=>t.trim()).map(t=>'<span class="chip">'+esc(t.trim())+'</span>').join(' ')}</td><td class="muted">${fmt(c.lastUsedAt)}${c.useCount?' ('+c.useCount+'×)':''}</td><td><button class="btn btn-ghost btn-sm" onclick="openEditor('${c.id}')">✎</button> <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="delContact('${c.id}')">🗑</button></td></tr>`).join('') +
-        '</tbody></table>';
+    if (currentMode === 'mine') {
+        const rows = await api('GET', '/api/v1/contacts' + (q ? '?q=' + encodeURIComponent(q) : ''));
+        if (rows.length === 0) { el.innerHTML = '<p class="muted">' + @Json.Serialize(T["contacts.empty"].Value) + '</p>'; return; }
+        el.innerHTML = '<table class="fm-list"><thead><tr><th>' +
+            @Json.Serialize(T["common.name"].Value) + '</th><th>' +
+            @Json.Serialize(T["contacts.email"].Value) + '</th><th>' +
+            @Json.Serialize(T["contacts.company"].Value) + '</th><th>' +
+            @Json.Serialize(T["contacts.tags"].Value) + '</th><th>' +
+            @Json.Serialize(T["contacts.last_used"].Value) + '</th><th></th></tr></thead><tbody>' +
+            rows.map(c => `<tr><td><strong>${esc(c.name)}</strong></td><td class="mono">${esc(c.email)}</td><td class="muted">${esc(c.company||'')}</td><td>${(c.tags||'').split(',').filter(t=>t.trim()).map(t=>'<span class="chip">'+esc(t.trim())+'</span>').join(' ')}</td><td class="muted">${fmt(c.lastUsedAt)}${c.useCount?' ('+c.useCount+'×)':''}</td><td><button class="btn btn-ghost btn-sm" onclick="openEditor('${c.id}')">✎</button> <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="delContact('${c.id}')">🗑</button></td></tr>`).join('') +
+            '</tbody></table>';
+    } else {
+        // Directory-Modus: alle NimShare-User (read-only)
+        let rows;
+        try { rows = await api('GET', '/api/v1/contacts/directory' + (q ? '?q=' + encodeURIComponent(q) : '')); }
+        catch (e) { el.innerHTML = '<p class="muted">' + esc(e.message) + '</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = '<p class="muted">' + @Json.Serialize(T["contacts.directory_empty"].Value) + '</p>'; return; }
+        el.innerHTML = '<table class="fm-list"><thead><tr><th>' +
+            @Json.Serialize(T["common.name"].Value) + '</th><th>' +
+            @Json.Serialize(T["contacts.email"].Value) + '</th><th></th></tr></thead><tbody>' +
+            rows.map(u => `<tr><td><strong>${esc(u.name)}</strong></td><td class="mono">${esc(u.email)}</td><td><button class="btn btn-ghost btn-sm" title="${@Json.Serialize(T["contacts.save_as_mine"].Value)}" onclick='saveAsMine(${JSON.stringify(u.email)}, ${JSON.stringify(u.name)})'>➕ ${@Json.Serialize(T["contacts.save_as_mine"].Value)}</button></td></tr>`).join('') +
+            '</tbody></table>';
+    }
+}
+
+async function saveAsMine(email, name) {
+    try {
+        await api('POST', '/api/v1/contacts', { email, name, company: null, tags: null, notes: null });
+        setMode('mine');
+        nimToast(@Json.Serialize(T["contacts.saved_ok"].Value), { kind: 'success' });
+    } catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }
 async function openEditor(id) {
     if (id === null) {

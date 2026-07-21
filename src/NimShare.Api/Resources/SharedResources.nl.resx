@@ -939,6 +939,11 @@ Open deze link om te tekenen:
   <data name="email_tpl.ai_generate"><value>Genereren</value></data>
 
   <data name="contacts.title"><value>Adresboek</value></data>
+  <data name="contacts.tab_mine"><value>Mijn contacten</value></data>
+  <data name="contacts.tab_directory"><value>NimShare-gebruikers</value></data>
+  <data name="contacts.directory_empty"><value>Geen andere actieve gebruikers.</value></data>
+  <data name="contacts.save_as_mine"><value>Als contact opslaan</value></data>
+  <data name="contacts.saved_ok"><value>Contact opgeslagen.</value></data>
   <data name="contacts.lede"><value>Persoonlijke contacten om handtekeningverzoeken voor in te vullen. E-mails worden in de wizard automatisch aangevuld.</value></data>
   <data name="contacts.new"><value>Nieuw contact</value></data>
   <data name="contacts.empty"><value>Nog geen contacten. Elke ontvanger van een handtekening wordt automatisch toegevoegd.</value></data>

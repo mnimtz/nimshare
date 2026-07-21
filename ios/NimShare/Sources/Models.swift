@@ -205,6 +205,14 @@ struct ContactDto: Codable, Identifiable, Hashable {
     let useCount: Int
 }
 
+/// v1.10.74: NimShare-User als Read-Only-Verzeichnis-Eintrag im Adressbuch.
+struct DirectoryUserDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let email: String
+    let isSelf: Bool
+}
+
 // MARK: - Certificates (v1.10.71 iOS parity)
 struct CertDto: Codable, Identifiable, Hashable {
     let id: UUID

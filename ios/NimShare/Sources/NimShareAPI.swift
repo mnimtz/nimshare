@@ -651,6 +651,15 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    /// v1.10.74: NimShare-User-Directory. Alle aktiven User außer sich selbst.
+    func listDirectoryUsers(query: String? = nil) async throws -> [DirectoryUserDto] {
+        var q: [URLQueryItem] = [.init(name: "limit", value: "1000")]
+        if let s = query, !s.isEmpty { q.append(.init(name: "q", value: s)) }
+        let req = request("GET", "api/v1/contacts/directory", query: q)
+        let (data, _) = try await perform(req)
+        return try decode([DirectoryUserDto].self, data)
+    }
+
     // MARK: - Certificates (v1.10.71 iOS parity)
 
     func listCertificates() async throws -> [CertDto] {

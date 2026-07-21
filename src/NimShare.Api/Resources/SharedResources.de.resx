@@ -945,6 +945,11 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="email_tpl.ai_generate"><value>Erzeugen</value></data>
 
   <data name="contacts.title"><value>Adressbuch</value></data>
+  <data name="contacts.tab_mine"><value>Meine Kontakte</value></data>
+  <data name="contacts.tab_directory"><value>NimShare-User</value></data>
+  <data name="contacts.directory_empty"><value>Keine anderen aktiven Nutzer.</value></data>
+  <data name="contacts.save_as_mine"><value>Als Kontakt speichern</value></data>
+  <data name="contacts.saved_ok"><value>Kontakt gespeichert.</value></data>
   <data name="contacts.lede"><value>Persönliche Kontakte zum Vorbefüllen von Signatur-Anforderungen. E-Mails werden im Wizard automatisch vervollständigt.</value></data>
   <data name="contacts.new"><value>Neuer Kontakt</value></data>
   <data name="contacts.empty"><value>Noch keine Kontakte. Jeder Empfänger einer Signatur wird automatisch angelegt.</value></data>

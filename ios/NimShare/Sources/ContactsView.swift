@@ -1,80 +1,189 @@
 import SwiftUI
 
-/// v1.10.71: Adressbuch (Web-Parity). Liste mit Suche, Add/Delete,
-/// zuletzt-verwendet-First.
+/// v1.10.74: Adressbuch mit zwei Modi (Segmented Control).
+///  - "Meine Kontakte": persönlich angelegte Contacts, editierbar
+///  - "NimShare-User": alle aktiven User im System, read-only Directory
+/// Suche filtert die aktive Sektion. Add-Button (+) legt nur in "Meine"
+/// an — im Directory-Modus ausgeblendet (kein manuelles User-Anlegen).
 struct ContactsView: View {
     @EnvironmentObject var auth: AuthStore
-    @State private var items: [ContactDto] = []
+
+    enum Mode: String, CaseIterable, Identifiable {
+        case mine, directory
+        var id: Self { self }
+        var label: String { self == .mine ? "Meine Kontakte" : "NimShare-User" }
+    }
+
+    @State private var mode: Mode = .mine
+    @State private var myContacts: [ContactDto] = []
+    @State private var directory: [DirectoryUserDto] = []
     @State private var searchText = ""
     @State private var loading = true
     @State private var error: String?
     @State private var showAdd = false
 
     var body: some View {
-        Group {
-            if loading && items.isEmpty {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if items.isEmpty {
-                ContentUnavailableView("Kein Kontakt",
-                    systemImage: "person.crop.circle",
-                    description: Text("Kontakte tauchen automatisch auf wenn du jemanden zum Signieren einlädst — du kannst auch manuell welche anlegen."))
-            } else {
-                List {
-                    ForEach(items) { c in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(c.name).font(.body.weight(.semibold))
-                                Spacer()
-                                if c.useCount > 0 {
-                                    Text("\(c.useCount)×").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            Text(c.email).font(.caption.monospaced()).foregroundStyle(.secondary)
-                            if let company = c.company, !company.isEmpty {
-                                Text(company).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 2)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                Task { await deleteContact(c.id) }
-                            } label: { Label("Löschen", systemImage: "trash") }
-                        }
+        VStack(spacing: 0) {
+            Picker("Modus", selection: $mode) {
+                ForEach(Mode.allCases) { m in
+                    Text(m.label).tag(m)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal).padding(.top, 8)
+
+            Group {
+                if loading && (myContacts.isEmpty && directory.isEmpty) {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    switch mode {
+                    case .mine: myList
+                    case .directory: directoryList
                     }
                 }
-                .searchable(text: $searchText, prompt: "Suchen")
-                .onChange(of: searchText) { _, _ in Task { await load() } }
             }
         }
         .navigationTitle("Adressbuch")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showAdd = true } label: { Image(systemName: "plus") }
+            if mode == .mine {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showAdd = true } label: { Image(systemName: "plus") }
+                }
             }
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await loadAll() }
+        .refreshable { await loadAll() }
         .sheet(isPresented: $showAdd) {
-            AddContactSheet { Task { await load() } }
+            AddContactSheet { Task { await loadMy() } }
         }
         .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
     }
 
-    private func load() async {
+    @ViewBuilder
+    private var myList: some View {
+        let filtered = myContacts.filter { searchText.isEmpty ||
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText) ||
+            ($0.company ?? "").localizedCaseInsensitiveContains(searchText)
+        }
+        if filtered.isEmpty {
+            ContentUnavailableView(
+                myContacts.isEmpty ? "Noch kein Kontakt" : "Nichts gefunden",
+                systemImage: "person.crop.circle",
+                description: Text(myContacts.isEmpty
+                    ? "Kontakte tauchen automatisch auf wenn du jemanden zum Signieren einlädst — du kannst auch manuell welche anlegen (+ oben rechts)."
+                    : "Kein Kontakt passt zu \"\(searchText)\"."))
+        } else {
+            List {
+                ForEach(filtered) { c in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(c.name).font(.body.weight(.semibold))
+                            Spacer()
+                            if c.useCount > 0 {
+                                Text("\(c.useCount)×").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Text(c.email).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        if let company = c.company, !company.isEmpty {
+                            Text(company).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task { await deleteContact(c.id) }
+                        } label: { Label("Löschen", systemImage: "trash") }
+                    }
+                }
+            }
+            .searchable(text: $searchText, prompt: "Suchen")
+        }
+    }
+
+    @ViewBuilder
+    private var directoryList: some View {
+        let filtered = directory.filter { searchText.isEmpty ||
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText)
+        }
+        if filtered.isEmpty {
+            ContentUnavailableView(
+                directory.isEmpty ? "Keine anderen User" : "Nichts gefunden",
+                systemImage: "person.3",
+                description: Text(directory.isEmpty
+                    ? "Aktuell bist du der einzige aktive Nutzer im System."
+                    : "Kein Kollege passt zu \"\(searchText)\"."))
+        } else {
+            List {
+                Section {
+                    ForEach(filtered) { u in
+                        HStack {
+                            Image(systemName: "person.crop.circle.fill")
+                                .foregroundStyle(Theme.tungstenBlue)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(u.name).font(.body.weight(.semibold))
+                                Text(u.email).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            // "In meine Kontakte übernehmen" — spart Tippen
+                            // wenn man den User später öfter braucht (bumpt
+                            // LastUsedAt für Signatur-Autocomplete).
+                            Button {
+                                Task { await addToMy(u) }
+                            } label: { Image(systemName: "person.crop.circle.badge.plus") }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(Theme.tungstenBlue)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } footer: {
+                    Text("\(filtered.count) NimShare-User · nur lesend").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .searchable(text: $searchText, prompt: "Suchen")
+        }
+    }
+
+    private func loadAll() async {
+        loading = true; defer { loading = false }
+        async let a = loadMyRaw()
+        async let b = loadDirRaw()
+        _ = await (a, b)
+    }
+    private func loadMy() async {
+        loading = true; defer { loading = false }
+        _ = await loadMyRaw()
+    }
+    private func loadMyRaw() async -> Void {
         guard let api = auth.api else { return }
-        loading = true
-        defer { loading = false }
-        do { items = try await api.listContacts(query: searchText.isEmpty ? nil : searchText) }
+        do { myContacts = try await api.listContacts(query: nil) }
         catch let ex { error = ex.localizedDescription }
+    }
+    private func loadDirRaw() async -> Void {
+        guard let api = auth.api else { return }
+        do { directory = try await api.listDirectoryUsers(query: nil) }
+        catch { /* Directory kann bei alter Server-Version 404 werfen — dann leer lassen */ }
     }
 
     private func deleteContact(_ id: UUID) async {
         guard let api = auth.api else { return }
         do {
             try await api.deleteContact(id)
-            await load()
+            await loadMy()
+        } catch let ex { error = ex.localizedDescription }
+    }
+
+    /// v1.10.74: Directory-User als eigenen persönlichen Kontakt speichern.
+    private func addToMy(_ u: DirectoryUserDto) async {
+        guard let api = auth.api else { return }
+        do {
+            _ = try await api.createContact(email: u.email, name: u.name)
+            mode = .mine
+            await loadMy()
         } catch let ex { error = ex.localizedDescription }
     }
 }
