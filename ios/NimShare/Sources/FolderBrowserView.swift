@@ -242,19 +242,25 @@ struct FolderBrowserView: View {
                                 shareItemName = f.name
                                 shareTarget = .folder(f.id)
                             } label: { Label("Freigabelink erstellen", systemImage: "link.badge.plus") }
+                            // v1.10.105: EIN Berechtigungen-Eintrag pro Scope statt
+                            // zwei. Vorher: für Public wurden „Berechtigungen…"
+                            // (DirectShareSheet) UND „🔒 Windows-Berechtigungen"
+                            // (PermissionsSheet mit Privacy-Toggle) parallel gezeigt
+                            // — beide auf dieselbe Backend-Tabelle. Konsolidiert:
+                            //   • Public → PermissionsSheet (Grants + Privacy-Toggle)
+                            //   • Personal/Group → DirectShareSheet (nur Grants,
+                            //     Privacy-Konzept existiert dort nicht)
                             Button {
-                                directShareName = f.name
-                                directShareTarget = .folder(f.id)
-                            } label: { Label("Berechtigungen…", systemImage: "person.crop.circle.badge.plus") }
-                            // v1.10.104: Für Öffentliche Ordner zusätzlich der Windows-ACL-
-                            // Style Sheet — Privat-Schalter + Grants. Berechtigung wird
-                            // serverseitig validiert (nur Owner/Admin darf toggeln).
-                            if scope.lowercased() == "public" {
-                                Button {
+                                if scope.lowercased() == "public" {
                                     permissionsTarget = PermissionsTargetRef(id: f.id, name: f.name)
-                                } label: {
-                                    Label("🔒 Windows-Berechtigungen", systemImage: "lock.shield")
+                                } else {
+                                    directShareName = f.name
+                                    directShareTarget = .folder(f.id)
                                 }
+                            } label: {
+                                Label("Berechtigungen…",
+                                      systemImage: scope.lowercased() == "public"
+                                        ? "lock.shield" : "person.crop.circle.badge.plus")
                             }
                             Button {
                                 newFolderParent = f.id
