@@ -70,46 +70,54 @@ struct FolderPickerSheet: View {
         nodes.filter { $0.parentId == parentId }.sorted { ($0.name ?? "") < ($1.name ?? "") }
     }
 
-    @ViewBuilder
-    private func nodeRow(_ n: NimShareAPI.WritableFolderNode, depth: Int) -> some View {
+    // v1.10.73: return-Type EXPLIZIT AnyView. Vorher konnte Swift den
+    // opaque Return-Type nicht auflösen weil `nodeRow` sich rekursiv
+    // in ihrem eigenen ViewBuilder aufruft → "opaque return type was
+    // inferred as … which defines the opaque type in terms of itself".
+    // AnyView bricht die rekursive Typ-Inferenz.
+    private func nodeRow(_ n: NimShareAPI.WritableFolderNode, depth: Int) -> AnyView {
         let kids = children(of: n.id)
         let hasKids = !kids.isEmpty
         let isExpanded = expanded.contains(n.id)
-        HStack(spacing: 6) {
-            if hasKids {
-                Button {
-                    if isExpanded { expanded.remove(n.id) } else { expanded.insert(n.id) }
-                } label: {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 14)
-                }.buttonStyle(.plain)
-            } else {
-                Text("").frame(width: 14)
+        return AnyView(
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    if hasKids {
+                        Button {
+                            if isExpanded { expanded.remove(n.id) } else { expanded.insert(n.id) }
+                        } label: {
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14)
+                        }.buttonStyle(.plain)
+                    } else {
+                        Text("").frame(width: 14)
+                    }
+                    Image(systemName: n.isRoot == true
+                          ? (n.scope == "Personal" ? "person.crop.circle"
+                             : n.scope == "Public" ? "globe" : "person.3")
+                          : "folder.fill")
+                        .foregroundStyle(Theme.tungstenBlue)
+                    Text(n.name ?? n.path ?? "(unbenannt)")
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .padding(.leading, CGFloat(6 + depth * 16))
+                .padding(.trailing, 12)
+                .background(selected == n.id ? Theme.tungstenBlue.opacity(0.18) : Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selected = n.id
+                    selectedPath = fullPath(n)
+                }
+                if hasKids && isExpanded {
+                    ForEach(kids, id: \.id) { child in
+                        nodeRow(child, depth: depth + 1)
+                    }
+                }
             }
-            Image(systemName: n.isRoot == true
-                  ? (n.scope == "Personal" ? "person.crop.circle"
-                     : n.scope == "Public" ? "globe" : "person.3")
-                  : "folder.fill")
-                .foregroundStyle(Theme.tungstenBlue)
-            Text(n.name ?? n.path ?? "(unbenannt)")
-            Spacer()
-        }
-        .padding(.vertical, 6)
-        .padding(.leading, CGFloat(6 + depth * 16))
-        .padding(.trailing, 12)
-        .background(selected == n.id ? Theme.tungstenBlue.opacity(0.18) : Color.clear)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selected = n.id
-            selectedPath = fullPath(n)
-        }
-        if hasKids && isExpanded {
-            ForEach(kids, id: \.id) { child in
-                nodeRow(child, depth: depth + 1)
-            }
-        }
+        )
     }
 
     private func fullPath(_ n: NimShareAPI.WritableFolderNode) -> String {
