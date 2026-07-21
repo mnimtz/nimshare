@@ -191,10 +191,12 @@
                                        — im Web WAR das nur über Rechtsklick erreichbar, der 🤝-Button fehlte in der
                                        Hover-Row. Jetzt sichtbar auf allen Ordnern. *@
                                     <button title="@T["share.direct"]" aria-label="@T["share.direct"]" onclick="event.stopPropagation();openDirectShare({id:'@sub.Id', name:@Json.Serialize(sub.Name), kind:'folder'})">🤝</button>
-                                    @* v1.10.104: Berechtigungen-Icon nur im Public-Scope und nur für
-                                       Owner oder Admin — das sind die einzigen, die den Privacy-Toggle
-                                       und die Grants setzen dürfen. *@
-                                    @if (sub.Scope == FileScope.Public && me != null && (sub.CreatedByUserId == me.Id || me.Role == UserRole.Admin))
+                                    @* v1.10.107: Berechtigungen-Icon für ALLE Public-Ordner —
+                                       vorher nur Owner/Admin, was bei Ordnern mit historisch
+                                       leerem CreatedByUserId das Icon versteckte. Das Modal
+                                       zeigt sich read-only wenn der Server canManage=false
+                                       liefert; der eigentliche Schutz sitzt serverseitig. *@
+                                    @if (sub.Scope == FileScope.Public)
                                     {
                                         <button title="@T["actions.permissions"]" aria-label="@T["actions.permissions"]" onclick="event.stopPropagation();openPermissionsModal('@sub.Id')">🔒</button>
                                     }
@@ -718,13 +720,12 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         ctxTarget.color = tr.dataset.color || '';
         showFor('share',       true);
         showFor('directShare', true);
-        // v1.10.104: Berechtigungen — nur für Public-Ordner, und nur wenn
-        // der aktuelle User Owner ist (data-mine=1) oder Admin (SCOPE=Public
-        // + CAN_MANAGE true auf Public deutet auf Admin hin, weil normale
-        // User dort ihre eigenen Ordner via data-mine haben).
-        showFor('permissions', ctxTarget.kind === 'folder'
-                              && ctxTarget.folderScope === 'public'
-                              && (ctxTarget.mine || IS_ADMIN));
+        // v1.10.107: Berechtigungen IMMER anbieten — Marcus's Wunsch nach
+        // doppeltem Boden, weil die Hover-Icons auf manchen Setups nicht
+        // reagieren. Vorher war der Eintrag auf Public-Ordner + Owner/Admin
+        // beschränkt; jetzt entscheidet der Klick-Handler welches Modal
+        // passt und der Server validiert die eigentliche Berechtigung.
+        showFor('permissions', true);
         showFor('favorite',    true);
         // Delete is destructive — it drops the underlying blob. On pinned
         // "shortcut" rows we hide it (Unpin above is the correct action);
@@ -792,7 +793,17 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             else openShareFolderModal(ctxTarget.id);
         }
         if (act === 'directShare') openDirectShare(ctxTarget);
-        if (act === 'permissions' && ctxTarget.kind === 'folder') openPermissionsModal(ctxTarget.id);
+        // v1.10.107: Berechtigungen für jeden Row-Typ. Public-Ordner
+        // bekommen das ACL-Modal (Privat-Toggle + Grants); alles andere
+        // (Personal/Group-Ordner, Dateien) das Direct-Share-Modal — dort
+        // IST Direct-Share das Berechtigungskonzept.
+        if (act === 'permissions') {
+            if (ctxTarget.kind === 'folder' && ctxTarget.folderScope === 'public') {
+                openPermissionsModal(ctxTarget.id);
+            } else {
+                openDirectShare(ctxTarget);
+            }
+        }
         if (act === 'favorite') toggleFavorite(ctxTarget);
         if (act === 'sign' && ctxTarget.kind === 'file') {
             location.href = '/signatures/new?fileId=' + ctxTarget.id;
