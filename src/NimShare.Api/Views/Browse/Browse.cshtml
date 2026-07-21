@@ -180,6 +180,11 @@
                                 <div class="fm-row-actions">
                                     <button title="@T["actions.download_zip"]" aria-label="@T["actions.download_zip"]" onclick="event.stopPropagation();downloadFolderZip('@sub.Id', @Json.Serialize(sub.Name))">⬇</button>
                                     <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFolderModal('@sub.Id')">🔗</button>
+                                    @* v1.10.94: Direct-Share (Berechtigungen für User/Gruppen) auch als Hover-Icon.
+                                       Marcus's Report: „in iOS kann ich Berechtigungen auf Ordner setzen, im Web nicht"
+                                       — im Web WAR das nur über Rechtsklick erreichbar, der 🤝-Button fehlte in der
+                                       Hover-Row. Jetzt sichtbar auf allen Ordnern. *@
+                                    <button title="@T["share.direct"]" aria-label="@T["share.direct"]" onclick="event.stopPropagation();openDirectShare({id:'@sub.Id', name:@Json.Serialize(sub.Name), kind:'folder'})">🤝</button>
                                     <button title="@T["actions.request_upload"]" aria-label="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
                                     @if (canManage)
                                     {
@@ -226,6 +231,8 @@
                                 <div class="fm-row-actions">
                                     <button title="@T["actions.download"]" aria-label="@T["actions.download"]" onclick="event.stopPropagation();downloadFile('@f.Id')">⬇</button>
                                     <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
+                                    @* v1.10.94: Direct-Share auch für Files als Hover-Icon *@
+                                    <button title="@T["share.direct"]" aria-label="@T["share.direct"]" onclick="event.stopPropagation();openDirectShare({id:'@f.Id', name:@Json.Serialize(f.Name), kind:'file'})">🤝</button>
                                     @if (canWrite) { <button title="@T["actions.move"]" aria-label="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
                                     <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
                                 </div>
