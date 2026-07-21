@@ -663,6 +663,10 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         ("ShareLinkAccesses", "Timezone", "TEXT", "nvarchar(60)"),
         // v1.10.50: Per-User Timezone-Preference
         ("Users", "PreferredTimezone", "TEXT", "nvarchar(60)"),
+        // v1.10.77: optionale Klartext-IP für Signatur-Forensik (DSGVO
+        // Art. 6(1)(f), Admin-toggle Signatures:StoreFullIp=true).
+        ("SignatureParticipants", "IpAddress", "TEXT", "nvarchar(45)"),
+        ("SignatureAudits", "IpAddress", "TEXT", "nvarchar(45)"),
     };
     foreach (var w in wanted)
     {

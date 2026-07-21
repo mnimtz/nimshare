@@ -22,13 +22,27 @@ public class SignController : Controller
     private readonly ISignaturePdfService _sig;
     private readonly IUserNotifier _in;
     private readonly IGeoIpService _geo;
+    private readonly bool _storeFullIp;
 
     public SignController(NimShareDbContext db, IPasswordHasher hasher,
         IBlobStorageService blobs, IIpHashService iphash,
-        ISignaturePdfService sig, IUserNotifier inApp, IGeoIpService geo)
+        ISignaturePdfService sig, IUserNotifier inApp, IGeoIpService geo,
+        IConfiguration config)
     {
         _db = db; _hasher = hasher; _blobs = blobs; _iphash = iphash; _sig = sig; _in = inApp; _geo = geo;
+        // v1.10.77: Signatures:StoreFullIp = true → zusätzlich zur SHA-Hash
+        // wird die Klartext-IP im Audit gespeichert. DSGVO-Rechtfertigung:
+        // Art. 6(1)(f) berechtigtes Interesse bei elektronischen Signaturen
+        // (Beweis-Sicherung). Default false (privacy-first) — Admin muss
+        // bewusst einschalten. In appsettings.json setzen:
+        //   { "Signatures": { "StoreFullIp": true } }
+        _storeFullIp = config.GetValue<bool>("Signatures:StoreFullIp", false);
     }
+
+    /// <summary>v1.10.77: Klartext-IP nur wenn Admin-Flag an; sonst null.</summary>
+    private string? MaybeIp() => _storeFullIp
+        ? HttpContext.Connection.RemoteIpAddress?.ToString()
+        : null;
 
     // v1.10.42 — extrahiert die vom Client mitgeschickte Timezone (IANA-
     // Id) aus dem Form-Feld "clientTz". Vorsichtige Validation:
@@ -74,6 +88,7 @@ public class SignController : Controller
             // Slack link previews would silently satisfy a viewer's ack.
             p.ViewedAt = DateTimeOffset.UtcNow;
             p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+            p.IpAddress = MaybeIp();
             p.UserAgent = Request.Headers.UserAgent;
             // v1.10.42 — beim Landing haben wir noch keinen Timezone-
             // Header (Landing ist GET, clientTz kommt nur mit Form-POST).
@@ -83,7 +98,7 @@ public class SignController : Controller
             _db.SignatureAudits.Add(new SignatureAudit
             {
                 RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Viewed,
-                IpHash = p.IpHash, UserAgent = p.UserAgent,
+                IpHash = p.IpHash, IpAddress = p.IpAddress, UserAgent = p.UserAgent,
                 Country = vf.Country, City = vf.City,
                 DeviceType = vf.Device, Timezone = vf.Timezone,
             });
@@ -355,11 +370,12 @@ public class SignController : Controller
         p.Status = SignatureParticipantStatus.Signed;
         p.SignedAt = now;
         p.IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        p.IpAddress = MaybeIp();
         var forensics = await ForensicsAsync(ct);
         _db.SignatureAudits.Add(new SignatureAudit
         {
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Signed,
-            IpHash = p.IpHash, UserAgent = p.UserAgent,
+            IpHash = p.IpHash, IpAddress = p.IpAddress, UserAgent = p.UserAgent,
             // v1.10.15: record which UI-mode produced the signature image so
             // the audit trail can distinguish hand-drawn from cert-stamped.
             Note = string.Equals(signMode, "cert", StringComparison.OrdinalIgnoreCase)
@@ -453,6 +469,7 @@ public class SignController : Controller
             RequestId = req.Id, ParticipantId = pid, Kind = SignatureAuditKind.Declined,
             Note = reason,
             IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+            IpAddress = MaybeIp(),
             UserAgent = HttpContext.Request.Headers.UserAgent.ToString(),
             Country = declF.Country, City = declF.City,
             DeviceType = declF.Device, Timezone = declF.Timezone,
@@ -630,6 +647,7 @@ public class SignController : Controller
             RequestId = req.Id, ParticipantId = p.Id, Kind = SignatureAuditKind.Declined,
             Note = $"reassigned:{toEmail}",
             IpHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+            IpAddress = MaybeIp(),
             UserAgent = Request.Headers.UserAgent,
         });
         _db.SignatureAudits.Add(new SignatureAudit

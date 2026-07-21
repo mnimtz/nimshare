@@ -652,25 +652,50 @@ public class SignaturesController : ControllerBase
             });
         }
 
-        // Alle sind fertig, aber Status hängt → Finalizer synchron nochmal
-        // laufen lassen und Fehler an den Aufrufer geben.
+        // v1.10.77: Diagnose-Trace inline mitliefern. Marcus hatte in
+        // v1.10.76 die Meldung "Finalizer lief aber state änderte nicht"
+        // und keinen Log-Zugriff — jetzt bekommt er strukturierte Details
+        // direkt in der Response, statt in unlesbaren Azure-Logs suchen
+        // zu müssen.
+        var trace = new List<string>();
+        trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] Alle Beteiligten fertig → Finalizer wird synchron gestartet.");
         try
         {
             await finalizer.TryFinalizeAsync(r.Id, ct);
+            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] TryFinalizeAsync durchgelaufen (keine Exception).");
         }
         catch (Exception ex)
         {
-            return Problem(statusCode: 500, title: "Finalizer threw.", detail: ex.ToString());
+            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] ✗ EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+            if (ex.InnerException is not null)
+                trace.Add($"   inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+            return Ok(new
+            {
+                status = r.Status.ToString(),
+                note = string.Join("\n", trace),
+                diagnostic = ex.ToString(),
+            });
         }
         var after = await _db.SignatureRequests.AsNoTracking()
+            .Include(x => x.Participants)
             .SingleOrDefaultAsync(x => x.Id == id, ct);
+        trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] Nachher: Status={after?.Status}, FinalFileId={after?.FinalFileId?.ToString() ?? "(null)"}");
+        if (after?.Status != SignatureRequestStatus.Completed)
+        {
+            // Genau protokollieren wer als "not-yet-done" gilt — zeigt DB-
+            // vs Audit-Log-Diskrepanzen auf.
+            trace.Add("--- Participant-Status in DB nach Finalizer:");
+            foreach (var p in (after?.Participants ?? Enumerable.Empty<SignatureParticipant>()).OrderBy(x => x.Order))
+                trace.Add($"   • {p.Name} ({p.Role}) = {p.Status}, SignedAt={p.SignedAt?.ToString("u") ?? "(null)"}");
+            trace.Add("--- Wenn hier alle Signer=Signed sind aber Status trotzdem nicht Completed:");
+            trace.Add("    Der Merge/PDF-Signing-Schritt hat wahrscheinlich einen tieferen Fehler.");
+            trace.Add("    Server-Log-Zeile 'Finalisierung fehlgeschlagen für {ReqId}' zeigt Details.");
+        }
         return Ok(new
         {
             status = after?.Status.ToString() ?? "?",
             finalFileId = after?.FinalFileId,
-            note = after?.Status == SignatureRequestStatus.Completed
-                ? "Finalized successfully."
-                : "Finalizer ran but state did not change to Completed — check server logs.",
+            note = string.Join("\n", trace),
         });
     }
 

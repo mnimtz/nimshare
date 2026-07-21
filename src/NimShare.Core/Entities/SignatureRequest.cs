@@ -79,6 +79,10 @@ public class SignatureParticipant
     public DateTimeOffset? SignedAt { get; set; }
     public string? DeclinedReason { get; set; }
     public string? IpHash { get; set; }
+    // v1.10.77: Optional-Klartext-IP für gerichtsfestere Forensik.
+    // Nur gefüllt wenn Admin Signatures:StoreFullIp=true gesetzt hat.
+    // Standardmässig nullbleibt und nur IpHash (Pseudonymisierung) ist da.
+    public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
 }
 
@@ -139,6 +143,8 @@ public class SignatureAudit
     public SignatureAuditKind Kind { get; set; }
     public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
     public string? IpHash { get; set; }
+    // v1.10.77: siehe SignatureParticipant.IpAddress — optional Klartext.
+    public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
     public string? Note { get; set; }
 
