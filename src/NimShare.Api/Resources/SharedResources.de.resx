@@ -545,7 +545,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.file_restored"><value>„{0}</value></data>
   <data name="notice.purged_one"><value>Definitief verwijderd.</value></data>
   <data name="notice.purged_many"><value>{0} definitief verwijderd.</value></data>
-  <data name="notice.invite_sent"><value>Uitnodiging verzonden naar {0}.</value></data>
+  <data name="notice.invite_sent"><value>Einladung an {0} versendet.</value></data>
   <data name="notice.password_reset_sent"><value>Resetlink verzonden naar {0}.</value></data>
   <data name="notice.group_created"><value>Groep aangemaakt.</value></data>
   <data name="notice.group_updated"><value>Groep bijgewerkt.</value></data>

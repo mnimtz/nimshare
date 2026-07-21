@@ -544,7 +544,7 @@ Abre el enlace:
   <data name="notice.file_restored"><value>Restored "{0}".</value></data>
   <data name="notice.purged_one"><value>Permanently deleted.</value></data>
   <data name="notice.purged_many"><value>{0} permanently deleted.</value></data>
-  <data name="notice.invite_sent"><value>Invite sent to {0}.</value></data>
+  <data name="notice.invite_sent"><value>Invitación enviada a {0}.</value></data>
   <data name="notice.password_reset_sent"><value>Password reset link sent to {0}.</value></data>
   <data name="notice.group_created"><value>Group created.</value></data>
   <data name="notice.group_updated"><value>Group updated.</value></data>
