@@ -2,6 +2,14 @@
 @{
     ViewData["Title"] = T["users.title"]; Layout = "_AppShell";
     var groups = (List<NimShare.Core.Entities.Group>)(ViewData["Groups"] ?? new List<NimShare.Core.Entities.Group>());
+    var invites = (List<NimShare.Core.Entities.Invitation>)(ViewData["Invitations"] ?? new List<NimShare.Core.Entities.Invitation>());
+    var now = DateTimeOffset.UtcNow;
+    (string cls, string label, string icon) InviteStatus(NimShare.Core.Entities.Invitation i) {
+        if (i.UsedAt is not null) return ("chip-ok", "Angenommen", "✓");
+        if (i.RevokedAt is not null) return ("chip", "Widerrufen", "✕");
+        if (i.ExpiresAt < now) return ("chip-warn", "Abgelaufen", "⌛");
+        return ("chip-info", "Offen", "…");
+    }
 }
 <div class="page-header">
     <div>
@@ -41,6 +49,96 @@
         </div>
         <button type="submit" class="btn btn-primary">@T["users.invite.send"]</button>
     </form>
+</div>
+
+@* v1.10.92: „Get-Link"-Toast — Admin-Copy des Accept-Link, falls Email
+   nicht angekommen ist. Wird nur EINMAL nach der Redirect-Aktion gezeigt. *@
+@if (TempData["InviteLink"] is string invLink)
+{
+    <div class="card" style="border-left:3px solid var(--tw-accent);background:rgba(50,110,255,.05)">
+        <strong>Einladungs-Link für @(TempData["InviteLinkEmail"] as string):</strong>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" value="@invLink" readonly onclick="this.select()"
+                   style="flex:1;min-width:280px;font-family:var(--font-mono);font-size:.8rem;padding:6px 8px"/>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(()=>this.textContent='✓ Kopiert')">
+                Kopieren
+            </button>
+        </div>
+        <div class="muted" style="margin-top:6px;font-size:.75rem">Der Link ist 7 Tage gültig und wird nach Annahme unbrauchbar. Er wurde neu generiert — ein evtl. vorher versandter Link ist damit ungültig.</div>
+    </div>
+}
+
+@* v1.10.92: Einladungs-Übersicht — Marcus's Bug: „sendet man eine Einladung,
+   kann man garnicht den Status sehen". Zeigt letzte 60 Tage mit Status,
+   Ablauf, Aktionen (Widerrufen, Neu senden, Link kopieren). *@
+<div class="card">
+    <h2 class="card-title">Einladungen (@invites.Count)</h2>
+    @if (!invites.Any())
+    {
+        <p class="muted" style="margin:0">Noch keine Einladungen in den letzten 60 Tagen versendet.</p>
+    }
+    else
+    {
+        <div style="overflow-x:auto">
+        <table class="table" style="margin:0;font-size:.88rem">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Email</th>
+                    <th>Rolle</th>
+                    <th>Eingeladen von</th>
+                    <th>Gesendet</th>
+                    <th>Läuft ab</th>
+                    <th style="text-align:right">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var i in invites)
+            {
+                var (cls, label, icon) = InviteStatus(i);
+                var isOpen = i.UsedAt is null && i.RevokedAt is null && i.ExpiresAt >= now;
+                var isPending = i.UsedAt is null && i.RevokedAt is null;
+                <tr>
+                    <td><span class="chip @cls">@icon @label</span></td>
+                    <td><code>@i.Email</code></td>
+                    <td>@i.Role</td>
+                    <td>@(i.InvitedBy?.DisplayName ?? "—")</td>
+                    <td style="white-space:nowrap">@i.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                    <td style="white-space:nowrap">@i.ExpiresAt.LocalDateTime.ToString("dd.MM.yyyy")
+                        @if (i.UsedAt is DateTimeOffset used)
+                        {
+                            <div class="muted" style="font-size:.7rem">angen.: @used.LocalDateTime.ToString("dd.MM. HH:mm")</div>
+                        }
+                    </td>
+                    <td style="text-align:right;white-space:nowrap">
+                        @if (isPending)
+                        {
+                            <form method="post" action="/settings/users/invite/@i.Id/get-link" style="display:inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-ghost btn-sm" title="Neuen Link generieren und anzeigen">🔗 Link</button>
+                            </form>
+                            <form method="post" action="/settings/users/invite/@i.Id/resend" style="display:inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-ghost btn-sm" title="Email erneut senden (neuer Token)">📧 Neu senden</button>
+                            </form>
+                            <form method="post" action="/settings/users/invite/@i.Id/revoke" style="display:inline"
+                                  onsubmit="return confirm('Einladung an @i.Email widerrufen?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--status-critical)">✕</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="muted" style="font-size:.75rem">—</span>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        </div>
+    }
 </div>
 
 <details class="card">

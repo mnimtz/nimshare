@@ -128,6 +128,88 @@ public class InvitationsController : Controller
         if (!_hasher.Verify(t, invite.TokenHash)) return null;
         return invite;
     }
+
+    // v1.10.92: Admin-Actions für die Einladungs-Übersicht auf /settings/users.
+    // Der Token existiert nur als bcrypt-Hash — bei „Neu senden" muss ein
+    // NEUER Token generiert werden (der alte kann nicht rekonstruiert
+    // werden). Deshalb rotieren wir Token + ExpiresAt beim Resend.
+
+    [Authorize(Policy = "WebUser")]
+    [HttpPost("/settings/users/invite/{id:guid}/revoke")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Revoke(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (me.Role != UserRole.Admin) return Forbid();
+        var inv = await _db.Invitations.FindAsync(new object[] { id }, ct);
+        if (inv is null) { TempData["Error"] = "Einladung nicht gefunden."; return RedirectToAction("List", "Users"); }
+        if (inv.UsedAt is not null) { TempData["Error"] = "Bereits angenommen — kann nicht mehr widerrufen werden."; return RedirectToAction("List", "Users"); }
+        inv.RevokedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        TempData["Notice"] = $"Einladung an {inv.Email} widerrufen.";
+        return RedirectToAction("List", "Users");
+    }
+
+    [Authorize(Policy = "WebUser")]
+    [HttpPost("/settings/users/invite/{id:guid}/resend")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Resend(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (me.Role != UserRole.Admin) return Forbid();
+        var inv = await _db.Invitations.FindAsync(new object[] { id }, ct);
+        if (inv is null) { TempData["Error"] = "Einladung nicht gefunden."; return RedirectToAction("List", "Users"); }
+        if (inv.UsedAt is not null) { TempData["Error"] = "Bereits angenommen."; return RedirectToAction("List", "Users"); }
+
+        // Token rotieren (alter Hash nicht mehr rückrechenbar).
+        var raw = RandomNumberGenerator.GetBytes(32);
+        var token = Convert.ToBase64String(raw).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+        inv.TokenHash = _hasher.Hash(token);
+        inv.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
+        inv.RevokedAt = null;
+        await _db.SaveChangesAsync(ct);
+
+        var url = $"{Request.Scheme}://{Request.Host}/accept-invite/{inv.Id}?t={token}";
+        var subject = $"{me.DisplayName} invited you to NimShare (Erinnerung)";
+        var body = $"Hallo,\n\n{me.DisplayName} ({me.Email}) hat dich zu NimShare eingeladen.\n\nÖffne diesen Link um dein Passwort zu setzen:\n{url}\n\nDer Link läuft am {inv.ExpiresAt:u} ab.\n\n— NimShare";
+        try
+        {
+            await _gateway.SendAsync(inv.Email, subject, body, ct);
+            TempData["Notice"] = $"Einladung an {inv.Email} erneut gesendet.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"Neuer Link generiert aber Email-Versand gescheitert: {ex.Message}. Manueller Link: {url}";
+        }
+        return RedirectToAction("List", "Users");
+    }
+
+    /// <summary>Generiert einen NEUEN Einladungs-Link ohne Email zu senden
+    /// (für den „Link kopieren"-Fall wo der Admin ihn manuell weitergibt,
+    /// z.B. per Signal/WhatsApp). Rotiert Token wie Resend.</summary>
+    [Authorize(Policy = "WebUser")]
+    [HttpPost("/settings/users/invite/{id:guid}/get-link")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GetLink(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (me.Role != UserRole.Admin) return Forbid();
+        var inv = await _db.Invitations.FindAsync(new object[] { id }, ct);
+        if (inv is null) { TempData["Error"] = "Einladung nicht gefunden."; return RedirectToAction("List", "Users"); }
+        if (inv.UsedAt is not null) { TempData["Error"] = "Bereits angenommen."; return RedirectToAction("List", "Users"); }
+
+        var raw = RandomNumberGenerator.GetBytes(32);
+        var token = Convert.ToBase64String(raw).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+        inv.TokenHash = _hasher.Hash(token);
+        inv.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
+        inv.RevokedAt = null;
+        await _db.SaveChangesAsync(ct);
+        var url = $"{Request.Scheme}://{Request.Host}/accept-invite/{inv.Id}?t={token}";
+        // Als TempData weitergeben damit die View einen „Copy"-Toast rendern kann.
+        TempData["InviteLink"] = url;
+        TempData["InviteLinkEmail"] = inv.Email;
+        return RedirectToAction("List", "Users");
+    }
 }
 
 public record AcceptInviteViewModel(Guid Id, string Token, string Email, string DisplayName);

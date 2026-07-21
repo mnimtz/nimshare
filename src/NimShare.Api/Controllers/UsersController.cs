@@ -46,6 +46,19 @@ public class UsersController : Controller
             .OrderBy(g => g.Name)
             .ToListAsync(ct);
         ViewData["Groups"] = groups;
+        // v1.10.92: Einladungs-Übersicht. Marcus's Feedback: „sendet man eine
+        // Einladung, kann man garnicht den status sehen". Wir laden die
+        // letzten 60 Tage — abgeschlossene bleiben zur Nachvollziehbarkeit
+        // sichtbar, sehr alte werden ausgeblendet damit die Liste nicht
+        // wächst. Include(InvitedBy) für Anzeige „eingeladen von".
+        var since = DateTimeOffset.UtcNow.AddDays(-60);
+        var invites = await _db.Invitations
+            .Include(i => i.InvitedBy)
+            .Where(i => i.CreatedAt >= since)
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(200)
+            .ToListAsync(ct);
+        ViewData["Invitations"] = invites;
         return View(users);
     }
 
