@@ -1104,4 +1104,7 @@ Thanks for using NimShare.</value></data>
   <data name="sig.detail.forensics_title"><value>Signature evidence</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadata captured at the moment of signing — location (from IP), device type, timezone. Not shared with the signer.</value></data>
   <data name="browse.tree.mobile_toggle"><value>Show folders</value></data>
+  <data name="links.private.section"><value>Private</value></data>
+  <data name="links.group.section"><value>Groups</value></data>
+  <data name="links.group.lede"><value>Links to files or folders in group libraries — visible to group members.</value></data>
 </root>

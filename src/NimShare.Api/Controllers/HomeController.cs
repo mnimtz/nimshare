@@ -65,23 +65,52 @@ public class HomeController : Controller
     public async Task<IActionResult> Links(CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var mine = await _db.ShareLinks
+        // v1.10.61 — Marcus's Wunsch: Aufteilung in "Privat" vs "Öffentlich"
+        // basierend auf dem SCOPE der Zieldatei/-ordner, nicht auf einem
+        // separaten IsPublic-Flag. Semantik:
+        //   Privat: eigene Links auf Dateien/Ordner im Personal-Scope
+        //           (echt privat, nur für mich sinnvoll)
+        //   Öffentlich: alle Links (egal wer Owner) wo Ziel im Public-Scope
+        //           liegt — automatisch für ALLE User sichtbar, weil die
+        //           Zieldatei sowieso alle sehen können. Plus admin-
+        //           explizite IsPublic-Links bleiben hier als Backward-
+        //           Compat sichtbar.
+        //   Gruppen: eigene Links auf Group-Scope-Dateien (Teilbereich
+        //           dazwischen — technisch privat weil nur Gruppen-Mitglieder
+        //           können, aber nicht dein-persönliches).
+        var all = await _db.ShareLinks
             .Include(l => l.File)
-            .Where(l => l.OwnerId == user.Id)
-            .OrderByDescending(l => l.CreatedAt)
-            .ToListAsync(ct);
-        // Admin-curated links that everyone can see and use, but only the
-        // owner (or an admin) can revoke/delete/edit. Filter mine out so
-        // they don't appear twice for the owner.
-        var publicLinks = await _db.ShareLinks
-            .Include(l => l.File)
+            .Include(l => l.Folder)
             .Include(l => l.Owner)
-            .Where(l => l.IsPublic && l.OwnerId != user.Id)
+            .Where(l => l.OwnerId == user.Id
+                     || (l.File != null && l.File.Scope == FileScope.Public)
+                     || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                     || l.IsPublic)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
+
+        bool IsPublicScope(ShareLink l)
+            => (l.File != null && l.File.Scope == FileScope.Public)
+            || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+            || l.IsPublic;
+        bool IsGroupScope(ShareLink l)
+            => (l.File != null && l.File.Scope == FileScope.Group)
+            || (l.Folder != null && l.Folder.Scope == FileScope.Group);
+
+        var privateLinks = all
+            .Where(l => l.OwnerId == user.Id && !IsPublicScope(l) && !IsGroupScope(l))
+            .ToList();
+        var groupLinks = all
+            .Where(l => l.OwnerId == user.Id && IsGroupScope(l))
+            .ToList();
+        var publicLinks = all
+            .Where(l => IsPublicScope(l))
+            .ToList();
+
         ViewData["PublicLinks"] = publicLinks;
+        ViewData["GroupLinks"] = groupLinks;
         ViewData["IsAdmin"] = user.Role == UserRole.Admin;
-        return View(mine);
+        return View(privateLinks);
     }
 
     [Authorize]

@@ -1105,4 +1105,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="sig.detail.forensics_title"><value>Handtekening-bewijs</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadata vastgelegd op het moment van ondertekenen — locatie (uit IP), apparaattype, tijdzone. Niet gedeeld met de ondertekenaar.</value></data>
   <data name="browse.tree.mobile_toggle"><value>Mappen tonen</value></data>
+  <data name="links.private.section"><value>Privé</value></data>
+  <data name="links.group.section"><value>Groepen</value></data>
+  <data name="links.group.lede"><value>Links naar bestanden of mappen in groepsbibliotheken — zichtbaar voor groepsleden.</value></data>
 </root>

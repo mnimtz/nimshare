@@ -1106,4 +1106,7 @@ Gracias por usar NimShare.</value></data>
   <data name="sig.detail.forensics_title"><value>Pruebas de la firma</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadatos capturados en el momento de firmar — ubicación (a partir de IP), tipo de dispositivo, zona horaria. No se comparten con el firmante.</value></data>
   <data name="browse.tree.mobile_toggle"><value>Mostrar carpetas</value></data>
+  <data name="links.private.section"><value>Privado</value></data>
+  <data name="links.group.section"><value>Grupos</value></data>
+  <data name="links.group.lede"><value>Enlaces a archivos o carpetas en bibliotecas de grupo — visibles para los miembros.</value></data>
 </root>

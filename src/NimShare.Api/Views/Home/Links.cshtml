@@ -3,6 +3,7 @@
     ViewData["Title"] = T["links.title"];
     Layout = "_AppShell";
     var publicLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["PublicLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
+    var groupLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["GroupLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
 }
 <div class="page-header">
@@ -13,7 +14,9 @@
     <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
 </div>
 
-<h2 style="margin-top:8px">🔗 @T["links.mine.section"]</h2>
+@* v1.10.61: Umbenannt von "Meine Links" → "🔒 Privat" — semantisch klarer
+   nach der Aufteilung. Enthält jetzt NUR Links auf Personal-Scope-Dateien. *@
+<h2 style="margin-top:8px">🔒 @T["links.private.section"]</h2>
 
 @if (!Model.Any())
 {
@@ -60,6 +63,52 @@ else
                             @(l.IsPublic ? "🔒 " + @T["links.public.unshare"].Value : "🌐 " + @T["links.public.share"].Value)
                         </button>
                     }
+                    @if (!l.IsRevoked)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
+                    }
+                    <button class="btn btn-ghost btn-sm" data-delete="@l.Id">@T["links.action.delete"]</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@* v1.10.61: neue Gruppen-Sektion — Links auf Dateien im Group-Scope.
+   Zwischen Privat und Public, weil sie nicht persönlich sind aber auch
+   nicht öffentlich für alle. Nur eigene Links; wenn der User keine
+   Group-Scope-Links erstellt hat, wird die Sektion nicht angezeigt. *@
+@if (groupLinks.Any())
+{
+    <h2 style="margin-top:32px">👥 @T["links.group.section"]</h2>
+    <p class="muted" style="margin-bottom:8px">@T["links.group.lede"]</p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>@T["links.slug"]</th>
+                <th>@T["file.name"]</th>
+                <th>@T["links.downloads"]</th>
+                <th>@T["links.state"]</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var l in groupLinks)
+        {
+            var gstate = l.IsRevoked
+                ? ("chip-critical", @T["links.revoked"].Value)
+                : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
+                    ? ("chip-warn", @T["links.expired"].Value)
+                    : ("chip-ok", @T["links.active"].Value);
+            <tr>
+                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
+                <td>@l.DownloadCount @(l.MaxDownloads is int m3 ? $" / {m3}" : "")</td>
+                <td><span class="chip @gstate.Item1">@gstate.Item2</span></td>
+                <td>
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
+                    <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
                     @if (!l.IsRevoked)
                     {
                         <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>

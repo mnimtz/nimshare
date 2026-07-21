@@ -1110,4 +1110,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="sig.detail.forensics_title"><value>Signatur-Beweise</value></data>
   <data name="sig.detail.forensics_hint"><value>Metadaten aus dem Moment der Signatur — Standort (aus IP), Gerätetyp, Zeitzone. Wird dem Unterzeichnenden nicht gezeigt.</value></data>
   <data name="browse.tree.mobile_toggle"><value>Ordner anzeigen</value></data>
+  <data name="links.private.section"><value>Privat</value></data>
+  <data name="links.group.section"><value>Gruppen</value></data>
+  <data name="links.group.lede"><value>Links auf Dateien oder Ordner in Gruppen-Bereichen — sichtbar für Gruppen-Mitglieder.</value></data>
 </root>

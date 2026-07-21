@@ -1106,4 +1106,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="sig.detail.forensics_title"><value>Preuves de signature</value></data>
   <data name="sig.detail.forensics_hint"><value>Métadonnées capturées au moment de la signature — lieu (via IP), type d'appareil, fuseau horaire. Non partagées avec le signataire.</value></data>
   <data name="browse.tree.mobile_toggle"><value>Afficher les dossiers</value></data>
+  <data name="links.private.section"><value>Privé</value></data>
+  <data name="links.group.section"><value>Groupes</value></data>
+  <data name="links.group.lede"><value>Liens vers des fichiers ou dossiers dans les bibliothèques de groupe — visibles pour les membres.</value></data>
 </root>
