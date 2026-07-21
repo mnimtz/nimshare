@@ -9,8 +9,8 @@ settings:
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    MARKETING_VERSION: "1.10.59"
-    CURRENT_PROJECT_VERSION: "4"
+    MARKETING_VERSION: "1.10.63"
+    CURRENT_PROJECT_VERSION: "5"
 targets:
   NimShare:
     type: application

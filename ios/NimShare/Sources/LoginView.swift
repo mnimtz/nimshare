@@ -11,6 +11,7 @@ struct LoginView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var showServerSheet = false
+    @State private var rememberCredentials = true
     @FocusState private var focusedField: Field?
 
     enum Field { case email, password }
@@ -89,6 +90,28 @@ struct LoginView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
+                        // v1.10.63 — expliziter "Anmeldedaten merken"-Toggle.
+                        // ON (default): E-Mail wird gespeichert (UserDefaults),
+                        //   Passwort geht in iOS-Schlüsselbund via AutoFill-Prompt.
+                        //   Beim nächsten Start ist E-Mail vorausgefüllt, iOS
+                        //   bietet Passwort automatisch an.
+                        // OFF: kein Speichern der E-Mail. iOS AutoFill bleibt
+                        //   grundsätzlich aktiv (steuert der Nutzer im System-
+                        //   Passwort-Dialog), aber unser Feld wird geleert.
+                        Toggle(isOn: $rememberCredentials) {
+                            HStack(spacing: 8) {
+                                Image(systemName: rememberCredentials ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(rememberCredentials ? Theme.tungstenBlue : Color.secondary)
+                                Text("Anmeldedaten merken")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        .toggleStyle(.button)
+                        .tint(Theme.tungstenBlue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
+
                         // Login-Button — Tungsten-Blau, prominent
                         Button {
                             Task { await doLogin() }
@@ -146,6 +169,18 @@ struct LoginView: View {
                 email = last
                 focusedField = .password
             }
+            // Toggle-Zustand aus letzter Session übernehmen.
+            rememberCredentials = auth.rememberCredentials
+        }
+        .onChange(of: rememberCredentials) { _, newValue in
+            // Persistieren damit beim nächsten App-Start der letzte
+            // Zustand vorausgewählt ist.
+            auth.rememberCredentials = newValue
+            if !newValue {
+                // Toggle deaktiviert → gespeicherte E-Mail sofort löschen
+                // (nicht erst beim nächsten Login).
+                auth.lastEmail = nil
+            }
         }
         .sheet(isPresented: $showServerSheet) {
             NavigationStack {
@@ -184,6 +219,12 @@ struct LoginView: View {
         defer { busy = false }
         do {
             try await auth.login(email: email, password: password)
+            // v1.10.63: nach erfolgreichem Login den Toggle-Zustand anwenden.
+            // AuthStore.login speichert lastEmail immer — wenn der User
+            // "Merken" abgewählt hat, löschen wir es hier direkt wieder.
+            if !rememberCredentials {
+                auth.lastEmail = nil
+            }
         } catch let e as ApiError {
             error = e.localizedDescription
         } catch let ex {

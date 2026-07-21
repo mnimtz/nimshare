@@ -19,6 +19,7 @@ final class AuthStore: ObservableObject {
     private let serverURLKey = "nimshare.serverURL"
     private let tokenKey = "nimshare.jwt"
     private let lastEmailKey = "nimshare.lastEmail"
+    private let rememberKey = "nimshare.rememberCredentials"
 
     /// v1.10.59: Werksseitig eingestellte Standard-URL. Marcus's Vorgabe.
     /// User kann via "Server ändern" trotzdem umschalten wenn nötig.
@@ -33,6 +34,13 @@ final class AuthStore: ObservableObject {
             if let v = newValue, !v.isEmpty { defaults.set(v, forKey: lastEmailKey) }
             else { defaults.removeObject(forKey: lastEmailKey) }
         }
+    }
+
+    /// v1.10.63: Zustand des "Anmeldedaten merken"-Toggle. Default true —
+    /// User erwartet dass App sich merkt. Bei false: kein lastEmail-Speichern.
+    var rememberCredentials: Bool {
+        get { defaults.object(forKey: rememberKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: rememberKey) }
     }
 
     func bootstrap() async {
