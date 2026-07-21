@@ -293,15 +293,32 @@ public class BrowseController : Controller
     // ── POST: delete folder ────────────────────────────────────────────────
     [HttpPost("folders/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteFolder(Guid id, string returnUrl, CancellationToken ct)
+    public async Task<IActionResult> DeleteFolder(Guid id, string returnUrl, bool force, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
         if (folder is null) return NotFound();
         if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
-        try { await _folders.DeleteAsync(folder, ct); }
+        try { await _folders.DeleteAsync(folder, cascade: force, ct); }
         catch (Exception ex) { TempData["Error"] = ex.Message; }
         return Redirect(SafeReturn(returnUrl));
+    }
+
+    /// <summary>
+    /// v1.10.96: Count-Endpoint für die 2-stufige Löschbestätigung. Frontend
+    /// ruft diesen vor dem Delete-Post; wenn Inhalt gefunden → Extra-Frage
+    /// „X Dateien + Y Unterordner mit in den Papierkorb?"
+    /// </summary>
+    [HttpGet("/api/v1/folders/{id:guid}/contents-count")]
+    public async Task<IActionResult> FolderContentsCount(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        var files = await _db.Files.CountAsync(f => f.FolderId == id && f.Status != StorageFileStatus.Deleted, ct);
+        var subs = await _db.Folders.CountAsync(f => f.ParentFolderId == id, ct);
+        return Ok(new { files, subfolders = subs });
     }
 
     private string SafeReturn(string? url) =>

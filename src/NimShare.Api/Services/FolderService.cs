@@ -15,6 +15,7 @@ public interface IFolderService
     Task<Folder> CreateChildAsync(Folder parent, string name, User createdBy, CancellationToken ct = default);
     Task RenameAsync(Folder folder, string newName, CancellationToken ct = default);
     Task DeleteAsync(Folder folder, CancellationToken ct = default);
+    Task DeleteAsync(Folder folder, bool cascade, CancellationToken ct = default);
 
     Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default);
     Task<List<StorageFile>> ListFilesAsync(Folder parent, CancellationToken ct = default);
@@ -133,12 +134,41 @@ public class FolderService : IFolderService
 
     public async Task DeleteAsync(Folder folder, CancellationToken ct = default)
     {
+        await DeleteAsync(folder, cascade: false, ct);
+    }
+
+    /// <summary>
+    /// v1.10.96: cascade-Modus für Marcus's Bug „Löschen verweigert bei
+    /// Inhalt statt nachzufragen". Ohne cascade: default-Verhalten (throw
+    /// wenn nicht leer). Mit cascade: alle Files soft-deleten (→ Trash),
+    /// Subfolders rekursiv löschen. Blobs bleiben — Trash-Rescue über
+    /// die normale Undelete-Route möglich.
+    /// </summary>
+    public async Task DeleteAsync(Folder folder, bool cascade, CancellationToken ct = default)
+    {
         if (folder.ParentFolderId is null) throw new InvalidOperationException("Cannot delete a scope root.");
         var folderId = folder.Id;
         var hasChildren = await _db.Folders.AnyAsync(f => f.ParentFolderId == folderId, ct);
         var hasFiles = await _db.Files.AnyAsync(f => f.FolderId == folderId && f.Status != StorageFileStatus.Deleted, ct);
-        if (hasChildren || hasFiles)
+        if ((hasChildren || hasFiles) && !cascade)
             throw new InvalidOperationException("Folder is not empty. Move or delete its contents first.");
+        if (cascade)
+        {
+            // Files → Trash (soft-delete)
+            var files = await _db.Files
+                .Where(f => f.FolderId == folderId && f.Status != StorageFileStatus.Deleted)
+                .ToListAsync(ct);
+            var now = DateTimeOffset.UtcNow;
+            foreach (var f in files)
+            {
+                f.Status = StorageFileStatus.Deleted;
+                f.DeletedAt = now;
+            }
+            // Subfolders rekursiv
+            var subs = await _db.Folders.Where(f => f.ParentFolderId == folderId).ToListAsync(ct);
+            foreach (var sub in subs)
+                await DeleteAsync(sub, cascade: true, ct);
+        }
         _db.Folders.Remove(folder);
         await _db.SaveChangesAsync(ct);
     }

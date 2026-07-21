@@ -188,14 +188,13 @@
                                     <button title="@T["actions.request_upload"]" aria-label="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
                                     @if (canManage)
                                     {
-                                        <button title="@T["actions.rename"]" aria-label="@T["actions.rename"]" onclick="event.stopPropagation();openRenameFolderModal('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
-                                        <form method="post" action="/browse/folders/@sub.Id/delete" style="display:inline"
-                                              onclick="event.stopPropagation()"
-                                              onsubmit="const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["actions.confirm_delete"].Value),{danger:true}))f.submit();})();return false;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="returnUrl" value="@currentUrl"/>
-                                            <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" type="submit">🗑</button>
-                                        </form>
+                                        @* v1.10.96: Rename ruft jetzt tatsächlich einen Handler auf (openRenameFolderModal
+                                           war früher undefined → Stift-Button war stumm). Delete ist jetzt zweistufig:
+                                           bei nicht-leerem Ordner fragt der Handler explizit ob mit Inhalt gelöscht werden soll. *@
+                                        <button title="@T["actions.rename"]" aria-label="@T["actions.rename"]"
+                                                onclick="event.stopPropagation();nimRenameFolder('@sub.Id', @Json.Serialize(sub.Name))">✎</button>
+                                        <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]"
+                                                onclick="event.stopPropagation();nimDeleteFolder('@sub.Id', @Json.Serialize(sub.Name), @Json.Serialize(currentUrl))">🗑</button>
                                     }
                                 </div>
                             </td>
@@ -434,6 +433,53 @@ function clearSelection() {
     document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
     if (selAll) selAll.checked = false;
     updateSelection();
+}
+
+// v1.10.96: Fix „Stift ohne Funktion" — openRenameFolderModal wurde nur
+// aufgerufen, aber nie definiert. Ersetzt durch nimRenameFolder: fragt via
+// nimPrompt (window.prompt-Fallback), postet an /browse/folders/{id}/rename.
+async function nimRenameFolder(id, currentName) {
+    const newName = window.prompt(@Json.Serialize(T["actions.rename"].Value), currentName);
+    if (!newName || newName === currentName) return;
+    const csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const form = new FormData();
+    form.append('name', newName);
+    form.append('returnUrl', window.location.pathname + window.location.search);
+    form.append('__RequestVerificationToken', csrf);
+    const r = await fetch('/browse/folders/' + id + '/rename', { method: 'POST', body: form, credentials: 'same-origin' });
+    if (r.ok || r.redirected) window.location.reload();
+    else nimAlert('Rename fehlgeschlagen: ' + r.status, { kind: 'error' });
+}
+
+// v1.10.96: Fix Marcus's Delete-Bug — vorher warf der Delete bei nicht-leerem
+// Ordner nur eine Fehlermeldung. Jetzt: Content-Count via API holen, dann
+// abhängig davon einstufige oder zweistufige Confirmation.
+async function nimDeleteFolder(id, name, returnUrl) {
+    let count = { files: 0, subfolders: 0 };
+    try {
+        const r = await fetch('/api/v1/folders/' + id + '/contents-count', { credentials: 'same-origin' });
+        if (r.ok) count = await r.json();
+    } catch {}
+    const nonEmpty = count.files > 0 || count.subfolders > 0;
+    let msg;
+    if (nonEmpty) {
+        const parts = [];
+        if (count.files > 0) parts.push(count.files + ' Datei' + (count.files === 1 ? '' : 'en'));
+        if (count.subfolders > 0) parts.push(count.subfolders + ' Unterordner');
+        msg = 'Der Ordner „' + name + '" enthält ' + parts.join(' und ') + '. Wirklich alles in den Papierkorb verschieben?';
+    } else {
+        msg = 'Ordner „' + name + '" wirklich löschen?';
+    }
+    if (!await nimConfirm(msg, { danger: true })) return;
+    // POST an Delete-Endpoint mit force=true wenn nicht leer
+    const csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const form = new FormData();
+    form.append('returnUrl', returnUrl);
+    if (nonEmpty) form.append('force', 'true');
+    form.append('__RequestVerificationToken', csrf);
+    const r = await fetch('/browse/folders/' + id + '/delete', { method: 'POST', body: form, credentials: 'same-origin' });
+    if (r.ok || r.redirected) window.location.reload();
+    else nimAlert('Löschen fehlgeschlagen: ' + r.status, { kind: 'error' });
 }
 
 async function bulkDelete() {
@@ -683,7 +729,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         }
         if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
         if (act === 'downloadZip' && ctxTarget.kind === 'folder') downloadFolderZip(ctxTarget.id, ctxTarget.name);
-        if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
+        if (act === 'rename' && ctxTarget.kind === 'folder') nimRenameFolder(ctxTarget.id, ctxTarget.name);
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'newSubfolder' && ctxTarget.kind === 'folder') openNewFolderModal(ctxTarget.id);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
@@ -692,18 +738,7 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         if (act === 'unpin' && ctxTarget.kind === 'file') unpinFile(ctxTarget.id);
         if (act === 'delete') {
             if (ctxTarget.kind === 'file') deleteFile(ctxTarget.id);
-            else {
-                if (confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) {
-                    const f = document.createElement('form');
-                    f.method = 'post';
-                    f.action = '/browse/folders/' + ctxTarget.id + '/delete';
-                    const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (csrf) f.appendChild(csrf.cloneNode(true));
-                    const rt = document.createElement('input'); rt.name='returnUrl'; rt.value = RETURN_URL; f.appendChild(rt);
-                    document.body.appendChild(f);
-                    f.submit();
-                }
-            }
+            else nimDeleteFolder(ctxTarget.id, ctxTarget.name, RETURN_URL);
         }
     });
 });
