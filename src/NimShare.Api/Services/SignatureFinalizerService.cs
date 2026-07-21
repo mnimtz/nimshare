@@ -142,11 +142,28 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             // PKCS#7 SignedData that Adobe Reader validates natively (green
             // padlock). Silent fallback if no cert: ship the unsigned PDF as
             // before.
-            var initiatorCert = await _db.SigningCertificates
-                .Where(c => c.OwnerUserId == req.InitiatorUserId && c.NotAfter > DateTimeOffset.UtcNow)
-                .OrderByDescending(c => c.IsDefault)
-                .ThenByDescending(c => c.CreatedAt)
-                .FirstOrDefaultAsync(ct);
+            // v1.10.81: Root-Cause aus Marcus's v1.10.80-Diagnose — SqlServer-
+            // Provider kann DateTimeOffset.UtcNow nicht in einem Where in SQL
+            // übersetzen, wirft InvalidOperationException. SQLite hat's still
+            // per Client-Evaluation gemacht, deshalb lokal ok. Fix: Wert vorher
+            // in eine lokale Variable, dann geht der Provider ihn als Parameter.
+            // Zusätzlich: das ganze Cert-Lookup gehört in ein defensives try —
+            // ein failer Cert-Query darf NIE den Finalize blockieren, weil das
+            // PAdES-Siegel per Design optional ist (fällt auf unsigned zurück).
+            SigningCertificate? initiatorCert = null;
+            try
+            {
+                var now = DateTimeOffset.UtcNow;
+                initiatorCert = await _db.SigningCertificates
+                    .Where(c => c.OwnerUserId == req.InitiatorUserId && c.NotAfter > now)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenByDescending(c => c.CreatedAt)
+                    .FirstOrDefaultAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Cert-Lookup failed for {ReqId} — proceeding without PAdES signature", req.Id);
+            }
             string? cryptoSigInfo = null;
             if (initiatorCert is not null)
             {
