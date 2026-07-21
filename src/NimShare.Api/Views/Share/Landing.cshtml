@@ -66,15 +66,39 @@
 
         @{
             var ct = (Model.ContentType ?? "").ToLowerInvariant();
-            var previewable = ct.StartsWith("image/") || ct == "application/pdf";
+            // v1.10.83: Video + Audio als previewable — Blob Storage kann Range-
+            // Requests, der Browser streamt direkt und der Empfänger kann seeken
+            // ohne erst das ganze File runterladen zu müssen.
+            var isImage = ct.StartsWith("image/");
+            var isPdf = ct == "application/pdf";
+            var isVideo = ct.StartsWith("video/");
+            var isAudio = ct.StartsWith("audio/");
+            var previewable = isImage || isPdf || isVideo || isAudio;
         }
         @if (previewable && !Model.HasPassword)
         {
-            <div style="margin-top:var(--sp-4);border:1px solid var(--tw-gray-200);border-radius:8px;overflow:hidden;background:var(--tw-gray-100)">
-                @if (ct.StartsWith("image/"))
+            <div style="margin-top:var(--sp-4);border:1px solid var(--tw-gray-200);border-radius:8px;overflow:hidden;background:@(isAudio ? "transparent" : "var(--tw-gray-100)")">
+                @if (isImage)
                 {
                     <img src="/s/@Model.Slug/preview" alt="@Model.FileName"
                          style="display:block;max-width:100%;max-height:60vh;margin:0 auto;background:#fff"/>
+                }
+                else if (isVideo)
+                {
+                    <video controls preload="metadata" playsinline
+                           style="display:block;width:100%;max-height:60vh;background:#000;outline:none"
+                           poster="">
+                        <source src="/s/@Model.Slug/preview" type="@Model.ContentType"/>
+                        @T["landing.video.unsupported"]
+                    </video>
+                }
+                else if (isAudio)
+                {
+                    <audio controls preload="metadata"
+                           style="display:block;width:100%;padding:var(--sp-3)">
+                        <source src="/s/@Model.Slug/preview" type="@Model.ContentType"/>
+                        @T["landing.audio.unsupported"]
+                    </audio>
                 }
                 else
                 {

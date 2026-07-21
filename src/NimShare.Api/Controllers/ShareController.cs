@@ -211,9 +211,16 @@ public class ShareController : Controller
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var ct2 = (link.File.ContentType ?? "").ToLowerInvariant();
-        if (!ct2.StartsWith("image/") && ct2 != "application/pdf") return BadRequest();
-        // Redirect to a short-lived SAS with inline disposition — Azure serves it
-        // directly, no bytes go through the app.
+        // v1.10.83: Video + Audio in Preview freigegeben. Azure Blob Storage
+        // beantwortet Range-Requests nativ, das <video>/<audio>-Tag im Browser
+        // fetcht die Chunks direkt vom Storage — kein Byte geht durch die App.
+        // Damit auch Seek/Fast-Forward funktioniert und der Vorschau-Player
+        // sofort losspielen kann, ohne das ganze File vorher zu laden.
+        var isPreviewable = ct2.StartsWith("image/")
+            || ct2 == "application/pdf"
+            || ct2.StartsWith("video/")
+            || ct2.StartsWith("audio/");
+        if (!isPreviewable) return BadRequest();
         var sas = _blobs.CreateInlineSas(link.File.BlobPath, link.File.ContentType);
         return Redirect(sas.ToString());
     }

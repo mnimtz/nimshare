@@ -1129,4 +1129,6 @@ Gracias por usar NimShare.</value></data>
   <data name="copy.hint.single"><value>Elige la carpeta de destino para la copia.</value></data>
   <data name="copy.done_single"><value>Copiado.</value></data>
   <data name="copy.done_many"><value>copiados.</value></data>
+  <data name="landing.video.unsupported" xml:space="preserve"><value>Tu navegador no puede reproducir este vídeo directamente.</value></data>
+  <data name="landing.audio.unsupported" xml:space="preserve"><value>Tu navegador no puede reproducir este audio directamente.</value></data>
 </root>
