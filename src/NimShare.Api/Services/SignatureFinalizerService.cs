@@ -76,6 +76,13 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             .Include(r => r.SourceFile)
             .Include(r => r.Participants)
             .Include(r => r.Initiator)
+            // v1.10.86: BUG-FIX — Fields fehlten im Include. Marcus's Report:
+            // „das ist das Original-PDF, ohne Felder/Unterschriften". Ursache:
+            // req.Fields war eine leere Nav-Collection, die foreach-Schleife
+            // in RenderFinalAsync lief komplett leer durch. Ohne diesen
+            // Include war das finale PDF byte-identisch mit dem Source-PDF
+            // (plus die magere Audit-Seite hinten dran).
+            .Include(r => r.Fields)
             .SingleOrDefaultAsync(r => r.Id == requestId, ct);
         if (req is null)
         {
@@ -134,7 +141,15 @@ public class SignatureFinalizerService : ISignatureFinalizerService
                 catch { /* skip missing sig */ }
             }
 
-            var finalBytes = await _sig.RenderFinalAsync(req, srcBytes, sigImages, ct);
+            // v1.10.86: Audit-Events explizit laden und dem Renderer mitgeben —
+            // eingebettete Audit-Seite im finalen PDF bekommt jetzt volle
+            // Forensik (IP, UA, Device, Timezone, Location) statt nur
+            // Name+Email+IP-Hash.
+            var auditEvents = await _db.SignatureAudits
+                .Where(a => a.RequestId == req.Id)
+                .OrderBy(a => a.At)
+                .ToListAsync(ct);
+            var finalBytes = await _sig.RenderFinalAsync(req, srcBytes, sigImages, auditEvents, ct);
 
             // v1.10.16 — embed a real PAdES-B cryptographic signature using
             // the initiator's default certificate (if any). Every byte of the
