@@ -1,0 +1,76 @@
+@{
+    ViewData["Title"] = "Privacy Policy — NimShare";
+    Layout = "_AppShell";
+    var lastUpdated = new DateTime(2026, 7, 21);
+}
+@* v1.10.89 fix: kein zweites @inject — T kommt bereits aus _ViewImports.cshtml.
+   Doppel-inject brach die Razor-AOT-Compilation still ("Ambiguous inject T"),
+   die View landete nicht im Views-Assembly und Runtime meldete "not found". *@
+
+<div class="card" style="max-width:820px;margin:0 auto">
+    <h1>@T["privacy.title"]</h1>
+    <p class="muted" style="font-size:.85rem">@T["privacy.last_updated"]: @lastUpdated.ToString("yyyy-MM-dd")</p>
+
+    <h2>@T["privacy.intro.title"]</h2>
+    <p>@T["privacy.intro.body"]</p>
+
+    <h2>@T["privacy.controller.title"]</h2>
+    <p>@Html.Raw(@T["privacy.controller.body"].Value)</p>
+
+    <h2>@T["privacy.data.title"]</h2>
+    <p>@T["privacy.data.intro"]</p>
+    <ul>
+        <li><strong>@T["privacy.data.account"]:</strong> @T["privacy.data.account_desc"]</li>
+        <li><strong>@T["privacy.data.files"]:</strong> @T["privacy.data.files_desc"]</li>
+        <li><strong>@T["privacy.data.usage"]:</strong> @T["privacy.data.usage_desc"]</li>
+        <li><strong>@T["privacy.data.signatures"]:</strong> @T["privacy.data.signatures_desc"]</li>
+        <li><strong>@T["privacy.data.contacts"]:</strong> @T["privacy.data.contacts_desc"]</li>
+        <li><strong>@T["privacy.data.moderation"]:</strong> @T["privacy.data.moderation_desc"]</li>
+    </ul>
+
+    <h2>@T["privacy.purposes.title"]</h2>
+    <p>@T["privacy.purposes.body"]</p>
+
+    <h2>@T["privacy.tracking.title"]</h2>
+    <p><strong>@T["privacy.tracking.no_tracking"]</strong></p>
+    <p>@T["privacy.tracking.body"]</p>
+
+    <h2>@T["privacy.thirdparty.title"]</h2>
+    <p>@T["privacy.thirdparty.body"]</p>
+    <ul>
+        <li><strong>@T["privacy.thirdparty.hoster"]:</strong> @T["privacy.thirdparty.hoster_desc"]</li>
+        <li><strong>@T["privacy.thirdparty.smtp"]:</strong> @T["privacy.thirdparty.smtp_desc"]</li>
+        <li><strong>@T["privacy.thirdparty.ai"]:</strong> @T["privacy.thirdparty.ai_desc"]</li>
+    </ul>
+
+    <h2>@T["privacy.retention.title"]</h2>
+    <p>@T["privacy.retention.body"]</p>
+
+    <h2>@T["privacy.rights.title"]</h2>
+    <p>@T["privacy.rights.body"]</p>
+    <ul>
+        <li>@T["privacy.rights.access"]</li>
+        <li>@T["privacy.rights.rectify"]</li>
+        <li>@T["privacy.rights.delete"]</li>
+        <li>@T["privacy.rights.export"]</li>
+        <li>@T["privacy.rights.restrict"]</li>
+        <li>@T["privacy.rights.object"]</li>
+        <li>@T["privacy.rights.complaint"]</li>
+    </ul>
+    <p>@Html.Raw(@T["privacy.rights.how"].Value)</p>
+
+    <h2>@T["privacy.security.title"]</h2>
+    <p>@T["privacy.security.body"]</p>
+
+    <h2>@T["privacy.minors.title"]</h2>
+    <p>@T["privacy.minors.body"]</p>
+
+    <h2>@T["privacy.changes.title"]</h2>
+    <p>@T["privacy.changes.body"]</p>
+
+    <hr>
+    <p class="muted" style="font-size:.85rem">
+        <a href="/support">@T["nav.support"]</a> ·
+        <a href="/imprint">@T["nav.imprint"]</a>
+    </p>
+</div>

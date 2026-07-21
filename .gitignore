@@ -55,7 +55,11 @@ ios/build/
 ios/DerivedData/
 ios/*.xcworkspace/
 ios/**/*.xcuserdatad/
-# Also ignore the two "Browse [conflicted]"-style Finder merge backups
-# that occasionally show up under Views/
-**/*[conflicted]*.cshtml
-**/*[conflicted 2]*.cshtml
+# v1.10.89: Finder-Merge-Backups im Views/-Ordner ignorieren.
+# WARNUNG: die zwei ursprünglichen Zeilen waren unbeabsichtigte
+# Bracket-Character-Classes — `**/*[conflicted]*.cshtml` matchte JEDE
+# .cshtml die einen dieser Buchstaben enthält (also alle). Deswegen
+# blieben 4 neue Views in v1.10.88 ungetrackt und der Server warf 500
+# „view not found". Escape verhindert Character-Class-Interpretation.
+**/*\[conflicted\]*.cshtml
+**/*\[conflicted 2\]*.cshtml

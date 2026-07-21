@@ -1,0 +1,304 @@
+@model NimShare.Core.Entities.SignatureRequest
+@using NimShare.Core.Entities
+@* T kommt aus _ViewImports.cshtml. *@
+@{
+    ViewData["Title"] = $"Audit — {Model.Title}";
+    Layout = "_AppShell";
+    var fields = (List<SignatureField>)ViewData["Fields"]!;
+    var audits = (List<SignatureAudit>)ViewData["Audits"]!;
+
+    string kindLabel(SignatureAuditKind k) => k switch
+    {
+        SignatureAuditKind.Invited => T["sig.audit.kind.invited"].Value,
+        SignatureAuditKind.Viewed => T["sig.audit.kind.viewed"].Value,
+        SignatureAuditKind.Signed => T["sig.audit.kind.signed"].Value,
+        SignatureAuditKind.Declined => T["sig.audit.kind.declined"].Value,
+        SignatureAuditKind.Cancelled => T["sig.audit.kind.cancelled"].Value,
+        SignatureAuditKind.Finalized => T["sig.audit.kind.finalized"].Value,
+        _ => k.ToString(),
+    };
+    string kindIcon(SignatureAuditKind k) => k switch
+    {
+        SignatureAuditKind.Invited => "📨",
+        SignatureAuditKind.Viewed => "👁",
+        SignatureAuditKind.Signed => "✍",
+        SignatureAuditKind.Declined => "🚫",
+        SignatureAuditKind.Cancelled => "✕",
+        SignatureAuditKind.Finalized => "🔐",
+        _ => "•",
+    };
+    string kindColor(SignatureAuditKind k) => k switch
+    {
+        SignatureAuditKind.Signed or SignatureAuditKind.Finalized => "var(--status-ok, #2a7f2a)",
+        SignatureAuditKind.Declined or SignatureAuditKind.Cancelled => "var(--status-critical, #d33)",
+        _ => "var(--tw-gray-500, #666)",
+    };
+    var participantById = Model.Participants.ToDictionary(p => p.Id, p => p);
+
+    var totalEvents = audits.Count;
+    var signedCount = audits.Count(a => a.Kind == SignatureAuditKind.Signed);
+    var uniqueIps = audits.Where(a => !string.IsNullOrEmpty(a.IpHash))
+        .Select(a => a.IpHash).Distinct().Count();
+    var firstAt = audits.FirstOrDefault()?.At;
+    var lastAt = audits.LastOrDefault()?.At;
+}
+
+<style>
+    .audit-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:16px }
+    .audit-header h1 { margin:0 0 4px 0 }
+    .audit-actions { display:flex; gap:6px; flex-wrap:wrap }
+    .audit-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:20px }
+    .audit-summary .tile { background:var(--tw-gray-50,#f7f7f8); border:1px solid var(--tw-gray-200); border-radius:8px; padding:12px }
+    .audit-summary .tile .num { font-size:1.4rem; font-weight:700; color:var(--tw-navy,#001d3d) }
+    .audit-summary .tile .lbl { font-size:.75rem; color:var(--tw-gray-500,#666); text-transform:uppercase; letter-spacing:.03em }
+    .timeline { position:relative; margin-left:20px; padding-left:24px; border-left:2px solid var(--tw-gray-200) }
+    .timeline .event { position:relative; margin-bottom:20px; padding:12px 14px; border:1px solid var(--tw-gray-200); border-radius:8px; background:#fff }
+    .timeline .event::before { content:''; position:absolute; left:-33px; top:14px; width:14px; height:14px; border-radius:50%; background:#fff; border:3px solid var(--evt-color, #666) }
+    .timeline .event-head { display:flex; align-items:center; gap:8px; margin-bottom:6px }
+    .timeline .event-head .icon { font-size:1.1rem }
+    .timeline .event-head .kind { font-weight:600 }
+    .timeline .event-head .when { margin-left:auto; font-family:var(--font-mono, monospace); font-size:.8rem; color:var(--tw-gray-500) }
+    .timeline .event dl { margin:0; display:grid; grid-template-columns:auto 1fr; column-gap:12px; row-gap:4px; font-size:.85rem }
+    .timeline .event dt { font-weight:500; color:var(--tw-gray-600, #555) }
+    .timeline .event dd { margin:0; word-break:break-all; font-family:var(--font-mono, monospace); font-size:.8rem }
+    .timeline .event dd.note { font-family:inherit; font-size:.85rem }
+    .table-audit td, .table-audit th { padding:6px 8px; font-size:.85rem; vertical-align:top }
+    .empty { color:var(--tw-gray-500); font-style:italic }
+    @@media print {
+        .audit-actions, nav, .app-sidebar, .app-topbar { display:none !important }
+        .audit-header { border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px }
+        body { background:#fff !important; color:#000 !important }
+        .timeline .event { break-inside:avoid; page-break-inside:avoid }
+    }
+</style>
+
+<div class="audit-header">
+    <div>
+        <h1 class="h4">🔐 @T["sig.audit.title"]</h1>
+        <div class="muted" style="font-size:.9rem">
+            <strong>@Model.Title</strong>
+            @if (Model.SourceFile is not null) { <span> · @Model.SourceFile.Name</span> }
+            <span> · @T["sig.audit.subject"]: @Model.Id.ToString()</span>
+        </div>
+    </div>
+    <div class="audit-actions">
+        <a class="btn btn-ghost" href="/signatures/@Model.Id">← @T["common.back"]</a>
+        <a class="btn btn-secondary" href="/api/v1/signatures/@Model.Id/audit" target="_blank" rel="noopener">📄 @T["sig.audit.json_export"]</a>
+        <button class="btn btn-secondary" onclick="window.print()">🖨 @T["sig.audit.print"]</button>
+    </div>
+</div>
+
+<div class="audit-summary">
+    <div class="tile">
+        <div class="num">@totalEvents</div>
+        <div class="lbl">@T["sig.audit.stat.events"]</div>
+    </div>
+    <div class="tile">
+        <div class="num">@signedCount / @Model.Participants.Count(p => p.Role == SignatureParticipantRole.Signer)</div>
+        <div class="lbl">@T["sig.audit.stat.signed"]</div>
+    </div>
+    <div class="tile">
+        <div class="num">@uniqueIps</div>
+        <div class="lbl">@T["sig.audit.stat.unique_ips"]</div>
+    </div>
+    <div class="tile">
+        <div class="num" style="font-size:.95rem">@(firstAt?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
+        <div class="lbl">@T["sig.audit.stat.first_event"]</div>
+    </div>
+    <div class="tile">
+        <div class="num" style="font-size:.95rem">@(lastAt?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
+        <div class="lbl">@T["sig.audit.stat.last_event"]</div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+    <h2 class="card-title" style="margin-top:0">📋 @T["sig.audit.metadata"]</h2>
+    <table class="table table-audit" style="margin-bottom:0">
+        <tr><th style="width:180px">@T["sig.audit.meta.id"]</th><td><code>@Model.Id</code></td></tr>
+        <tr><th>@T["sig.audit.meta.title"]</th><td>@Model.Title</td></tr>
+        @if (!string.IsNullOrWhiteSpace(Model.Message))
+        {
+            <tr><th>@T["sig.audit.meta.message"]</th><td>@Model.Message</td></tr>
+        }
+        <tr><th>@T["sig.audit.meta.status"]</th><td><strong>@Model.Status</strong></td></tr>
+        <tr><th>@T["sig.audit.meta.delivery"]</th><td>@Model.DeliveryOrder</td></tr>
+        <tr><th>@T["sig.audit.meta.source_file"]</th>
+            <td>@(Model.SourceFile?.Name ?? "—")
+                @if (Model.SourceFile is not null)
+                {
+                    <span class="muted"> · @Model.SourceFile.SizeBytes bytes · @Model.SourceFile.ContentType</span>
+                }
+            </td></tr>
+        <tr><th>@T["sig.audit.meta.initiator"]</th><td>@(Model.Initiator?.DisplayName) &lt;@(Model.Initiator?.Email)&gt;</td></tr>
+        <tr><th>@T["sig.audit.meta.created"]</th><td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</td></tr>
+        @if (Model.SentAt is not null) { <tr><th>@T["sig.audit.meta.sent"]</th><td>@Model.SentAt.Value.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</td></tr> }
+        @if (Model.Deadline is not null) { <tr><th>@T["sig.audit.meta.deadline"]</th><td>@Model.Deadline.Value.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</td></tr> }
+        @if (Model.CompletedAt is not null) { <tr><th>@T["sig.audit.meta.completed"]</th><td>@Model.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</td></tr> }
+        @if (Model.FinalFileId is not null) { <tr><th>@T["sig.audit.meta.final_file"]</th><td><code>@Model.FinalFileId</code></td></tr> }
+    </table>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+    <h2 class="card-title" style="margin-top:0">👥 @T["sig.audit.participants"]</h2>
+    <table class="table table-audit" style="width:100%;margin-bottom:0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>@T["sig.audit.part.name"]</th>
+                <th>@T["sig.audit.part.email"]</th>
+                <th>@T["sig.audit.part.role"]</th>
+                <th>@T["sig.audit.part.status"]</th>
+                <th>@T["sig.audit.part.viewed_at"]</th>
+                <th>@T["sig.audit.part.signed_at"]</th>
+                <th>@T["sig.audit.part.ip"]</th>
+                <th>@T["sig.audit.part.user_agent"]</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var p in Model.Participants.OrderBy(p => p.Order))
+        {
+            <tr>
+                <td>@(p.Order + 1)</td>
+                <td>@p.Name</td>
+                <td><code>@p.Email</code></td>
+                <td>@p.Role</td>
+                <td><strong>@p.Status</strong></td>
+                <td>@(p.ViewedAt?.ToString("yyyy-MM-dd HH:mm:ss 'UTC'") ?? "—")</td>
+                <td>@(p.SignedAt?.ToString("yyyy-MM-dd HH:mm:ss 'UTC'") ?? "—")</td>
+                <td style="max-width:200px">
+                    @if (!string.IsNullOrEmpty(p.IpAddress))
+                    {
+                        <code>@p.IpAddress</code>
+                        <div class="muted" style="font-size:.7rem">hash: @p.IpHash?.Substring(0, Math.Min(16, p.IpHash.Length))…</div>
+                    }
+                    else if (!string.IsNullOrEmpty(p.IpHash))
+                    {
+                        <code style="font-size:.75rem">@p.IpHash.Substring(0, Math.Min(24, p.IpHash.Length))…</code>
+                        <div class="muted" style="font-size:.7rem">@T["sig.audit.ip_hashed_only"]</div>
+                    }
+                    else { <span class="empty">—</span> }
+                </td>
+                <td style="max-width:220px;word-break:break-all;font-size:.72rem">@(p.UserAgent ?? "—")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+    <h2 class="card-title" style="margin-top:0">📝 @T["sig.audit.fields"] (@fields.Count)</h2>
+    @if (!fields.Any())
+    {
+        <p class="empty">@T["sig.audit.no_fields"]</p>
+    }
+    else
+    {
+        <table class="table table-audit" style="width:100%;margin-bottom:0">
+            <thead>
+                <tr>
+                    <th>@T["sig.audit.field.assigned"]</th>
+                    <th>@T["sig.audit.field.type"]</th>
+                    <th>@T["sig.audit.field.page"]</th>
+                    <th>@T["sig.audit.field.position"]</th>
+                    <th>@T["sig.audit.field.value"]</th>
+                    <th>@T["sig.audit.field.filled_at"]</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var f in fields)
+            {
+                var p = participantById.GetValueOrDefault(f.ParticipantId);
+                <tr>
+                    <td>@(p?.Name ?? "?")</td>
+                    <td>@f.Type</td>
+                    <td>@f.Page</td>
+                    <td style="font-family:var(--font-mono);font-size:.75rem">
+                        x=@f.X.ToString("F1"), y=@f.Y.ToString("F1")<br>
+                        w=@f.Width.ToString("F1"), h=@f.Height.ToString("F1")
+                    </td>
+                    <td>
+                        @if (f.Type == SignatureFieldType.Signature)
+                        {
+                            <span class="muted">@(string.IsNullOrEmpty(f.SignatureImagePath) ? T["sig.audit.field.unsigned"].Value : T["sig.audit.field.signed_image"].Value)</span>
+                        }
+                        else if (f.Type == SignatureFieldType.Checkbox)
+                        {
+                            <span>@(f.Value == "true" ? "☑" : "☐")</span>
+                        }
+                        else
+                        {
+                            <span>@(f.Value ?? "—")</span>
+                        }
+                    </td>
+                    <td>@(f.FilledAt?.ToString("yyyy-MM-dd HH:mm:ss 'UTC'") ?? "—")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+<div class="card">
+    <h2 class="card-title" style="margin-top:0">🕐 @T["sig.audit.timeline"] (@audits.Count)</h2>
+    @if (!audits.Any())
+    {
+        <p class="empty">@T["sig.audit.no_events"]</p>
+    }
+    else
+    {
+        <div class="timeline">
+            @foreach (var a in audits)
+            {
+                var p = a.ParticipantId is Guid pid ? participantById.GetValueOrDefault(pid) : null;
+                var loc = string.IsNullOrEmpty(a.City) && string.IsNullOrEmpty(a.Country) ? "" :
+                    !string.IsNullOrEmpty(a.City) && !string.IsNullOrEmpty(a.Country) ? $"{a.City}, {a.Country}" :
+                    a.City ?? a.Country ?? "";
+                <div class="event" style="--evt-color:@kindColor(a.Kind)">
+                    <div class="event-head">
+                        <span class="icon">@kindIcon(a.Kind)</span>
+                        <span class="kind">@kindLabel(a.Kind)</span>
+                        @if (p is not null)
+                        {
+                            <span class="muted">· @p.Name &lt;@p.Email&gt;</span>
+                        }
+                        <span class="when">@a.At.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</span>
+                    </div>
+                    <dl>
+                        @if (!string.IsNullOrEmpty(a.IpAddress))
+                        {
+                            <dt>@T["sig.audit.evt.ip"]</dt><dd>@a.IpAddress</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(a.IpHash))
+                        {
+                            <dt>@T["sig.audit.evt.ip_hash"]</dt><dd>@a.IpHash</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(loc))
+                        {
+                            <dt>@T["sig.audit.evt.location"]</dt><dd class="note">🌍 @loc</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(a.DeviceType) && a.DeviceType != "Unknown")
+                        {
+                            <dt>@T["sig.audit.evt.device"]</dt><dd class="note">@a.DeviceType</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(a.Timezone))
+                        {
+                            <dt>@T["sig.audit.evt.timezone"]</dt><dd class="note">@a.Timezone</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(a.UserAgent))
+                        {
+                            <dt>@T["sig.audit.evt.user_agent"]</dt><dd>@a.UserAgent</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(a.Note))
+                        {
+                            <dt>@T["sig.audit.evt.note"]</dt><dd class="note">@a.Note</dd>
+                        }
+                    </dl>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<p class="muted" style="margin-top:16px;font-size:.75rem;text-align:center">
+    @T["sig.audit.footer_disclaimer"]
+</p>

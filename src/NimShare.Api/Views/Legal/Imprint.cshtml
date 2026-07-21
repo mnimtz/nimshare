@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Impressum — NimShare";
+    Layout = "_AppShell";
+}
+@* T kommt bereits aus _ViewImports.cshtml — kein zweiter @inject. *@
+
+<div class="card" style="max-width:820px;margin:0 auto">
+    <h1>@T["imprint.title"]</h1>
+
+    <p><strong>@T["imprint.operator"]:</strong><br>
+       @Html.Raw(@T["imprint.operator_body"].Value)</p>
+
+    <h2>@T["imprint.contact.title"]</h2>
+    <p>@Html.Raw(@T["imprint.contact.body"].Value)</p>
+
+    <h2>@T["imprint.tech.title"]</h2>
+    <p>@T["imprint.tech.body"]</p>
+
+    <h2>@T["imprint.disclaimer.title"]</h2>
+    <p>@T["imprint.disclaimer.body"]</p>
+
+    <hr>
+    <p class="muted" style="font-size:.85rem">
+        <a href="/privacy">@T["nav.privacy"]</a> ·
+        <a href="/support">@T["nav.support"]</a>
+    </p>
+</div>

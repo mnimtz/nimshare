@@ -1,0 +1,109 @@
+@using NimShare.Core.Entities
+@using NimShare.Api.Controllers
+@model List<NimShare.Api.Controllers.ModerationController.ReportRow>
+@{
+    ViewData["Title"] = "Moderation";
+    var filter = (ViewData["Filter"] as string) ?? "open";
+    string statusPill(ContentReportStatus s) => s switch
+    {
+        ContentReportStatus.Open => "warning",
+        ContentReportStatus.Resolved => "success",
+        ContentReportStatus.Dismissed => "secondary",
+        _ => "secondary",
+    };
+    string reasonLabel(ContentReportReason r) => r switch
+    {
+        ContentReportReason.Spam => "Spam",
+        ContentReportReason.Harassment => "Belästigung / Hass",
+        ContentReportReason.IllegalContent => "Rechtswidrig",
+        ContentReportReason.IntellectualProperty => "Urheberrecht",
+        ContentReportReason.CsamOrChildSafety => "Kinderschutz",
+        ContentReportReason.Impersonation => "Identitätsdiebstahl",
+        ContentReportReason.Malware => "Malware / Phishing",
+        _ => "Sonstiges",
+    };
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 m-0">Moderations-Queue</h1>
+    <div class="btn-group btn-group-sm" role="group">
+        <a class="btn @(filter=="open"?"btn-primary":"btn-outline-secondary")"
+           asp-action="List" asp-route-status="open">Offen</a>
+        <a class="btn @(filter=="resolved"?"btn-primary":"btn-outline-secondary")"
+           asp-action="List" asp-route-status="resolved">Bearbeitet</a>
+        <a class="btn @(filter=="dismissed"?"btn-primary":"btn-outline-secondary")"
+           asp-action="List" asp-route-status="dismissed">Abgewiesen</a>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Keine Reports in dieser Ansicht.</div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var row in Model)
+        {
+            var r = row.Report;
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-@statusPill(r.Status)">@r.Status</span>
+                            <strong>@reasonLabel(r.Reason)</strong>
+                            <span class="text-muted">· @r.SubjectKind</span>
+                        </div>
+                        <div class="small">
+                            <strong>Ressource:</strong> @(r.SubjectLabel ?? r.SubjectId.ToString())
+                            @if (row.Owner is not null)
+                            {
+                                <span class="text-muted"> · Eigentümer: @row.Owner.DisplayName (@row.Owner.Email)</span>
+                            }
+                        </div>
+                        <div class="small text-muted">
+                            Gemeldet von @(row.Reporter?.DisplayName ?? "?") am @r.CreatedAt.LocalDateTime.ToString("g")
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(r.Note))
+                        {
+                            <blockquote class="blockquote-footer mt-2 mb-0 small">@r.Note</blockquote>
+                        }
+                        @if (r.Resolution.HasValue)
+                        {
+                            <div class="small mt-2">
+                                <span class="text-muted">Entscheidung:</span> @r.Resolution
+                                @if (!string.IsNullOrWhiteSpace(r.ResolutionNote))
+                                {
+                                    <div class="text-muted">„@r.ResolutionNote"</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (r.Status == ContentReportStatus.Open)
+                    {
+                        <details>
+                            <summary class="btn btn-sm btn-primary">Bearbeiten</summary>
+                            <form asp-action="Resolve" asp-route-id="@r.Id" method="post" class="mt-2 border rounded p-2" style="min-width: 320px;">
+                                @Html.AntiForgeryToken()
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1">Aktion</label>
+                                    <select name="resolution" class="form-select form-select-sm">
+                                        <option value="@ContentReportResolution.ContentRemoved">Inhalt entfernt</option>
+                                        <option value="@ContentReportResolution.UserSuspended">User gesperrt</option>
+                                        <option value="@ContentReportResolution.Warning">Verwarnung</option>
+                                        <option value="@ContentReportResolution.NoAction">Kein Verstoß</option>
+                                        <option value="@ContentReportResolution.Duplicate">Duplikat</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <textarea name="note" class="form-control form-control-sm" rows="2" placeholder="Interner Kommentar (optional)"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-success w-100">Bestätigen</button>
+                            </form>
+                        </details>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
