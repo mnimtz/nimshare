@@ -14,8 +14,31 @@ namespace NimShare.Api.Services;
 /// </summary>
 public interface ISignatureFinalizerService
 {
-    Task TryFinalizeAsync(Guid requestId, CancellationToken ct = default);
+    Task<FinalizeOutcome> TryFinalizeAsync(Guid requestId, CancellationToken ct = default);
 }
+
+/// <summary>
+/// v1.10.80: Ergebnis eines Finalize-Versuchs. Der bisherige Return
+/// void hat alle Fehler im ILogger versenkt — Marcus's ForceFinalize-
+/// Trace konnte nur „keine Exception" sagen, ohne den echten Grund zu
+/// nennen. Jetzt kann der Aufrufer die Ursache direkt anzeigen.
+/// </summary>
+public enum FinalizeOutcomeKind
+{
+    Completed,
+    Skipped,             // Bereits Completed/Cancelled/Declined
+    WaitingParticipants, // Noch Signer/Viewer offen
+    RequestNotFound,
+    SourceMissing,
+    BlobUploadFailed,
+    RenderFailed,        // PDF-Merge/Sig-Rendering hat geworfen
+    UnexpectedError,     // catch-all für alles andere
+}
+
+public sealed record FinalizeOutcome(
+    FinalizeOutcomeKind Kind,
+    string? Detail = null,
+    string? Exception = null);
 
 public class SignatureFinalizerService : ISignatureFinalizerService
 {
@@ -39,31 +62,37 @@ public class SignatureFinalizerService : ISignatureFinalizerService
         _pdfSign = pdfSign; _dp = dp; _email = email;
     }
 
-    public async Task TryFinalizeAsync(Guid requestId, CancellationToken ct = default)
+    public async Task<FinalizeOutcome> TryFinalizeAsync(Guid requestId, CancellationToken ct = default)
     {
         // v1.10.75: EXTENSIVES Logging jedes early-return-Pfads. Marcus's
         // Report v1.10.74: "1/1 signiert, bleibt trotzdem auf Läuft" —
         // Finalizer wurde entweder gar nicht getriggert ODER er stieg
         // stumm aus. Ohne konkrete Log-Zeilen war die Root-Cause nicht
-        // identifizierbar. Jetzt sagt der Log konkret WO er ausstieg.
+        // identifizierbar. v1.10.80: die Info geht zusätzlich über
+        // FinalizeOutcome an den Aufrufer zurück, damit ForceFinalize
+        // sie im Response-Trace zeigen kann.
         _log.LogInformation("Finalizer-Start für Request {Id}", requestId);
         var req = await _db.SignatureRequests
             .Include(r => r.SourceFile)
             .Include(r => r.Participants)
             .Include(r => r.Initiator)
             .SingleOrDefaultAsync(r => r.Id == requestId, ct);
-        if (req is null) { _log.LogWarning("Finalizer-Abort {Id}: Request not found", requestId); return; }
+        if (req is null)
+        {
+            _log.LogWarning("Finalizer-Abort {Id}: Request not found", requestId);
+            return new FinalizeOutcome(FinalizeOutcomeKind.RequestNotFound);
+        }
         if (req.Status is SignatureRequestStatus.Completed
             or SignatureRequestStatus.Cancelled
             or SignatureRequestStatus.Declined)
         {
             _log.LogInformation("Finalizer-Skip {Id}: bereits {Status}", requestId, req.Status);
-            return;
+            return new FinalizeOutcome(FinalizeOutcomeKind.Skipped, $"already {req.Status}");
         }
         if (req.SourceFile is null)
         {
             _log.LogWarning("Finalizer-Abort {Id}: SourceFile ist null", requestId);
-            return;
+            return new FinalizeOutcome(FinalizeOutcomeKind.SourceMissing);
         }
 
         var allDone = req.Participants.All(x =>
@@ -81,7 +110,7 @@ public class SignatureFinalizerService : ISignatureFinalizerService
                             || x.Status == SignatureParticipantStatus.Signed))))
                 .Select(x => $"{x.Name}({x.Role}={x.Status})"));
             _log.LogInformation("Finalizer-Skip {Id}: offene Beteiligte: {Open}", requestId, openList);
-            return;
+            return new FinalizeOutcome(FinalizeOutcomeKind.WaitingParticipants, openList);
         }
 
         try
@@ -161,8 +190,14 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             var uploadResp = await http.PutAsync(ticket.UploadUrl, content, ct);
             if (!uploadResp.IsSuccessStatusCode)
             {
-                _log.LogWarning("Signature final blob upload {StatusCode} for {ReqId}", uploadResp.StatusCode, req.Id);
-                return;
+                var bodySnippet = string.Empty;
+                try { bodySnippet = (await uploadResp.Content.ReadAsStringAsync(ct)).Trim(); } catch { }
+                if (bodySnippet.Length > 400) bodySnippet = bodySnippet[..400] + "…";
+                _log.LogWarning("Signature final blob upload {StatusCode} for {ReqId} — body: {Body}",
+                    uploadResp.StatusCode, req.Id, bodySnippet);
+                return new FinalizeOutcome(
+                    FinalizeOutcomeKind.BlobUploadFailed,
+                    $"{(int)uploadResp.StatusCode} {uploadResp.ReasonPhrase}: {bodySnippet}");
             }
 
             var final = new StorageFile
@@ -232,14 +267,24 @@ public class SignatureFinalizerService : ISignatureFinalizerService
             await _db.SaveChangesAsync(ct);
             _log.LogInformation("Finalizer-OK {Id}: FinalFileId={FinalId}, cryptoSig={Crypto}",
                 req.Id, req.FinalFileId, cryptoSigInfo ?? "(none)");
+            return new FinalizeOutcome(FinalizeOutcomeKind.Completed, cryptoSigInfo);
         }
         catch (Exception ex)
         {
             // v1.10.75: LogError statt LogWarning — Finalize-Fehler bedeuten
             // dass ein Signatur-Vorgang auf "läuft" hängen bleibt obwohl er
             // fertig ist. Marcus's Bug in v1.10.74. Muss im Log-Stream
-            // sofort auffallen, nicht in der Rauschzone.
+            // sofort auffallen, nicht in der Rauschzone. v1.10.80: das
+            // Outcome-Objekt liefert die Details zusätzlich an die Route
+            // zurück, damit die ForceFinalize-Response die echte Ursache
+            // zeigt statt "keine Exception".
             _log.LogError(ex, "Finalisierung fehlgeschlagen für {ReqId} — Vorgang bleibt auf {Status}. Der Startup-Rescue oder /remind + \"Abschluss erzwingen\" retriggern den Finalizer.", req.Id, req.Status);
+            var kind = ex is HttpRequestException or IOException or TaskCanceledException
+                ? FinalizeOutcomeKind.BlobUploadFailed
+                : FinalizeOutcomeKind.RenderFailed;
+            return new FinalizeOutcome(kind,
+                $"{ex.GetType().Name}: {ex.Message}",
+                ex.ToString());
         }
     }
 }

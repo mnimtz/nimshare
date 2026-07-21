@@ -657,18 +657,26 @@ public class SignaturesController : ControllerBase
         // und keinen Log-Zugriff — jetzt bekommt er strukturierte Details
         // direkt in der Response, statt in unlesbaren Azure-Logs suchen
         // zu müssen.
+        // v1.10.80: FinalizeOutcome — der Aufrufer bekommt jetzt strukturiert
+        // zurück warum es klappte oder nicht. Vorher hat TryFinalizeAsync alle
+        // Exceptions intern geschluckt und nur „keine Exception" gemeldet.
         var trace = new List<string>();
+        string? diagnostic = null;
         trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] Alle Beteiligten fertig → Finalizer wird synchron gestartet.");
+        FinalizeOutcome outcome;
         try
         {
-            await finalizer.TryFinalizeAsync(r.Id, ct);
-            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] TryFinalizeAsync durchgelaufen (keine Exception).");
+            outcome = await finalizer.TryFinalizeAsync(r.Id, ct);
+            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] Outcome={outcome.Kind}"
+                + (outcome.Detail is null ? "" : $" — {outcome.Detail}"));
+            if (outcome.Exception is not null) diagnostic = outcome.Exception;
         }
         catch (Exception ex)
         {
-            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] ✗ EXCEPTION: {ex.GetType().Name}: {ex.Message}");
-            if (ex.InnerException is not null)
-                trace.Add($"   inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+            // Sollte nach v1.10.80 nicht mehr passieren — Finalizer wirft nicht
+            // mehr. Falls doch (z.B. DbContext-Dispose während Awaits): trotzdem
+            // sauber im Trace zeigen statt 500 zu werfen.
+            trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] ✗ Unerwartete Exception außerhalb Finalizer: {ex.GetType().Name}: {ex.Message}");
             return Ok(new
             {
                 status = r.Status.ToString(),
@@ -682,20 +690,43 @@ public class SignaturesController : ControllerBase
         trace.Add($"[{DateTimeOffset.UtcNow:HH:mm:ss}] Nachher: Status={after?.Status}, FinalFileId={after?.FinalFileId?.ToString() ?? "(null)"}");
         if (after?.Status != SignatureRequestStatus.Completed)
         {
-            // Genau protokollieren wer als "not-yet-done" gilt — zeigt DB-
-            // vs Audit-Log-Diskrepanzen auf.
             trace.Add("--- Participant-Status in DB nach Finalizer:");
             foreach (var p in (after?.Participants ?? Enumerable.Empty<SignatureParticipant>()).OrderBy(x => x.Order))
                 trace.Add($"   • {p.Name} ({p.Role}) = {p.Status}, SignedAt={p.SignedAt?.ToString("u") ?? "(null)"}");
-            trace.Add("--- Wenn hier alle Signer=Signed sind aber Status trotzdem nicht Completed:");
-            trace.Add("    Der Merge/PDF-Signing-Schritt hat wahrscheinlich einen tieferen Fehler.");
-            trace.Add("    Server-Log-Zeile 'Finalisierung fehlgeschlagen für {ReqId}' zeigt Details.");
+            // v1.10.80: konkreter Hinweis basierend auf dem Outcome — statt
+            // generischem „schau ins Server-Log".
+            switch (outcome.Kind)
+            {
+                case FinalizeOutcomeKind.RenderFailed:
+                    trace.Add("→ PDF-Merge/Rendering-Fehler. Häufigste Ursachen:");
+                    trace.Add("  • Zertifikat kaputt/entschlüsselbar (DataProtection-Key rotiert seit Cert-Upload?)");
+                    trace.Add("  • Source-PDF verschlüsselt/passwortgeschützt");
+                    trace.Add("  • Signatur-Bild-Blob im Storage 404");
+                    break;
+                case FinalizeOutcomeKind.BlobUploadFailed:
+                    trace.Add("→ Storage-Upload gescheitert. Prüfen:");
+                    trace.Add("  • SAS-Token noch gültig? Managed-Identity-Rechte auf Container?");
+                    trace.Add("  • Storage-Firewall/VNet blockt Azure-App-IP?");
+                    break;
+                case FinalizeOutcomeKind.WaitingParticipants:
+                    trace.Add("→ Der Finalizer hat noch offene Beteiligte gesehen (Race?):");
+                    trace.Add($"  {outcome.Detail}");
+                    break;
+                case FinalizeOutcomeKind.SourceMissing:
+                    trace.Add("→ Source-Datei ist gelöscht/nicht mehr referenzierbar.");
+                    break;
+                default:
+                    trace.Add("→ Details im Server-Log unter 'Finalisierung fehlgeschlagen für {ReqId}'.");
+                    break;
+            }
         }
         return Ok(new
         {
             status = after?.Status.ToString() ?? "?",
             finalFileId = after?.FinalFileId,
+            outcome = outcome.Kind.ToString(),
             note = string.Join("\n", trace),
+            diagnostic,
         });
     }
 
