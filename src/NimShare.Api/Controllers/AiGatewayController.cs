@@ -150,6 +150,89 @@ public class AiGatewayController : Controller
         return Ok(new { queued = ids.Count, smokeTest = "ok", vectorDim = testVec.Length });
     }
 
+    /// <summary>
+    /// v1.10.98: Diagnose-Endpoint. Zeigt sofort was mit dem AI-Setup los ist:
+    /// aktueller Provider, Feature-Flags, Ready-Files vs Embeddings, letzter
+    /// Fehler. Löst Marcus's „hab 20 mal Reindex geklickt, geht immer noch nicht".
+    /// </summary>
+    [HttpGet("/api/v1/ai/diag")]
+    public async Task<IActionResult> Diag([FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        if (!await IsAdmin(ct)) return Forbid();
+        var s = await _ai.LoadAsync(ct);
+        var apiKey = await _ai.GetApiKeyAsync(ct);
+
+        var readyFiles = await db.Files.CountAsync(f => f.Status == StorageFileStatus.Ready, ct);
+        var withText   = await db.Files.CountAsync(f => f.Status == StorageFileStatus.Ready && f.ExtractedText != null && f.ExtractedText != "", ct);
+        var embeddings = await db.FileEmbeddings.CountAsync(ct);
+        var latestEmbed = await db.FileEmbeddings.OrderByDescending(e => e.CreatedAt).Select(e => new { e.FileId, e.Model, e.CreatedAt }).FirstOrDefaultAsync(ct);
+        var missingIds = await db.Files
+            .Where(f => f.Status == StorageFileStatus.Ready && !db.FileEmbeddings.Any(e => e.FileId == f.Id))
+            .OrderBy(f => f.Name)
+            .Select(f => new { f.Id, f.Name, f.ContentType, HasText = f.ExtractedText != null && f.ExtractedText != "" })
+            .Take(10)
+            .ToListAsync(ct);
+
+        string? providerFailure = _ai.LastProviderCreationFailure;
+        object? smokeTestResult = null;
+        if (s.Provider != AiProvider.Disabled && !string.IsNullOrWhiteSpace(apiKey))
+        {
+            try
+            {
+                var provider = await _ai.CreateProviderAsync(ct);
+                var vec = await provider.EmbedAsync("smoke-test");
+                var lastErr = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
+                    ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
+                    ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError;
+                smokeTestResult = new
+                {
+                    ok = vec is not null && vec.Length > 0,
+                    vectorDim = vec?.Length ?? 0,
+                    lastError = lastErr,
+                };
+            }
+            catch (Exception ex) { smokeTestResult = new { ok = false, error = ex.Message }; }
+        }
+
+        return Ok(new
+        {
+            provider = s.Provider.ToString(),
+            model = s.Model,
+            endpoint = s.Endpoint,
+            hasApiKey = !string.IsNullOrEmpty(apiKey),
+            apiKeyPrefix = string.IsNullOrEmpty(apiKey) ? null : apiKey.Substring(0, Math.Min(6, apiKey.Length)) + "…",
+            flags = new
+            {
+                enableSemanticSearch = s.EnableSemanticSearch,
+                enableSmartTags = s.EnableSmartTags,
+                enableContentRiskDetection = s.EnableContentRiskDetection,
+                enableAiSummary = s.EnableAiSummary,
+            },
+            files = new
+            {
+                ready = readyFiles,
+                withExtractedText = withText,
+                withoutText = readyFiles - withText,
+            },
+            embeddings = new
+            {
+                total = embeddings,
+                missing = readyFiles - embeddings,
+                latest = latestEmbed,
+                sampleMissing = missingIds,
+            },
+            providerCreationFailure = providerFailure,
+            smokeTest = smokeTestResult,
+            hint = embeddings == 0 && readyFiles > 0
+                ? "Ready-Files existieren, aber NULL Embeddings. Wenn smokeTest.ok=true, läuft der Provider — dann läuft der PostProcessor nicht durch (siehe Server-Log nach 'Embed returned null' oder 'AI post-process failed')."
+                : embeddings > 0 && embeddings < readyFiles
+                ? $"{embeddings}/{readyFiles} indexiert. Restliche Files landen beim nächsten Reindex oder haben ein Extract-Problem — siehe sampleMissing."
+                : embeddings >= readyFiles && readyFiles > 0
+                ? "Alles gut. Wenn Chat trotzdem 'keine Embeddings' meldet, bitte iOS-App neu starten (Client-Cache)."
+                : null,
+        });
+    }
+
     public record ListModelsResp(string[] Models, string? Error);
 
     /// <summary>Live model-listing per provider, using the currently-saved API
