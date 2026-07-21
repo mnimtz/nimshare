@@ -468,43 +468,58 @@ public class GeminiProvider : IAiProvider
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
     {
         LastError = null;
-        // v1.10.30: URL-Encode Key + Logging von HTTP-Fehlern. Bisher schluckte
-        // EmbedAsync jeden Fehler still → jede Reindex-Runde mit einem ungültigen
-        // Key erzeugte 0 Embeddings ohne dass irgendwas im Log stand.
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={Uri.EscapeDataString(_apiKey)}";
-        var payload = new { content = new { parts = new[] { new { text = text.Length > 8000 ? text[..8000] : text } } } };
-        var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        try
+        // v1.10.99: Marcus's Report — Provider funktioniert für Chat/Classify,
+        // aber Reindex erzeugt keine Embeddings. Root Cause: text-embedding-004
+        // ist seit Anfang 2025 deprecated und wird in neu erstellten Google-
+        // Cloud-Projekten teilweise nicht mehr freigeschaltet. Fallback-Cascade
+        // testet neuere Modelle zuerst und fällt bei 404/nicht-gefunden zurück.
+        var candidates = new[] { "gemini-embedding-001", "text-embedding-004", "embedding-001" };
+        var input = text.Length > 8000 ? text[..8000] : text;
+        var payload = new { content = new { parts = new[] { new { text = input } } } };
+        var bodyJson = JsonSerializer.Serialize(payload);
+        var errors = new List<string>();
+        foreach (var model in candidates)
         {
-            var resp = await _http.PostAsync(url, body, ct);
-            var respText = await resp.Content.ReadAsStringAsync(ct);
-            if (!resp.IsSuccessStatusCode)
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:embedContent?key={Uri.EscapeDataString(_apiKey)}";
+            var body = new StringContent(bodyJson, Encoding.UTF8, "application/json");
+            try
             {
-                string reason = respText.Length > 400 ? respText[..400] : respText;
-                try
+                var resp = await _http.PostAsync(url, body, ct);
+                var respText = await resp.Content.ReadAsStringAsync(ct);
+                if (!resp.IsSuccessStatusCode)
                 {
-                    var errDoc = JsonDocument.Parse(respText);
-                    if (errDoc.RootElement.TryGetProperty("error", out var e)
-                        && e.TryGetProperty("message", out var m))
-                        reason = m.GetString() ?? reason;
+                    string reason = respText.Length > 400 ? respText[..400] : respText;
+                    try
+                    {
+                        var errDoc = JsonDocument.Parse(respText);
+                        if (errDoc.RootElement.TryGetProperty("error", out var e) && e.TryGetProperty("message", out var m))
+                            reason = m.GetString() ?? reason;
+                    }
+                    catch { }
+                    var msg = $"{model}: HTTP {(int)resp.StatusCode}: {reason}";
+                    errors.Add(msg);
+                    Console.Error.WriteLine($"[GeminiEmbed] {msg}");
+                    // 404 / NOT_FOUND → nächstes Modell probieren. Andere Fehler (401 key,
+                    // 429 rate) bringen bei anderen Modellen nix — sofort abbrechen.
+                    if ((int)resp.StatusCode == 404 || reason.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    LastError = "Gemini Embed " + msg;
+                    return null;
                 }
-                catch { }
-                LastError = $"Gemini Embed HTTP {(int)resp.StatusCode}: {reason}";
-                Console.Error.WriteLine($"[GeminiEmbed] {LastError}");
-                return null;
+                var doc = JsonDocument.Parse(respText);
+                var arr = doc.RootElement.GetProperty("embedding").GetProperty("values");
+                var vec = new float[arr.GetArrayLength()];
+                for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
+                return vec;
             }
-            var doc = JsonDocument.Parse(respText);
-            var arr = doc.RootElement.GetProperty("embedding").GetProperty("values");
-            var vec = new float[arr.GetArrayLength()];
-            for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
-            return vec;
+            catch (Exception ex)
+            {
+                errors.Add($"{model}: {ex.Message}");
+                Console.Error.WriteLine($"[GeminiEmbed] {model}: {ex.Message}");
+            }
         }
-        catch (Exception ex)
-        {
-            LastError = $"Gemini Embed Exception: {ex.Message}";
-            Console.Error.WriteLine($"[GeminiEmbed] {LastError}");
-            return null;
-        }
+        LastError = "Alle Gemini-Embed-Modelle abgelehnt: " + string.Join(" | ", errors);
+        return null;
     }
 
     private async Task<string?> GenerateAsync(string prompt, double temperature, CancellationToken ct)
