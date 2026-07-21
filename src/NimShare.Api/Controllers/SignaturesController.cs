@@ -730,6 +730,88 @@ public class SignaturesController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// v1.10.85: Vollständiger Audit-Export als JSON. Enthält jedes Feld
+    /// das die Audit-Tabelle besitzt (auch die im Detail-View gekürzten:
+    /// IP-Adresse Klartext, IP-Hash, User-Agent, Notiz, Country, City,
+    /// DeviceType, Timezone) plus Participants, Fields und Metadaten.
+    /// Nützlich für Übergabe an Legal, Compliance-Ordner-Ablage oder
+    /// Nachweis bei einer Rechtsstreitigkeit.
+    /// </summary>
+    [HttpGet("{id:guid}/audit")]
+    public async Task<IActionResult> AuditJson(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests
+            .Include(x => x.SourceFile)
+            .Include(x => x.Participants)
+            .Include(x => x.Initiator)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r is null) return NotFound();
+        if (r.InitiatorUserId != me.Id && me.Role != UserRole.Admin) return Forbid();
+
+        var fields = await _db.SignatureFields
+            .Where(f => f.RequestId == id)
+            .OrderBy(f => f.Page).ThenBy(f => f.Y).ToListAsync(ct);
+        var audits = await _db.SignatureAudits
+            .Where(a => a.RequestId == id)
+            .OrderBy(a => a.At).ToListAsync(ct);
+
+        var payload = new
+        {
+            schema = "nimshare.audit.v1",
+            exportedAt = DateTimeOffset.UtcNow,
+            request = new
+            {
+                r.Id, r.Title, r.Message,
+                Status = r.Status.ToString(),
+                DeliveryOrder = r.DeliveryOrder.ToString(),
+                r.CreatedAt, r.SentAt, r.CompletedAt, r.Deadline,
+                r.FinalFileId,
+                Source = new { r.SourceFile?.Id, r.SourceFile?.Name, r.SourceFile?.SizeBytes, r.SourceFile?.ContentType },
+                Initiator = new { r.Initiator?.Id, r.Initiator?.Email, r.Initiator?.DisplayName },
+            },
+            participants = r.Participants.OrderBy(p => p.Order).Select(p => new
+            {
+                p.Id, p.Order, p.Name, p.Email,
+                Role = p.Role.ToString(),
+                Status = p.Status.ToString(),
+                p.ViewedAt, p.SignedAt, p.DeclinedReason,
+                p.IpAddress, p.IpHash, p.UserAgent,
+            }),
+            fields = fields.Select(f => new
+            {
+                f.Id, f.ParticipantId,
+                Type = f.Type.ToString(),
+                Anchor = f.Anchor.ToString(),
+                f.Page, f.X, f.Y, f.Width, f.Height,
+                f.Label, f.Value, f.FilledAt,
+                HasSignatureImage = !string.IsNullOrEmpty(f.SignatureImagePath),
+            }),
+            events = audits.Select(a => new
+            {
+                a.Id, a.At,
+                Kind = a.Kind.ToString(),
+                a.ParticipantId,
+                a.IpAddress, a.IpHash, a.UserAgent,
+                a.Country, a.City, a.DeviceType, a.Timezone,
+                a.Note,
+            }),
+        };
+
+        // Als Datei-Download markieren damit Curl/Browser sinnvollen Namen hat.
+        var fname = $"nimshare-audit-{id:N}.json";
+        Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fname}\"";
+        return new JsonResult(payload)
+        {
+            SerializerSettings = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            },
+        };
+    }
+
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {

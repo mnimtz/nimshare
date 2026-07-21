@@ -84,6 +84,37 @@ public class SignaturesPageController : Controller
         return View("Detail", r);
     }
 
+    // v1.10.85: Dedizierte Audit-Ansicht — vollständiges Forensik-Log
+    // (jedes Event mit Timestamp, Wer, IP-Klartext falls vorhanden, IP-Hash,
+    // UserAgent, Country, City, DeviceType, Timezone, Notiz). Auf der
+    // Detail-Seite ist es kompakt; hier ist alles auf einer druckbaren
+    // Seite versammelt. Access-Regel identisch zu Detail (nur Initiator
+    // oder Admin).
+    [HttpGet("/signatures/{id:guid}/audit")]
+    public async Task<IActionResult> Audit(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var r = await _db.SignatureRequests
+            .Include(x => x.SourceFile)
+            .Include(x => x.Participants)
+            .Include(x => x.Initiator)
+            .SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (r is null) return NotFound();
+        if (r.InitiatorUserId != me.Id && me.Role != NimShare.Core.Entities.UserRole.Admin)
+            return Forbid();
+
+        var fields = await _db.SignatureFields
+            .Where(f => f.RequestId == id)
+            .OrderBy(f => f.Page).ThenBy(f => f.Y).ToListAsync(ct);
+        var audits = await _db.SignatureAudits
+            .Where(a => a.RequestId == id)
+            .OrderBy(a => a.At).ToListAsync(ct);
+
+        ViewData["Fields"] = fields;
+        ViewData["Audits"] = audits;
+        return View("Audit", r);
+    }
+
     [HttpGet("/signatures/new")]
     public async Task<IActionResult> NewRequest(Guid? fileId, CancellationToken ct)
     {

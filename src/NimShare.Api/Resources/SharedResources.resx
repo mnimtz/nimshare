@@ -1141,4 +1141,63 @@ Thanks for using NimShare.</value></data>
   <data name="copy.done_many"><value>copied.</value></data>
   <data name="landing.video.unsupported" xml:space="preserve"><value>Your browser cannot play this video inline.</value></data>
   <data name="landing.audio.unsupported" xml:space="preserve"><value>Your browser cannot play this audio inline.</value></data>
+  <data name="sig.audit.button" xml:space="preserve"><value>View audit</value></data>
+  <data name="sig.audit.title" xml:space="preserve"><value>Audit trail</value></data>
+  <data name="sig.audit.subject" xml:space="preserve"><value>ID</value></data>
+  <data name="sig.audit.json_export" xml:space="preserve"><value>JSON export</value></data>
+  <data name="sig.audit.print" xml:space="preserve"><value>Print / PDF</value></data>
+  <data name="sig.audit.stat.events" xml:space="preserve"><value>Total events</value></data>
+  <data name="sig.audit.stat.signed" xml:space="preserve"><value>Signatures</value></data>
+  <data name="sig.audit.stat.unique_ips" xml:space="preserve"><value>Unique IPs</value></data>
+  <data name="sig.audit.stat.first_event" xml:space="preserve"><value>First event</value></data>
+  <data name="sig.audit.stat.last_event" xml:space="preserve"><value>Last event</value></data>
+  <data name="sig.audit.metadata" xml:space="preserve"><value>Request metadata</value></data>
+  <data name="sig.audit.meta.id" xml:space="preserve"><value>Request ID</value></data>
+  <data name="sig.audit.meta.title" xml:space="preserve"><value>Title</value></data>
+  <data name="sig.audit.meta.message" xml:space="preserve"><value>Message</value></data>
+  <data name="sig.audit.meta.status" xml:space="preserve"><value>Status</value></data>
+  <data name="sig.audit.meta.delivery" xml:space="preserve"><value>Delivery order</value></data>
+  <data name="sig.audit.meta.source_file" xml:space="preserve"><value>Source document</value></data>
+  <data name="sig.audit.meta.initiator" xml:space="preserve"><value>Initiator</value></data>
+  <data name="sig.audit.meta.created" xml:space="preserve"><value>Created</value></data>
+  <data name="sig.audit.meta.sent" xml:space="preserve"><value>Sent</value></data>
+  <data name="sig.audit.meta.deadline" xml:space="preserve"><value>Deadline</value></data>
+  <data name="sig.audit.meta.completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="sig.audit.meta.final_file" xml:space="preserve"><value>Signed PDF (file ID)</value></data>
+  <data name="sig.audit.participants" xml:space="preserve"><value>Participants</value></data>
+  <data name="sig.audit.part.name" xml:space="preserve"><value>Name</value></data>
+  <data name="sig.audit.part.email" xml:space="preserve"><value>Email</value></data>
+  <data name="sig.audit.part.role" xml:space="preserve"><value>Role</value></data>
+  <data name="sig.audit.part.status" xml:space="preserve"><value>Status</value></data>
+  <data name="sig.audit.part.viewed_at" xml:space="preserve"><value>Viewed</value></data>
+  <data name="sig.audit.part.signed_at" xml:space="preserve"><value>Signed</value></data>
+  <data name="sig.audit.part.ip" xml:space="preserve"><value>IP address</value></data>
+  <data name="sig.audit.part.user_agent" xml:space="preserve"><value>User agent</value></data>
+  <data name="sig.audit.ip_hashed_only" xml:space="preserve"><value>hash only</value></data>
+  <data name="sig.audit.fields" xml:space="preserve"><value>Fields on document</value></data>
+  <data name="sig.audit.no_fields" xml:space="preserve"><value>No fields placed.</value></data>
+  <data name="sig.audit.field.assigned" xml:space="preserve"><value>Assigned to</value></data>
+  <data name="sig.audit.field.type" xml:space="preserve"><value>Type</value></data>
+  <data name="sig.audit.field.page" xml:space="preserve"><value>Page</value></data>
+  <data name="sig.audit.field.position" xml:space="preserve"><value>Position (PDF points)</value></data>
+  <data name="sig.audit.field.value" xml:space="preserve"><value>Value</value></data>
+  <data name="sig.audit.field.filled_at" xml:space="preserve"><value>Filled at</value></data>
+  <data name="sig.audit.field.unsigned" xml:space="preserve"><value>(not yet signed)</value></data>
+  <data name="sig.audit.field.signed_image" xml:space="preserve"><value>(handwritten image stored)</value></data>
+  <data name="sig.audit.timeline" xml:space="preserve"><value>Event timeline</value></data>
+  <data name="sig.audit.no_events" xml:space="preserve"><value>No events recorded.</value></data>
+  <data name="sig.audit.kind.invited" xml:space="preserve"><value>Invited</value></data>
+  <data name="sig.audit.kind.viewed" xml:space="preserve"><value>Viewed</value></data>
+  <data name="sig.audit.kind.signed" xml:space="preserve"><value>Signed</value></data>
+  <data name="sig.audit.kind.declined" xml:space="preserve"><value>Declined</value></data>
+  <data name="sig.audit.kind.cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="sig.audit.kind.finalized" xml:space="preserve"><value>Finalized</value></data>
+  <data name="sig.audit.evt.ip" xml:space="preserve"><value>IP address</value></data>
+  <data name="sig.audit.evt.ip_hash" xml:space="preserve"><value>IP hash</value></data>
+  <data name="sig.audit.evt.location" xml:space="preserve"><value>Location</value></data>
+  <data name="sig.audit.evt.device" xml:space="preserve"><value>Device</value></data>
+  <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Time zone</value></data>
+  <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User agent</value></data>
+  <data name="sig.audit.evt.note" xml:space="preserve"><value>Note</value></data>
+  <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>This audit trail is generated live from the database. For an immutable record, archive the JSON export separately.</value></data>
 </root>

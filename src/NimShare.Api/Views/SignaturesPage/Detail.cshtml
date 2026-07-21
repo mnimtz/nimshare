@@ -51,6 +51,13 @@
         {
             <a class="btn btn-primary" href="/api/v1/signatures/@Model.Id/signed-pdf" target="_blank" rel="noopener">📥 @T["sig.signed_pdf"]</a>
         }
+        @* v1.10.85: Audit-Button — sichtbar ab Sent, weil ab da Events
+           anfallen (Invited, Viewed…). Für Draft macht Audit noch keinen
+           Sinn (die Timeline wäre leer). *@
+        @if (Model.Status != SignatureRequestStatus.Draft)
+        {
+            <a class="btn btn-secondary" href="/signatures/@Model.Id/audit">🔐 @T["sig.audit.button"]</a>
+        }
     </div>
 </div>
 
