@@ -49,6 +49,16 @@ struct SignatureDetailView: View {
         } message: {
             Text(finalizeInfo)
         }
+        // v1.10.76: separater Error-Alert damit Exception-Meldungen aus
+        // forceFinalize/cancelRequest/deleteRequest überhaupt gezeigt werden.
+        // Vorher: error-State wurde gesetzt, aber niemand rendert ihn → User
+        // sah gar nichts wenn was schief lief (Marcus's "Abschluss erzwingen
+        // passiert nichts").
+        .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK") { error = nil }
+        } message: {
+            Text(error ?? "")
+        }
         .confirmationDialog(
             "Signatur-Vorgang wirklich löschen?",
             isPresented: $showDeleteConfirm,

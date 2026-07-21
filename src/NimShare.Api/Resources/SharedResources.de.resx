@@ -1051,10 +1051,10 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sign.mode_cert"><value>📜 Zertifikat</value></data>
   <data name="sign.pad_clear"><value>Löschen</value></data>
   <data name="sign.cert_loading"><value>Lade Zertifikat …</value></data>
-  <data name="sign.cert_hint_html"><value>Wenn du eingeloggt bist und ein Default-Zertifikat unter &lt;a href="/settings/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; hinterlegt hast, wird es hier verwendet. Der Stempel enthält deinen CN, den Thumbprint und Zeitstempel — er wird als Bild ins Signaturfeld eingebettet (wie eine handgezeichnete Unterschrift).</value></data>
+  <data name="sign.cert_hint_html"><value>Wenn du eingeloggt bist und ein Default-Zertifikat unter &lt;a href="/signatures/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; hinterlegt hast, wird es hier verwendet. Der Stempel enthält deinen CN, den Thumbprint und Zeitstempel — er wird als Bild ins Signaturfeld eingebettet (wie eine handgezeichnete Unterschrift).</value></data>
   <data name="sign.cert_used_html"><value>Verwendetes Zertifikat: &lt;strong&gt;{0}&lt;/strong&gt; — Thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
   <data name="sign.cert_needed_login_html"><value>⚠ Zertifikat-Stempel via Default-Cert nur für &lt;strong&gt;angemeldete NimShare-Nutzer&lt;/strong&gt;. Wechsle auf „🖊 Zeichnen" oder „📎 Eigenes Zertifikat" — oder {loginLink} um dein Default-Cert zu nutzen.</value></data>
-  <data name="sign.cert_no_default_html"><value>⚠ Kein Default-Zertifikat gefunden. Lege eines unter &lt;a href="/settings/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; an und setze es als Default.</value></data>
+  <data name="sign.cert_no_default_html"><value>⚠ Kein Default-Zertifikat gefunden. Lege eines unter &lt;a href="/signatures/certificates" target="_blank"&gt;Einstellungen › Zertifikate&lt;/a&gt; an und setze es als Default.</value></data>
   <data name="sign.cert_load_error"><value>Fehler beim Laden des Zertifikats:</value></data>
   <data name="sign.extra_fields"><value>Zusätzliche Felder ausfüllen</value></data>
   <data name="sign.field_page"><value>Seite {0}</value></data>

@@ -1036,10 +1036,10 @@ Open deze link om te tekenen:
   <data name="sign.mode_cert"><value>📜 Certificaat</value></data>
   <data name="sign.pad_clear"><value>Wissen</value></data>
   <data name="sign.cert_loading"><value>Certificaat laden …</value></data>
-  <data name="sign.cert_hint_html"><value>Als je bent ingelogd en een standaardcertificaat hebt onder &lt;a href="/settings/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt;, wordt dat hier gebruikt. De stempel bevat je CN, thumbprint en tijdstempel — hij wordt als afbeelding in het handtekeningveld ingebed (zoals een handgetekende handtekening).</value></data>
+  <data name="sign.cert_hint_html"><value>Als je bent ingelogd en een standaardcertificaat hebt onder &lt;a href="/signatures/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt;, wordt dat hier gebruikt. De stempel bevat je CN, thumbprint en tijdstempel — hij wordt als afbeelding in het handtekeningveld ingebed (zoals een handgetekende handtekening).</value></data>
   <data name="sign.cert_used_html"><value>Gebruikt certificaat: &lt;strong&gt;{0}&lt;/strong&gt; — thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
   <data name="sign.cert_needed_login_html"><value>⚠ De certificaatstempel via standaardcertificaat is alleen voor &lt;strong&gt;ingelogde NimShare-gebruikers&lt;/strong&gt;. Ga naar « 🖊 Tekenen » of « 📎 Eigen certificaat » — of {loginLink} om je standaardcertificaat te gebruiken.</value></data>
-  <data name="sign.cert_no_default_html"><value>⚠ Geen standaardcertificaat gevonden. Maak er een aan onder &lt;a href="/settings/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt; en stel het in als standaard.</value></data>
+  <data name="sign.cert_no_default_html"><value>⚠ Geen standaardcertificaat gevonden. Maak er een aan onder &lt;a href="/signatures/certificates" target="_blank"&gt;Instellingen › Certificaten&lt;/a&gt; en stel het in als standaard.</value></data>
   <data name="sign.cert_load_error"><value>Fout bij laden certificaat:</value></data>
   <data name="sign.extra_fields"><value>Vul aanvullende velden in</value></data>
   <data name="sign.field_page"><value>Pagina {0}</value></data>

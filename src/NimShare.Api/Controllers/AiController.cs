@@ -423,15 +423,17 @@ public class AiController : ControllerBase
                 detail: "Einstellungen → AI-Gateway: 'Semantische Suche' zusätzlich aktivieren — Chat findet Dokumente über Embeddings.");
         if (string.IsNullOrWhiteSpace(req.Question)) return BadRequest();
 
-        // Check that the user actually has embeddings — otherwise the retrieval
-        // returns empty and the chat says "no context" which reads as broken.
+        // v1.10.76: der bisherige Check nur auf f.OwnerId == me.Id sagte "keine
+        // Embeddings" wenn der User zwar Files sehen kann, sie aber nicht selbst
+        // hochgeladen hat (Public-Scope, Direct-Shares, Gruppen-Files). Marcus's
+        // Report: "hab schon oft Reindex gedrückt, kommt immer 'keine Embeddings'"
+        // — genau dieser Fall. Jetzt: Embeddings sind global, jeder User darf sie
+        // via Chat verwenden — Access-Check läuft eh später im RetrieveHitsAsync.
         var me = await users.GetOrProvisionAsync(User, ct);
-        var anyEmbedding = await _db.FileEmbeddings
-            .Where(e => _db.Files.Any(f => f.Id == e.FileId && f.OwnerId == me.Id))
-            .AnyAsync(ct);
+        var anyEmbedding = await _db.FileEmbeddings.AnyAsync(ct);
         if (!anyEmbedding)
             return Problem(statusCode: 503, title: "Noch keine indexierten Dokumente.",
-                detail: "Semantische Suche benötigt Embeddings, die beim Hochladen erzeugt werden. Nach dem Aktivieren neue Dateien hochladen oder ältere neu indexieren (Reindex-Button auf der AI-Gateway-Seite folgt).");
+                detail: "Die semantische Suche braucht Embeddings. Klicke unter Einstellungen › AI-Gateway auf „Neu indexieren" — wenn danach immer noch nichts da ist, ist wahrscheinlich der AI-Provider (API-Key/Modell) nicht korrekt konfiguriert. Server-Log prüfen: die Zeile 'Embed returned null' zeigt den Provider-Fehler.");
 
         // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
         var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);

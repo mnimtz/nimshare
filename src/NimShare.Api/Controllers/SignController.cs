@@ -375,6 +375,27 @@ public class SignController : Controller
         // Persist the Signed status BEFORE any long-running work.
         await _db.SaveChangesAsync(ct);
 
+        // v1.10.76: Initiator-Notification fürs Sign-Event.
+        // Vorher gab es nur "Decline" + "Complete"-Notifications, kein
+        // Zwischenschritt — Marcus's Report "Benachrichtigungen leer außer
+        // Ablehnung von gestern". Bei jedem Signed wird ein In-App-Ping
+        // fällig damit der Initiator sieht "Michael Stebich hat signiert
+        // (2/3 fertig)". Selbst-Signieren wird ausgeblendet.
+        if (req.InitiatorUserId != p.UserId && req.InitiatorUserId != Guid.Empty)
+        {
+            try
+            {
+                var signed = req.Participants.Count(x => x.Role == SignatureParticipantRole.Signer
+                                                       && x.Status == SignatureParticipantStatus.Signed);
+                var total = req.Participants.Count(x => x.Role == SignatureParticipantRole.Signer);
+                var title = $"✍ {p.Name} hat signiert";
+                var body = $"„{req.Title}" — {signed}/{total} Unterschrift(en) fertig.";
+                await _in.NotifyAsync(req.InitiatorUserId, NotificationKind.SystemAnnouncement,
+                    title, body: body, href: $"/signatures/{req.Id}", ct: ct);
+            }
+            catch { /* Notification-Fehler dürfen den Sign-Flow nicht kippen */ }
+        }
+
         // Sequential chain: trigger the next participant in Order.
         if (req.DeliveryOrder == SignatureDeliveryOrder.Sequential)
         {

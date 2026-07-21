@@ -1037,10 +1037,10 @@ Abre este enlace para firmar:
   <data name="sign.mode_cert"><value>📜 Certificado</value></data>
   <data name="sign.pad_clear"><value>Borrar</value></data>
   <data name="sign.cert_loading"><value>Cargando certificado …</value></data>
-  <data name="sign.cert_hint_html"><value>Si has iniciado sesión y tienes un certificado predeterminado en &lt;a href="/settings/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt;, se usará aquí. El sello contiene tu CN, huella y marca de tiempo — se incrusta en el campo de firma como imagen (igual que una firma dibujada a mano).</value></data>
+  <data name="sign.cert_hint_html"><value>Si has iniciado sesión y tienes un certificado predeterminado en &lt;a href="/signatures/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt;, se usará aquí. El sello contiene tu CN, huella y marca de tiempo — se incrusta en el campo de firma como imagen (igual que una firma dibujada a mano).</value></data>
   <data name="sign.cert_used_html"><value>Certificado usado: &lt;strong&gt;{0}&lt;/strong&gt; — huella &lt;code&gt;{1}&lt;/code&gt;</value></data>
   <data name="sign.cert_needed_login_html"><value>⚠ El sello con certificado predeterminado es solo para &lt;strong&gt;usuarios NimShare autenticados&lt;/strong&gt;. Cambia a « 🖊 Dibujar » o « 📎 Mi certificado » — o {loginLink} para usar tu predeterminado.</value></data>
-  <data name="sign.cert_no_default_html"><value>⚠ No se encontró un certificado predeterminado. Crea uno en &lt;a href="/settings/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt; y márcalo como predeterminado.</value></data>
+  <data name="sign.cert_no_default_html"><value>⚠ No se encontró un certificado predeterminado. Crea uno en &lt;a href="/signatures/certificates" target="_blank"&gt;Ajustes › Certificados&lt;/a&gt; y márcalo como predeterminado.</value></data>
   <data name="sign.cert_load_error"><value>Error al cargar el certificado:</value></data>
   <data name="sign.extra_fields"><value>Rellena los campos adicionales</value></data>
   <data name="sign.field_page"><value>Página {0}</value></data>

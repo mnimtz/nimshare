@@ -1037,10 +1037,10 @@ Apri questo link per firmare:
   <data name="sign.mode_cert"><value>📜 Certificato</value></data>
   <data name="sign.pad_clear"><value>Cancella</value></data>
   <data name="sign.cert_loading"><value>Caricamento del certificato …</value></data>
-  <data name="sign.cert_hint_html"><value>Se hai effettuato l'accesso e hai un certificato predefinito in &lt;a href="/settings/certificates" target="_blank"&gt;Impostazioni › Certificati&lt;/a&gt;, verrà utilizzato qui. Il timbro contiene CN, thumbprint e timestamp — viene incorporato nel campo firma come immagine (come una firma disegnata a mano).</value></data>
+  <data name="sign.cert_hint_html"><value>Se hai effettuato l'accesso e hai un certificato predefinito in &lt;a href="/signatures/certificates" target="_blank"&gt;Impostazioni › Certificati&lt;/a&gt;, verrà utilizzato qui. Il timbro contiene CN, thumbprint e timestamp — viene incorporato nel campo firma come immagine (come una firma disegnata a mano).</value></data>
   <data name="sign.cert_used_html"><value>Certificato usato: &lt;strong&gt;{0}&lt;/strong&gt; — thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
   <data name="sign.cert_needed_login_html"><value>⚠ Il timbro con certificato predefinito è disponibile solo per &lt;strong&gt;utenti NimShare autenticati&lt;/strong&gt;. Passa a « 🖊 Disegna » o « 📎 Certificato proprio » — oppure {loginLink} per usare il tuo predefinito.</value></data>
-  <data name="sign.cert_no_default_html"><value>⚠ Nessun certificato predefinito trovato. Creane uno in &lt;a href="/settings/certificates" target="_blank"&gt;Impostazioni › Certificati&lt;/a&gt; e impostalo come predefinito.</value></data>
+  <data name="sign.cert_no_default_html"><value>⚠ Nessun certificato predefinito trovato. Creane uno in &lt;a href="/signatures/certificates" target="_blank"&gt;Impostazioni › Certificati&lt;/a&gt; e impostalo come predefinito.</value></data>
   <data name="sign.cert_load_error"><value>Errore nel caricamento del certificato:</value></data>
   <data name="sign.extra_fields"><value>Compila i campi aggiuntivi</value></data>
   <data name="sign.field_page"><value>Pagina {0}</value></data>

@@ -1045,10 +1045,10 @@ Please open this link to sign:
   <data name="sign.mode_cert"><value>📜 Certificate</value></data>
   <data name="sign.pad_clear"><value>Clear</value></data>
   <data name="sign.cert_loading"><value>Loading certificate …</value></data>
-  <data name="sign.cert_hint_html"><value>If you are signed in and have a default certificate stored under &lt;a href="/settings/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt;, it will be used here. The stamp shows your CN, thumbprint and timestamp — it is embedded into the signature field as an image (just like a hand-drawn signature).</value></data>
+  <data name="sign.cert_hint_html"><value>If you are signed in and have a default certificate stored under &lt;a href="/signatures/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt;, it will be used here. The stamp shows your CN, thumbprint and timestamp — it is embedded into the signature field as an image (just like a hand-drawn signature).</value></data>
   <data name="sign.cert_used_html"><value>Certificate used: &lt;strong&gt;{0}&lt;/strong&gt; — thumbprint &lt;code&gt;{1}&lt;/code&gt;</value></data>
   <data name="sign.cert_needed_login_html"><value>⚠ The certificate stamp is only available to &lt;strong&gt;signed-in NimShare users&lt;/strong&gt; with a default certificate. Switch to "🖊 Draw" or "📎 Own certificate" — or {loginLink} to use your default.</value></data>
-  <data name="sign.cert_no_default_html"><value>⚠ No default certificate found. Create one under &lt;a href="/settings/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt; and mark it as the default.</value></data>
+  <data name="sign.cert_no_default_html"><value>⚠ No default certificate found. Create one under &lt;a href="/signatures/certificates" target="_blank"&gt;Settings › Certificates&lt;/a&gt; and mark it as the default.</value></data>
   <data name="sign.cert_load_error"><value>Failed to load the certificate:</value></data>
   <data name="sign.extra_fields"><value>Fill in additional fields</value></data>
   <data name="sign.field_page"><value>Page {0}</value></data>

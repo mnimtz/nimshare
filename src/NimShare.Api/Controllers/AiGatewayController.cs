@@ -122,13 +122,32 @@ public class AiGatewayController : Controller
         var s = await _ai.LoadAsync(ct);
         if (s.Provider == AiProvider.Disabled)
             return Problem(statusCode: 422, title: _l["ai.reindex.err_disabled"].Value);
-        // Nur Ready-Files, alle Scopes. Wir laden nur IDs — ExtractText +
-        // AI-Call passiert per-File asynchron im PostProcessor, hier wollen
-        // wir sofort antworten damit der User Feedback sieht.
+        if (!s.EnableSemanticSearch)
+            return Problem(statusCode: 422, title: "Semantische Suche ist deaktiviert.",
+                detail: "Ohne Semantische-Suche-Flag baut der PostProcessor keine Embeddings. Aktiviere sie oben.");
+
+        // v1.10.76: SMOKE-TEST — synchron einen einzelnen Embed-Call gegen
+        // den Provider machen und Ergebnis in die Response schreiben. Wenn
+        // der crasht (falscher API-Key, tote URL, Modell weg), sieht der
+        // Admin sofort was los ist statt "hab schon oft reindex gedrückt".
+        var provider = await _ai.CreateProviderAsync(ct);
+        var testVec = await provider.EmbedAsync("smoke-test");
+        if (testVec is null || testVec.Length == 0)
+        {
+            var err = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
+                ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
+                ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError
+                ?? _ai.LastProviderCreationFailure
+                ?? $"Provider {provider.GetType().Name} lieferte keinen Vector zurück.";
+            return Problem(statusCode: 502,
+                title: "AI-Provider liefert keine Embeddings.",
+                detail: $"Smoke-Test-Embed schlug fehl: {err}\n\nHäufigste Ursachen: API-Key falsch/abgelaufen, gewähltes Modell unterstützt kein Embedding, oder Rate-Limit. Bitte in Settings › AI-Gateway den Key neu eintragen oder Modell wechseln.");
+        }
+
         var ids = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
             db.Files.Where(f => f.Status == StorageFileStatus.Ready).Select(f => f.Id), ct);
         foreach (var id in ids) postProcessor.QueueForFile(id);
-        return Ok(new { queued = ids.Count });
+        return Ok(new { queued = ids.Count, smokeTest = "ok", vectorDim = testVec.Length });
     }
 
     public record ListModelsResp(string[] Models, string? Error);
