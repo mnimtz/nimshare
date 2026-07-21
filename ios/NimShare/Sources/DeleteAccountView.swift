@@ -38,7 +38,8 @@ struct DeleteAccountView: View {
                         .textContentType(.password)
                 }
                 Section("Bestätigung") {
-                    Text("Zum Bestätigen bitte „\(requiredConfirmation)" eintippen:")
+                    // v1.10.91: extended delimiters für das „…"
+                    Text(#"Zum Bestätigen bitte „\#(requiredConfirmation)" eintippen:"#)
                         .font(.footnote).foregroundStyle(.secondary)
                     TextField(requiredConfirmation, text: $confirmationText)
                         .autocorrectionDisabled()

@@ -24,7 +24,10 @@ struct BlocksView: View {
                         Text(email).font(.caption).foregroundStyle(.secondary)
                     }
                     if let reason = r.reason, !reason.isEmpty {
-                        Text("„\(reason)"").font(.caption).foregroundStyle(.secondary)
+                        // v1.10.91: extended delimiters, sonst zerlegt das
+                        // typografische „…" den Swift-String und der Parser
+                        // wirft „unterminated string literal".
+                        Text(#"„\#(reason)""#).font(.caption).foregroundStyle(.secondary)
                     }
                     Text(r.createdAt, style: .date).font(.caption2).foregroundStyle(.secondary)
                 }
