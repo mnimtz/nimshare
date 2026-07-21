@@ -476,6 +476,13 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] Running EnsureForensicColumnsAsync…");
         await EnsureForensicColumnsAsync(db, isSqlServer);
         Console.Error.WriteLine("[STARTUP] EnsureForensicColumnsAsync done.");
+        // v1.10.106: Rescue für Folders.IsPrivate. In v1.10.104 landete die
+        // V184-Migration ohne [DbContext]/[Migration]-Attribute im Repo —
+        // MigrateAsync hat sie beim Assembly-Scan uebersprungen, Column
+        // fehlt in prod-DBs. Idempotent, laeuft ab jetzt bei jedem Start.
+        Console.Error.WriteLine("[STARTUP] Running EnsureFolderIsPrivateColumnAsync…");
+        await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
+        Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync done.");
     }
     catch (Exception ex)
     {
@@ -726,6 +733,65 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
             // der App-Start weiterlaufen. Marcus sieht die Fehler im Log.
             Console.Error.WriteLine($"[STARTUP] EnsureForensicColumns for {w.Table}.{w.Column} failed: {ex.Message}");
         }
+    }
+}
+
+// v1.10.106: Standalone-Rescue fuer Folders.IsPrivate. Die V184-Migration
+// hatte in v1.10.104 die [DbContext]/[Migration]-Attribute vergessen, EF
+// hat sie beim Scan uebergangen — Column existiert weder in Sqlite noch
+// in SqlServer, jede Query auf Folder crasht mit "no such column
+// f.IsPrivate". Idempotent: legt die Spalte an, wenn sie fehlt, sonst
+// no-op. Anders als EnsureForensicColumnsAsync ist IsPrivate NOT NULL
+// DEFAULT 0 (bool), deshalb eigene Routine mit eigenem DDL-Suffix.
+static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool isSqlServer)
+{
+    try
+    {
+        if (isSqlServer)
+        {
+            var connStr = db.Database.GetConnectionString();
+            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            await cn.OpenAsync();
+            using var check = cn.CreateCommand();
+            check.CommandText = "SELECT COL_LENGTH('Folders', 'IsPrivate')";
+            var res = await check.ExecuteScalarAsync();
+            var exists = res is not null && res != DBNull.Value;
+            if (!exists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE [Folders] ADD [IsPrivate] bit NOT NULL DEFAULT (0)";
+                await alter.ExecuteNonQueryAsync();
+                Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SqlServer).");
+            }
+        }
+        else
+        {
+            var connStr = db.Database.GetConnectionString();
+            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+            await cn.OpenAsync();
+            using var check = cn.CreateCommand();
+            check.CommandText = "PRAGMA table_info(\"Folders\")";
+            var exists = false;
+            using (var rdr = await check.ExecuteReaderAsync())
+            {
+                while (await rdr.ReadAsync())
+                {
+                    if (string.Equals(rdr.GetString(1), "IsPrivate", StringComparison.OrdinalIgnoreCase))
+                    { exists = true; break; }
+                }
+            }
+            if (!exists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"IsPrivate\" INTEGER NOT NULL DEFAULT 0";
+                await alter.ExecuteNonQueryAsync();
+                Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SQLite).");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync failed: " + ex.Message);
     }
 }
 
