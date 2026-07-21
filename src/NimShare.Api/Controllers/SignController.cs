@@ -803,7 +803,14 @@ public class SignController : Controller
         // Rehydrate initiator + participants for the audit page.
         req.Participants = all;
         req.Initiator ??= await _db.Users.FindAsync(new object[] { req.InitiatorUserId }, ct);
-        var finalBytes = await _sig.RenderFinalAsync(req, srcBytes, sigImages, ct);
+        // v1.10.86: Audit-Events laden für ausführliche eingebettete Audit-
+        // Seite. Vorher hat der Reject-Pfad die Seite ohne Timeline
+        // gerendert — jetzt konsistent mit dem Finalize-Pfad.
+        var auditEvents = await _db.SignatureAudits
+            .Where(a => a.RequestId == req.Id)
+            .OrderBy(a => a.At)
+            .ToListAsync(ct);
+        var finalBytes = await _sig.RenderFinalAsync(req, srcBytes, sigImages, auditEvents, ct);
 
         var finalName = System.IO.Path.GetFileNameWithoutExtension(req.SourceFile.Name) + " (signiert).pdf";
         var finalPath = $"users/{req.InitiatorUserId:N}/signatures/{req.Id:N}.pdf";
