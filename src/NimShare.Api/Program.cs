@@ -448,6 +448,14 @@ using (var scope = app.Services.CreateScope())
                 // CREATE TABLE / ADD COLUMN whose target already exists.
                 await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
             }
+            // v1.10.108: MUSS vor MigrateAsync laufen. DBs, die v1.10.106
+            // sahen, haben Folders.IsPrivate bereits per Rescue-ALTER —
+            // aber KEINEN V184-History-Eintrag (die Migration war damals
+            // wegen fehlender Attribute unsichtbar). Ohne den Stamp würde
+            // MigrateAsync V184 erneut anwenden → "duplicate column name"
+            // → Migration-Loop bricht ab und JEDE künftige Migration
+            // (V185+) bliebe für immer liegen.
+            await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
             await db.Database.MigrateAsync();
             break;
         }
@@ -745,6 +753,17 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
 // DEFAULT 0 (bool), deshalb eigene Routine mit eigenem DDL-Suffix.
 static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool isSqlServer)
 {
+    // v1.10.108: Läuft VOR MigrateAsync. Zwei Aufgaben:
+    //  (1) Column nachlegen, falls sie fehlt (DBs, die v1.10.104/105 ohne
+    //      funktionierende V184 sahen).
+    //  (2) V184 in __EFMigrationsHistory stempeln, sobald die Column da
+    //      ist — sonst wendet MigrateAsync die (seit v1.10.106
+    //      attributierte) V184 erneut an und stirbt an "duplicate column",
+    //      was ALLE künftigen Migrationen blockieren würde.
+    // Auf frischen DBs existiert die Folders-Tabelle noch nicht: beide
+    // Schritte schlagen fehl bzw. greifen nicht, MigrateAsync legt danach
+    // alles regulär inkl. V184 an.
+    const string V184 = "20260721145510_V184_FolderIsPrivate";
     try
     {
         if (isSqlServer)
@@ -761,7 +780,19 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
                 using var alter = cn.CreateCommand();
                 alter.CommandText = "ALTER TABLE [Folders] ADD [IsPrivate] bit NOT NULL DEFAULT (0)";
                 await alter.ExecuteNonQueryAsync();
+                exists = true;
                 Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SqlServer).");
+            }
+            if (exists)
+            {
+                using var stamp = cn.CreateCommand();
+                stamp.CommandText =
+                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
+                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
+                stamp.Parameters.AddWithValue("@mid", V184);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V184 (SqlServer).");
             }
         }
         else
@@ -782,10 +813,26 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
             }
             if (!exists)
             {
+                // Auf frischen DBs gibt es die Folders-Tabelle noch nicht —
+                // dann wirft ALTER, der catch unten schluckt, MigrateAsync
+                // übernimmt. Auf Bestands-DBs legt das die Column nach.
                 using var alter = cn.CreateCommand();
                 alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"IsPrivate\" INTEGER NOT NULL DEFAULT 0";
                 await alter.ExecuteNonQueryAsync();
+                exists = true;
                 Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SQLite).");
+            }
+            if (exists)
+            {
+                using var stamp = cn.CreateCommand();
+                stamp.CommandText =
+                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                    "SELECT $mid, '8.0.10' " +
+                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+                stamp.Parameters.AddWithValue("$mid", V184);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V184 (SQLite).");
             }
         }
     }
@@ -870,7 +917,11 @@ static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceP
         await using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (@id, @v)";
-            var p1 = cmd.CreateParameter(); p1.ParameterName = "@id"; p1.Value = "20260719180245_InitialSqlServer"; cmd.Parameters.Add(p1);
+            // v1.10.108: Die ID muss EXAKT der echten Migration entsprechen
+            // (20260720042650, nicht 20260719180245 — Tippfehler aus v1.8.5).
+            // Mit der falschen ID sah MigrateAsync Initial weiter als pending
+            // und crashte auf "object already exists".
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "@id"; p1.Value = "20260720042650_InitialSqlServer"; cmd.Parameters.Add(p1);
             var p2 = cmd.CreateParameter(); p2.ParameterName = "@v"; p2.Value = "8.0.10"; cmd.Parameters.Add(p2);
             await cmd.ExecuteNonQueryAsync();
         }

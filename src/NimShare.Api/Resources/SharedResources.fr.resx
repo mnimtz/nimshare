@@ -408,7 +408,6 @@
   <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
   <data name="browse.search.error"><value>Search failed. Try again.</value></data>
   <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="browse.tree.loading"><value>Loading folders...</value></data>
   <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
   <data name="preview.download"><value>Open in a new tab</value></data>
   <data name="links.email.send"><value>Send</value></data>
@@ -577,7 +576,6 @@ Ouvrez le lien :
   <data name="users.tab.security"><value>Security</value></data>
   <data name="users.no_groups"><value>No groups assigned.</value></data>
   <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.add_member"><value>Add member</value></data>
   <data name="groups.promote"><value>Promote to manager</value></data>
   <data name="groups.demote"><value>Demote to member</value></data>
   <data name="groups.remove_member"><value>Remove</value></data>
@@ -1283,4 +1281,16 @@ Merci d'utiliser NimShare.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>Impossible de modifier la visibilité</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>Tu ne peux pas modifier les autorisations de ce dossier.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Choisis un utilisateur dans les suggestions.</value></data>
+  <data name="groups.no_candidates" xml:space="preserve"><value>Tous les utilisateurs actifs sont déjà membres de ce groupe.</value></data>
+  <data name="groups.no_candidates.link" xml:space="preserve"><value>Créer un nouvel utilisateur</value></data>
+  <data name="ai.reindex.err_disabled" xml:space="preserve"><value>Le fournisseur IA est désactivé. Active d'abord un fournisseur, puis relance l'indexation.</value></data>
+  <data name="sig.new.new_template" xml:space="preserve"><value>Nouveau modèle</value></data>
+  <data name="sig.new.new_template_hint" xml:space="preserve"><value>Crée un modèle d'e-mail réutilisable directement ici. Utilise des variables comme {{doc.title}} — elles seront remplacées à l'envoi de l'invitation.</value></data>
+  <data name="templates.name" xml:space="preserve"><value>Nom (interne)</value></data>
+  <data name="templates.subject" xml:space="preserve"><value>Objet</value></data>
+  <data name="templates.body" xml:space="preserve"><value>Corps du message</value></data>
+  <data name="templates.placeholder_hint" xml:space="preserve"><value>Variables disponibles :</value></data>
+  <data name="templates.set_default" xml:space="preserve"><value>Définir comme modèle par défaut pour cette langue</value></data>
+  <data name="templates.err_name_subject" xml:space="preserve"><value>Le nom et l'objet sont obligatoires.</value></data>
+  <data name="templates.saved_ok" xml:space="preserve"><value>Modèle enregistré et sélectionné.</value></data>
 </root>

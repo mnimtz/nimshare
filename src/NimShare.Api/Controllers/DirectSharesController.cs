@@ -222,7 +222,12 @@ public class DirectSharesController : ControllerBase
         if (!ok && share.FolderId is Guid folid)
         {
             var folder = await _db.Folders.FindAsync(new object[] { folid }, ct);
-            ok = folder is not null && folder.OwnerUserId == me.Id;
+            // v1.10.108: Public-Ordner haben OwnerUserId == null — dort ist
+            // der Ersteller (CreatedByUserId) der faktische Eigentümer.
+            // Ohne den Zweig konnte der Ordner-Ersteller fremd angelegte
+            // Grants auf seinem eigenen privaten Ordner nicht widerrufen.
+            ok = folder is not null
+                && (folder.OwnerUserId == me.Id || folder.CreatedByUserId == me.Id);
         }
         if (!ok) return Forbid();
         _db.DirectShares.Remove(share);

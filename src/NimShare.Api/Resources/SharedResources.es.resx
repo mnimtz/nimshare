@@ -408,7 +408,6 @@
   <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
   <data name="browse.search.error"><value>Search failed. Try again.</value></data>
   <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="browse.tree.loading"><value>Loading folders...</value></data>
   <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
   <data name="preview.download"><value>Open in a new tab</value></data>
   <data name="links.email.send"><value>Send</value></data>
@@ -577,7 +576,6 @@ Abre el enlace:
   <data name="users.tab.security"><value>Security</value></data>
   <data name="users.no_groups"><value>No groups assigned.</value></data>
   <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.add_member"><value>Add member</value></data>
   <data name="groups.promote"><value>Promote to manager</value></data>
   <data name="groups.demote"><value>Demote to member</value></data>
   <data name="groups.remove_member"><value>Remove</value></data>
@@ -1283,4 +1281,16 @@ Gracias por usar NimShare.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>No se pudo cambiar la visibilidad</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>No puedes cambiar los permisos de esta carpeta.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Elige un usuario de las sugerencias.</value></data>
+  <data name="groups.no_candidates" xml:space="preserve"><value>Todos los usuarios activos ya son miembros de este grupo.</value></data>
+  <data name="groups.no_candidates.link" xml:space="preserve"><value>Crear un nuevo usuario</value></data>
+  <data name="ai.reindex.err_disabled" xml:space="preserve"><value>El proveedor de IA está desactivado. Activa primero un proveedor y vuelve a indexar.</value></data>
+  <data name="sig.new.new_template" xml:space="preserve"><value>Nueva plantilla</value></data>
+  <data name="sig.new.new_template_hint" xml:space="preserve"><value>Crea aquí una plantilla de correo reutilizable. Usa marcadores como {{doc.title}} — se sustituirán al enviar la invitación.</value></data>
+  <data name="templates.name" xml:space="preserve"><value>Nombre (interno)</value></data>
+  <data name="templates.subject" xml:space="preserve"><value>Asunto</value></data>
+  <data name="templates.body" xml:space="preserve"><value>Cuerpo del mensaje</value></data>
+  <data name="templates.placeholder_hint" xml:space="preserve"><value>Marcadores disponibles:</value></data>
+  <data name="templates.set_default" xml:space="preserve"><value>Establecer como predeterminada para este idioma</value></data>
+  <data name="templates.err_name_subject" xml:space="preserve"><value>El nombre y el asunto son obligatorios.</value></data>
+  <data name="templates.saved_ok" xml:space="preserve"><value>Plantilla guardada y seleccionada.</value></data>
 </root>

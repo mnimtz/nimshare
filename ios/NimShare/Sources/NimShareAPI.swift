@@ -66,6 +66,12 @@ final class NimShareAPI: ObservableObject {
             }
             return (data, http)
         } catch let e as ApiError { throw e }
+        // v1.10.108: Cancellation NICHT in ApiError.network wrappen. Sonst
+        // landet „Abgebrochen" (Task-Cancel bei Tab-Wechsel / Pull-Refresh)
+        // als roter Fehler-Screen in jeder Listen-View — die Views können
+        // CancellationError gezielt schlucken, ApiError.network nicht.
+        catch is CancellationError { throw CancellationError() }
+        catch let u as URLError where u.code == .cancelled { throw CancellationError() }
         catch { throw ApiError.network(error.localizedDescription) }
     }
 

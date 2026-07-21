@@ -409,7 +409,6 @@
   <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
   <data name="browse.search.error"><value>Search failed. Try again.</value></data>
   <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="browse.tree.loading"><value>Loading folders...</value></data>
   <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
   <data name="preview.download"><value>Open in a new tab</value></data>
   <data name="links.email.send"><value>Send</value></data>
@@ -578,7 +577,6 @@ Open the link:
   <data name="users.tab.security"><value>Security</value></data>
   <data name="users.no_groups"><value>No groups assigned.</value></data>
   <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.add_member"><value>Add member</value></data>
   <data name="groups.promote"><value>Promote to manager</value></data>
   <data name="groups.demote"><value>Demote to member</value></data>
   <data name="groups.remove_member"><value>Remove</value></data>

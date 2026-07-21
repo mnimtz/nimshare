@@ -407,7 +407,6 @@
   <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
   <data name="browse.search.error"><value>Search failed. Try again.</value></data>
   <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="browse.tree.loading"><value>Loading folders...</value></data>
   <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
   <data name="preview.download"><value>Open in a new tab</value></data>
   <data name="links.email.send"><value>Send</value></data>
@@ -552,11 +551,11 @@ Open de link:
   <data name="notice.member_removed"><value>Member removed.</value></data>
   <data name="notice.member_role_updated"><value>Role updated.</value></data>
   <data name="err.invalid_email"><value>Invalid email address.</value></data>
-  <data name="err.user_exists"><value>A user with that email already exists.</value></data>
+  <data name="err.user_exists"><value>Er bestaat al een gebruiker met dit e-mailadres.</value></data>
   <data name="err.cannot_disable_self"><value>You cannot disable yourself.</value></data>
-  <data name="err.cannot_delete_self"><value>You cannot delete yourself.</value></data>
-  <data name="err.last_admin"><value>Cannot remove or demote the last active admin.</value></data>
-  <data name="err.last_manager"><value>Cannot remove or demote the last manager.</value></data>
+  <data name="err.cannot_delete_self"><value>Je kunt jezelf niet verwijderen.</value></data>
+  <data name="err.last_admin"><value>De laatste actieve beheerder kan niet worden verwijderd of gedegradeerd.</value></data>
+  <data name="err.last_manager"><value>De laatste manager kan niet worden verwijderd of gedegradeerd.</value></data>
   <data name="err.group_name_required"><value>Group name is required.</value></data>
   <data name="err.quota_range"><value>Quota must be between 1 GB and 10 TB.</value></data>
   <data name="err.entra_only"><value>This account uses Entra sign-in; there is no local password to change.</value></data>
@@ -568,7 +567,7 @@ Open de link:
   <data name="err.upload_failed"><value>Upload failed. Try again.</value></data>
   <data name="users.edit"><value>Gebruiker bewerken</value></data>
   <data name="users.reset_password"><value>Reset password</value></data>
-  <data name="users.reset_password.helper"><value>Sends an email with a new password to the user.</value></data>
+  <data name="users.reset_password.helper"><value>Stuurt de gebruiker een e-mail met een nieuw wachtwoord.</value></data>
   <data name="users.new_password"><value>New password</value></data>
   <data name="users.set_password"><value>Set password</value></data>
   <data name="users.tab.basics"><value>Basics</value></data>
@@ -576,7 +575,6 @@ Open de link:
   <data name="users.tab.security"><value>Security</value></data>
   <data name="users.no_groups"><value>No groups assigned.</value></data>
   <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.add_member"><value>Add member</value></data>
   <data name="groups.promote"><value>Promote to manager</value></data>
   <data name="groups.demote"><value>Demote to member</value></data>
   <data name="groups.remove_member"><value>Remove</value></data>
@@ -1282,4 +1280,16 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>Zichtbaarheid kon niet worden gewijzigd</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>Je mag de machtigingen van deze map niet wijzigen.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Kies een gebruiker uit de suggesties.</value></data>
+  <data name="groups.no_candidates" xml:space="preserve"><value>Alle actieve gebruikers zijn al lid van deze groep.</value></data>
+  <data name="groups.no_candidates.link" xml:space="preserve"><value>Nieuwe gebruiker aanmaken</value></data>
+  <data name="ai.reindex.err_disabled" xml:space="preserve"><value>De AI-provider is uitgeschakeld. Schakel eerst een provider in en indexeer daarna opnieuw.</value></data>
+  <data name="sig.new.new_template" xml:space="preserve"><value>Nieuw sjabloon</value></data>
+  <data name="sig.new.new_template_hint" xml:space="preserve"><value>Maak hier een herbruikbaar e-mailsjabloon. Gebruik placeholders zoals {{doc.title}} — die worden vervangen bij het versturen van de uitnodiging.</value></data>
+  <data name="templates.name" xml:space="preserve"><value>Naam (intern)</value></data>
+  <data name="templates.subject" xml:space="preserve"><value>Onderwerpregel</value></data>
+  <data name="templates.body" xml:space="preserve"><value>Berichttekst</value></data>
+  <data name="templates.placeholder_hint" xml:space="preserve"><value>Beschikbare placeholders:</value></data>
+  <data name="templates.set_default" xml:space="preserve"><value>Instellen als standaard voor deze taal</value></data>
+  <data name="templates.err_name_subject" xml:space="preserve"><value>Naam en onderwerpregel zijn verplicht.</value></data>
+  <data name="templates.saved_ok" xml:space="preserve"><value>Sjabloon opgeslagen en geselecteerd.</value></data>
 </root>

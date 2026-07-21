@@ -408,7 +408,6 @@
   <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
   <data name="browse.search.error"><value>Search failed. Try again.</value></data>
   <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="browse.tree.loading"><value>Loading folders...</value></data>
   <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
   <data name="preview.download"><value>Open in a new tab</value></data>
   <data name="links.email.send"><value>Send</value></data>
@@ -577,7 +576,6 @@ Apri il link:
   <data name="users.tab.security"><value>Security</value></data>
   <data name="users.no_groups"><value>No groups assigned.</value></data>
   <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.add_member"><value>Add member</value></data>
   <data name="groups.promote"><value>Promote to manager</value></data>
   <data name="groups.demote"><value>Demote to member</value></data>
   <data name="groups.remove_member"><value>Remove</value></data>
@@ -1283,4 +1281,16 @@ Grazie per usare NimShare.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>Impossibile modificare la visibilità</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>Non puoi modificare le autorizzazioni di questa cartella.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Scegli un utente tra i suggerimenti.</value></data>
+  <data name="groups.no_candidates" xml:space="preserve"><value>Tutti gli utenti attivi sono già membri di questo gruppo.</value></data>
+  <data name="groups.no_candidates.link" xml:space="preserve"><value>Crea un nuovo utente</value></data>
+  <data name="ai.reindex.err_disabled" xml:space="preserve"><value>Il provider IA è disattivato. Attiva prima un provider, poi riesegui l'indicizzazione.</value></data>
+  <data name="sig.new.new_template" xml:space="preserve"><value>Nuovo modello</value></data>
+  <data name="sig.new.new_template_hint" xml:space="preserve"><value>Crea qui un modello e-mail riutilizzabile. Usa segnaposto come {{doc.title}} — verranno sostituiti all'invio dell'invito.</value></data>
+  <data name="templates.name" xml:space="preserve"><value>Nome (interno)</value></data>
+  <data name="templates.subject" xml:space="preserve"><value>Oggetto</value></data>
+  <data name="templates.body" xml:space="preserve"><value>Corpo del messaggio</value></data>
+  <data name="templates.placeholder_hint" xml:space="preserve"><value>Segnaposto disponibili:</value></data>
+  <data name="templates.set_default" xml:space="preserve"><value>Imposta come predefinito per questa lingua</value></data>
+  <data name="templates.err_name_subject" xml:space="preserve"><value>Nome e oggetto sono obbligatori.</value></data>
+  <data name="templates.saved_ok" xml:space="preserve"><value>Modello salvato e selezionato.</value></data>
 </root>

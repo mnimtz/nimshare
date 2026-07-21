@@ -181,19 +181,13 @@ public class FolderService : IFolderService
         await _db.SaveChangesAsync(ct);
     }
 
-    public async Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default)
-    {
-        var subs = await _db.Folders
+    // Bewusst ungefiltert — Privacy-Filterung übernimmt der Caller via
+    // FilterVisibleSubfoldersAsync (braucht den User-Kontext).
+    public Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default) =>
+        _db.Folders
             .Where(f => f.ParentFolderId == parent.Id)
             .OrderBy(f => f.Name)
             .ToListAsync(ct);
-        if (parent.Scope != FileScope.Public || subs.Count == 0) return subs;
-        // v1.10.104: Private-Ordner ohne Grant für den aktuellen User
-        // sind unsichtbar. Der Owner + Admin sehen alles (IsFolderHidden
-        // gibt für sie false zurück). Kein AuthContext hier — Filter ruft
-        // der Caller mit `FilterVisibleSubfoldersAsync`.
-        return subs;
-    }
 
     public async Task<List<Folder>> FilterVisibleSubfoldersAsync(List<Folder> subs, User user, CancellationToken ct = default)
     {
@@ -262,9 +256,15 @@ public class FolderService : IFolderService
         {
             FileScope.Personal => folder.OwnerUserId == user.Id,
             // v1.10.104: Ordner-Ersteller im Public-Scope darf seinen
-            // Ordner managen — vor allem den IsPrivate-Toggle setzen.
-            // Vorher: nur Admin.
-            FileScope.Public => folder.CreatedByUserId == user.Id,
+            // Ordner managen. v1.10.108: zusätzlich jeder mit explizitem
+            // Write-DirectShare auf dem Ordner oder einem Ahnen — sonst
+            // ist Delegation unmöglich (Admin legt Ordner an, will die
+            // Verwaltung einem User übergeben; Legacy-Ordner haben
+            // CreatedByUserId == Guid.Empty und wären für immer Admin-only).
+            // Bewusst NICHT PublicCanWrite — das würde jedem Schreib-User
+            // Rename/Delete/Privacy auf fremden Ordnern geben.
+            FileScope.Public => folder.CreatedByUserId == user.Id
+                || await HasWriteGrantOnChainAsync(folder, user, ct),
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupManagerAsync(user, g, ct),
             _ => false,
         };
@@ -280,6 +280,29 @@ public class FolderService : IFolderService
         var folder = await _db.Folders.FindAsync(new object[] { folderId }, ct);
         if (folder is null) return false;
         return await HasReadOnlyOverrideAsync(folder, user, ct);
+    }
+
+    /// <summary>
+    /// v1.10.108: True wenn der User einen expliziten Write-DirectShare auf
+    /// dem Ordner oder einem seiner Ahnen hat (direkt oder via Gruppe).
+    /// Grundlage der Manage-Delegation im Public-Scope.
+    /// </summary>
+    private async Task<bool> HasWriteGrantOnChainAsync(Folder folder, User user, CancellationToken ct)
+    {
+        var visited = new HashSet<Guid>();
+        Guid? cursor = folder.Id;
+        while (cursor is Guid fid && visited.Add(fid) && visited.Count <= 64)
+        {
+            var hasWrite = await _db.DirectShares.AnyAsync(s =>
+                s.FolderId == fid
+                && s.Permission == DirectSharePermission.Write
+                && (s.TargetUserId == user.Id
+                    || (s.TargetGroupId != null && _db.GroupMemberships.Any(m => m.UserId == user.Id && m.GroupId == s.TargetGroupId))),
+                ct);
+            if (hasWrite) return true;
+            cursor = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
+        }
+        return false;
     }
 
     /// <summary>

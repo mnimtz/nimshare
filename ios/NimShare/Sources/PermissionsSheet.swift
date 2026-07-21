@@ -11,6 +11,12 @@ struct PermissionsSheet: View {
     let folderName: String
 
     @State private var isPrivate = false
+    // v1.10.108: gespiegelter Server-Zustand. Der onChange(of: isPrivate)
+    // feuert auch bei programmatischen Änderungen (load-Ergebnis, Fehler-
+    // Rollback) — ohne den Guard gegen serverIsPrivate entstand eine
+    // endlose PATCH-403-Schleife, sobald ein Nur-Lese-User das Sheet
+    // eines privaten Ordners öffnete.
+    @State private var serverIsPrivate = false
     @State private var canManage = false
     @State private var userGrants: [FolderPermissionUserGrant] = []
     @State private var groupGrants: [FolderPermissionGroupGrant] = []
@@ -56,6 +62,8 @@ struct PermissionsSheet: View {
                     }
                     .disabled(!canManage || loading)
                     .onChange(of: isPrivate) { newValue in
+                        // Nur echte User-Umschaltungen an den Server senden.
+                        guard newValue != serverIsPrivate else { return }
                         Task { await togglePrivacy(newValue) }
                     }
                 } header: {
@@ -183,6 +191,7 @@ struct PermissionsSheet: View {
         loading = true; defer { loading = false }
         do {
             let d = try await api.folderPermissions(id: folderId)
+            serverIsPrivate = d.isPrivate
             isPrivate = d.isPrivate
             canManage = d.canManage
             userGrants = d.userGrants
@@ -199,14 +208,16 @@ struct PermissionsSheet: View {
         guard let api = auth.api else { return }
         do {
             let result = try await api.setFolderPrivacy(id: folderId, isPrivate: wanted)
+            serverIsPrivate = result
             isPrivate = result
         } catch let e as ApiError {
             error = e.localizedDescription
-            // Toggle zurückrollen, damit UI und Server konsistent sind.
-            isPrivate = !wanted
+            // Rollback auf den Server-Zustand — der onChange-Guard
+            // (newValue == serverIsPrivate) verhindert ein Re-Fire.
+            isPrivate = serverIsPrivate
         } catch let ex {
             error = ex.localizedDescription
-            isPrivate = !wanted
+            isPrivate = serverIsPrivate
         }
     }
 

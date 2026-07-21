@@ -409,7 +409,6 @@
   <data name="browse.search.disabled"><value>Semantische Suche ist deaktiviert.</value></data>
   <data name="browse.search.error"><value>Suche fehlgeschlagen.</value></data>
   <data name="browse.search.no_hits"><value>Keine Treffer in diesem Bereich.</value></data>
-  <data name="browse.tree.loading"><value>Lade Ordner...</value></data>
   <data name="preview.unsupported"><value>Vorschau fuer diesen Dateityp noch nicht unterstuetzt.</value></data>
   <data name="preview.download"><value>In neuem Tab oeffnen</value></data>
   <data name="links.email.send"><value>Senden</value></data>
@@ -554,11 +553,11 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.member_removed"><value>Lid verwijderd.</value></data>
   <data name="notice.member_role_updated"><value>Rol bijgewerkt.</value></data>
   <data name="err.invalid_email"><value>Ongeldig e-mailadres.</value></data>
-  <data name="err.user_exists"><value>Er bestaat al een gebruiker met dit e-mailadres.</value></data>
+  <data name="err.user_exists"><value>Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.</value></data>
   <data name="err.cannot_disable_self"><value>Je kunt jezelf niet deactiveren.</value></data>
-  <data name="err.cannot_delete_self"><value>Je kunt jezelf niet verwijderen.</value></data>
-  <data name="err.last_admin"><value>De laatste actieve beheerder kan niet worden verwijderd/gedegradeerd.</value></data>
-  <data name="err.last_manager"><value>De laatste manager kan niet worden verwijderd/gedegradeerd.</value></data>
+  <data name="err.cannot_delete_self"><value>Du kannst dich nicht selbst löschen.</value></data>
+  <data name="err.last_admin"><value>Der letzte aktive Administrator kann nicht entfernt oder herabgestuft werden.</value></data>
+  <data name="err.last_manager"><value>Der letzte Manager kann nicht entfernt oder herabgestuft werden.</value></data>
   <data name="err.group_name_required"><value>Groepsnaam is vereist.</value></data>
   <data name="err.quota_range"><value>Quotum moet tussen 1 GB en 10 TB liggen.</value></data>
   <data name="err.entra_only"><value>Dit account gebruikt Entra; geen lokaal wachtwoord.</value></data>
@@ -570,7 +569,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="err.upload_failed"><value>Uploaden mislukt. Probeer opnieuw.</value></data>
   <data name="users.edit"><value>Nutzer bearbeiten</value></data>
   <data name="users.reset_password"><value>Wachtwoord resetten</value></data>
-  <data name="users.reset_password.helper"><value>Stuurt een e-mail met een nieuw wachtwoord.</value></data>
+  <data name="users.reset_password.helper"><value>Sendet dem Benutzer eine E-Mail mit einem neuen Passwort.</value></data>
   <data name="users.new_password"><value>Nieuw wachtwoord</value></data>
   <data name="users.set_password"><value>Wachtwoord instellen</value></data>
   <data name="users.tab.basics"><value>Basis</value></data>
@@ -578,7 +577,6 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="users.tab.security"><value>Beveiliging</value></data>
   <data name="users.no_groups"><value>Geen groepen toegewezen.</value></data>
   <data name="groups.rename"><value>Hernoemen</value></data>
-  <data name="groups.add_member"><value>Lid toevoegen</value></data>
   <data name="groups.promote"><value>Tot manager maken</value></data>
   <data name="groups.demote"><value>Tot lid maken</value></data>
   <data name="groups.remove_member"><value>Verwijderen</value></data>

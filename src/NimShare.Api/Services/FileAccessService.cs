@@ -93,10 +93,14 @@ public class FileAccessService : IFileAccessService
 
         var publicReadable = user.Role == UserRole.Admin || user.PublicCanRead;
         // v1.10.104: Public + Private-Ordner unsichtbar für Nutzer ohne
-        // Grant. Der Guard wirkt zusätzlich zur Direct-Share-Beziehung —
-        // ein DirectShare auf die Datei oder den Ordner selbst hebt den
-        // Privacy-Filter nicht auf; wer den Private-Root nicht sehen darf,
-        // sieht auch Files darin nicht via Bulk-Reads.
+        // Grant. v1.10.108-Klarstellung: der Hidden-Filter gated nur den
+        // Scope-Zweig ("jeder darf Public lesen"). Die Direct-Share-OR-
+        // Zweige darunter bleiben bewusst offen — ein expliziter Grant auf
+        // die Datei oder einen Ordner der Kette gewährt Zugriff, exakt wie
+        // CanReadAsync es für Einzel-Reads tut (Windows-Semantik: explizite
+        // ACE schlägt Vererbung). Grants können nur von Berechtigten
+        // vergeben werden (EffectivePermission prüft seit v1.10.108 die
+        // Privacy), daher ist das kein Bypass.
         var hidden = hiddenPublicFolderIds;
         return q.Where(f =>
             (f.Scope == FileScope.Personal && f.OwnerId == user.Id) ||
@@ -118,14 +122,16 @@ public class FileAccessService : IFileAccessService
             .ToListAsync(ct);
         if (privateRoots.Count == 0) return new HashSet<Guid>();
 
-        // 2) Grants: hat der User (via self oder Group) einen DirectShare?
+        // 2) Grants: ALLE Folder-Grants des Users (self oder Group) — nicht
+        //    nur die auf Private-Roots. v1.10.108: ein Grant auf einen
+        //    Unterordner im privaten Baum macht dessen Subtree sichtbar
+        //    (Windows-Semantik, konsistent zu IsFolderHiddenByPrivacyAsync).
         var myGroupIds = await _db.GroupMemberships
             .Where(m => m.UserId == user.Id)
             .Select(m => m.GroupId)
             .ToListAsync(ct);
-        var rootIds = privateRoots.Select(r => r.Id).ToList();
         var grantedFolderIds = await _db.DirectShares
-            .Where(s => s.FolderId != null && rootIds.Contains(s.FolderId!.Value)
+            .Where(s => s.FolderId != null
                 && (s.TargetUserId == user.Id
                     || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId!.Value))))
             .Select(s => s.FolderId!.Value)
@@ -143,7 +149,9 @@ public class FileAccessService : IFileAccessService
         if (inaccessible.Count == 0) return new HashSet<Guid>();
 
         // 4) BFS über Descendants — jedes Level in einer Query, damit wir
-        //    grosse Public-Bäume nicht komplett laden müssen.
+        //    grosse Public-Bäume nicht komplett laden müssen. Kinder mit
+        //    eigenem Grant werden NICHT versteckt und NICHT expandiert —
+        //    ihr Subtree ist per Grant-in-Kette sichtbar.
         var hidden = new HashSet<Guid>(inaccessible);
         var frontier = inaccessible.ToList();
         var safety = 64;
@@ -154,7 +162,9 @@ public class FileAccessService : IFileAccessService
                 .Where(f => f.ParentFolderId != null && parents.Contains(f.ParentFolderId!.Value))
                 .Select(f => f.Id)
                 .ToListAsync(ct);
-            frontier = children.Where(id => hidden.Add(id)).ToList();
+            frontier = children
+                .Where(id => !grantedSet.Contains(id) && hidden.Add(id))
+                .ToList();
         }
         return hidden;
     }
@@ -164,32 +174,38 @@ public class FileAccessService : IFileAccessService
         if (user.Role == UserRole.Admin) return false;
         if (folder.Scope != FileScope.Public) return false;
 
-        // Walk ancestor chain (incl. this folder) und finde den ersten
-        // Private-Root. Wenn keiner → nicht hidden.
+        // v1.10.108: Ketten-Semantik statt "nur der erste Private-Root
+        // zählt". hidden ⇔ irgendein Knoten der Kette (inkl. self) ist
+        // privat UND kein Knoten der Kette trägt einen Grant für den User
+        // (direkt oder via Gruppe) UND kein privater Knoten wurde vom User
+        // selbst erstellt. Damit verhält sich die Einzel-Prüfung identisch
+        // zur BFS-Variante in GetHiddenPublicFolderIdsAsync — vorher zeigte
+        // Browse einen Ordner, den Suche/Tree versteckten (und umgekehrt).
         var visited = new HashSet<Guid>();
         Folder? cursor = folder;
         var safety = 64;
+        var sawPrivate = false;
+        var myGroupIds = _db.GroupMemberships
+            .Where(m => m.UserId == user.Id)
+            .Select(m => m.GroupId);
         while (cursor != null && visited.Add(cursor.Id) && safety-- > 0)
         {
+            var nodeId = cursor.Id;
+            var hasGrantHere = await _db.DirectShares.AnyAsync(s =>
+                s.FolderId == nodeId
+                && (s.TargetUserId == user.Id
+                    || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId!.Value))),
+                ct);
+            if (hasGrantHere) return false;
             if (cursor.IsPrivate)
             {
                 if (cursor.CreatedByUserId == user.Id) return false;
-                // Grant-Check am Private-Root
-                var privateRootId = cursor.Id;
-                var myGroupIds = _db.GroupMemberships
-                    .Where(m => m.UserId == user.Id)
-                    .Select(m => m.GroupId);
-                var hasGrant = await _db.DirectShares.AnyAsync(s =>
-                    s.FolderId == privateRootId
-                    && (s.TargetUserId == user.Id
-                        || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId!.Value))),
-                    ct);
-                return !hasGrant;
+                sawPrivate = true;
             }
             if (cursor.ParentFolderId is not Guid pid) break;
             cursor = await _db.Folders.FindAsync(new object[] { pid }, ct);
         }
-        return false;
+        return sawPrivate;
     }
 
     public async Task<bool> CanReadAsync(User user, StorageFile file, CancellationToken ct = default)
@@ -354,6 +370,12 @@ public class FileAccessService : IFileAccessService
     {
         if (user.Role == UserRole.Admin) return DirectSharePermission.Write;
         if (folder.OwnerUserId == user.Id) return DirectSharePermission.Write;
+        // v1.10.108: Public-Ordner haben OwnerUserId == null — der faktische
+        // Eigentümer ist der Ersteller. Ohne diesen Zweig konnte der Ersteller
+        // eines privaten Public-Ordners weniger als Write haben und z. B.
+        // keine Write-Grants vergeben.
+        if (folder.Scope == FileScope.Public && folder.CreatedByUserId == user.Id)
+            return DirectSharePermission.Write;
         if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid g && await IsGroupManagerAsync(user, g, ct))
             return DirectSharePermission.Write;
 
@@ -377,7 +399,15 @@ public class FileAccessService : IFileAccessService
             cursor = parent;
         }
         // Fall back to scope-based read (group member = read).
-        if (folder.Scope == FileScope.Public && (user.Role == UserRole.Admin || user.PublicCanRead))
+        // v1.10.108 SECURITY: der Public-Fallback MUSS die Privacy prüfen.
+        // Vorher lieferte er für einen versteckten Private-Ordner Read/Write
+        // zurück — damit konnte sich jeder eingeloggte User via
+        // POST /api/v1/direct-shares selbst einen Grant auf einen fremden
+        // privaten Ordner ausstellen (Create prüft "darfst du nicht mehr
+        // vergeben als du selbst hast" genau über diese Methode) und so
+        // die komplette ACL aushebeln.
+        if (folder.Scope == FileScope.Public && (user.Role == UserRole.Admin || user.PublicCanRead)
+            && !await IsFolderHiddenByPrivacyAsync(user, folder, ct))
             return user.PublicCanWrite ? DirectSharePermission.Write : DirectSharePermission.Read;
         if (folder.Scope == FileScope.Group && folder.OwnerGroupId is Guid gm && await IsGroupMemberAsync(user, gm, ct))
             return DirectSharePermission.Read;

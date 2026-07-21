@@ -464,9 +464,6 @@ const RETURN_URL = @Json.Serialize(currentUrl);
 const SCOPE = @Json.Serialize(scope.ToString());
 const CAN_WRITE = @(canWrite ? "true" : "false");
 const CAN_MANAGE = @(canManage ? "true" : "false");
-// v1.10.104: Admin-Flag für Kontext-Menü-Entscheidungen (Berechtigungen
-// im Public-Scope). Non-Admins ohne Ownership bekommen den Eintrag nicht.
-const IS_ADMIN = @(me != null && me.Role == UserRole.Admin ? "true" : "false");
 
 // ── Row selection ─────────────────────────────────────────────
 const bulkBar = document.getElementById('bulkBar');
@@ -1506,7 +1503,10 @@ function pm_render(d) {
 }
 async function pm_revoke(id) {
     const r = await fetch('/api/v1/direct-shares/' + id, { method: 'DELETE', credentials: 'same-origin' });
-    if (r.ok) await pm_reload();
+    // v1.10.108: Fehler nicht mehr stumm schlucken — 403 heißt "du darfst
+    // diesen Grant nicht entziehen", das muss der User sehen.
+    if (!r.ok) { nimAlert('HTTP ' + r.status, { kind: 'error' }); return; }
+    await pm_reload();
 }
 
 // ── Favorite toggle ───────────────────────────────────────────
