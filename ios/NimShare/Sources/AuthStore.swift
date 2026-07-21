@@ -18,30 +18,51 @@ final class AuthStore: ObservableObject {
     private let defaults = UserDefaults.standard
     private let serverURLKey = "nimshare.serverURL"
     private let tokenKey = "nimshare.jwt"
+    private let lastEmailKey = "nimshare.lastEmail"
+
+    /// v1.10.59: Werksseitig eingestellte Standard-URL. Marcus's Vorgabe.
+    /// User kann via "Server ändern" trotzdem umschalten wenn nötig.
+    static let defaultServerURL = URL(string: "https://nimshare.azurewebsites.net")!
+
+    /// v1.10.59: letzter erfolgreicher Login — für "Email merken" auf der
+    /// Login-Seite. Passwort läuft komplett über iOS Keychain-AutoFill
+    /// (textContentType(.password)) — nie in UserDefaults gespeichert.
+    var lastEmail: String? {
+        get { defaults.string(forKey: lastEmailKey) }
+        set {
+            if let v = newValue, !v.isEmpty { defaults.set(v, forKey: lastEmailKey) }
+            else { defaults.removeObject(forKey: lastEmailKey) }
+        }
+    }
 
     func bootstrap() async {
-        if let raw = defaults.string(forKey: serverURLKey), let url = URL(string: raw) {
-            serverURL = url
-            let token = Keychain.get(tokenKey)
-            api = NimShareAPI(baseURL: url, token: token)
-            if token != nil {
-                do {
-                    let me = try await api!.me()
-                    user = me
-                    state = .signedIn
-                    return
-                } catch {
-                    // token expired / revoked
-                    Keychain.remove(forKey: tokenKey)
-                    api?.setToken(nil)
-                    state = .needsLogin
-                    return
-                }
-            }
-            state = .needsLogin
-        } else {
-            state = .needsServer
+        // v1.10.59: Wenn kein Server konfiguriert ist, den default nutzen
+        // statt auf einen expliziten Setup-Screen zu warten. Marcus's
+        // Wunsch: direkt auf Login-Screen landen mit Server bereits gesetzt.
+        let raw = defaults.string(forKey: serverURLKey)
+        let url = raw.flatMap(URL.init(string:)) ?? Self.defaultServerURL
+        // Falls es der default ist und noch nicht persistiert, direkt
+        // speichern — damit "Change server" ihn korrekt wieder anzeigt.
+        if raw == nil {
+            defaults.set(url.absoluteString, forKey: serverURLKey)
         }
+        serverURL = url
+        let token = Keychain.get(tokenKey)
+        api = NimShareAPI(baseURL: url, token: token)
+        if token != nil {
+            do {
+                let me = try await api!.me()
+                user = me
+                state = .signedIn
+                return
+            } catch {
+                Keychain.remove(forKey: tokenKey)
+                api?.setToken(nil)
+                state = .needsLogin
+                return
+            }
+        }
+        state = .needsLogin
     }
 
     func setServer(_ url: URL) {
@@ -63,9 +84,11 @@ final class AuthStore: ObservableObject {
             Keychain.set(resp.token, forKey: tokenKey)
             api.setToken(resp.token)
             user = resp.user
+            lastEmail = email  // v1.10.59: für Vorausfüllung beim nächsten Login
             state = .signedIn
         case .totpRequired(let challenge):
             pendingTotpChallenge = challenge
+            lastEmail = email  // auch bei 2FA-Zwischenstand für Retry
         }
     }
 
@@ -93,8 +116,11 @@ final class AuthStore: ObservableObject {
     func changeServer() {
         signOut()
         defaults.removeObject(forKey: serverURLKey)
-        serverURL = nil
-        api = nil
-        state = .needsServer
+        // v1.10.59: NICHT auf nil setzen — wir gehen sofort auf den
+        // Default-Server zurück und lassen den User via ServerConfig-Sheet
+        // ändern. Damit bleibt die App IMMER in einem funktionierenden Zustand.
+        serverURL = Self.defaultServerURL
+        api = NimShareAPI(baseURL: Self.defaultServerURL)
+        state = .needsLogin
     }
 }
