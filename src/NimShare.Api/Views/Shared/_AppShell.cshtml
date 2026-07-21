@@ -164,20 +164,24 @@
                 <span>@T["nav.settings"]</span><span class="chevron">▾</span>
             </div>
             <div class="nav-section-body">
-                @* Profil ist jetzt über den Avatar-Popover unten links erreichbar — hier redundant. *@
+                @* v1.10.93: Nur User-relevante Settings für Nicht-Admins.
+                   Marcus's Report: „ich kann als normaler User Domain sehen,
+                   sollte man nicht — auch keine API-Tokens". Beide Features
+                   sind Admin/Power-User-Krams; Standard-User brauchen sie nie. *@
                 <a href="/settings/2fa" class="@Exact("/settings/2fa")">@T["settings.2fa"]</a>
                 <a href="/settings/landing/mine" class="@Exact("/settings/landing/mine")">@T["settings.download_page"]</a>
-                <a href="/settings/dev" class="@Exact("/settings/dev")">@T["settings.dev"]</a>
                 @if (isAdmin)
                 {
+                    <a href="/settings/dev" class="@Exact("/settings/dev")">@T["settings.dev"]</a>
+                    <a href="/settings" class="@Exact("/settings")">@T["nav.domains"]</a>
                     <a href="/settings/users" class="@Active("/settings/users")">@T["nav.users"]</a>
                     <a href="/settings/landing/global" class="@Exact("/settings/landing/global")">@T["settings.public_download_page"]</a>
                     <a href="/settings/email" class="@Active("/settings/email")">@T["nav.email_gateway"]</a>
                     <a href="/settings/office" class="@Active("/settings/office")">@T["settings.office"]</a>
                     <a href="/settings/ai" class="@Active("/settings/ai")">@T["nav.ai_gateway"]</a>
                     <a href="/settings/database" class="@Active("/settings/database")">@T["nav.database"]</a>
+                    <a href="/settings/moderation" class="@Active("/settings/moderation")">🛡 @T["nav.moderation"]</a>
                 }
-                <a href="/settings" class="@Exact("/settings")">@T["nav.domains"]</a>
             </div>
         </nav>
 

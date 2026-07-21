@@ -432,8 +432,19 @@ public class AiController : ControllerBase
         var me = await users.GetOrProvisionAsync(User, ct);
         var anyEmbedding = await _db.FileEmbeddings.AnyAsync(ct);
         if (!anyEmbedding)
-            return Problem(statusCode: 503, title: "Noch keine indexierten Dokumente.",
-                detail: "Die semantische Suche braucht Embeddings. Klicke unter Einstellungen › AI-Gateway auf 'Neu indexieren' — wenn danach immer noch nichts da ist, ist wahrscheinlich der AI-Provider (API-Key/Modell) nicht korrekt konfiguriert. Server-Log prüfen: die Zeile 'Embed returned null' zeigt den Provider-Fehler.");
+        {
+            // v1.10.93: Rolle-abhängige Meldung — Marcus's Feedback: „normale
+            // User bekommen technische Fehlermeldung die für sie nicht
+            // umsetzbar ist". Admin sieht die actionable Meldung, User eine
+            // freundliche „warte auf Indexierung"-Nachricht.
+            var isAdmin = me.Role == UserRole.Admin;
+            var detail = isAdmin
+                ? "Die semantische Suche braucht Embeddings. Klicke unter Einstellungen › AI-Gateway auf 'Neu indexieren' — wenn danach immer noch nichts da ist, ist wahrscheinlich der AI-Provider (API-Key/Modell) nicht korrekt konfiguriert. Server-Log prüfen: die Zeile 'Embed returned null' zeigt den Provider-Fehler."
+                : "Der AI-Chat ist noch nicht bereit — deine Administratorin muss die Dokumente einmalig indexieren. Bitte gib ihr einen kurzen Hinweis und versuche es später erneut.";
+            return Problem(statusCode: 503,
+                title: isAdmin ? "Noch keine indexierten Dokumente." : "AI-Chat noch nicht bereit",
+                detail: detail);
+        }
 
         // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
         var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);

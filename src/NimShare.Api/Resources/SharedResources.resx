@@ -1280,4 +1280,5 @@ Thanks for using NimShare.</value></data>
   <data name="imprint.tech.body" xml:space="preserve"><value>NimShare is open-source software (github.com/mnimtz/nimshare). This instance is operated independently by the entity named above; the software's developers have no access to the data processed here.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
   <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
+  <data name="nav.moderation" xml:space="preserve"><value>Moderation</value></data>
 </root>
