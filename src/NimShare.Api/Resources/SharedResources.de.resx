@@ -1279,9 +1279,9 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="support.faq.signature.a" xml:space="preserve"><value>Jeder Signatur-Vorgang wird lückenlos protokolliert (IP-Adresse, Zeitstempel, Geräte-Typ, Zeitzone). Ist ein Zertifikat hinterlegt, wird das finale PDF zusätzlich mit einer PAdES-B-kryptografischen Signatur versehen (SHA-256, PKCS#7), die Adobe Reader nativ verifiziert (grünes Schlosssymbol). Der Audit-Bericht ist als PDF-Anhang und JSON-Export verfügbar.</value></data>
   <data name="imprint.title" xml:space="preserve"><value>Impressum</value></data>
   <data name="imprint.operator" xml:space="preserve"><value>Betreiberin dieser Instanz</value></data>
-  <data name="imprint.operator_body" xml:space="preserve"><value>Diese NimShare-Instanz wird betrieben von:&lt;br&gt;&lt;em&gt;(Bitte hier die Kontaktdaten der Instanz-Betreiberin eintragen — Name/Firma, Anschrift, Handelsregister-Nummer, USt-IdNr.)&lt;/em&gt;</value></data>
+  <data name="imprint.operator_body" xml:space="preserve"><value>Marcus Nimtz&lt;br&gt;(Privatperson, keine gewerbliche Nutzung)&lt;br&gt;Deutschland</value></data>
   <data name="imprint.contact.title" xml:space="preserve"><value>Kontakt</value></data>
-  <data name="imprint.contact.body" xml:space="preserve"><value>&lt;em&gt;(Bitte E-Mail-Adresse und ggf. Telefonnummer eintragen)&lt;/em&gt;</value></data>
+  <data name="imprint.contact.body" xml:space="preserve"><value>E-Mail: &lt;a href="mailto:marcus@nimtz.email"&gt;marcus@nimtz.email&lt;/a&gt;</value></data>
   <data name="imprint.tech.title" xml:space="preserve"><value>Technischer Betrieb</value></data>
   <data name="imprint.tech.body" xml:space="preserve"><value>NimShare ist eine Open-Source-Software (github.com/mnimtz/nimshare). Diese Instanz wird selbstständig durch die oben genannte Stelle betrieben; die Entwickler der Software haben keinen Zugriff auf die hier verarbeiteten Daten.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>Haftungsausschluss für externe Links</value></data>

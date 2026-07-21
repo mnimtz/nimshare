@@ -1275,7 +1275,7 @@ Thanks for using NimShare.</value></data>
   <data name="imprint.operator" xml:space="preserve"><value>Operator of this instance</value></data>
   <data name="imprint.operator_body" xml:space="preserve"><value>This NimShare instance is operated by:&lt;br&gt;&lt;em&gt;(Please fill in the operator's contact details here — name/company, address, commercial register number, VAT ID.)&lt;/em&gt;</value></data>
   <data name="imprint.contact.title" xml:space="preserve"><value>Contact</value></data>
-  <data name="imprint.contact.body" xml:space="preserve"><value>&lt;em&gt;(Please fill in an email address and optionally a phone number)&lt;/em&gt;</value></data>
+  <data name="imprint.contact.body" xml:space="preserve"><value>Email: &lt;a href="mailto:marcus@nimtz.email"&gt;marcus@nimtz.email&lt;/a&gt;</value></data>
   <data name="imprint.tech.title" xml:space="preserve"><value>Technical operation</value></data>
   <data name="imprint.tech.body" xml:space="preserve"><value>NimShare is open-source software (github.com/mnimtz/nimshare). This instance is operated independently by the entity named above; the software's developers have no access to the data processed here.</value></data>
   <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
