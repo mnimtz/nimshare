@@ -41,6 +41,17 @@ FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
 # custom apt install has been observed to conflict with the base's libs.
 ARG APP_UID=1654
 
+# v1.10.70: LibreOffice-headless für Office-Preview-Endpoint
+# (/api/v1/files/{id}/office-preview konvertiert DOCX/XLSX/PPTX on-demand
+# nach PDF und cached im Blob-Storage). ~500 MB extra Image-Size.
+# --no-install-recommends spart die Java+GUI-Deps ein (headless kann Basic
+# alles ohne Java machen). fontconfig für Fallback-Fonts damit Office-
+# Files mit windows-only Fonts wie Calibri nicht ohne Text rendern.
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libreoffice-nogui fonts-liberation fontconfig \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /app ./
 RUN chown -R ${APP_UID}:${APP_UID} /app

@@ -73,12 +73,17 @@
   <data name="browse.tile.groups.empty"><value>Du bist noch in keiner Gruppe. Bitte einen Admin, dich einzuladen.</value></data>
 
   <data name="browse.new_folder"><value>Neuer Ordner</value></data>
+  <data name="browse.new_subfolder"><value>Neuer Unterordner…</value></data>
+  <data name="browse.new_folder.created"><value>Ordner „{name}“ angelegt</value></data>
   <data name="browse.upload"><value>Hochladen</value></data>
   <data name="browse.share_this"><value>Diesen Ordner freigeben</value></data>
   <data name="browse.request_upload"><value>Upload anfordern</value></data>
   <data name="browse.folder_name"><value>Ordnername</value></data>
 
   <data name="actions.share_link"><value>Freigabelink</value></data>
+  <data name="actions.download"><value>Herunterladen</value></data>
+  <data name="actions.download_zip"><value>Als ZIP herunterladen</value></data>
+  <data name="folder.zip.preparing"><value>ZIP wird vorbereitet…</value></data>
   <data name="actions.request_upload"><value>Upload anfordern</value></data>
   <data name="actions.rename"><value>Umbenennen</value></data>
   <data name="actions.delete"><value>Löschen</value></data>
@@ -98,6 +103,9 @@
 
   <data name="users.action.manage"><value>Verwalten</value></data>
   <data name="links.folder_target"><value>(Ordner-Freigabe)</value></data>
+  <data name="links.for_file"><value>Datei</value></data>
+  <data name="links.for_folder"><value>Ordner</value></data>
+  <data name="links.target_gone"><value>Ziel gelöscht</value></data>
 
   <data name="groups.title"><value>Gruppen</value></data>
   <data name="groups.lede"><value>Teams, die einen gemeinsamen Dateipool nutzen. Manager verwalten Mitglieder und Dateien; Mitglieder können lesen und hochladen.</value></data>
@@ -354,6 +362,7 @@
   <data name="ai.reindex.button"><value>Meine Dateien neu indexieren</value></data>
   <data name="ai.reindex.running"><value>Wird eingereiht…</value></data>
   <data name="ai.reindex.done"><value>{0} Dateien in die Indexierungs-Queue eingereiht. Embeddings sind in den nächsten Minuten verfügbar.</value></data>
+  <data name="ai.reindex.err_disabled"><value>KI-Provider ist deaktiviert. Bitte zuerst einen Provider aktivieren, dann neu indexieren.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-Zusammenfassung auf Freigabe-Landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Empfaenger koennen vor dem Download eine 2-3 Satz-Zusammenfassung generieren.</value></data>
   <data name="ai.feat.smart_tags"><value>Intelligente Tags</value></data>

@@ -13,12 +13,12 @@ struct BrowseRootView: View {
             } else if let e = error {
                 errorView(e)
             } else if scopes.isEmpty {
-                ContentUnavailableView("No libraries", systemImage: "folder", description: Text("No scopes returned from the server."))
+                ContentUnavailableView("Keine Bibliotheken", systemImage: "folder", description: Text("Der Server hat keine Bibliotheken zurückgegeben."))
             } else {
                 content
             }
         }
-        .navigationTitle("Files")
+        .navigationTitle("Dateien")
         .task { await load() }
         .refreshable { await load() }
     }
@@ -63,8 +63,18 @@ struct BrowseRootView: View {
     }
 
     private func scopeRow(_ tile: ScopeTile) -> some View {
-        NavigationLink {
-            FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: tile.name)
+        // v1.10.71: Scope-Namen lokalisieren. Server liefert englisch
+        // ("Personal"/"Public"/"Group"), iOS zeigt es auf Deutsch.
+        let localized: String = {
+            switch tile.scope.lowercased() {
+            case "personal": return "Persönlich"
+            case "public": return "Öffentlich"
+            case "group": return "Gruppe"
+            default: return tile.scope.capitalized
+            }
+        }()
+        return NavigationLink {
+            FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: tile.systemImage)
@@ -72,8 +82,11 @@ struct BrowseRootView: View {
                     .foregroundStyle(Theme.tungstenBlue)
                     .frame(width: 32)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(tile.name).font(.body.weight(.medium))
-                    Text(tile.scope.capitalized).font(.caption).foregroundStyle(.secondary)
+                    Text(localized).font(.body.weight(.medium))
+                    if tile.scope.lowercased() == "group" {
+                        // Bei Gruppen ist tile.name der Gruppen-Name — als Sub-Zeile.
+                        Text(tile.name).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(.vertical, 4)
@@ -84,7 +97,7 @@ struct BrowseRootView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
             Text(e).multilineTextAlignment(.center).padding(.horizontal)
-            Button("Retry") { Task { await load() } }
+            Button("Erneut versuchen") { Task { await load() } }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

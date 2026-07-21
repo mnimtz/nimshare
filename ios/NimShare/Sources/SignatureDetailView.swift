@@ -107,6 +107,12 @@ struct SignatureDetailView: View {
                 }
                 if d.status == "Sent" {
                     Button {
+                        Task { await sendReminder() }
+                    } label: {
+                        Label("Erinnerung an offene Signierer senden", systemImage: "bell.badge")
+                    }
+                    .disabled(busy)
+                    Button {
                         Task { await forceFinalize() }
                     } label: {
                         Label("Abschluss erzwingen", systemImage: "flag.checkered")
@@ -223,6 +229,21 @@ struct SignatureDetailView: View {
             await load()
         } catch let ex {
             error = "Abbrechen fehlgeschlagen: \(ex.localizedDescription)"
+        }
+    }
+
+    /// v1.10.72: Reminder-Push manuell auslösen. Server iteriert alle
+    /// offenen Signierer und sendet die Reminder-Email (unabhängig vom
+    /// Auto-Reminder-Cronjob). Wird nur bei Status="Sent" angeboten.
+    private func sendReminder() async {
+        guard let api = auth.api else { return }
+        busy = true; defer { busy = false }
+        do {
+            try await api.remindSignature(requestId)
+            finalizeInfo = "Erinnerung an alle offenen Signierer versendet."
+            showFinalizeInfo = true
+        } catch let ex {
+            error = "Erinnerung fehlgeschlagen: \(ex.localizedDescription)"
         }
     }
 

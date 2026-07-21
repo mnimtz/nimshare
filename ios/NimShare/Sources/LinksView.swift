@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// v1.10.71: 1:1-Parity mit Web-`/settings/links`.
+/// Zeigt drei Sektionen (Privat / Gruppen / Öffentlich, sofern befüllt),
+/// jede Row mit "📄 Datei: X" oder "📁 Ordner: Y" statt bloß Slug,
+/// plus Status-Chip (aktiv / abgelaufen / widerrufen), Downloads,
+/// Password-Icon, Copy + Teilen.
 struct LinksView: View {
     @EnvironmentObject var auth: AuthStore
     @State private var links: [ShareLinkDto] = []
@@ -14,53 +19,109 @@ struct LinksView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
                     Text(e).multilineTextAlignment(.center).padding(.horizontal)
-                    Button("Retry") { Task { await load() } }
+                    Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if links.isEmpty {
-                ContentUnavailableView("No share links yet", systemImage: "link",
-                                       description: Text("Create share links from the NimShare web app; they'll appear here."))
+                ContentUnavailableView("Noch keine Freigabelinks",
+                                       systemImage: "link",
+                                       description: Text("Erstelle Freigabelinks aus dem Dateien-Browser (rechtsklick / Kontext-Menü)."))
             } else {
-                List(links) { link in
-                    row(link)
+                List {
+                    let publicLinks = links.filter { $0.isPublic == true }
+                    let mine = links.filter { $0.isPublic != true }
+                    if !mine.isEmpty {
+                        Section("👤 Privat") {
+                            ForEach(mine) { row($0) }
+                        }
+                    }
+                    if !publicLinks.isEmpty {
+                        Section("🌍 Öffentlich") {
+                            ForEach(publicLinks) { row($0) }
+                        }
+                    }
                 }
             }
         }
-        .navigationTitle("My links")
+        .navigationTitle("Meine Links")
         .task { await load() }
         .refreshable { await load() }
     }
 
     private func row(_ link: ShareLinkDto) -> some View {
         let full = URL(string: link.url)
+        // v1.10.71: target-Info als HEADLINE. Slug + URL zusätzlich klein
+        // darunter (wie Web). Chip zeigt State.
+        let targetLine: (icon: String, prefix: String, name: String)? = {
+            if link.targetKind == "file" { return ("doc.text.fill", "Datei", link.targetName ?? "?") }
+            if link.targetKind == "folder" { return ("folder.fill", "Ordner", link.targetName ?? "?") }
+            return nil
+        }()
         return VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Image(systemName: "link").foregroundStyle(Theme.tungstenBlue)
-                Text(link.slug).font(.body.weight(.medium)).lineLimit(1)
-                Spacer()
-                if link.hasPassword { Image(systemName: "lock.fill").foregroundStyle(.secondary) }
-                if link.isRevoked { Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.warnRed) }
+            if let t = targetLine {
+                HStack(spacing: 6) {
+                    Image(systemName: t.icon).foregroundStyle(Theme.tungstenBlue)
+                    Text("\(t.prefix): ").foregroundStyle(.secondary)
+                    Text(t.name).font(.body.weight(.semibold)).lineLimit(1)
+                    Spacer()
+                    statusChip(link)
+                }
+            } else {
+                HStack {
+                    Image(systemName: "link").foregroundStyle(Theme.tungstenBlue)
+                    Text(link.slug).font(.body.weight(.medium)).lineLimit(1)
+                    Spacer()
+                    statusChip(link)
+                }
+            }
+            HStack(spacing: 6) {
+                Text(link.slug).font(.caption.monospaced()).foregroundStyle(Theme.tungstenBlue)
+                if link.hasPassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary) }
+                if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.warnRed) }
             }
             Text(link.url).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
             HStack(spacing: 12) {
-                Text("\(link.downloadCount) downloads").font(.caption).foregroundStyle(.secondary)
+                Text("\(link.downloadCount) Downloads").font(.caption).foregroundStyle(.secondary)
                 if let limit = link.maxDownloads { Text("Limit: \(limit)").font(.caption).foregroundStyle(.secondary) }
-                if let exp = link.expiresAt { Text("Expires: \(exp.formatted(date: .abbreviated, time: .omitted))").font(.caption).foregroundStyle(.secondary) }
+                if let exp = link.expiresAt {
+                    Text("Läuft ab: \(exp.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             HStack(spacing: 8) {
                 Button {
                     UIPasteboard.general.string = link.url
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label("Kopieren", systemImage: "doc.on.doc")
                 }.buttonStyle(.bordered).controlSize(.small)
                 if let full {
                     ShareLink(item: full) {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label("Teilen", systemImage: "square.and.arrow.up")
                     }.buttonStyle(.bordered).controlSize(.small)
                 }
             }
             .padding(.top, 2)
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func statusChip(_ link: ShareLinkDto) -> some View {
+        let now = Date()
+        if link.isRevoked {
+            chip("Widerrufen", color: Theme.warnRed)
+        } else if let exp = link.expiresAt, exp <= now {
+            chip("Abgelaufen", color: .orange)
+        } else {
+            chip("Aktiv", color: .green)
+        }
+    }
+    private func chip(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 
     private func load() async {

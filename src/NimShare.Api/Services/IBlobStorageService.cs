@@ -33,6 +33,13 @@ public interface IBlobStorageService
 
     /// <summary>Server-side copy from one blob path to another within the same container.</summary>
     Task CopyAsync(string sourcePath, string destPath, CancellationToken ct = default);
+
+    /// <summary>v1.10.70: Upload a stream to a specific blob path (overwrite if exists).
+    /// Used by OfficePreviewService to cache LibreOffice-rendered PDFs.</summary>
+    Task UploadFromStreamAsync(string blobPath, Stream source, string contentType, CancellationToken ct = default);
+
+    /// <summary>v1.10.70: Existence check without downloading the blob content.</summary>
+    Task<bool> ExistsAsync(string blobPath, CancellationToken ct = default);
 }
 
 public record UploadTicket(Uri UploadUrl, string Method, DateTimeOffset ExpiresAt);

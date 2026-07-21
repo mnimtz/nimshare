@@ -252,13 +252,18 @@
   <data name="browse.tile.groups.lede"><value>Files shared inside each of your teams.</value></data>
   <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet.</value></data>
 
-  <data name="browse.new_folder"><value>New folder</value></data>
+  <data name="browse.new_folder"><value>Nieuwe map</value></data>
+  <data name="browse.new_subfolder"><value>Nieuwe submap…</value></data>
+  <data name="browse.new_folder.created"><value>Map ‘{name}’ aangemaakt</value></data>
   <data name="browse.upload"><value>Upload</value></data>
   <data name="browse.share_this"><value>Share this folder</value></data>
   <data name="browse.request_upload"><value>Request upload here</value></data>
   <data name="browse.folder_name"><value>Folder name</value></data>
 
-  <data name="actions.share_link"><value>Create share link</value></data>
+  <data name="actions.share_link"><value>Deellink maken</value></data>
+  <data name="actions.download"><value>Downloaden</value></data>
+  <data name="actions.download_zip"><value>Als ZIP downloaden</value></data>
+  <data name="folder.zip.preparing"><value>ZIP wordt voorbereid…</value></data>
   <data name="actions.request_upload"><value>Request upload</value></data>
   <data name="actions.rename"><value>Rename</value></data>
   <data name="actions.delete"><value>Delete</value></data>
@@ -277,7 +282,10 @@
   <data name="modal.upload_request.max_uploads"><value>Max uploads</value></data>
 
   <data name="users.action.manage"><value>Manage</value></data>
-  <data name="links.folder_target"><value>(folder share)</value></data>
+  <data name="links.folder_target"><value>(mapdeling)</value></data>
+  <data name="links.for_file"><value>Bestand</value></data>
+  <data name="links.for_folder"><value>Map</value></data>
+  <data name="links.target_gone"><value>doel verwijderd</value></data>
 
   <data name="profile.picture"><value>Profielfoto</value></data>
   <data name="profile.picture.lede"><value>Klik op de cirkel om een afbeelding van je apparaat te kiezen. Je kunt zoomen en slepen om je gezicht te centreren.</value></data>

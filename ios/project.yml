@@ -6,18 +6,29 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    DEVELOPMENT_TEAM: ""
+    # v1.10.64: Marcus's Apple-Team direkt fest verdrahtet (KQGPPH4S33 —
+    # dieselbe Team-ID wie für MySecurePrint / photoflow / alle anderen
+    # email.nimtz.*-Bundles). Vorher stand hier "", was jeder xcodegen-
+    # Regenerate über Marcus's manuelle Team-Auswahl im Signing-Tab
+    # wischte. Jetzt: einmal setzen, für immer stabil.
+    DEVELOPMENT_TEAM: KQGPPH4S33
+    CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    MARKETING_VERSION: "1.10.63"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.10.72"
+    CURRENT_PROJECT_VERSION: "12"
 targets:
   NimShare:
     type: application
     platform: iOS
+    # v1.10.65: xcodegen 2.45 hat KEIN separates `resources:`-Feld —
+    # der Eintrag wurde stumm ignoriert (0 Refs in pbxproj → Runtime-
+    # Fehler "No image named 'AppLogo'"). ALLE Files, inkl. Asset-
+    # Catalog und xcstrings, gehen unter `sources:`. xcodegen routet
+    # sie per Datei-Endung in die richtige BuildPhase (.swift → Compile,
+    # .xcassets/.xcstrings → Resources mit actool).
     sources:
       - NimShare/Sources
-    resources:
       - NimShare/Resources
     info:
       path: NimShare/Info.plist

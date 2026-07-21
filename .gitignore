@@ -55,3 +55,7 @@ ios/build/
 ios/DerivedData/
 ios/*.xcworkspace/
 ios/**/*.xcuserdatad/
+# Also ignore the two "Browse [conflicted]"-style Finder merge backups
+# that occasionally show up under Views/
+**/*[conflicted]*.cshtml
+**/*[conflicted 2]*.cshtml

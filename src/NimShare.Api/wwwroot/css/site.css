@@ -1291,6 +1291,61 @@ body.nav-open { position: relative; }
 /* Desktop-only: Tree-Toggle-Button versteckt */
 .fm-tree-toggle { display: none; }
 
+/* v1.10.67: Folder-Picker im Move/Copy-Modal — echter Ordner-Browser
+   statt Dropdown. Reuse der ft-* Styles wäre möglich, aber der Picker
+   braucht ein sichtbares Highlight des ausgewählten Ziels + einen
+   scrollbaren Container mit fester Höhe. */
+.folder-picker-panel { max-width: 560px; }
+.folder-picker {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--tw-gray-300, #d0d7de);
+    border-radius: 6px;
+    padding: 6px 4px;
+    background: var(--tw-card-bg, #fafbfc);
+    margin-top: 4px;
+}
+.folder-picker .fp-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+}
+.folder-picker .fp-row:hover { background: var(--tw-gray-200, #eef1f5); }
+.folder-picker .fp-row.selected {
+    background: rgba(0,160,251,.18);
+    font-weight: 600;
+    outline: 1px solid rgba(0,160,251,.5);
+}
+.folder-picker .fp-toggle {
+    width: 14px;
+    text-align: center;
+    color: var(--tw-muted-blue, #6b7280);
+    font-size: .75rem;
+    flex-shrink: 0;
+}
+.folder-picker .fp-icon { font-size: 1.05rem; line-height: 1; flex-shrink: 0; }
+.folder-picker .fp-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.folder-picker-target {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: var(--tw-gray-100, #f5f7fa);
+    border-radius: 4px;
+    font-size: .95rem;
+}
+.folder-picker-target strong { color: var(--tw-primary, #085a9c); }
+@media (max-width: 640px) {
+    .folder-picker { max-height: 280px; }
+}
+
 @media (max-width: 780px) {
     .fm-with-tree { grid-template-columns: 1fr; }
     /* v1.10.52: Tree als Bottom-Sheet-Overlay statt komplett weg.

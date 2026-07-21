@@ -43,7 +43,11 @@ public class LinksController : ControllerBase
         Guid Id, string Slug, string Url, string QrCodeUrl,
         DateTimeOffset? ExpiresAt, int? MaxDownloads,
         int DownloadCount, int HitCount, bool HasPassword,
-        bool IsRevoked, DateTimeOffset CreatedAt);
+        bool IsRevoked, DateTimeOffset CreatedAt,
+        bool IsPublic,
+        // v1.10.71: Wofür ist der Link? iOS/Web zeigt jetzt "Datei: X"
+        // oder "Ordner: Y" statt bloß Slug. TargetKind = "file"|"folder"|null.
+        string? TargetKind, string? TargetName);
 
     // v1.10.41: Live-Check für den Share-Dialog. Während der User tippt
     // fragt das Frontend hier an (debounce 400ms), zeigt sofort ob der
@@ -134,9 +138,12 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        // Materialize first so we can build absolute URLs from the current
-        // HttpContext.Request — same shape as Get/Create.
+        // v1.10.66: Include File+Folder damit IsPublic korrekt berechnet
+        // werden kann (Split "Öffentliche Links" vs "Meine Links" im iOS-
+        // und Web-Client).
         var rows = await _db.ShareLinks
+            .Include(l => l.File)
+            .Include(l => l.Folder)
             .Where(l => l.OwnerId == user.Id)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
@@ -247,7 +254,14 @@ public class LinksController : ControllerBase
     private LinkDto ToDto(ShareLink l) => new(
         l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
         l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
-        l.PasswordHash != null, l.IsRevoked, l.CreatedAt);
+        l.PasswordHash != null, l.IsRevoked, l.CreatedAt,
+        // v1.10.66: Public wenn File/Folder Scope=Public, oder explizit
+        // als isPublic markierter Admin-Link.
+        IsPublic: (l.File != null && l.File.Scope == FileScope.Public)
+              || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+              || l.IsPublic,
+        TargetKind: l.File != null ? "file" : (l.Folder != null ? "folder" : null),
+        TargetName: l.File?.Name ?? l.Folder?.Name);
 
     private string BuildPublicUrl(string slug)
     {

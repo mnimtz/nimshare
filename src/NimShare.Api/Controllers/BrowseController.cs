@@ -201,6 +201,39 @@ public class BrowseController : Controller
         return Redirect(SafeReturn(returnUrl));
     }
 
+    /// <summary>
+    /// v1.10.64: JSON-Twin von CreateFolder für die Browse-UI. Vorher ging
+    /// das Modal per Form-Submit + Server-Redirect — bei einem beliebigen
+    /// Fehler (AntiForgery-Timeout, Name-Kollision, Speichern-Fehler) sah
+    /// der User NICHTS. Neue AJAX-Variante gibt strukturiertes JSON zurück,
+    /// das Frontend zeigt konkrete Fehlermeldung + Toast bei Erfolg.
+    /// </summary>
+    public record CreateFolderReq(Guid ParentId, string Name);
+
+    [HttpPost("/api/v1/folders")]
+    public async Task<IActionResult> ApiCreateFolder([FromBody] CreateFolderReq req,
+        [FromServices] IActivityLogger activity, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return Problem(statusCode: 422, title: "Name is required");
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var parent = await _db.Folders.FindAsync(new object[] { req.ParentId }, ct);
+        if (parent is null) return Problem(statusCode: 404, title: "Parent folder not found");
+        if (!await _folders.CanWriteAsync(parent, me, ct))
+            return Problem(statusCode: 403, title: "You cannot create folders here");
+        try
+        {
+            var child = await _folders.CreateChildAsync(parent, req.Name.Trim(), me, ct);
+            await activity.LogAsync(ActivityKind.FolderCreated, me, $"Ordner erstellt: {req.Name}",
+                folderId: child.Id, ct: ct);
+            return Ok(new { id = child.Id, name = child.Name, parentId = parent.Id });
+        }
+        catch (Exception ex)
+        {
+            return Problem(statusCode: 500, title: "Could not create folder", detail: ex.Message);
+        }
+    }
+
     // ── POST: rename folder ────────────────────────────────────────────────
     [HttpPost("folders/{id:guid}/rename")]
     [ValidateAntiForgeryToken]
@@ -238,6 +271,23 @@ public class BrowseController : Controller
         folder.Color = color;
         await _db.SaveChangesAsync(ct);
         return Ok(new { emoji, color });
+    }
+
+    /// <summary>v1.10.70: JSON-Rename für Folder (iOS + Web-AJAX). Der
+    /// alte Form-Post-Endpoint bleibt für den bestehenden Web-Flow.</summary>
+    public record RenameReq(string Name);
+
+    [HttpPost("/api/v1/folders/{id:guid}/rename")]
+    public async Task<IActionResult> ApiRenameFolder(Guid id, [FromBody] RenameReq req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name)) return Problem(statusCode: 422, title: "Name ist erforderlich");
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        try { await _folders.RenameAsync(folder, req.Name.Trim(), ct); }
+        catch (Exception ex) { return Problem(statusCode: 500, title: "Umbenennen fehlgeschlagen", detail: ex.Message); }
+        return Ok(new { id = folder.Id, name = folder.Name });
     }
 
     // ── POST: delete folder ────────────────────────────────────────────────
@@ -315,11 +365,18 @@ public class BrowseController : Controller
             while (cur.ParentFolderId is Guid pid && byId.TryGetValue(pid, out var p)) { parts.Insert(0, p.Name); cur = p; }
             return string.Join(" / ", parts);
         }
+        // v1.10.67: parentId + isRoot fürs Baum-Browser-Modal (Copy/Move
+        // im Web und iOS bauen daraus einen aufklappbaren Ordnerbaum
+        // statt einer flachen Dropdown-Liste).
         var items = all.Select(f => new
         {
             id = f.Id,
             path = PathOf(f),
+            name = f.Name,
             scope = f.Scope.ToString(),
+            parentId = f.ParentFolderId,
+            groupId = f.OwnerGroupId,
+            isRoot = f.ParentFolderId == null,
         }).ToList();
         return Ok(items);
     }
@@ -451,15 +508,8 @@ public class BrowseController : Controller
         return Ok(resp);
     }
 
-    /// <summary>Time-limited download URL for inline preview (image / PDF iframe).</summary>
-    [HttpGet("/api/v1/files/{id:guid}/preview-url")]
-    public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access, [FromServices] IBlobStorageService blobs, CancellationToken ct)
-    {
-        var user = await _users.GetOrProvisionAsync(User, ct);
-        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
-        if (file is null) return NotFound();
-        if (!await access.CanReadAsync(user, file, ct)) return Forbid();
-        var sas = blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, TimeSpan.FromMinutes(5));
-        return Ok(new { url = sas.ToString(), contentType = file.ContentType, name = file.Name });
-    }
+    // v1.10.66: preview-url wurde von hier nach FilesController umgezogen
+    // (ApiUser-Policy statt WebUser-only) damit iOS mit Bearer-Token nicht
+    // mehr HTML statt JSON kriegt. Web-Client funktioniert weiter, weil
+    // ApiUser sowohl Cookie- als auch JWT-Schemes akzeptiert.
 }

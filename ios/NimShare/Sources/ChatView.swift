@@ -15,6 +15,11 @@ struct ChatView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var previewFileItem: FileItem?
+    // v1.10.66: expliziter FocusState damit "Fertig"-Toolbar-Button
+    // die Tastatur zuverlässig einklappt. Marcus's Bug: aus dem Chat
+    // kam man nur raus indem man die App neu startet — die Tastatur
+    // verdeckte die Tab-Bar und es gab keinen Escape.
+    @FocusState private var inputFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,28 +33,48 @@ struct ChatView: View {
                             bubble(m).id(m.id)
                         }
                         if busy {
-                            HStack { ProgressView(); Text("Thinking…").font(.footnote).foregroundStyle(.secondary) }
+                            HStack { ProgressView(); Text("Denke…").font(.footnote).foregroundStyle(.secondary) }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal)
                         }
                     }
                     .padding(.vertical)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: messages.count) {
                     if let last = messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
+                // Tap anywhere im Scroll-Bereich → Tastatur weg.
+                .simultaneousGesture(TapGesture().onEnded { inputFocused = false })
             }
 
             if let e = error {
-                Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding(.horizontal)
+                // v1.10.71: der 503 "Noch keine indexierten Dokumente"
+                // kommt regelmäßig weil User erwarten Chat funktioniert
+                // ohne Setup. Zeigen wir freundlich statt roten Fehler-Blob.
+                let looksLikeNoIndex = e.contains("keine indexierten") || e.contains("no indexed") || e.contains("503")
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: looksLikeNoIndex ? "info.circle" : "exclamationmark.triangle")
+                        .foregroundStyle(looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed)
+                    Text(looksLikeNoIndex
+                         ? #"Noch keine Datei-Embeddings — bitte im Web unter Einstellungen › KI-Gateway einmal „Neu indexieren" klicken."#
+                         : e)
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                }
+                .padding(10)
+                .background((looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed).opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal)
             }
 
             HStack(spacing: 8) {
-                TextField("Ask about your files…", text: $input, axis: .vertical)
+                TextField("Frage zu deinen Dateien…", text: $input, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...4)
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.cardBackground))
+                    .focused($inputFocused)
                 Button {
                     Task { await send() }
                 } label: {
@@ -62,7 +87,17 @@ struct ChatView: View {
             }
             .padding(.horizontal).padding(.bottom, 8)
         }
-        .navigationTitle("AI Chat")
+        .navigationTitle("KI-Chat")
+        .toolbar {
+            // System-Tastatur-Toolbar: "Fertig"-Button klappt Tastatur ein
+            // → Tab-Bar wird wieder sichtbar → User kommt aus dem Chat raus.
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button("Fertig") { inputFocused = false }
+                }
+            }
+        }
         .sheet(item: $previewFileItem) { f in
             NavigationStack { FilePreviewView(file: f) }
         }
@@ -71,8 +106,8 @@ struct ChatView: View {
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(Theme.tungstenBlue)
-            Text("Chat with your files").font(.title3.weight(.semibold))
-            Text("Ask a question and the assistant will search your files and cite the sources it used.")
+            Text("Chatte mit deinen Dateien").font(.title3.weight(.semibold))
+            Text("Stelle eine Frage — der Assistent durchsucht deine Dateien und zeigt die verwendeten Quellen.")
                 .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

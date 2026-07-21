@@ -926,6 +926,13 @@ public class AiGatewayService : IAiGatewayService
             return new NullAiProvider();
         }
         var http = _httpFactory.CreateClient();
+        // v1.10.68: 30s Timeout statt Default 100s. Marcus's Feedback zu
+        // "server hängt lange nach einem Upload" — Ursache: AiPostProcessor
+        // ruft ClassifyAsync/EmbedAsync, ohne Timeout hängen die bei Provider-
+        // Zicken bis zu 100s und halten währenddessen einen DB-Scope offen
+        // + einen ThreadPool-Slot. 30s ist mehr als genug für einen normalen
+        // Chat-Completion oder Embedding, und fail-fast entspannt den Server.
+        http.Timeout = TimeSpan.FromSeconds(30);
         return s.Provider switch
         {
             AiProvider.OpenAi => new OpenAiProvider(http, apiKey, s.Model ?? "gpt-4o-mini", null),

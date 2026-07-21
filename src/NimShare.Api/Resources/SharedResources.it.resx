@@ -253,13 +253,18 @@
   <data name="browse.tile.groups.lede"><value>Files shared inside each of your teams.</value></data>
   <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet.</value></data>
 
-  <data name="browse.new_folder"><value>New folder</value></data>
+  <data name="browse.new_folder"><value>Nuova cartella</value></data>
+  <data name="browse.new_subfolder"><value>Nuova sottocartella…</value></data>
+  <data name="browse.new_folder.created"><value>Cartella “{name}” creata</value></data>
   <data name="browse.upload"><value>Upload</value></data>
   <data name="browse.share_this"><value>Share this folder</value></data>
   <data name="browse.request_upload"><value>Request upload here</value></data>
   <data name="browse.folder_name"><value>Folder name</value></data>
 
-  <data name="actions.share_link"><value>Create share link</value></data>
+  <data name="actions.share_link"><value>Crea link di condivisione</value></data>
+  <data name="actions.download"><value>Scarica</value></data>
+  <data name="actions.download_zip"><value>Scarica come ZIP</value></data>
+  <data name="folder.zip.preparing"><value>Preparazione ZIP…</value></data>
   <data name="actions.request_upload"><value>Request upload</value></data>
   <data name="actions.rename"><value>Rename</value></data>
   <data name="actions.delete"><value>Delete</value></data>
@@ -278,7 +283,10 @@
   <data name="modal.upload_request.max_uploads"><value>Max uploads</value></data>
 
   <data name="users.action.manage"><value>Manage</value></data>
-  <data name="links.folder_target"><value>(folder share)</value></data>
+  <data name="links.folder_target"><value>(condivisione cartella)</value></data>
+  <data name="links.for_file"><value>File</value></data>
+  <data name="links.for_folder"><value>Cartella</value></data>
+  <data name="links.target_gone"><value>destinazione eliminata</value></data>
 
   <data name="profile.picture"><value>Foto profilo</value></data>
   <data name="profile.picture.lede"><value>Clicca sul cerchio per scegliere un'immagine dal tuo dispositivo. Puoi zoomare e spostare per centrare il viso.</value></data>

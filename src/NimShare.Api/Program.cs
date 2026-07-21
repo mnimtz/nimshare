@@ -361,6 +361,10 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 builder.Services.AddScoped<IAiGatewayService, AiGatewayService>();
 builder.Services.AddSingleton<IAiPostProcessor, AiPostProcessor>();
+// v1.10.70: Office-Preview (DOCX/XLSX/PPTX → PDF via LibreOffice-headless).
+// Scoped weil er den scoped IBlobStorageService braucht. Concurrency ist
+// intern per statischer SemaphoreSlim(2) geregelt.
+builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
 // The old SmtpNotificationService is replaced by the gateway-backed adapter so
 // existing callers (link download/upload notifications, "send by email" button)
 // route through the persisted, per-tenant email configuration.

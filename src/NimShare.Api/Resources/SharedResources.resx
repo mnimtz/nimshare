@@ -73,12 +73,17 @@
   <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet. Ask an admin to add you.</value></data>
 
   <data name="browse.new_folder"><value>New folder</value></data>
+  <data name="browse.new_subfolder"><value>New subfolder…</value></data>
+  <data name="browse.new_folder.created"><value>Folder “{name}” created</value></data>
   <data name="browse.upload"><value>Upload</value></data>
   <data name="browse.share_this"><value>Share this folder</value></data>
   <data name="browse.request_upload"><value>Request upload here</value></data>
   <data name="browse.folder_name"><value>Folder name</value></data>
 
   <data name="actions.share_link"><value>Create share link</value></data>
+  <data name="actions.download"><value>Download</value></data>
+  <data name="actions.download_zip"><value>Download as ZIP</value></data>
+  <data name="folder.zip.preparing"><value>Preparing ZIP…</value></data>
   <data name="actions.request_upload"><value>Request upload</value></data>
   <data name="actions.rename"><value>Rename</value></data>
   <data name="actions.delete"><value>Delete</value></data>
@@ -98,6 +103,9 @@
 
   <data name="users.action.manage"><value>Manage</value></data>
   <data name="links.folder_target"><value>(folder share)</value></data>
+  <data name="links.for_file"><value>File</value></data>
+  <data name="links.for_folder"><value>Folder</value></data>
+  <data name="links.target_gone"><value>target deleted</value></data>
 
   <data name="groups.title"><value>Groups</value></data>
   <data name="groups.lede"><value>Teams that share a common pool of files. Managers can add members and manage the group's files; members can read and upload.</value></data>
@@ -354,6 +362,7 @@
   <data name="ai.reindex.button"><value>Re-index my files</value></data>
   <data name="ai.reindex.running"><value>Queuing…</value></data>
   <data name="ai.reindex.done"><value>{0} files queued for indexing. Embeddings will appear over the next few minutes.</value></data>
+  <data name="ai.reindex.err_disabled"><value>AI provider is disabled. Enable a provider first, then reindex.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-summary on share landing</value></data>
   <data name="ai.feat.auto_summary.desc"><value>Recipients can generate a 2-3 sentence summary before downloading.</value></data>
   <data name="ai.feat.smart_tags"><value>Smart tags</value></data>

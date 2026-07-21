@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Requester-side list of the signed-in user's signature requests. Tap
 /// "Neue" to start a wizard; tap a row to open the on-server detail page.
@@ -128,6 +129,12 @@ struct NewSignatureRequestSheet: View {
     @State private var newEmail = ""
     @State private var newName = ""
     @State private var newRole = "Signer"
+    // v1.10.71: Delivery-Order + Deadline (Web-Parity)
+    @State private var deliveryOrder: String = "Parallel"
+    @State private var useDeadline = false
+    @State private var deadline = Date().addingTimeInterval(60*60*24*7)
+    // v1.10.71: Kontakt-Vorschläge aus Adressbuch
+    @State private var contactSuggestions: [ContactDto] = []
 
     @State private var requestId: UUID?
     @State private var busy = false
@@ -161,27 +168,86 @@ struct NewSignatureRequestSheet: View {
             }
             .task { if scopes.isEmpty { await loadPersonalFiles() } }
             .overlay { if busy { ProgressView() } }
+            .fileImporter(
+                isPresented: $showPicker,
+                allowedContentTypes: [.pdf],
+                allowsMultipleSelection: false
+            ) { result in
+                Task { await handlePickedFile(result) }
+            }
         }
     }
+
+    /// v1.10.70: Importierte PDF hochladen und automatisch als
+    /// pickedFileId setzen. Die Datei landet in Personal-Root (folderId=nil
+    /// → Server nimmt den Personal-Root-Folder des Users).
+    private func handlePickedFile(_ result: Result<[URL], Error>) async {
+        guard let api = auth.api else { return }
+        do {
+            let urls = try result.get()
+            guard let src = urls.first else { return }
+            // Security-scoped-URL access: iCloud/Dateien-App-URLs brauchen
+            // explizites startAccessingSecurityScopedResource() um sie zu lesen.
+            let didStart = src.startAccessingSecurityScopedResource()
+            defer { if didStart { src.stopAccessingSecurityScopedResource() } }
+            let data = try Data(contentsOf: src)
+            busy = true; error = nil
+            let name = src.lastPathComponent
+            let fid = try await api.uploadFile(name: name, contentType: "application/pdf",
+                folderId: nil, data: data)
+            // Neu geladene File in die lokale Liste einreihen + auswählen
+            files.append(FileItem(id: fid, name: name, sizeBytes: Int64(data.count),
+                contentType: "application/pdf", createdAt: Date(), ownerName: nil,
+                aiTags: nil, aiRiskFlag: nil))
+            pickedFileId = fid
+        } catch let ex { error = ex.localizedDescription }
+        busy = false
+    }
+
+    @State private var showPicker = false
 
     @ViewBuilder
     private var stepOne: some View {
         Form {
             Section("PDF wählen") {
-                if files.isEmpty {
-                    Text("Keine PDFs in deiner Personal-Ablage.").foregroundStyle(.secondary)
+                let pdfs = files.filter { $0.contentType.contains("pdf") }
+                if pdfs.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Keine PDFs in deinen Bibliotheken gefunden.").foregroundStyle(.secondary)
+                        Text("Wähle unten eine PDF aus der Dateien-App / iCloud Drive — sie wird direkt in deine Personal-Ablage geladen.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 } else {
                     Picker("Datei", selection: $pickedFileId) {
                         Text("—").tag(UUID?.none)
-                        ForEach(files.filter { $0.contentType.contains("pdf") }) { f in
+                        ForEach(pdfs) { f in
                             Text(f.name).tag(Optional(f.id))
                         }
                     }
                 }
+                // v1.10.70: PDF direkt aus Dateien-App wählen. Nach Upload
+                // wird die neue File-ID sofort als pickedFileId gesetzt, User
+                // kann direkt "Weiter" drücken.
+                Button {
+                    showPicker = true
+                } label: {
+                    Label("PDF aus Dateien wählen…", systemImage: "doc.badge.plus")
+                }
+                .disabled(busy)
             }
             Section("Titel & Nachricht") {
                 TextField("Titel (Standard: Dateiname)", text: $title)
                 TextField("Nachricht an die Empfänger", text: $message, axis: .vertical).lineLimit(2...5)
+            }
+            Section("Ablauf") {
+                Picker("Reihenfolge", selection: $deliveryOrder) {
+                    Text("Alle parallel").tag("Parallel")
+                    Text("Nacheinander").tag("Sequential")
+                }
+                Toggle("Frist setzen", isOn: $useDeadline)
+                if useDeadline {
+                    DatePicker("Deadline", selection: $deadline, in: Date()..., displayedComponents: [.date])
+                }
             }
             if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             Section {
@@ -194,6 +260,26 @@ struct NewSignatureRequestSheet: View {
     @ViewBuilder
     private var stepTwo: some View {
         Form {
+            if !contactSuggestions.isEmpty {
+                Section("Aus Adressbuch") {
+                    ForEach(contactSuggestions.prefix(5)) { c in
+                        Button {
+                            newEmail = c.email
+                            newName = c.name
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.crop.circle").foregroundStyle(Theme.tungstenBlue)
+                                VStack(alignment: .leading) {
+                                    Text(c.name).foregroundStyle(.primary)
+                                    Text(c.email).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.left.circle").foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
             Section("Empfänger hinzufügen") {
                 TextField("E-Mail", text: $newEmail).keyboardType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled()
                 TextField("Name", text: $newName)
@@ -222,12 +308,25 @@ struct NewSignatureRequestSheet: View {
         }
     }
 
+    /// v1.10.66: PDFs aus ALLEN Bibliotheken sammeln (Personal, Public,
+    /// alle Gruppen) — Marcus's Bug: "keine PDFs vorhanden" trat auf wenn
+    /// die relevanten PDFs im Public- oder Gruppen-Scope lagen und Personal
+    /// leer war. Wir zeigen jetzt jedes lesbare PDF quer über die Scopes.
     private func loadPersonalFiles() async {
         guard let api = auth.api else { return }
         do {
             scopes = try await api.scopes()
-            let personal = try await api.browse(scope: "Personal", groupId: nil, path: nil)
-            files = personal.files
+            var collected: [FileItem] = []
+            for tile in scopes {
+                do {
+                    let r = try await api.browse(scope: tile.scope, groupId: tile.groupId, path: nil)
+                    collected.append(contentsOf: r.files)
+                } catch { /* stille Fehler pro Scope — nicht den ganzen Sheet blockieren */ }
+            }
+            // Duplikate (dieselbe File-ID kann via Pin in mehreren Scopes
+            // erscheinen) einmalig zeigen.
+            var seen = Set<UUID>()
+            files = collected.filter { seen.insert($0.id).inserted }
         } catch { }
     }
 
@@ -235,10 +334,17 @@ struct NewSignatureRequestSheet: View {
         guard let api = auth.api, let fid = pickedFileId else { return }
         busy = true; error = nil; defer { busy = false }
         do {
-            let r = try await api.createSignatureRequest(sourceFileId: fid,
+            let r = try await api.createSignatureRequest(
+                sourceFileId: fid,
                 title: title.isEmpty ? nil : title,
-                message: message.isEmpty ? nil : message)
+                message: message.isEmpty ? nil : message,
+                deliveryOrder: deliveryOrder,
+                deadline: useDeadline ? deadline : nil)
             requestId = r.id
+            // v1.10.71: Adressbuch für stepTwo vorladen — Autocomplete für Empfänger.
+            if let contacts = try? await api.listContacts() {
+                contactSuggestions = contacts
+            }
             step = 2
         } catch let ex { error = ex.localizedDescription }
     }

@@ -18,6 +18,14 @@ public class AiPostProcessor : IAiPostProcessor
 {
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<AiPostProcessor> _log;
+    // v1.10.68: Concurrency-Gate. Vorher konnten unbeschränkt viele parallele
+    // AI-Aufrufe laufen (jeder mit eigenem DB-Scope + HTTP-Call). Bei einem
+    // Bulk-Upload von z.B. 20 Files → 20 Tasks blockierten alle den ThreadPool
+    // und die SQLite-Writer-Lock-Queue → User-Requests hingen minutenlang.
+    // Jetzt: max 2 gleichzeitige AI-Runs, alle weiteren warten in Reihe.
+    // Semaphore statt Channel gewählt weil kein Fairness-Requirement und
+    // fire-and-forget Semantik erhalten bleibt.
+    private static readonly SemaphoreSlim _concurrency = new(2, 2);
 
     public AiPostProcessor(IServiceScopeFactory scopes, ILogger<AiPostProcessor> log)
     {
@@ -27,7 +35,12 @@ public class AiPostProcessor : IAiPostProcessor
 
     public void QueueForFile(Guid fileId)
     {
-        _ = Task.Run(() => RunAsync(fileId));
+        _ = Task.Run(async () =>
+        {
+            await _concurrency.WaitAsync();
+            try { await RunAsync(fileId); }
+            finally { _concurrency.Release(); }
+        });
     }
 
     private async Task RunAsync(Guid fileId)

@@ -178,6 +178,7 @@
                             @if (scope != FileScope.Personal) { <td class="col-owner"></td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
+                                    <button title="@T["actions.download_zip"]" aria-label="@T["actions.download_zip"]" onclick="event.stopPropagation();downloadFolderZip('@sub.Id', @Json.Serialize(sub.Name))">⬇</button>
                                     <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFolderModal('@sub.Id')">🔗</button>
                                     <button title="@T["actions.request_upload"]" aria-label="@T["actions.request_upload"]" onclick="event.stopPropagation();openUploadRequestModal('@sub.Id')">📥</button>
                                     @if (canManage)
@@ -223,6 +224,7 @@
                             @if (scope != FileScope.Personal) { <td class="col-owner muted">@f.Owner.DisplayName</td> }
                             <td class="col-actions">
                                 <div class="fm-row-actions">
+                                    <button title="@T["actions.download"]" aria-label="@T["actions.download"]" onclick="event.stopPropagation();downloadFile('@f.Id')">⬇</button>
                                     <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
                                     @if (canWrite) { <button title="@T["actions.move"]" aria-label="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
                                     <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
@@ -246,6 +248,7 @@
                             <td class="col-date muted">@f.CreatedAt.ToDisplay()</td>
                             <td class="col-actions">
                                 <div class="fm-row-actions">
+                                    <button title="@T["actions.download"]" aria-label="@T["actions.download"]" onclick="event.stopPropagation();downloadFile('@f.Id')">⬇</button>
                                     <button title="@T["actions.share_link"]" aria-label="@T["actions.share_link"]" onclick="event.stopPropagation();openShareFileModal('@f.Id')">🔗</button>
                                     <button title="@T["pin.unpin"]" aria-label="@T["pin.unpin"]" onclick="event.stopPropagation();unpinFile('@f.Id')">📌✕</button>
                                 </div>
@@ -275,6 +278,7 @@
     <button data-act="directShare">🤝 @T["share.direct"]</button>
     <button data-act="sign" style="display:none">✍ @T["nav.signatures"]</button>
     <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
+    <button data-act="downloadZip" style="display:none">⬇ @T["actions.download_zip"]</button>
     <button data-act="favorite">⭐ @T["actions.star"]</button>
     <div class="divider"></div>
     <button data-act="move" style="display:none">↦ @T["actions.move"]</button>
@@ -283,7 +287,20 @@
     <button data-act="unpin" style="display:none">📌✕ @T["pin.unpin"]</button>
     <button data-act="rename" style="display:none">✎ @T["actions.rename"]</button>
     <button data-act="icon" style="display:none">🎨 @T["actions.change_icon"]</button>
+    <button data-act="newSubfolder" style="display:none">📁+ @T["browse.new_subfolder"]</button>
     <button data-act="delete">🗑 @T["actions.delete"]</button>
+</div>
+
+@* v1.10.64: separates Kontextmenü für Rechtsklick auf die LEERE Fläche
+   der Ordnerliste — nur globale "hier neu anlegen"-Aktionen, kein
+   Datei-/Ordner-bezogenes Zeug. Marcus's Wunsch: rechte Maustaste →
+   Neuer Ordner soll intuitiv im Browser funktionieren. *@
+<div class="ctx-menu" id="ctxMenuEmpty">
+    @if (canWrite)
+    {
+        <button data-act="newFolder">📁+ @T["browse.new_folder"]</button>
+        <button data-act="upload">↑ @T["browse.upload"]</button>
+    }
 </div>
 
 <!-- Folder-icon modal — swaps emoji + colour via /api/v1/folders/{id}/icon -->
@@ -339,37 +356,39 @@
 
 <partial name="_LinkModals" model="@current" />
 
-<!-- Move modal -->
+@* v1.10.67: Move + Copy nutzen jetzt einen echten Ordner-Browser statt
+   einer flachen Dropdown-Liste. Marcus's Feedback: "langes fixes Dropdown
+   an Ordnern - nicht wirklich state of the art". Der Browser zeigt eine
+   Baum-Struktur mit aufklappbaren Ordnern, aktueller Pfad wird prominent
+   angezeigt, Zielordner wird per Klick markiert (highlight). *@
 <div class="modal-backdrop" id="modalMove" onclick="if(event.target===this)closeModal('modalMove')">
-    <div class="modal-panel">
+    <div class="modal-panel folder-picker-panel">
         <h2>@T["move.title"]</h2>
         <p class="muted" id="moveHint"></p>
-        <div class="field">
-            <label>@T["move.target"]</label>
-            <select id="moveTarget"></select>
-            <div class="helper">@T["move.helper"]</div>
+        <div class="folder-picker" id="movePicker" data-mode="move"></div>
+        <div class="folder-picker-target">
+            <span class="muted">@T["move.target"]:</span>
+            <strong id="moveTargetLabel">—</strong>
         </div>
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="closeModal('modalMove')">@T["modal.cancel"]</button>
-            <button type="button" class="btn btn-primary" onclick="performMove()">@T["move.button"]</button>
+            <button type="button" class="btn btn-primary" onclick="performMove()" id="moveBtn" disabled>@T["move.button"]</button>
         </div>
     </div>
 </div>
 
-@* v1.10.62 — Copy-Modal analog zu Move. Unterschied: Original bleibt,
-   neuer Blob wird erzeugt. Quota-Check läuft server-side. *@
 <div class="modal-backdrop" id="modalCopy" onclick="if(event.target===this)closeModal('modalCopy')">
-    <div class="modal-panel">
+    <div class="modal-panel folder-picker-panel">
         <h2>@T["copy.title"]</h2>
         <p class="muted" id="copyHint"></p>
-        <div class="field">
-            <label>@T["move.target"]</label>
-            <select id="copyTarget"></select>
-            <div class="helper">@T["copy.helper"]</div>
+        <div class="folder-picker" id="copyPicker" data-mode="copy"></div>
+        <div class="folder-picker-target">
+            <span class="muted">@T["move.target"]:</span>
+            <strong id="copyTargetLabel">—</strong>
         </div>
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="closeModal('modalCopy')">@T["modal.cancel"]</button>
-            <button type="button" class="btn btn-primary" onclick="performCopy()">@T["copy.button"]</button>
+            <button type="button" class="btn btn-primary" onclick="performCopy()" id="copyBtn" disabled>@T["copy.button"]</button>
         </div>
     </div>
 </div>
@@ -467,6 +486,64 @@ async function deleteFile(id) {
     if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
 }
 
+// v1.10.70: Folder-ZIP-Download. Ruft POST /api/v1/folders/{id}/zip
+// welcher rekursiv alle lesbaren Files als ZIP-Stream zurückgibt.
+// Fetch-basiert (nicht Anchor-basiert) damit wir die Response-Fehler
+// vor dem Download sehen (413 "Ordner zu groß" etc.).
+async function downloadFolderZip(folderId, folderName) {
+    const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+    const busyMsg = @Json.Serialize(T["folder.zip.preparing"].Value);
+    const oldTitle = document.title;
+    document.title = busyMsg;
+    try {
+        const r = await fetch('/api/v1/folders/' + folderId + '/zip', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: csrf ? { 'X-XSRF-TOKEN': csrf.value } : {},
+        });
+        if (!r.ok) {
+            let msg = 'HTTP ' + r.status;
+            try { const b = await r.json(); msg = b.detail || b.title || msg; } catch {}
+            nimAlert(msg, { kind: 'error' });
+            return;
+        }
+        const blob = await r.blob();
+        const cd = r.headers.get('Content-Disposition') || '';
+        const m = /filename="?([^"]+)"?/.exec(cd);
+        const name = m ? m[1] : (folderName + '.zip');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    } finally { document.title = oldTitle; }
+}
+
+// v1.10.64: Direkt-Download aus der Row-Action-Leiste. Ein-Klick-Weg
+// statt "Vorschau öffnen → Download-Anchor klicken". Nutzt den bestehenden
+// preview-url-Endpoint, weil dessen SAS bereits ContentDisposition=attachment
+// enthält — der Browser lädt also runter statt zu rendern, sobald wir die
+// URL öffnen. Kein `download`-Attribut nötig (funktioniert eh nicht cross-
+// origin bei Azure Blob URLs).
+async function downloadFile(id) {
+    try {
+        const r = await fetch('/api/v1/files/' + id + '/preview-url', { credentials: 'same-origin' });
+        if (!r.ok) { nimAlert('Fehler: ' + r.status, { kind: 'error' }); return; }
+        const d = await r.json();
+        // Ein unsichtbares Anchor mit target=_blank triggern — bei
+        // Content-Disposition:attachment fängt der Browser den Response
+        // ab und speichert direkt, ohne das neue Tab überhaupt zu zeigen.
+        const a = document.createElement('a');
+        a.href = d.url;
+        a.rel = 'noopener';
+        // download-Attribut ignoriert der Browser cross-origin, aber schadet nicht.
+        a.download = d.name || '';
+        document.body.appendChild(a); a.click(); a.remove();
+    } catch (ex) {
+        nimAlert(String(ex), { kind: 'error' });
+    }
+}
+
 // ── Pin (kopiere ohne Blob-Duplikat in Personal) ─────────────
 async function pinFile(fileId) {
     const csrf = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -510,8 +587,12 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('preview',     ctxTarget.kind === 'file');
         showFor('sign',        isSignable);
         showFor('uploadReq',   ctxTarget.kind === 'folder');
+        showFor('downloadZip', ctxTarget.kind === 'folder');
         showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
         showFor('icon',        ctxTarget.kind === 'folder' && CAN_MANAGE);
+        // v1.10.64: Sub-Ordner direkt aus dem Kontext eines anderen Ordners
+        // anlegen — spart einen Navigations-Sprung.
+        showFor('newSubfolder', ctxTarget.kind === 'folder' && CAN_WRITE);
         showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE && !ctxTarget.pinned);
         showFor('copy',        ctxTarget.kind === 'file'   && !ctxTarget.pinned);
         showFor('pin',         canPin);
@@ -539,6 +620,42 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
 });
 document.addEventListener('click', () => ctxMenu.classList.remove('open'));
 window.addEventListener('scroll', () => ctxMenu.classList.remove('open'), true);
+
+// ── v1.10.64: Rechtsklick auf leere Content-Fläche → "Neuer Ordner" Menü ─
+// Marcus's Wunsch: "wäre toll wenn man da auch so rechte maustaste
+// drücken könnte 'Neuer Ordner'". Ein zweites, schmales Kontextmenü das
+// nur die "Hier neu anlegen"-Aktionen anbietet — kein Datei/Ordner-Zeug.
+const ctxMenuEmpty = document.getElementById('ctxMenuEmpty');
+if (ctxMenuEmpty) {
+    // Auslöser: Rechtsklick auf .fm-main, .fm-empty oder direkt auf die
+    // Tabelle wenn NICHT auf einer Row (tr.ctx fängt die eh selbst ab).
+    const emptyTargets = document.querySelectorAll('.fm-main, .fm-empty, .fm-list tbody');
+    emptyTargets.forEach(el => {
+        el.addEventListener('contextmenu', (e) => {
+            // Wenn der Klick innerhalb einer Row geschieht, überlassen wir
+            // ihn dem regulären ctxMenu (dessen Handler ist auf tr.ctx).
+            if (e.target.closest('tr.ctx')) return;
+            e.preventDefault();
+            ctxMenu.classList.remove('open');
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const w = 200, h = ctxMenuEmpty.offsetHeight || 100;
+            const x = Math.min(e.clientX, vw - w - 10);
+            const y = Math.min(e.clientY, vh - h - 10);
+            ctxMenuEmpty.style.left = x + 'px';
+            ctxMenuEmpty.style.top = y + 'px';
+            ctxMenuEmpty.classList.add('open');
+        });
+    });
+    document.addEventListener('click', () => ctxMenuEmpty.classList.remove('open'));
+    window.addEventListener('scroll', () => ctxMenuEmpty.classList.remove('open'), true);
+    ctxMenuEmpty.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => {
+            const act = b.dataset.act;
+            if (act === 'newFolder') openNewFolderModal();
+            else if (act === 'upload') document.getElementById('quickPick').click();
+        });
+    });
+}
 ctxMenu.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
         const act = b.dataset.act;
@@ -558,8 +675,10 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             location.href = '/signatures/new?fileId=' + ctxTarget.id;
         }
         if (act === 'uploadReq' && ctxTarget.kind === 'folder') openUploadRequestModal(ctxTarget.id);
+        if (act === 'downloadZip' && ctxTarget.kind === 'folder') downloadFolderZip(ctxTarget.id, ctxTarget.name);
         if (act === 'rename' && ctxTarget.kind === 'folder') openRenameFolderModal(ctxTarget.id, ctxTarget.name);
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
+        if (act === 'newSubfolder' && ctxTarget.kind === 'folder') openNewFolderModal(ctxTarget.id);
         if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
         if (act === 'copy' && ctxTarget.kind === 'file') openCopySingle(ctxTarget.id);
         if (act === 'pin' && ctxTarget.kind === 'file') pinFile(ctxTarget.id);
@@ -582,102 +701,177 @@ ctxMenu.querySelectorAll('button').forEach(b => {
     });
 });
 
-// ── Move file(s) ──────────────────────────────────────────────
+// ── v1.10.67: Ordner-Browser für Move + Copy ──────────────────
+// Marcus's Feedback zu v1.10.66: das lange fixe Dropdown "nicht wirklich
+// state of the art" — jetzt ein echter Baum-Picker. Beide Modals nutzen
+// dieselbe Render-Logik (openFolderPicker), unterscheiden sich nur in
+// (a) welcher Endpoint für die Ordnerliste (writable-all reserviert für
+// Copy weil cross-scope, writable?scope=… für Move weil same-scope), und
+// (b) welche Action beim Bestätigen läuft.
 let moveIds = [];
+let copyIds = [];
+const pickerState = { move: { target: null, expanded: new Set() },
+                       copy: { target: null, expanded: new Set() } };
+
 async function openMoveModal() {
     moveIds = selectedIds();
     if (!moveIds.length) return;
-    await populateMoveTargets();
     const tpl = @Json.Serialize(T["move.hint.multi"].Value);
     document.getElementById('moveHint').textContent = tpl.replace("{n}", moveIds.length);
-    document.getElementById('modalMove').classList.add('open');
+    await openFolderPicker('move', /* scoped */ true);
 }
 async function openMoveSingle(id) {
     moveIds = [id];
-    await populateMoveTargets();
     document.getElementById('moveHint').textContent = @Json.Serialize(T["move.hint.single"].Value);
-    document.getElementById('modalMove').classList.add('open');
+    await openFolderPicker('move', true);
 }
-async function populateMoveTargets() {
-    const r = await fetch('/api/v1/folders/writable?scope=' + SCOPE + '&exclude=' + FOLDER_ID, { credentials: 'same-origin' });
-    if (!r.ok) return;
-    const items = await r.json();
-    const sel = document.getElementById('moveTarget');
-    sel.innerHTML = '';
-    items.forEach(x => { const opt = document.createElement('option'); opt.value = x.id; opt.textContent = x.path; sel.appendChild(opt); });
+async function openCopySingle(id) {
+    copyIds = [id];
+    document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single"].Value);
+    await openFolderPicker('copy', /* scoped */ false);
 }
+
+/// Renders a fold-out folder tree in modalMove / modalCopy. `scoped`
+/// limits the picker to the CURRENT scope (used by Move — cross-scope
+/// moves are refused by the server anyway); Copy shows all writable
+/// folders across all scopes.
+async function openFolderPicker(mode, scoped) {
+    pickerState[mode] = { target: null, expanded: new Set() };
+    const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
+    picker.innerHTML = '<div class="muted" style="padding:16px">Lädt…</div>';
+    const modalId = mode === 'move' ? 'modalMove' : 'modalCopy';
+    document.getElementById(modalId).classList.add('open');
+    document.getElementById(mode + 'TargetLabel').textContent = '—';
+    document.getElementById(mode + 'Btn').disabled = true;
+
+    let items;
+    if (scoped) {
+        const r = await fetch('/api/v1/folders/writable?scope=' + SCOPE + '&exclude=' + FOLDER_ID, { credentials: 'same-origin' });
+        if (!r.ok) { picker.innerHTML = '<div class="muted">Fehler beim Laden</div>'; return; }
+        // /writable liefert flache Liste OHNE parentId → wir behandeln
+        // sie als flache Liste ohne Baum-Ebenen (kompatibel mit alten
+        // Servern). Der neue writable-all hat parentId.
+        items = (await r.json()).map(x => ({ id: x.id, name: x.path, scope: SCOPE, parentId: null, isRoot: false }));
+    } else {
+        const r = await fetch('/api/v1/folders/writable-all', { credentials: 'same-origin' });
+        if (!r.ok) { picker.innerHTML = '<div class="muted">Fehler beim Laden</div>'; return; }
+        items = await r.json();
+    }
+    renderFolderPicker(picker, items, mode);
+}
+
+function renderFolderPicker(picker, items, mode) {
+    // Baumaufbau: parentId → children. Roots sind Nodes ohne parentId
+    // (oder deren parentId nicht in items ist — z.B. writable-Fallback).
+    const byId = new Map(items.map(x => [x.id, { ...x, children: [] }]));
+    const roots = [];
+    for (const it of byId.values()) {
+        if (it.parentId && byId.has(it.parentId)) {
+            byId.get(it.parentId).children.push(it);
+        } else {
+            roots.push(it);
+        }
+    }
+    // Innerhalb jeder Ebene alphabetisch, aber Roots nach Scope sortieren.
+    const scopeRank = { Personal: 0, Public: 1, Group: 2 };
+    roots.sort((a, b) => (scopeRank[a.scope] ?? 9) - (scopeRank[b.scope] ?? 9)
+                        || (a.name || '').localeCompare(b.name || ''));
+    function sortChildren(n) { n.children.sort((a, b) => (a.name || '').localeCompare(b.name || '')); n.children.forEach(sortChildren); }
+    roots.forEach(sortChildren);
+
+    picker.innerHTML = '';
+    if (roots.length === 0) {
+        picker.innerHTML = '<div class="muted" style="padding:16px">Keine Zielordner verfügbar.</div>';
+        return;
+    }
+    const state = pickerState[mode];
+    // Roots per Default aufgeklappt.
+    roots.forEach(r => state.expanded.add(r.id));
+
+    function nodeEl(n, depth) {
+        const wrap = document.createElement('div');
+        wrap.className = 'fp-node';
+        const row = document.createElement('div');
+        row.className = 'fp-row';
+        row.style.paddingLeft = (6 + depth * 16) + 'px';
+        row.dataset.id = n.id;
+        const hasKids = n.children.length > 0;
+        const tog = document.createElement('span');
+        tog.className = 'fp-toggle';
+        tog.textContent = hasKids ? (state.expanded.has(n.id) ? '▾' : '▸') : '·';
+        if (hasKids) {
+            tog.style.cursor = 'pointer';
+            tog.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (state.expanded.has(n.id)) state.expanded.delete(n.id);
+                else state.expanded.add(n.id);
+                renderFolderPicker(picker, [...byId.values()], mode);
+            });
+        }
+        const ico = document.createElement('span');
+        ico.className = 'fp-icon';
+        ico.textContent = n.isRoot
+            ? (n.scope === 'Personal' ? '👤' : n.scope === 'Public' ? '🌍' : '👥')
+            : '📁';
+        const lbl = document.createElement('span');
+        lbl.className = 'fp-label';
+        lbl.textContent = n.name || n.path || '(unbenannt)';
+        row.appendChild(tog);
+        row.appendChild(ico);
+        row.appendChild(lbl);
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+            state.target = { id: n.id, name: fullPath(n) };
+            picker.querySelectorAll('.fp-row.selected').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            document.getElementById(mode + 'TargetLabel').textContent = fullPath(n);
+            document.getElementById(mode + 'Btn').disabled = false;
+        });
+        wrap.appendChild(row);
+        if (hasKids && state.expanded.has(n.id)) {
+            const kids = document.createElement('div');
+            kids.className = 'fp-children';
+            n.children.forEach(c => kids.appendChild(nodeEl(c, depth + 1)));
+            wrap.appendChild(kids);
+        }
+        return wrap;
+    }
+    function fullPath(n) {
+        const parts = [n.name || n.path];
+        let cur = n;
+        while (cur.parentId && byId.has(cur.parentId)) {
+            cur = byId.get(cur.parentId);
+            parts.unshift(cur.name || cur.path);
+        }
+        return parts.join(' / ');
+    }
+    roots.forEach(r => picker.appendChild(nodeEl(r, 0)));
+}
+
 async function performMove() {
-    const folderId = document.getElementById('moveTarget').value;
-    if (!folderId) return;
+    const t = pickerState.move.target;
+    if (!t) return;
     let ok = 0, fail = 0;
     for (const id of moveIds) {
         const r = await fetch('/api/v1/files/' + id + '/move', {
             method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-            body: JSON.stringify({ folderId }),
+            body: JSON.stringify({ folderId: t.id }),
         });
         if (r.ok) ok++; else fail++;
     }
     document.getElementById('modalMove').classList.remove('open');
-    if (fail) nimAlert(ok + ' moved, ' + fail + ' failed', { kind: 'warning' }); else location.reload();
+    if (fail) nimAlert(ok + ' verschoben, ' + fail + ' fehlgeschlagen', { kind: 'warning' });
+    else { nimToast('Verschoben nach ' + t.name, { kind: 'success' }); setTimeout(() => location.reload(), 400); }
 }
 
-// v1.10.62 — Copy analog zu Move. Zwei Unterschiede:
-//   1) Anders als /move erlaubt /copy auch cross-scope (Personal→Public,
-//      Public→Group). Deshalb kein exclude=FOLDER_ID beim populate — der
-//      User könnte in denselben Ordner "kopieren" wollen (Duplikat).
-//   2) Response ist { id: newFileId } — wir könnten das nutzen um zur
-//      Kopie zu navigieren, aber reload reicht.
-let copyIds = [];
-async function openCopySingle(id) {
-    copyIds = [id];
-    await populateCopyTargets();
-    document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single"].Value);
-    document.getElementById('modalCopy').classList.add('open');
-}
-async function populateCopyTargets() {
-    // Alle Ordner listen wo der User schreiben darf — Personal + Public +
-    // seine Groups. Kein exclude damit auch "in demselben Ordner kopieren"
-    // geht (praktisch für "Kopie mit gleichem Namen als Backup" o.ä.).
-    const r = await fetch('/api/v1/folders/writable-all', { credentials: 'same-origin' });
-    if (!r.ok) {
-        // Fallback: nur der aktuelle Scope wenn der neue Endpoint noch nicht deployed ist
-        const r2 = await fetch('/api/v1/folders/writable?scope=' + SCOPE, { credentials: 'same-origin' });
-        if (!r2.ok) return;
-        const items2 = await r2.json();
-        const sel2 = document.getElementById('copyTarget');
-        sel2.innerHTML = '';
-        items2.forEach(x => { const opt = document.createElement('option'); opt.value = x.id; opt.textContent = x.path; sel2.appendChild(opt); });
-        return;
-    }
-    const items = await r.json();
-    const sel = document.getElementById('copyTarget');
-    sel.innerHTML = '';
-    // Nach Scope gruppieren für bessere Übersicht
-    const byScope = { Personal: [], Public: [], Group: [] };
-    items.forEach(x => { (byScope[x.scope] || byScope.Personal).push(x); });
-    ['Personal', 'Public', 'Group'].forEach(scope => {
-        if (!byScope[scope].length) return;
-        const grp = document.createElement('optgroup');
-        grp.label = scope === 'Personal' ? @Json.Serialize(T["browse.tile.personal"].Value)
-                   : scope === 'Public'  ? @Json.Serialize(T["browse.tile.public"].Value)
-                   : @Json.Serialize(T["browse.tile.groups"].Value);
-        byScope[scope].forEach(x => {
-            const opt = document.createElement('option');
-            opt.value = x.id;
-            opt.textContent = x.path;
-            grp.appendChild(opt);
-        });
-        sel.appendChild(grp);
-    });
-}
 async function performCopy() {
-    const folderId = document.getElementById('copyTarget').value;
-    if (!folderId) return;
+    const t = pickerState.copy.target;
+    if (!t) return;
     let ok = 0, fail = 0, errMsg = '';
     for (const id of copyIds) {
         const r = await fetch('/api/v1/files/' + id + '/copy', {
             method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-            body: JSON.stringify({ folderId }),
+            body: JSON.stringify({ folderId: t.id }),
         });
         if (r.ok) ok++; else {
             fail++;
@@ -689,7 +883,7 @@ async function performCopy() {
     }
     document.getElementById('modalCopy').classList.remove('open');
     if (fail) nimAlert(ok + ' kopiert, ' + fail + ' fehlgeschlagen: ' + errMsg, { kind: 'error' });
-    else { nimToast(ok === 1 ? @Json.Serialize(T["copy.done_single"].Value) : (ok + ' ' + @Json.Serialize(T["copy.done_many"].Value)), { kind: 'success' }); setTimeout(() => location.reload(), 500); }
+    else { nimToast('Kopiert nach ' + t.name, { kind: 'success' }); setTimeout(() => location.reload(), 500); }
 }
 
 // ── Semantic search ───────────────────────────────────────────
@@ -719,8 +913,31 @@ async function doSearch() {
 function escapeHtml(s) { return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ── Inline preview modal ──────────────────────────────────────
+// v1.10.70: Office-Formate (docx/xlsx/pptx/odt/…) laufen zuerst über
+// /office-preview — der Server rendert on-demand nach PDF (LibreOffice
+// headless, gecacht). Fällt der Endpoint auf 415 zurück, nutzen wir den
+// klassischen Download-Link-Fallback. Andere Formate (Bild, PDF direkt)
+// laufen weiter über /preview-url wie bisher.
+const OFFICE_CTS = new Set([
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'application/vnd.oasis.opendocument.presentation',
+    'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint',
+    'application/rtf', 'text/rtf',
+]);
+
 async function openPreview(fileId) {
-    const r = await fetch('/api/v1/files/' + fileId + '/preview-url', { credentials: 'same-origin' });
+    const rowCt = (document.querySelector(`tr.ctx[data-id="${fileId}"]`)?.dataset.contentType || '').toLowerCase();
+    const useOffice = OFFICE_CTS.has(rowCt);
+    const endpoint = useOffice ? '/office-preview' : '/preview-url';
+    let r = await fetch('/api/v1/files/' + fileId + endpoint, { credentials: 'same-origin' });
+    // Office-Endpoint kann bei einem Fehler auf 415/500 gehen — dann normalen Preview versuchen.
+    if (useOffice && !r.ok) {
+        r = await fetch('/api/v1/files/' + fileId + '/preview-url', { credentials: 'same-origin' });
+    }
     if (!r.ok) return;
     const d = await r.json();
     document.getElementById('previewTitle').textContent = d.name;
@@ -1162,6 +1379,12 @@ async function fi_save() {
 }
 
 // ── Folder tree — left panel (collapsible) ────────────────────
+// v1.10.64: stale-while-revalidate Cache im sessionStorage. Marcus's
+// Feedback: "Baum links wirkt sehr behäbig, langsam". Ursache: jeder
+// Navigations-Klick reloadet die Seite und den Tree per Netzwerk-
+// Roundtrip. Fix: den zuletzt gesehenen Baum aus sessionStorage sofort
+// rendern (perceived latency ~0ms) und im Hintergrund frisch nachladen.
+// Nur wenn frisch !== cached wird neu gerendert (kein Flicker).
 (async function loadFolderTree() {
     const panel = document.getElementById('fmTree');
     if (!panel) return;
@@ -1169,15 +1392,38 @@ async function fi_save() {
     const groupId = panel.dataset.groupId || '';
     const currentId = panel.dataset.currentId;
     const url = '/api/v1/folders/tree?scope=' + encodeURIComponent(scope) + (groupId ? '&groupId=' + groupId : '');
+    const cacheKey = 'nimshare.tree.' + scope + '.' + groupId;
+
+    let cached = null;
+    try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) cached = JSON.parse(raw);
+    } catch { /* Storage disabled */ }
+
+    let rendered = false;
+    if (Array.isArray(cached) && cached.length > 0) {
+        renderTree(panel, cached, currentId);
+        rendered = true;
+    }
+
+    // Live-Refresh — updated der DOM nur wenn sich der Baum tatsächlich
+    // geändert hat, um Flackern zu vermeiden.
     let roots;
     try {
         const r = await fetch(url, { credentials: 'same-origin' });
         if (!r.ok) throw new Error(r.status);
         roots = await r.json();
     } catch (e) {
-        panel.innerHTML = '<div class="muted" style="padding:12px">Baum nicht geladen</div>';
+        if (!rendered) panel.innerHTML = '<div class="muted" style="padding:12px">Baum nicht geladen</div>';
         return;
     }
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(roots)); } catch { }
+    if (!rendered || JSON.stringify(roots) !== JSON.stringify(cached)) {
+        renderTree(panel, roots, currentId);
+    }
+})();
+
+function renderTree(panel, roots, currentId) {
     // Precompute the path from root → currentId so we can auto-expand the trail.
     const trail = new Set();
     function findPath(node, path) {
@@ -1271,7 +1517,18 @@ async function fi_save() {
             }
         });
     });
-})();
+}
+
+// v1.10.64: Cache invalidieren wenn ein Ordner erzeugt/umbenannt/gelöscht
+// wurde. Der `location.reload()` nach Create/Rename/Delete rendert dann
+// beim nächsten Frame den frischen Baum statt der veralteten Cache-Version.
+window.invalidateFolderTreeCache = function () {
+    try {
+        for (const key of Object.keys(sessionStorage)) {
+            if (key.startsWith('nimshare.tree.')) sessionStorage.removeItem(key);
+        }
+    } catch { }
+};
 
 // v1.10.52: Mobile-Tree-Toggle. Auf Desktop ist das Panel immer sichtbar;
 // auf Mobile ist es per CSS ausgeblendet. Der 📁-Button in der Toolbar

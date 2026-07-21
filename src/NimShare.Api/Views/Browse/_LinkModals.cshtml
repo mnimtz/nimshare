@@ -3,13 +3,19 @@
     var currentUrl = Context.Request.Path.Value ?? "/browse";
 }
 
-<!-- New Folder Modal -->
+<!-- New Folder Modal — v1.10.64: async/AJAX statt Form-Submit + Redirect.
+     Vorher: Form ging an /browse/folders/create, Server macht Redirect
+     zurück. Wenn AntiForgery-Token ausläuft (z.B. Tab lag lange offen)
+     oder Server 500 wirft, sah der User keine Rückmeldung — die Seite
+     reloadet mit fehlgeschlagenem Create ohne Fehler-Hinweis. Marcus's
+     Bug "Anlegen tut nichts". Jetzt: fetch mit Erfolgs-Toast, Fehler-
+     Alert bei jedem Non-200. -->
 <div class="modal-backdrop" id="modalNewFolder" onclick="if(event.target===this)closeModal('modalNewFolder')">
     <div class="modal-panel">
         <h2>@T["browse.new_folder"]</h2>
-        <form method="post" action="/browse/folders/create">
+        <form id="newFolderForm" onsubmit="return createNewFolder(event)">
             @Html.AntiForgeryToken()
-            <input type="hidden" name="parentId" value="@Model.Id"/>
+            <input type="hidden" id="newFolderParentId" name="parentId" value="@Model.Id"/>
             <input type="hidden" name="returnUrl" value="@currentUrl"/>
             <div class="field">
                 <label for="newFolderName">@T["browse.folder_name"]</label>
@@ -17,7 +23,7 @@
             </div>
             <div class="actions">
                 <button type="button" class="btn btn-ghost" onclick="closeModal('modalNewFolder')">@T["modal.cancel"]</button>
-                <button type="submit" class="btn btn-primary">@T["modal.create"]</button>
+                <button type="submit" class="btn btn-primary" id="newFolderSubmitBtn">@T["modal.create"]</button>
             </div>
         </form>
     </div>
@@ -229,9 +235,81 @@ function escapeHtmlSlug(s) {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function openNewFolderModal() {
+function openNewFolderModal(parentId) {
     document.getElementById('newFolderName').value = '';
+    // v1.10.64: parentId optional — Standard ist der aktuelle Ordner
+    // (aus dem Hidden-Input das per Model.Id gerendert wird).
+    // Rechtsklick auf einen Ordner-Row übergibt diesen als parentId,
+    // damit man Unterordner ohne Navigation anlegen kann.
+    if (parentId) {
+        document.getElementById('newFolderParentId').value = parentId;
+    }
     openModal('modalNewFolder');
+    setTimeout(() => document.getElementById('newFolderName').focus(), 50);
+}
+
+/// v1.10.64: async Create — ersetzt den stillen Form-POST + Redirect.
+/// Vorher passierte bei jedem Fehler (AntiForgery-Timeout, doppelter
+/// Name, Berechtigungs-Problem) genau NICHTS sichtbares — Marcus's Bug:
+/// "auf Anlegen klicken tut nichts". Jetzt: konkreter Fehler-Alert,
+/// Erfolgs-Toast, Seiten-Refresh damit der neue Ordner sofort erscheint.
+async function createNewFolder(ev) {
+    ev.preventDefault();
+    const nameInp = document.getElementById('newFolderName');
+    const btn = document.getElementById('newFolderSubmitBtn');
+    const name = (nameInp.value || '').trim();
+    if (!name) { nameInp.focus(); return false; }
+    const parentId = document.getElementById('newFolderParentId').value;
+    btn.disabled = true;
+    const oldLabel = btn.textContent;
+    btn.textContent = '…';
+    // v1.10.64: Hard 20s Client-Timeout via AbortController.
+    // Marcus meldete auf v1.10.62 einen 504 GatewayTimeout nach MINUTEN
+    // beim /browse/folders/create — der Browser hing bis das Azure-
+    // Frontend nach 240s abbrach. Egal was Backend-seitig hängt (Azure
+    // Files SMB Remount, SQL Deadlock, hängender Middleware-Retry) — der
+    // User bekommt jetzt spätestens nach 20s einen konkreten Timeout-
+    // Toast statt einer Minutenlangen "Anlegen tut nichts"-Wartezeit.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 20000);
+    try {
+        const r = await fetch('/api/v1/folders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ parentId: parentId, name: name }),
+            signal: ac.signal
+        });
+        if (r.ok) {
+            closeModal('modalNewFolder');
+            const okMsg = @Json.Serialize(T["browse.new_folder.created"].Value);
+            nimToast(okMsg.replace("{name}", name), { kind: 'success' });
+            // v1.10.64: gecachte Tree-Struktur weg — sonst zeigt der
+            // linke Baum-Panel beim nächsten Load noch die alte Version
+            // ohne den neuen Ordner (stale-while-revalidate hätte einen
+            // Frame lang die Alt-Version gerendert).
+            if (window.invalidateFolderTreeCache) window.invalidateFolderTreeCache();
+            setTimeout(() => location.reload(), 350);
+        } else {
+            let msg = 'HTTP ' + r.status;
+            try {
+                const body = await r.json();
+                msg = body.title || body.detail || msg;
+            } catch { /* Server hat keinen JSON-Body geliefert */ }
+            nimAlert(msg, { kind: 'error' });
+        }
+    } catch (ex) {
+        if (ex && ex.name === 'AbortError') {
+            nimAlert('Zeitüberschreitung nach 20s — der Server hat nicht geantwortet. Bitte erneut versuchen.', { kind: 'error' });
+        } else {
+            nimAlert(String(ex), { kind: 'error' });
+        }
+    } finally {
+        clearTimeout(timer);
+        btn.disabled = false;
+        btn.textContent = oldLabel;
+    }
+    return false;
 }
 
 function openRenameFolderModal(id, name) {

@@ -187,6 +187,103 @@ public class FilesController : ControllerBase
         return new EmptyResult();
     }
 
+    /// <summary>
+    /// v1.10.70: Ordner rekursiv als ZIP streamen. Sammelt alle lesbaren
+    /// StorageFile-Rows unter folderId (inkl. Sub-Sub-Ordner), baut relative
+    /// Pfad-Namen "Unterordner/Datei.pdf" damit die Ordnerstruktur im ZIP
+    /// erhalten bleibt, delegiert an dieselbe chunked-ZIP-Pipeline wie
+    /// BulkZip. Response-Content-Length ist bewusst nicht gesetzt — Browser
+    /// zeigt Progress in Bytes-Received.
+    /// </summary>
+    [HttpPost("/api/v1/folders/{id:guid}/zip")]
+    public async Task<IActionResult> FolderZip(Guid id,
+        [FromServices] IFileAccessService access,
+        [FromServices] IFolderService folders,
+        CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var root = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (root is null) return NotFound();
+        if (!await folders.CanReadAsync(root, user, ct)) return Forbid();
+
+        // BFS: alle Sub-Folder-Ids sammeln (ohne rekursive DB-Queries).
+        // Same-scope-Filter ist EXAKT — Public zeigt nur Public-Folders,
+        // Personal nur eigene, Group nur die dieser Group. Sonst würde
+        // ein Public-Root-ZIP versehentlich Personal-Ordner mit reinziehen.
+        var rootOwnerUser = root.OwnerUserId;
+        var rootOwnerGroup = root.OwnerGroupId;
+        var allFolders = await _db.Folders
+            .Where(f => f.Scope == root.Scope
+                     && f.OwnerUserId == rootOwnerUser
+                     && f.OwnerGroupId == rootOwnerGroup)
+            .Select(f => new { f.Id, f.Name, f.ParentFolderId })
+            .ToListAsync(ct);
+        var byParent = allFolders.GroupBy(f => f.ParentFolderId).ToDictionary(g => g.Key, g => g.ToList());
+        var pathOf = new Dictionary<Guid, string> { [root.Id] = "" };
+        var queue = new Queue<Guid>(); queue.Enqueue(root.Id);
+        while (queue.Count > 0)
+        {
+            var pid = queue.Dequeue();
+            if (!byParent.TryGetValue(pid, out var kids)) continue;
+            foreach (var k in kids)
+            {
+                pathOf[k.Id] = string.IsNullOrEmpty(pathOf[pid]) ? SanitizePathSegment(k.Name)
+                                                                 : pathOf[pid] + "/" + SanitizePathSegment(k.Name);
+                queue.Enqueue(k.Id);
+            }
+        }
+        var folderIds = pathOf.Keys.ToHashSet();
+
+        var files = await _db.Files
+            .Where(f => f.FolderId != null && folderIds.Contains(f.FolderId!.Value)
+                     && f.Status == StorageFileStatus.Ready)
+            .ToListAsync(ct);
+        var allowed = new List<(StorageFile file, string prefix)>(files.Count);
+        long totalBytes = 0;
+        foreach (var f in files)
+        {
+            if (!await access.CanReadAsync(user, f, ct)) continue;
+            allowed.Add((f, pathOf.TryGetValue(f.FolderId!.Value, out var p) ? p : ""));
+            totalBytes += f.SizeBytes;
+        }
+        if (allowed.Count == 0) return NotFound();
+        // Hart-Cap: 2 GB ZIP-Content. Alles darüber blockiert einen Container-
+        // Slot minutenlang und verlangsamt andere Requests. User bekommt einen
+        // klaren Fehler statt eines timeouts.
+        if (totalBytes > 2L * 1024 * 1024 * 1024)
+            return Problem(statusCode: 413, title: "Ordner zu groß",
+                detail: $"Der Ordner enthält {totalBytes / (1024 * 1024)} MB — max. 2048 MB pro ZIP-Download.");
+
+        var name = $"{SanitizePathSegment(root.Name)}-{DateTimeOffset.UtcNow:yyyyMMdd}.zip";
+        Response.Headers.ContentDisposition = $"attachment; filename=\"{name}\"";
+        Response.ContentType = "application/zip";
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        using (var zip = new System.IO.Compression.ZipArchive(Response.Body,
+            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (f, prefix) in allowed)
+            {
+                ct.ThrowIfCancellationRequested();
+                var entryPath = string.IsNullOrEmpty(prefix) ? f.Name : prefix + "/" + f.Name;
+                entryPath = MakeUnique(entryPath, used);
+                var entry = zip.CreateEntry(entryPath, System.IO.Compression.CompressionLevel.NoCompression);
+                using var es = entry.Open();
+                await _blobs.DownloadToAsync(f.BlobPath, es, ct);
+            }
+        }
+        return new EmptyResult();
+    }
+
+    private static string SanitizePathSegment(string s)
+    {
+        // Zip-safe: keine Slashes, keine Steuerzeichen, keine reservierten
+        // Windows-Namen. LibreOffice und Windows-Explorer sind da picky.
+        var cleaned = new string(s.Select(c => char.IsControl(c) || "\\/:*?\"<>|".Contains(c) ? '_' : c).ToArray());
+        return string.IsNullOrWhiteSpace(cleaned) ? "unbenannt" : cleaned.Trim();
+    }
+
     private static string MakeUnique(string name, HashSet<string> used)
     {
         if (used.Add(name)) return name;
@@ -222,6 +319,84 @@ public class FilesController : ControllerBase
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id && f.OwnerId == user.Id, ct);
         return file is null ? NotFound() : Ok(file);
+    }
+
+    /// <summary>
+    /// v1.10.66: preview-url für iOS (JWT/ApiUser-Policy). Der bestehende
+    /// gleichnamige Endpoint in BrowseController hängt an der Cookie-only
+    /// "WebUser"-Policy — iOS mit Bearer-Token bekommt dort einen HTML-
+    /// Login-Redirect und der JSON-Decoder crasht mit "Unexpected character
+    /// '<' at column 1". Diese ApiUser-Variante liefert dasselbe SAS-URL-
+    /// Objekt, ist aber Token-authentifiziert.
+    /// </summary>
+    [HttpGet("{id:guid}/preview-url")]
+    public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanReadAsync(user, file, ct)) return Forbid();
+        var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, TimeSpan.FromMinutes(5));
+        return Ok(new { url = sas.ToString(), contentType = file.ContentType, name = file.Name });
+    }
+
+    /// <summary>
+    /// v1.10.70: Office-Preview-URL. Konvertiert DOCX/XLSX/PPTX/ODT/… on-
+    /// demand nach PDF (LibreOffice-headless, gecacht als Blob), gibt eine
+    /// SAS-URL zurück. Der bestehende PDF-Viewer im Modal (bzw. QuickLook
+    /// auf iOS) rendert das dann direkt.
+    /// Response 415 wenn der Content-Type nicht unterstützt wird — Client
+    /// weiß dann: "kein Office-Format, fall back auf plain preview".
+    /// </summary>
+    [HttpGet("{id:guid}/office-preview")]
+    public async Task<IActionResult> OfficePreviewUrl(Guid id,
+        [FromServices] IFileAccessService access,
+        [FromServices] IOfficePreviewService office,
+        CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanReadAsync(user, file, ct)) return Forbid();
+        if (!office.IsSupported(file.ContentType))
+            return Problem(statusCode: 415, title: "Kein Office-Format",
+                detail: $"Content-Type {file.ContentType} wird von der Office-Preview nicht unterstützt.");
+        var url = await office.GetPreviewUrlAsync(id, file.BlobPath, file.Name, file.ContentType, ct);
+        if (url is null)
+            return Problem(statusCode: 500, title: "Konvertierung fehlgeschlagen",
+                detail: "LibreOffice konnte das Dokument nicht in PDF konvertieren. Details siehe Server-Log.");
+        return Ok(new { url = url.ToString(), contentType = "application/pdf", name = file.Name + ".pdf" });
+    }
+
+    /// <summary>v1.10.70: File umbenennen. Auth-Check: nur Owner oder
+    /// jemand mit Manage-Rechten auf der Datei darf renamen. Kollisionen
+    /// mit Existing-Names im gleichen Folder werden mit 409 gemeldet.</summary>
+    public record RenameFileRequest(string Name);
+
+    [HttpPost("{id:guid}/rename")]
+    public async Task<IActionResult> Rename(Guid id, [FromBody] RenameFileRequest req,
+        [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name)) return Problem(statusCode: 422, title: "Name ist erforderlich");
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanDeleteAsync(user, file, ct)) return Forbid();
+        var newName = req.Name.Trim();
+        // Sanitise: keine Path-Separator, Steuerzeichen etc.
+        newName = new string(newName.Select(c => char.IsControl(c) || "\\/:*?\"<>|".Contains(c) ? '_' : c).ToArray());
+        if (string.IsNullOrWhiteSpace(newName)) return Problem(statusCode: 422, title: "Ungültiger Name");
+        // Uniqueness-Check im gleichen Folder (sonst Doppelklick auf Preview verwirrt).
+        if (file.FolderId is Guid fid)
+        {
+            var exists = await _db.Files.AnyAsync(f =>
+                f.FolderId == fid && f.Id != file.Id && f.Name == newName
+                && f.Status != StorageFileStatus.Deleted, ct);
+            if (exists) return Problem(statusCode: 409, title: "Name bereits vergeben in diesem Ordner");
+        }
+        file.Name = newName;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { id = file.Id, name = file.Name });
     }
 
     public record MoveRequest(Guid FolderId);

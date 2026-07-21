@@ -34,17 +34,22 @@ public class AiGatewayController : Controller
         // v1.10.21: Key-Status live prüfen und im UI zeigen — sofort sichtbar
         // ob der gespeicherte Key noch entschlüsselbar ist (DP-Ring stabil)
         // oder ob er verloren gegangen ist. Kein Rätselraten mehr für Marcus.
-        ViewData["ApiKeyStatus"] = ComputeApiKeyStatus(s);
+        ViewData["ApiKeyStatus"] = await ComputeApiKeyStatusAsync(s);
         return View(s);
     }
 
-    private string ComputeApiKeyStatus(NimShare.Core.Entities.AiGatewaySettings s)
+    // v1.10.68: von sync + .GetAwaiter().GetResult() auf async umgestellt.
+    // Marcus's Feedback zu Server-Hängern: sync-over-async blockiert einen
+    // ThreadPool-Slot pro Aufruf, ohne SynchronizationContext zwar kein
+    // Deadlock — aber unter Last (viele parallele /settings/ai-Aufrufe)
+    // trägt es zur Slot-Erschöpfung bei. Async-Version verhält sich sauber.
+    private async Task<string> ComputeApiKeyStatusAsync(NimShare.Core.Entities.AiGatewaySettings s)
     {
         if (string.IsNullOrEmpty(s.ApiKeyEncrypted))
             return "kein Key gespeichert. Bitte oben eintragen und speichern.";
         try
         {
-            var key = _ai.GetApiKeyAsync().GetAwaiter().GetResult();
+            var key = await _ai.GetApiKeyAsync();
             if (string.IsNullOrEmpty(key))
                 return "Encrypt-Blob vorhanden aber Unprotect ergab leeren String — vermutlich DataProtection-Keys-Ring wurde regeneriert. Key neu eintragen.";
             // v1.10.28: Zusätzliche Byte-Level-Diagnose. Standard Gemini-Keys
@@ -100,6 +105,30 @@ public class AiGatewayController : Controller
         await _ai.SaveAsync(incoming, form.ApiKey, me.Id, ct);
         TempData["Notice"] = _l["notice.ai_saved"].Value;
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// v1.10.70: Reindex-Endpoint. Der Button in /settings/ai ruft ihn per
+    /// fetch()-POST. Legt alle Ready-Files (alle Scopes) wieder in die
+    /// AiPostProcessor-Queue. SemaphoreSlim(2) im PostProcessor bremst so
+    /// dass tausende gequeueter Files den Server nicht erschlagen.
+    /// Response: { queued: N } — der UI-JS ersetzt {0} damit.
+    /// </summary>
+    [HttpPost("/api/v1/ai/reindex")]
+    public async Task<IActionResult> Reindex([FromServices] IAiPostProcessor postProcessor,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        if (!await IsAdmin(ct)) return Forbid();
+        var s = await _ai.LoadAsync(ct);
+        if (s.Provider == AiProvider.Disabled)
+            return Problem(statusCode: 422, title: _l["ai.reindex.err_disabled"].Value);
+        // Nur Ready-Files, alle Scopes. Wir laden nur IDs — ExtractText +
+        // AI-Call passiert per-File asynchron im PostProcessor, hier wollen
+        // wir sofort antworten damit der User Feedback sieht.
+        var ids = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            db.Files.Where(f => f.Status == StorageFileStatus.Ready).Select(f => f.Id), ct);
+        foreach (var id in ids) postProcessor.QueueForFile(id);
+        return Ok(new { queued = ids.Count });
     }
 
     public record ListModelsResp(string[] Models, string? Error);

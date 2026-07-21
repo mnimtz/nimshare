@@ -162,10 +162,14 @@ final class NimShareAPI: ObservableObject {
         let title: String?
         let message: String?
         let deliveryOrder: String
+        let deadline: Date?
     }
     func createSignatureRequest(sourceFileId: UUID, title: String? = nil, message: String? = nil,
-                                deliveryOrder: String = "Parallel") async throws -> SignatureRequestDto {
-        let body = try Self.jsonEncoder.encode(CreateSignatureBody(sourceFileId: sourceFileId, title: title, message: message, deliveryOrder: deliveryOrder))
+                                deliveryOrder: String = "Parallel",
+                                deadline: Date? = nil) async throws -> SignatureRequestDto {
+        let body = try Self.jsonEncoder.encode(CreateSignatureBody(
+            sourceFileId: sourceFileId, title: title, message: message,
+            deliveryOrder: deliveryOrder, deadline: deadline))
         let req = request("POST", "api/v1/signatures", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(SignatureRequestDto.self, data)
@@ -421,6 +425,291 @@ final class NimShareAPI: ObservableObject {
         let req = request("GET", "api/v1/direct-shares/shared-with-me")
         let (data, _) = try await perform(req)
         return try decode([SharedWithMeItemDto].self, data)
+    }
+
+    // MARK: - Share-Link / Upload-Request (v1.10.66 iOS parity)
+
+    struct CreateShareLinkBody: Encodable {
+        let fileId: UUID?
+        let folderId: UUID?
+        let slug: String?
+        let password: String?
+        let maxDownloads: Int?
+        let expiresAt: Date?
+        let message: String?
+        let notifyOnAccess: Bool
+    }
+    /// Create a share link with default options (no password, no expiry, no
+    /// download limit). Returns the freshly created ShareLinkDto — caller
+    /// pastes/shows the .url.
+    func createShareLink(fileId: UUID? = nil, folderId: UUID? = nil) async throws -> ShareLinkDto {
+        let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
+            fileId: fileId, folderId: folderId, slug: nil, password: nil,
+            maxDownloads: nil, expiresAt: nil, message: nil, notifyOnAccess: false))
+        let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ShareLinkDto.self, data)
+    }
+
+    struct CreateUploadRequestBody: Encodable {
+        let slug: String?
+        let password: String?
+        let maxUploads: Int?
+        let expiresAt: Date?
+        let message: String?
+        let targetFolder: String
+        let notifyOnUpload: Bool
+    }
+    struct UploadRequestResult: Decodable {
+        let id: UUID
+        let slug: String
+        let url: String
+    }
+    /// Create an upload-request link (reverse-share). Uploaded files land in
+    /// the owner's Personal → "Received" folder (server default).
+    func createUploadRequest(message: String? = nil) async throws -> UploadRequestResult {
+        let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
+            slug: nil, password: nil, maxUploads: nil, expiresAt: nil,
+            message: message, targetFolder: "Received", notifyOnUpload: true))
+        let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(UploadRequestResult.self, data)
+    }
+
+    // MARK: - Folder/File CRUD (v1.10.70 iOS parity mit Web-Kontextmenü)
+
+    struct CreateFolderBody: Encodable { let parentId: UUID; let name: String }
+    struct CreateFolderResult: Decodable { let id: UUID; let name: String; let parentId: UUID }
+    func createFolder(parentId: UUID, name: String) async throws -> CreateFolderResult {
+        let body = try Self.jsonEncoder.encode(CreateFolderBody(parentId: parentId, name: name))
+        let req = request("POST", "api/v1/folders", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(CreateFolderResult.self, data)
+    }
+
+    struct RenameBody: Encodable { let name: String }
+    func renameFolder(id: UUID, newName: String) async throws {
+        let body = try Self.jsonEncoder.encode(RenameBody(name: newName))
+        let req = request("POST", "api/v1/folders/\(id)/rename", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    func renameFile(id: UUID, newName: String) async throws {
+        let body = try Self.jsonEncoder.encode(RenameBody(name: newName))
+        let req = request("POST", "api/v1/files/\(id)/rename", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    struct MoveFileBody: Encodable { let folderId: UUID }
+    func moveFile(id: UUID, targetFolderId: UUID) async throws {
+        let body = try Self.jsonEncoder.encode(MoveFileBody(folderId: targetFolderId))
+        let req = request("POST", "api/v1/files/\(id)/move", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    func copyFile(id: UUID, targetFolderId: UUID) async throws {
+        let body = try Self.jsonEncoder.encode(MoveFileBody(folderId: targetFolderId))
+        let req = request("POST", "api/v1/files/\(id)/copy", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    /// Flat writable-all list used to populate the folder-picker tree.
+    struct WritableFolderNode: Decodable, Identifiable {
+        let id: UUID
+        let name: String?
+        let path: String?
+        let scope: String
+        let parentId: UUID?
+        let isRoot: Bool?
+    }
+    func writableFoldersAll() async throws -> [WritableFolderNode] {
+        let req = request("GET", "api/v1/folders/writable-all")
+        let (data, _) = try await perform(req)
+        return try decode([WritableFolderNode].self, data)
+    }
+
+    // MARK: - File Upload (v1.10.70 iOS parity)
+    //
+    // Web nutzt den 3-Schritt-Flow: POST /api/v1/files {name,size,contentType,folderId}
+    // → 200 { fileId, uploadUrl } → PUT uploadUrl mit blob bytes →
+    // POST /api/v1/files/{id}/complete → 200. Wir spiegeln das exakt.
+
+    struct InitUploadBody: Encodable {
+        let name: String
+        let sizeBytes: Int64
+        let contentType: String
+        let folderId: UUID?
+    }
+    struct InitUploadResp: Decodable {
+        let fileId: UUID
+        let uploadUrl: String
+        let uploadMethod: String?
+    }
+    /// Uploads a local file to the user's Personal library (or a given folder).
+    /// Returns the created fileId once /complete succeeds.
+    func uploadFile(name: String, contentType: String, folderId: UUID?, data: Data) async throws -> UUID {
+        let body = try Self.jsonEncoder.encode(InitUploadBody(
+            name: name, sizeBytes: Int64(data.count), contentType: contentType, folderId: folderId))
+        let initReq = request("POST", "api/v1/files", body: body, contentType: "application/json")
+        let (initData, _) = try await perform(initReq)
+        let init_ = try decode(InitUploadResp.self, initData)
+
+        // Direct Azure Blob PUT with the SAS URL. x-ms-blob-type BlockBlob
+        // is required for a single-shot PUT of a chunked upload.
+        guard let url = URL(string: init_.uploadUrl) else { throw ApiError.network("Bad upload URL") }
+        var putReq = URLRequest(url: url)
+        putReq.httpMethod = init_.uploadMethod ?? "PUT"
+        putReq.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+        putReq.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        let (_, putResp) = try await URLSession.shared.upload(for: putReq, from: data)
+        if let http = putResp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ApiError.http(http.statusCode, "Azure Blob upload failed")
+        }
+
+        // Server-side: read blob props back, persist SizeBytes, kick AI post-process.
+        let completeReq = request("POST", "api/v1/files/\(init_.fileId)/complete")
+        _ = try await perform(completeReq)
+        return init_.fileId
+    }
+
+    // MARK: - Bulk-Actions (v1.10.72 iOS parity — Mehrfach-Selektion)
+
+    struct BulkDeleteBody: Encodable { let ids: [UUID] }
+    func bulkDeleteFiles(_ ids: [UUID]) async throws {
+        let body = try Self.jsonEncoder.encode(BulkDeleteBody(ids: ids))
+        let req = request("POST", "api/v1/files/bulk-delete", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    struct BulkZipBody: Encodable { let fileIds: [UUID]; let archiveName: String? }
+    /// Returns the raw ZIP bytes streamed by the server. Caller writes to a
+    /// temp file and hands it to a UIActivityViewController / .fileMover /
+    /// „In Dateien sichern" flow.
+    func bulkZipFiles(_ ids: [UUID], archiveName: String? = nil) async throws -> (Data, String) {
+        let body = try Self.jsonEncoder.encode(BulkZipBody(fileIds: ids, archiveName: archiveName))
+        let req = request("POST", "api/v1/files/bulk-zip", body: body, contentType: "application/json")
+        let (data, http) = try await perform(req)
+        let cd = http.value(forHTTPHeaderField: "Content-Disposition") ?? ""
+        let m = cd.range(of: #"filename="?([^"]+)"?"#, options: .regularExpression)
+            .map { String(cd[$0]).replacingOccurrences(of: #"filename="?"#, with: "", options: .regularExpression).replacingOccurrences(of: "\"", with: "") }
+        return (data, m ?? "nimshare.zip")
+    }
+
+    // MARK: - Signatur-Actions (v1.10.72)
+
+    func remindSignature(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/signatures/\(id)/remind")
+        _ = try await perform(req)
+    }
+    func cancelSignature(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/signatures/\(id)/cancel")
+        _ = try await perform(req)
+    }
+
+    // MARK: - File-Versions (v1.10.72 iOS parity)
+
+    struct FileVersionDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let versionNumber: Int
+        let sizeBytes: Int64
+        let contentType: String
+        let createdByName: String
+        let createdAt: Date
+        let isCurrent: Bool
+    }
+    func listFileVersions(_ fileId: UUID) async throws -> [FileVersionDto] {
+        let req = request("GET", "api/v1/files/\(fileId)/versions")
+        let (data, _) = try await perform(req)
+        return try decode([FileVersionDto].self, data)
+    }
+    func restoreFileVersion(fileId: UUID, versionId: UUID) async throws {
+        let req = request("POST", "api/v1/files/\(fileId)/versions/\(versionId)/restore")
+        _ = try await perform(req)
+    }
+
+    // v1.10.72: Direct-Share list/remove existiert schon als
+    // `directShares(forFile:)`, `directShares(forFolder:)`, `revokeDirectShare(:)`
+    // — DirectShareSheet nutzt das seit v1.3.0.
+
+    // MARK: - Contacts (v1.10.71 iOS parity)
+
+    func listContacts(query: String? = nil) async throws -> [ContactDto] {
+        var q: [URLQueryItem] = [.init(name: "limit", value: "500")]
+        if let s = query, !s.isEmpty { q.append(.init(name: "q", value: s)) }
+        let req = request("GET", "api/v1/contacts", query: q)
+        let (data, _) = try await perform(req)
+        return try decode([ContactDto].self, data)
+    }
+    struct CreateContactBody: Encodable {
+        let email: String; let name: String; let company: String?; let notes: String?; let tags: String?
+    }
+    func createContact(email: String, name: String, company: String? = nil, notes: String? = nil, tags: String? = nil) async throws -> ContactDto {
+        let body = try Self.jsonEncoder.encode(CreateContactBody(email: email, name: name, company: company, notes: notes, tags: tags))
+        let req = request("POST", "api/v1/contacts", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ContactDto.self, data)
+    }
+    func deleteContact(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/contacts/\(id)")
+        _ = try await perform(req)
+    }
+
+    // MARK: - Certificates (v1.10.71 iOS parity)
+
+    func listCertificates() async throws -> [CertDto] {
+        let req = request("GET", "api/v1/certificates")
+        let (data, _) = try await perform(req)
+        return try decode([CertDto].self, data)
+    }
+    struct GenerateCertBody: Encodable {
+        let name: String; let commonName: String; let organization: String?
+        let country: String?; let validityYears: Int; let setAsDefault: Bool
+    }
+    func generateCertificate(name: String, commonName: String, organization: String? = nil,
+                             country: String? = nil, validityYears: Int = 3, setAsDefault: Bool = true) async throws -> CertDto {
+        let body = try Self.jsonEncoder.encode(GenerateCertBody(
+            name: name, commonName: commonName, organization: organization,
+            country: country, validityYears: validityYears, setAsDefault: setAsDefault))
+        let req = request("POST", "api/v1/certificates/generate", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(CertDto.self, data)
+    }
+    func setDefaultCertificate(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/certificates/\(id)/set-default")
+        _ = try await perform(req)
+    }
+    func deleteCertificate(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/certificates/\(id)")
+        _ = try await perform(req)
+    }
+
+    // MARK: - Share-Link erweitert mit vollen Optionen (v1.10.71)
+
+    /// Same shape as createShareLink but exposes all optional fields
+    /// (slug, password, download limit, expiry, message, notify). Used by
+    /// the new "Freigabelink erstellen"-Sheet in iOS mit Web-parity.
+    func createShareLinkFull(fileId: UUID? = nil, folderId: UUID? = nil,
+                             slug: String? = nil, password: String? = nil,
+                             maxDownloads: Int? = nil, expiresAt: Date? = nil,
+                             message: String? = nil, notifyOnAccess: Bool = false) async throws -> ShareLinkDto {
+        let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
+            fileId: fileId, folderId: folderId, slug: slug, password: password,
+            maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
+            notifyOnAccess: notifyOnAccess))
+        let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ShareLinkDto.self, data)
+    }
+
+    // MARK: - Upload-Request mit vollen Optionen
+
+    func createUploadRequestFull(slug: String? = nil, password: String? = nil,
+                                 maxUploads: Int? = nil, expiresAt: Date? = nil,
+                                 message: String? = nil, targetFolder: String = "Received",
+                                 notifyOnUpload: Bool = true) async throws -> UploadRequestResult {
+        let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
+            slug: slug, password: password, maxUploads: maxUploads, expiresAt: expiresAt,
+            message: message, targetFolder: targetFolder, notifyOnUpload: notifyOnUpload))
+        let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(UploadRequestResult.self, data)
     }
 
     // MARK: - Activity

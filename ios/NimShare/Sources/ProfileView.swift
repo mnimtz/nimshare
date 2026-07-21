@@ -26,6 +26,15 @@ struct ProfileView: View {
                 }
             }
 
+            Section("Signaturen") {
+                NavigationLink { CertificatesView() } label: {
+                    Label("Meine Zertifikate", systemImage: "seal")
+                }
+                NavigationLink { ContactsView() } label: {
+                    Label("Adressbuch", systemImage: "person.crop.circle.badge.checkmark")
+                }
+            }
+
             Section("Sicherheit") {
                 NavigationLink { TwoFactorSetupView() } label: {
                     Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield")
@@ -34,12 +43,12 @@ struct ProfileView: View {
 
             Section("Server") {
                 LabeledContent("URL", value: auth.serverURL?.absoluteString ?? "")
-                Button("Change server", action: auth.changeServer)
+                Button("Server ändern", action: auth.changeServer)
             }
 
             Section {
                 Button(role: .destructive, action: auth.signOut) {
-                    Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                    Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
                 }
             }
 
@@ -52,7 +61,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .navigationTitle("Profile")
+        .navigationTitle("Profil")
     }
 }
 

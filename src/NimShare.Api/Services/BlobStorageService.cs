@@ -152,6 +152,23 @@ public class BlobStorageService : IBlobStorageService
         await blob.DownloadToAsync(destination, ct);
     }
 
+    public async Task UploadFromStreamAsync(string blobPath, Stream source, string contentType, CancellationToken ct = default)
+    {
+        var blob = _serviceClient.GetBlobContainerClient(_options.ContainerName).GetBlobClient(blobPath);
+        var opts = new Azure.Storage.Blobs.Models.BlobUploadOptions
+        {
+            HttpHeaders = new Azure.Storage.Blobs.Models.BlobHttpHeaders { ContentType = contentType }
+        };
+        await blob.UploadAsync(source, opts, ct);
+    }
+
+    public async Task<bool> ExistsAsync(string blobPath, CancellationToken ct = default)
+    {
+        var blob = _serviceClient.GetBlobContainerClient(_options.ContainerName).GetBlobClient(blobPath);
+        var exists = await blob.ExistsAsync(ct);
+        return exists.Value;
+    }
+
     private Uri BuildSasUri(BlobClient blob, BlobSasBuilder sas)
     {
         string sasQuery;

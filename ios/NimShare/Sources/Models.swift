@@ -185,6 +185,41 @@ struct ShareLinkDto: Codable, Identifiable, Hashable {
     let hasPassword: Bool
     let isRevoked: Bool
     let createdAt: Date
+    // v1.10.66: optional damit alte Server-Versionen ohne dieses Feld
+    // weiter dekodieren. LinksView zeigt bei nil alle unter "Meine Links".
+    let isPublic: Bool?
+    // v1.10.71: "file" | "folder" | nil, + der zugehörige Anzeigename.
+    // Damit die Row-UI "📄 Datei: report.pdf" statt "🔗 6rxvbse43e" zeigt.
+    let targetKind: String?
+    let targetName: String?
+}
+
+// MARK: - Contacts (v1.10.71 iOS parity — Adressbuch)
+struct ContactDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let email: String
+    let name: String
+    let company: String?
+    let tags: String?
+    let lastUsedAt: Date?
+    let useCount: Int
+}
+
+// MARK: - Certificates (v1.10.71 iOS parity)
+struct CertDto: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let subjectCommonName: String
+    let issuer: String
+    let notBefore: Date
+    let notAfter: Date
+    let thumbprint: String
+    let isSelfIssued: Bool
+    let isDefault: Bool
+    let lastUsedAt: Date?
+    let useCount: Int
+    let createdAt: Date
+    let isExpired: Bool
 }
 
 // MARK: - AI Search & Chat (mirror of server SearchHit)

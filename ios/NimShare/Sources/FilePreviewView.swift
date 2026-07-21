@@ -13,7 +13,7 @@ struct FilePreviewView: View {
     var body: some View {
         Group {
             if busy {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView("Lädt…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let url = localURL {
                 QLQuickLookView(url: url)
                     .ignoresSafeArea(edges: .bottom)
@@ -28,11 +28,17 @@ struct FilePreviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Close") { dismiss() }
+                Button("Schließen") { dismiss() }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if let url = localURL {
-                    ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
+                HStack {
+                    // v1.10.72: Versionen-History
+                    NavigationLink { FileVersionsView(fileId: file.id, fileName: file.name) } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    if let url = localURL {
+                        ShareLink(item: url) { Image(systemName: "square.and.arrow.up") }
+                    }
                 }
             }
         }

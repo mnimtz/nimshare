@@ -253,13 +253,18 @@
   <data name="browse.tile.groups.lede"><value>Files shared inside each of your teams.</value></data>
   <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet.</value></data>
 
-  <data name="browse.new_folder"><value>New folder</value></data>
+  <data name="browse.new_folder"><value>Nouveau dossier</value></data>
+  <data name="browse.new_subfolder"><value>Nouveau sous-dossier…</value></data>
+  <data name="browse.new_folder.created"><value>Dossier « {name} » créé</value></data>
   <data name="browse.upload"><value>Upload</value></data>
   <data name="browse.share_this"><value>Share this folder</value></data>
   <data name="browse.request_upload"><value>Request upload here</value></data>
   <data name="browse.folder_name"><value>Folder name</value></data>
 
-  <data name="actions.share_link"><value>Create share link</value></data>
+  <data name="actions.share_link"><value>Créer un lien de partage</value></data>
+  <data name="actions.download"><value>Télécharger</value></data>
+  <data name="actions.download_zip"><value>Télécharger en ZIP</value></data>
+  <data name="folder.zip.preparing"><value>Préparation du ZIP…</value></data>
   <data name="actions.request_upload"><value>Request upload</value></data>
   <data name="actions.rename"><value>Rename</value></data>
   <data name="actions.delete"><value>Delete</value></data>
@@ -278,7 +283,10 @@
   <data name="modal.upload_request.max_uploads"><value>Max uploads</value></data>
 
   <data name="users.action.manage"><value>Manage</value></data>
-  <data name="links.folder_target"><value>(folder share)</value></data>
+  <data name="links.folder_target"><value>(partage de dossier)</value></data>
+  <data name="links.for_file"><value>Fichier</value></data>
+  <data name="links.for_folder"><value>Dossier</value></data>
+  <data name="links.target_gone"><value>cible supprimée</value></data>
 
   <data name="profile.picture"><value>Photo de profil</value></data>
   <data name="profile.picture.lede"><value>Cliquez sur le cercle pour choisir une image depuis votre appareil. Zoomez et déplacez pour cadrer votre visage.</value></data>

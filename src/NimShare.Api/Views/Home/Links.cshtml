@@ -45,7 +45,21 @@ else
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
                 <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
+                <td>
+                    @if (l.File is not null)
+                    {
+                        <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
+                    }
+                    else if (l.Folder is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <strong>@l.Folder.Name</strong>
+                    }
+                    else if (l.FolderId is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <em class="muted">@T["links.target_gone"]</em>
+                    }
+                    else { <span class="muted">—</span> }
+                </td>
                 <td>@l.DownloadCount @(l.MaxDownloads is int m ? $" / {m}" : "")</td>
                 <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
                 <td><span class="chip @state.Item1">@state.Item2</span></td>
@@ -103,7 +117,21 @@ else
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
                 <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
+                <td>
+                    @if (l.File is not null)
+                    {
+                        <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
+                    }
+                    else if (l.Folder is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <strong>@l.Folder.Name</strong>
+                    }
+                    else if (l.FolderId is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <em class="muted">@T["links.target_gone"]</em>
+                    }
+                    else { <span class="muted">—</span> }
+                </td>
                 <td>@l.DownloadCount @(l.MaxDownloads is int m3 ? $" / {m3}" : "")</td>
                 <td><span class="chip @gstate.Item1">@gstate.Item2</span></td>
                 <td>
@@ -146,7 +174,21 @@ else
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
                 <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>@(l.File?.Name ?? (l.FolderId is not null ? T["links.folder_target"].Value : "—"))</td>
+                <td>
+                    @if (l.File is not null)
+                    {
+                        <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
+                    }
+                    else if (l.Folder is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <strong>@l.Folder.Name</strong>
+                    }
+                    else if (l.FolderId is not null)
+                    {
+                        <span class="muted">📁 @T["links.for_folder"]:</span> <em class="muted">@T["links.target_gone"]</em>
+                    }
+                    else { <span class="muted">—</span> }
+                </td>
                 <td class="muted">@l.Owner?.DisplayName</td>
                 <td>@l.DownloadCount @(l.MaxDownloads is int m2 ? $" / {m2}" : "")</td>
                 <td><span class="chip @pstate.Item1">@pstate.Item2</span></td>

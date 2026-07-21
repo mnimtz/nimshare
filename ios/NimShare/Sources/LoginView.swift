@@ -17,35 +17,41 @@ struct LoginView: View {
     enum Field { case email, password }
 
     var body: some View {
-        ZStack {
-            // Subtiler Tungsten-Gradient statt reinem Weiß — gibt dem
-            // Screen visuelles Gewicht ohne zu dominieren.
+        // v1.10.69: kräftiger Tungsten-Branded Header. Marcus's Feedback:
+        // "startseite eher immer noch weiß". Jetzt: oberes Drittel in
+        // Tungsten-Blau als Gradient (dunkel→hell), Logo+Titel weiß auf
+        // blau (Cloud-Icon fällt vor blauem Hintergrund weg — daher
+        // System-Icon in weißem Kreis als Fallback + Text drüber), weißer
+        // Content-Bereich mit Login-Card darunter fließt in einer
+        // Wave-Kurve rein für den Look. Kein reines Weiß mehr.
+        ZStack(alignment: .top) {
+            // Voll-Hintergrund: weiß unten, Tungsten oben.
             LinearGradient(
-                colors: [
-                    Theme.tungstenBlue.opacity(0.12),
-                    Color(.systemBackground),
-                    Color(.systemBackground)
-                ],
+                colors: [Theme.tungstenDark, Theme.tungstenBlue],
                 startPoint: .top,
-                endPoint: .center
+                endPoint: .bottom
             )
-            .ignoresSafeArea()
+            .frame(height: 320)
+            .ignoresSafeArea(edges: .top)
+            .frame(maxHeight: .infinity, alignment: .top)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
-                    // Header: Logo + Titel + Subtitle
-                    VStack(spacing: 14) {
+                    // Header auf blauem Hintergrund — Logo, Titel + Subtitle
+                    // in weiß gerendert (contrast pop).
+                    VStack(spacing: 12) {
                         Image("AppLogo")
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: 220, maxHeight: 90)
+                            .frame(maxWidth: 110, maxHeight: 110)
+                            .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 6)
                             .accessibilityHidden(true)
                         Text("NimShare")
-                            .font(.system(size: 30, weight: .bold, design: .default))
-                            .foregroundStyle(Theme.tungstenDark)
+                            .font(.system(size: 32, weight: .bold, design: .default))
+                            .foregroundStyle(.white)
                         Text("Sichere Datenübergabe")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.white.opacity(0.85))
                     }
                     .padding(.top, 50)
 
@@ -90,27 +96,26 @@ struct LoginView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
-                        // v1.10.63 — expliziter "Anmeldedaten merken"-Toggle.
-                        // ON (default): E-Mail wird gespeichert (UserDefaults),
-                        //   Passwort geht in iOS-Schlüsselbund via AutoFill-Prompt.
-                        //   Beim nächsten Start ist E-Mail vorausgefüllt, iOS
-                        //   bietet Passwort automatisch an.
-                        // OFF: kein Speichern der E-Mail. iOS AutoFill bleibt
-                        //   grundsätzlich aktiv (steuert der Nutzer im System-
-                        //   Passwort-Dialog), aber unser Feld wird geleert.
-                        Toggle(isOn: $rememberCredentials) {
-                            HStack(spacing: 8) {
-                                Image(systemName: rememberCredentials ? "checkmark.circle.fill" : "circle")
+                        // v1.10.64 — kompakter "Merken"-Tap. Marcus's Feedback
+                        // zu v1.10.63: der button-style Toggle war zu prominent
+                        // ("normal eher mittig und kleiner"). Neu: kleines
+                        // Checkbox-Icon + grauer Footnote-Text, zentriert unter
+                        // dem Login-Button — die klassische Login-Konvention.
+                        Button {
+                            rememberCredentials.toggle()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: rememberCredentials ? "checkmark.square.fill" : "square")
+                                    .font(.caption)
                                     .foregroundStyle(rememberCredentials ? Theme.tungstenBlue : Color.secondary)
                                 Text("Anmeldedaten merken")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        .toggleStyle(.button)
-                        .tint(Theme.tungstenBlue)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 4)
+                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 6)
 
                         // Login-Button — Tungsten-Blau, prominent
                         Button {
@@ -162,12 +167,12 @@ struct LoginView: View {
             }
         }
         .onAppear {
-            // E-Mail vorausfüllen für Wiederkehrer — Passwort kommt aus
-            // dem iOS-Schlüsselbund via AutoFill wenn der User es beim
-            // ersten Login gespeichert hat.
+            // v1.10.69: E-Mail vorausfüllen wenn merken=on, aber KEINEN
+            // Focus setzen — sonst poppt die Tastatur sofort beim Screen-
+            // Öffnen (Marcus's Kritik "blöde Tastatur nicht immer sofort
+            // da"). User tippt jetzt selbst wenn er will.
             if let last = auth.lastEmail, email.isEmpty {
                 email = last
-                focusedField = .password
             }
             // Toggle-Zustand aus letzter Session übernehmen.
             rememberCredentials = auth.rememberCredentials
