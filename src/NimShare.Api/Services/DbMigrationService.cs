@@ -340,26 +340,73 @@ public class DbMigrationService : IDbMigrationService
         // CopyDataAsync (reverse FK order).
         const int chunk = 500;
         long total = 0;
-        var batch = new List<T>(chunk);
-        await foreach (var row in source.Set<T>().AsNoTracking().AsAsyncEnumerable().WithCancellation(ct))
+
+        // v1.10.132: Hat der PK im Ziel eine IDENTITY-Spalte (z. B.
+        // ShareLinkAccesses.Id = bigint IDENTITY, SignatureAudits, ActivityEvents …),
+        // muss SET IDENTITY_INSERT ON aktiv sein, während wir die aus der Quelle
+        // übernommenen Id-Werte 1:1 einfügen (für FK-Treue). Sonst lehnt
+        // SqlServer ab: „Cannot insert explicit value for identity column …
+        // IDENTITY_INSERT is set to OFF." Generisch über sys.identity_columns
+        // erkannt — deckt jede Identity-Tabelle automatisch ab.
+        var et = target.Model.FindEntityType(typeof(T));
+        var tableName = et?.GetTableName() ?? typeof(T).Name;
+        var connStr = target.Database.GetConnectionString()!;
+        bool useIdentityInsert = await TableHasIdentityAsync(connStr, tableName, ct);
+
+        // Verbindung offen halten: SET IDENTITY_INSERT ist session-scoped und
+        // muss für alle Batches derselben Tabelle aktiv bleiben; EF würde die
+        // Verbindung sonst nach jedem SaveChanges schliessen und die Einstellung
+        // verlieren.
+        await target.Database.OpenConnectionAsync(ct);
+        try
         {
-            batch.Add(row);
-            if (batch.Count >= chunk)
+            if (useIdentityInsert)
+                await target.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] ON", ct);
+
+            var batch = new List<T>(chunk);
+            async Task FlushAsync()
             {
+                if (batch.Count == 0) return;
                 await target.Set<T>().AddRangeAsync(batch, ct);
                 await target.SaveChangesAsync(ct);
                 target.ChangeTracker.Clear();
                 total += batch.Count;
                 batch.Clear();
             }
+
+            await foreach (var row in source.Set<T>().AsNoTracking().AsAsyncEnumerable().WithCancellation(ct))
+            {
+                batch.Add(row);
+                if (batch.Count >= chunk) await FlushAsync();
+            }
+            await FlushAsync();
+
+            if (useIdentityInsert)
+                await target.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] OFF", ct);
         }
-        if (batch.Count > 0)
+        finally
         {
-            await target.Set<T>().AddRangeAsync(batch, ct);
-            await target.SaveChangesAsync(ct);
-            target.ChangeTracker.Clear();
-            total += batch.Count;
+            await target.Database.CloseConnectionAsync();
         }
         return total;
+    }
+
+    /// <summary>
+    /// v1.10.132: Prüft, ob eine Zieltabelle eine IDENTITY-Spalte hat. Über
+    /// eine eigene, kurze Metadaten-Verbindung — unabhängig vom EF-Kontext.
+    /// </summary>
+    private static async Task<bool> TableHasIdentityAsync(string connStr, string table, CancellationToken ct)
+    {
+        try
+        {
+            await using var cn = new SqlConnection(connStr);
+            await cn.OpenAsync(ct);
+            await using var cmd = cn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM sys.identity_columns WHERE object_id = OBJECT_ID(@t)";
+            cmd.Parameters.AddWithValue("@t", table);
+            var n = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct) ?? 0);
+            return n > 0;
+        }
+        catch { return false; }
     }
 }
