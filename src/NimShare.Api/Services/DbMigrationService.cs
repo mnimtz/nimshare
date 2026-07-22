@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using NimShare.Core.Data;
 
 namespace NimShare.Api.Services;
@@ -97,14 +98,93 @@ public class DbMigrationService : IDbMigrationService
             // Real migrations — evolves schema across app upgrades, unlike the
             // one-shot EnsureCreated we used in v1.8.0.
             await target.Database.MigrateAsync(ct);
+            // v1.10.127: modellgetriebener Schema-Abgleich. Die handgeschriebenen
+            // SqlServer-Migrationen sind über die Zeit vom EF-Modell weggedriftet
+            // (Spalten wie Users.PreferredTimezone, SignatureAudits.City, …, die
+            // im Live-Betrieb per EnsureForensicColumnsAsync nachgezogen werden,
+            // aber NIE ins Migrations-Ziel gelangten). Das führte beim Kopieren
+            // zu „Invalid column name …". Statt diese Liste doppelt zu pflegen,
+            // gehen wir hier das komplette Modell durch und ergänzen JEDE fehlende
+            // Spalte mit dem korrekten SqlServer-Store-Typ — einmal, generisch,
+            // für alle künftigen Drifts.
+            var added = await ReconcileColumnsAsync(target, targetConnectionString, ct);
             sw.Stop();
-            return new CopyResult(true, 0, 0, sw.Elapsed, null);
+            return new CopyResult(true, added, 0, sw.Elapsed, null);
         }
         catch (Exception ex)
         {
             sw.Stop();
             return new CopyResult(false, 0, 0, sw.Elapsed, Flatten(ex));
         }
+    }
+
+    /// <summary>
+    /// v1.10.127 — gleicht das Ziel-Schema (Azure SQL) spaltengenau an das
+    /// EF-Modell an. Für jede Entity und jede skalare Property wird geprüft, ob
+    /// die Spalte existiert; fehlt sie, wird sie per ALTER TABLE ADD als NULL
+    /// mit dem vom SqlServer-Provider gemappten Store-Typ ergänzt (die Zieltabelle
+    /// ist beim anschliessenden Copy leer, Werte kommen aus dem Copy — NOT NULL
+    /// würde am ADD scheitern). Fehlende Tabellen kann diese Routine nicht
+    /// anlegen; sie loggt sie laut (dürfen aber laut Migrations-Set nicht
+    /// vorkommen). Gibt die Zahl der ergänzten Spalten zurück.
+    /// </summary>
+    private async Task<int> ReconcileColumnsAsync(NimShareDbContext target, string conn, CancellationToken ct)
+    {
+        int added = 0;
+        await using var cn = new SqlConnection(conn);
+        await cn.OpenAsync(ct);
+        foreach (var et in target.Model.GetEntityTypes())
+        {
+            var tableName = et.GetTableName();
+            if (string.IsNullOrEmpty(tableName)) continue;   // keyless / view / owned-splitting
+            var storeObj = StoreObjectIdentifier.Table(tableName, et.GetSchema());
+
+            // Tabelle überhaupt vorhanden? (Migrations sollten sie angelegt haben.)
+            using (var tcheck = cn.CreateCommand())
+            {
+                tcheck.CommandText = "SELECT OBJECT_ID(@t, 'U')";
+                tcheck.Parameters.AddWithValue("@t", tableName);
+                var tid = await tcheck.ExecuteScalarAsync(ct);
+                if (tid is null || tid == DBNull.Value)
+                {
+                    _log.LogWarning("Schema-Reconcile: Zieltabelle {Table} fehlt komplett — Migrations-Set unvollständig.", tableName);
+                    continue;
+                }
+            }
+
+            foreach (var prop in et.GetProperties())
+            {
+                var col = prop.GetColumnName(storeObj);
+                if (string.IsNullOrEmpty(col)) continue;   // Property nicht auf diese Tabelle gemappt
+
+                bool exists;
+                using (var ccheck = cn.CreateCommand())
+                {
+                    ccheck.CommandText = "SELECT COL_LENGTH(@t, @c)";
+                    ccheck.Parameters.AddWithValue("@t", tableName);
+                    ccheck.Parameters.AddWithValue("@c", col);
+                    var r = await ccheck.ExecuteScalarAsync(ct);
+                    exists = r is not null && r != DBNull.Value;
+                }
+                if (exists) continue;
+
+                // Store-Typ vom SqlServer-Provider-Modell (nicht vom Live-SQLite-
+                // Modell — sonst kämen "TEXT"/"INTEGER" statt nvarchar/bigint).
+                var storeType = prop.GetColumnType();
+                if (string.IsNullOrEmpty(storeType))
+                    storeType = prop.GetRelationalTypeMapping().StoreType;
+                if (string.IsNullOrEmpty(storeType)) continue;
+
+                using var alter = cn.CreateCommand();
+                alter.CommandText = $"ALTER TABLE [{tableName}] ADD [{col}] {storeType} NULL";
+                await alter.ExecuteNonQueryAsync(ct);
+                added++;
+                _log.LogWarning("Schema-Reconcile: Spalte {Table}.{Col} ({Type}) ergänzt (Migrations-Drift).", tableName, col, storeType);
+            }
+        }
+        if (added > 0)
+            _log.LogInformation("Schema-Reconcile: {Count} fehlende Spalte(n) im Ziel-Schema ergänzt.", added);
+        return added;
     }
 
     /// <summary>
