@@ -74,10 +74,31 @@ document.getElementById('add-domain').addEventListener('click', async () => {
 });
 document.querySelectorAll('[data-verify]').forEach(b => {
     b.addEventListener('click', async () => {
+        // v1.10.136: echtes Ergebnis auswerten statt immer „Kicked off" zu
+        // zeigen und sofort neu zu laden (der Reload wischte den Toast weg).
+        // Jetzt: Antwort abwarten, Hinweis im blockierenden Dialog zeigen und
+        // erst NACH dem Schliessen neu laden — und nur bei Erfolg (damit der
+        // Fehler-Hinweis mit dem TXT-Record lesbar bleibt).
         const id = b.getAttribute('data-verify');
-        const r = await fetch(`/api/v1/custom-domains/${id}/verify`, { method: 'POST' });
-        nimAlert(r.ok ? 'Kicked off' : 'Failed', { kind: 'error' });
-        location.reload();
+        const original = b.textContent;
+        b.disabled = true; b.textContent = '…';
+        try {
+            const r = await fetch(`/api/v1/custom-domains/${id}/verify`, { method: 'POST' });
+            let d = null; try { d = await r.json(); } catch {}
+            if (r.ok && d) {
+                await nimAlert(d.hint || (d.verified ? 'Domain ist verifiziert.' : 'Noch nicht verifiziert.'),
+                    { title: 'Domain-Verifizierung', kind: d.verified ? 'success' : 'error' });
+                if (d.verified) location.reload();
+            } else {
+                await nimAlert('Verifizierung fehlgeschlagen (HTTP ' + r.status + ').',
+                    { title: 'Domain-Verifizierung', kind: 'error' });
+            }
+        } catch (e) {
+            await nimAlert('Netzwerkfehler bei der Verifizierung. Bitte erneut versuchen.',
+                { title: 'Domain-Verifizierung', kind: 'error' });
+        } finally {
+            b.disabled = false; b.textContent = original;
+        }
     });
 });
 </script>
