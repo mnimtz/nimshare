@@ -26,23 +26,22 @@ struct GreetingBanner: View {
     @ViewBuilder
     private var content: some View {
         if let t = text {
-            // v1.10.124: Begrüssung bewusst kompakt halten (footnote statt
-            // callout, kleineres 👋), damit sie sich in die Kachelgrössen
-            // einfügt und die Kacheln nicht nach unten verdrängt. Max. 3
-            // Zeilen, danach skaliert der Text herunter statt weiter zu
-            // wachsen — so bleibt das Ein-Screen-Layout stabil.
-            HStack(alignment: .top, spacing: 8) {
-                Text("👋").font(.subheadline)
+            // v1.10.125: Ausgewogene Grösse — nicht so gross dass sie die
+            // Kacheln verdrängt (v1.10.123), aber auch nicht so winzig dass
+            // sie verloren wirkt (v1.10.124). subheadline, primäre Farbe,
+            // vollständiger Text (kein hartes Abschneiden). Das adaptive
+            // Raster gleicht die natürliche Höhe automatisch aus.
+            HStack(alignment: .top, spacing: 10) {
+                Text("👋").font(.title3)
                 Text(t)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.85)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if loading { ProgressView().controlSize(.mini) }
             }
-            .padding(10)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Theme.tungstenBlue.opacity(0.08))
