@@ -5,6 +5,10 @@ struct BrowseRootView: View {
     @State private var scopes: [ScopeTile] = []
     @State private var loading = true
     @State private var error: String?
+    // v1.10.123: gemessene Höhe der Begrüssung, damit das Kachel-Raster den
+    // exakt verbleibenden Platz füllt — egal ob die Begrüssung 1 oder 4 Zeilen
+    // lang ist. Siehe adaptiveHome.
+    @State private var greetingHeight: CGFloat = 0
 
     var body: some View {
         Group {
@@ -15,7 +19,7 @@ struct BrowseRootView: View {
             } else if scopes.isEmpty {
                 ContentUnavailableView("Keine Bibliotheken", systemImage: "folder", description: Text("Der Server hat keine Bibliotheken zurückgegeben."))
             } else {
-                content
+                adaptiveHome
             }
         }
         .navigationTitle("Dateien")
@@ -29,77 +33,115 @@ struct BrowseRootView: View {
         .refreshable { await load(showSpinner: false) }
     }
 
-    private var content: some View {
-        List {
-            // v1.10.114: KI-Begrüssung ganz oben.
-            GreetingBanner()
-            Section("Bibliotheken") {
-                ForEach(scopes.filter { $0.scope.lowercased() == "personal" }) { tile in
-                    scopeRow(tile)
-                }
-                ForEach(scopes.filter { $0.scope.lowercased() == "public" }) { tile in
-                    scopeRow(tile)
-                }
-                // v1.10.103: Group-Kacheln bewusst NICHT mehr rendern.
-                // Server ab v1.10.102 liefert sie nicht mehr; dieser Client-
-                // Guard verhindert die Kachel auch, falls ein älterer Server
-                // sie noch mitschickt. Gruppen sind reine Verteiler-Namen
-                // für „Teilen mit → Gruppe", keine Bibliothek.
-            }
+    // MARK: - Adaptives Ein-Screen-Layout
 
-            Section("Übersichten") {
-                NavigationLink { FavoritesView() } label: {
-                    Label("Favoriten", systemImage: "star.fill").foregroundStyle(.yellow)
+    /// v1.10.123: Statt scrollender List ein Raster, das sich der Fläche
+    /// anpasst. Die Begrüssung nimmt oben ihren natürlichen Platz; der Rest der
+    /// Höhe wird auf die Kacheln verteilt, deren Größe (und damit Icon-/Text-
+    /// Größe) dynamisch berechnet wird. So ist immer alles auf EINEM Screen —
+    /// kurze Begrüssung → große Kacheln, lange Begrüssung → kompaktere Kacheln.
+    /// GeometryReader macht es zugleich responsiv über alle iPhone-Größen und
+    /// iPad (dort 3 Spalten statt 2). ScrollView bleibt als Sicherheitsnetz für
+    /// sehr kleine Geräte / sehr lange Begrüssungen erhalten.
+    private var adaptiveHome: some View {
+        GeometryReader { geo in
+            let specs = tileSpecs
+            let cols = geo.size.width > 700 ? 3 : 2
+            let rows = max(1, Int(ceil(Double(specs.count) / Double(cols))))
+            let outerPad: CGFloat = 16
+            let gap: CGFloat = 12
+            // Verfügbare Höhe fürs Raster = Screen − Begrüssung − Ränder − Lücke.
+            let avail = geo.size.height - greetingHeight - outerPad * 2 - gap
+            let tileH = max(78, (avail - CGFloat(rows - 1) * gap) / CGFloat(rows))
+            let columns = Array(repeating: GridItem(.flexible(), spacing: gap), count: cols)
+
+            ScrollView {
+                VStack(spacing: gap) {
+                    GreetingBanner()
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: GreetHeightKey.self, value: g.size.height)
+                        })
+                    LazyVGrid(columns: columns, spacing: gap) {
+                        ForEach(specs) { s in
+                            NavigationLink { s.dest() } label: { tileCard(s, height: tileH) }
+                                .buttonStyle(.plain)
+                        }
+                    }
                 }
-                NavigationLink { SharedWithMeView() } label: {
-                    Label("Für mich freigegeben", systemImage: "person.crop.circle.badge.checkmark")
-                        .foregroundStyle(Theme.tungstenBlue)
-                }
-                NavigationLink { LinksView() } label: {
-                    Label("Meine Links", systemImage: "link").foregroundStyle(Theme.tungstenBlue)
-                }
-                NavigationLink { SignaturesView() } label: {
-                    Label("Signaturen", systemImage: "signature").foregroundStyle(Theme.tungstenBlue)
-                }
-                NavigationLink { ActivityView() } label: {
-                    Label("Aktivität", systemImage: "clock.fill").foregroundStyle(Theme.tungstenBlue)
-                }
-                NavigationLink { TrashView() } label: {
-                    Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
-                }
+                .padding(outerPad)
+                .frame(minHeight: geo.size.height)   // mindestens ein Screen füllen
             }
+            .onPreferenceChange(GreetHeightKey.self) { greetingHeight = $0 }
         }
     }
 
-    private func scopeRow(_ tile: ScopeTile) -> some View {
-        // v1.10.71: Scope-Namen lokalisieren. Server liefert englisch
-        // ("Personal"/"Public"/"Group"), iOS zeigt es auf Deutsch.
-        let localized: String = {
-            switch tile.scope.lowercased() {
-            case "personal": return "Persönlich"
-            case "public": return "Öffentlich"
-            case "group": return "Gruppe"
-            default: return tile.scope.capitalized
+    /// Eine Kachel: Icon oben, Titel darunter. Alle Größen skalieren mit der
+    /// berechneten Kachelhöhe, damit das Layout auf jedem Gerät stimmig bleibt.
+    private func tileCard(_ s: TileSpec, height: CGFloat) -> some View {
+        VStack(spacing: max(4, height * 0.07)) {
+            Image(systemName: s.icon)
+                .font(.system(size: min(max(height * 0.30, 20), 46)))
+                .foregroundStyle(s.tint)
+            Text(s.title)
+                .font(.system(size: min(max(height * 0.13, 11), 16), weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if let sub = s.subtitle {
+                Text(sub)
+                    .font(.system(size: min(max(height * 0.10, 9), 12)))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
-        }()
-        return NavigationLink {
-            FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: tile.systemImage)
-                    .font(.title2)
-                    .foregroundStyle(Theme.tungstenBlue)
-                    .frame(width: 32)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localized).font(.body.weight(.medium))
-                    if tile.scope.lowercased() == "group" {
-                        // Bei Gruppen ist tile.name der Gruppen-Name — als Sub-Zeile.
-                        Text(tile.name).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.vertical, 4)
         }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Theme.tungstenBlue.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.tungstenBlue.opacity(0.12), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Kachel-Definitionen
+
+    /// Ein Kachel-Deskriptor. `dest` ist ein Closure, damit die Ziel-View erst
+    /// beim Antippen (nicht schon beim Rendern des Rasters) gebaut wird.
+    private struct TileSpec: Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String?
+        let icon: String
+        let tint: Color
+        let dest: () -> AnyView
+    }
+
+    private var tileSpecs: [TileSpec] {
+        var t: [TileSpec] = []
+        // Bibliotheken (Persönlich, dann Öffentlich) — wie in v1.10.103,
+        // Gruppen bewusst nicht als Kachel.
+        for tile in scopes.filter({ $0.scope.lowercased() == "personal" })
+                        + scopes.filter({ $0.scope.lowercased() == "public" }) {
+            let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
+                : tile.scope.lowercased() == "public" ? "Öffentlich" : tile.scope.capitalized
+            t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
+                              icon: tile.systemImage, tint: Theme.tungstenBlue,
+                              dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
+        }
+        // Übersichten.
+        t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: .yellow, dest: { AnyView(FavoritesView()) }))
+        t.append(TileSpec(id: "shared", title: "Freigegeben", subtitle: "für mich", icon: "person.crop.circle.badge.checkmark", tint: Theme.tungstenBlue, dest: { AnyView(SharedWithMeView()) }))
+        t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
+        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
+        t.append(TileSpec(id: "activity", title: "Aktivität", subtitle: nil, icon: "clock.fill", tint: Theme.tungstenBlue, dest: { AnyView(ActivityView()) }))
+        t.append(TileSpec(id: "trash", title: "Papierkorb", subtitle: nil, icon: "trash", tint: Theme.warnRed, dest: { AnyView(TrashView()) }))
+        return t
     }
 
     private func errorView(_ e: String) -> some View {
@@ -138,5 +180,13 @@ struct BrowseRootView: View {
             let isCancel = ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled
             if !isCancel && scopes.isEmpty { error = ex.localizedDescription }
         }
+    }
+}
+
+/// v1.10.123: Misst die Höhe der Begrüssung, damit das Raster den Rest füllt.
+private struct GreetHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
