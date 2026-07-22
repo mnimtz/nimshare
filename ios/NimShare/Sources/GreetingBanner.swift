@@ -165,13 +165,29 @@ final class OneShotLocation: NSObject, ObservableObject, CLLocationManagerDelega
     func requestOnce() async -> CLLocationCoordinate2D? {
         let status = manager.authorizationStatus
         if status == .denied || status == .restricted { return nil }
-        return await withCheckedContinuation { cont in
-            continuation = cont
-            if status == .notDetermined {
-                manager.requestWhenInUseAuthorization()
-            } else {
-                manager.requestLocation()
+        // v1.10.141: Läuft schon ein Request? Nicht doppelt starten — das würde
+        // die vorige Continuation überschreiben und leaken. Letzten Fix zurück.
+        if continuation != nil { return last }
+        // v1.10.141: cancellation-sicher + Timeout-Sicherheitsnetz, damit die
+        // Continuation IMMER genau einmal aufgelöst wird (behebt „leaked its
+        // continuation without resuming it"): kommt kein Standort-Callback —
+        // View verschwindet, requestLocation liefert nichts — löst spätestens
+        // der Timeout auf.
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { cont in
+                continuation = cont
+                if status == .notDetermined {
+                    manager.requestWhenInUseAuthorization()
+                } else {
+                    manager.requestLocation()
+                }
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 8_000_000_000)
+                    finish(last, setLast: false)   // no-op falls schon aufgelöst
+                }
             }
+        } onCancel: {
+            Task { @MainActor in self.finish(nil, setLast: false) }
         }
     }
 
