@@ -109,6 +109,14 @@ struct GreetingBanner: View {
             salutation = g.salutation
             message = g.message
         }
+        catch is CancellationError {
+            // v1.10.142: Abbruch (View abgebaut / Task gecancelt) ist KEIN
+            // echter Fehler. Vorher setzte der nackte catch hier den Offline-
+            // Fallback → message != nil → die initialLoad-Guard blockierte
+            // jeden weiteren Versuch, man hing die ganze Session auf der
+            // generischen Begrüssung. Jetzt nichts setzen, damit ein späterer
+            // Versuch die echte KI-Begrüssung noch lädt.
+        }
         catch {
             // v1.10.120: Server hat den Greeting-Endpoint (noch) nicht oder
             // ein Netzfehler — lokalen Fallback zeigen statt gar nichts, aber
