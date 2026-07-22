@@ -401,6 +401,194 @@ public class BrowseController : Controller
         return Ok(new { files, subfolders = subs });
     }
 
+    // ── v1.10.110: Ordner verschieben + kopieren (Rechtsklick-Parität mit Dateien) ──
+    public record FolderMoveReq(Guid FolderId);
+
+    /// <summary>
+    /// Verschiebt einen Ordner (reparent) in einen anderen Ziel-Ordner
+    /// DERSELBEN Bibliothek. Cross-Scope-Move ist bewusst nicht erlaubt —
+    /// das müsste Scope+Owner auf dem ganzen Teilbaum + allen Dateien
+    /// umschreiben. Validiert: kein Root, kein Zyklus, keine Namenskollision.
+    /// </summary>
+    [HttpPost("/api/v1/folders/{id:guid}/move")]
+    public async Task<IActionResult> MoveFolder(Guid id, [FromBody] FolderMoveReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (folder.ParentFolderId is null)
+            return Problem(statusCode: 422, title: "Cannot move a library root.");
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+
+        var target = await _db.Folders.FindAsync(new object[] { req.FolderId }, ct);
+        if (target is null) return NotFound();
+        if (!await _folders.CanWriteAsync(target, me, ct)) return Forbid();
+
+        if (target.Scope != folder.Scope)
+            return Problem(statusCode: 422, title: "Move within the same library only.");
+        if (folder.Scope == FileScope.Group && target.OwnerGroupId != folder.OwnerGroupId)
+            return Problem(statusCode: 422, title: "Move within the same group only.");
+        if (folder.Scope == FileScope.Personal && target.OwnerUserId != folder.OwnerUserId)
+            return Problem(statusCode: 422, title: "Move within your own library only.");
+        if (target.Id == folder.Id || await IsDescendantOfAsync(target.Id, folder.Id, ct))
+            return Problem(statusCode: 409, title: "Cannot move a folder into itself or one of its subfolders.");
+        if (await _db.Folders.AnyAsync(f => f.ParentFolderId == target.Id && f.Id != folder.Id && f.Name == folder.Name, ct))
+            return Problem(statusCode: 409, title: "A folder with that name already exists in the target.");
+
+        folder.ParentFolderId = target.Id;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { id = folder.Id });
+    }
+
+    public record FolderCopyReq(Guid FolderId);
+
+    /// <summary>
+    /// Kopiert einen Ordner rekursiv (Unterordner + Dateien als NEUE Blobs)
+    /// in einen Ziel-Ordner. Scope/Owner der Kopien richten sich nach dem
+    /// Ziel (wie bei Datei-Copy). Quota-Vorabprüfung bei Personal-Ziel.
+    /// </summary>
+    [HttpPost("/api/v1/folders/{id:guid}/copy")]
+    public async Task<IActionResult> CopyFolder(Guid id, [FromBody] FolderCopyReq req,
+        [FromServices] IBlobStorageService blobs, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var source = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (source is null) return NotFound();
+        if (!await _folders.CanReadAsync(source, me, ct)) return Forbid();
+
+        var target = await _db.Folders.FindAsync(new object[] { req.FolderId }, ct);
+        if (target is null) return NotFound();
+        if (!await _folders.CanWriteAsync(target, me, ct)) return Forbid();
+        if (target.Id == source.Id || await IsDescendantOfAsync(target.Id, source.Id, ct))
+            return Problem(statusCode: 409, title: "Cannot copy a folder into itself or one of its subfolders.");
+
+        // Quota-Vorabprüfung nur bei Personal-Ziel (Public/Group zählen nicht
+        // gegen User-Quota). Wir summieren den gesamten Quell-Teilbaum.
+        if (target.Scope == FileScope.Personal)
+        {
+            var subtree = await CollectSubtreeFolderIdsAsync(source.Id, ct);
+            var totalBytes = await _db.Files
+                .Where(f => subtree.Contains(f.FolderId!.Value)
+                    && f.Status == StorageFileStatus.Ready)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            var newOwnerId = target.OwnerUserId ?? me.Id;
+            var used = await _db.Files
+                .Where(f => f.OwnerId == newOwnerId && f.Scope == FileScope.Personal && f.Status != StorageFileStatus.Deleted)
+                .SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+            var owner = await _db.Users.FindAsync(new object[] { newOwnerId }, ct);
+            if (owner is not null && owner.QuotaBytes > 0 && used + totalBytes > owner.QuotaBytes)
+                return Problem(statusCode: 413, title: "Quota exceeded",
+                    detail: $"Copy needs {totalBytes / (1024 * 1024)} MB, only {(owner.QuotaBytes - used) / (1024 * 1024)} MB free.");
+        }
+
+        try
+        {
+            var newRootId = await CopyFolderRecursiveAsync(source, target, me, blobs, ct);
+            await _db.SaveChangesAsync(ct);
+            return Ok(new { id = newRootId });
+        }
+        catch (Exception ex)
+        {
+            return Problem(statusCode: 500, title: "Folder copy failed", detail: ex.Message);
+        }
+    }
+
+    /// <summary>True, wenn candidateId ein Nachfahre von ancestorId ist (Ahnenkette hoch).</summary>
+    private async Task<bool> IsDescendantOfAsync(Guid candidateId, Guid ancestorId, CancellationToken ct)
+    {
+        var visited = new HashSet<Guid>();
+        Guid? cur = candidateId;
+        while (cur is Guid c && visited.Add(c) && visited.Count <= 64)
+        {
+            if (c == ancestorId) return true;
+            cur = await _db.Folders.Where(x => x.Id == c).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
+        }
+        return false;
+    }
+
+    /// <summary>BFS über alle Folder-IDs des Teilbaums inkl. Wurzel (Quota-Summierung).</summary>
+    private async Task<HashSet<Guid>> CollectSubtreeFolderIdsAsync(Guid rootId, CancellationToken ct)
+    {
+        var all = new HashSet<Guid> { rootId };
+        var frontier = new List<Guid> { rootId };
+        var safety = 64;
+        while (frontier.Count > 0 && safety-- > 0)
+        {
+            var parents = frontier;
+            var kids = await _db.Folders
+                .Where(f => f.ParentFolderId != null && parents.Contains(f.ParentFolderId!.Value))
+                .Select(f => f.Id).ToListAsync(ct);
+            frontier = kids.Where(k => all.Add(k)).ToList();
+        }
+        return all;
+    }
+
+    private async Task<Guid> CopyFolderRecursiveAsync(Folder source, Folder targetParent, User me,
+        IBlobStorageService blobs, CancellationToken ct)
+    {
+        // Kollisionssicherer Name auf dieser Ebene.
+        var siblings = await _db.Folders.Where(f => f.ParentFolderId == targetParent.Id).Select(f => f.Name).ToListAsync(ct);
+        var name = source.Name;
+        if (siblings.Contains(name))
+        {
+            var i = 2;
+            while (siblings.Contains($"{source.Name} ({i})")) i++;
+            name = $"{source.Name} ({i})";
+        }
+
+        var newFolder = new Folder
+        {
+            Name = name,
+            ParentFolderId = targetParent.Id,
+            Scope = targetParent.Scope,
+            OwnerUserId = targetParent.Scope == FileScope.Personal ? targetParent.OwnerUserId : null,
+            OwnerGroupId = targetParent.Scope == FileScope.Group ? targetParent.OwnerGroupId : null,
+            CreatedByUserId = me.Id,
+            Emoji = source.Emoji,
+            Color = source.Color,
+            // IsPrivate bewusst NICHT übernommen — eine Kopie an neuer Stelle
+            // soll nicht still eine Privacy-Sperre erben.
+        };
+        _db.Folders.Add(newFolder);
+
+        var newOwnerId = targetParent.Scope == FileScope.Personal ? (targetParent.OwnerUserId ?? me.Id) : me.Id;
+        var files = await _db.Files
+            .Where(f => f.FolderId == source.Id && f.Status == StorageFileStatus.Ready).ToListAsync(ct);
+        foreach (var f in files)
+        {
+            var newFileId = Guid.NewGuid();
+            var safeName = f.Name.Replace('/', '_').Replace('\\', '_');
+            var newBlobPath = $"users/{newOwnerId:N}/{newFileId:N}/{safeName}";
+            await blobs.CopyAsync(f.BlobPath, newBlobPath, ct);
+            _db.Files.Add(new StorageFile
+            {
+                Id = newFileId,
+                OwnerId = newOwnerId,
+                Scope = targetParent.Scope,
+                GroupId = targetParent.OwnerGroupId,
+                FolderId = newFolder.Id,
+                Name = f.Name,
+                SizeBytes = f.SizeBytes,
+                ContentType = f.ContentType,
+                BlobPath = newBlobPath,
+                ContainerName = f.ContainerName,
+                Status = StorageFileStatus.Ready,
+                CreatedAt = DateTimeOffset.UtcNow,
+                ReadyAt = DateTimeOffset.UtcNow,
+                AiTags = f.AiTags,
+                AiRiskFlag = f.AiRiskFlag,
+                AiSummary = f.AiSummary,
+                AiSummaryLang = f.AiSummaryLang,
+            });
+        }
+
+        var subs = await _db.Folders.Where(f => f.ParentFolderId == source.Id).ToListAsync(ct);
+        foreach (var sub in subs)
+            await CopyFolderRecursiveAsync(sub, newFolder, me, blobs, ct);
+
+        return newFolder.Id;
+    }
+
     private string SafeReturn(string? url) =>
         !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : "/browse";
 

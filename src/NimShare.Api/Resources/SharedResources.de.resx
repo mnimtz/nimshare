@@ -1297,4 +1297,6 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>Sichtbarkeit konnte nicht geändert werden</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>Du darfst die Berechtigungen dieses Ordners nicht ändern.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Wähle eine Person aus den Vorschlägen.</value></data>
+  <data name="move.hint.single_folder" xml:space="preserve"><value>Wähle das Ziel für diesen Ordner.</value></data>
+  <data name="copy.hint.single_folder" xml:space="preserve"><value>Wähle den Zielordner für die Kopie.</value></data>
 </root>

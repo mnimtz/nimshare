@@ -1293,4 +1293,6 @@ Grazie per usare NimShare.</value></data>
   <data name="templates.set_default" xml:space="preserve"><value>Imposta come predefinito per questa lingua</value></data>
   <data name="templates.err_name_subject" xml:space="preserve"><value>Nome e oggetto sono obbligatori.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Modello salvato e selezionato.</value></data>
+  <data name="move.hint.single_folder" xml:space="preserve"><value>Scegli dove spostare questa cartella.</value></data>
+  <data name="copy.hint.single_folder" xml:space="preserve"><value>Scegli la cartella di destinazione della copia.</value></data>
 </root>

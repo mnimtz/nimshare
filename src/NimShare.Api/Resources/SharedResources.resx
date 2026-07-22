@@ -1291,4 +1291,6 @@ Thanks for using NimShare.</value></data>
   <data name="permissions.toggle_failed" xml:space="preserve"><value>Could not change the visibility</value></data>
   <data name="permissions.no_manage" xml:space="preserve"><value>You cannot change permissions on this folder.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Pick a user from the suggestions.</value></data>
+  <data name="move.hint.single_folder" xml:space="preserve"><value>Choose where to move this folder.</value></data>
+  <data name="copy.hint.single_folder" xml:space="preserve"><value>Choose the target folder for the copy.</value></data>
 </root>

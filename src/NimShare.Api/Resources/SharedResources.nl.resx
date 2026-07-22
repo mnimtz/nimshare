@@ -1292,4 +1292,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="templates.set_default" xml:space="preserve"><value>Instellen als standaard voor deze taal</value></data>
   <data name="templates.err_name_subject" xml:space="preserve"><value>Naam en onderwerpregel zijn verplicht.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Sjabloon opgeslagen en geselecteerd.</value></data>
+  <data name="move.hint.single_folder" xml:space="preserve"><value>Kies waar je deze map naartoe verplaatst.</value></data>
+  <data name="copy.hint.single_folder" xml:space="preserve"><value>Kies de doelmap voor de kopie.</value></data>
 </root>

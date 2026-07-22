@@ -1293,4 +1293,6 @@ Gracias por usar NimShare.</value></data>
   <data name="templates.set_default" xml:space="preserve"><value>Establecer como predeterminada para este idioma</value></data>
   <data name="templates.err_name_subject" xml:space="preserve"><value>El nombre y el asunto son obligatorios.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Plantilla guardada y seleccionada.</value></data>
+  <data name="move.hint.single_folder" xml:space="preserve"><value>Elige a dónde mover esta carpeta.</value></data>
+  <data name="copy.hint.single_folder" xml:space="preserve"><value>Elige la carpeta de destino de la copia.</value></data>
 </root>

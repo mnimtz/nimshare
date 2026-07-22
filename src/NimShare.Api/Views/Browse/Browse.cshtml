@@ -711,8 +711,13 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         // v1.10.64: Sub-Ordner direkt aus dem Kontext eines anderen Ordners
         // anlegen — spart einen Navigations-Sprung.
         showFor('newSubfolder', ctxTarget.kind === 'folder' && CAN_WRITE);
-        showFor('move',        ctxTarget.kind === 'file'   && CAN_WRITE && !ctxTarget.pinned);
-        showFor('copy',        ctxTarget.kind === 'file'   && !ctxTarget.pinned);
+        // v1.10.110: Move/Copy auch für Ordner. Optimistisch anzeigen; der
+        // Server validiert die eigentliche Berechtigung (CanManage fürs
+        // Verschieben, CanRead fürs Kopieren) und lehnt sonst ab.
+        showFor('move',        (ctxTarget.kind === 'file' && CAN_WRITE && !ctxTarget.pinned)
+                            || (ctxTarget.kind === 'folder'));
+        showFor('copy',        (ctxTarget.kind === 'file' && !ctxTarget.pinned)
+                            || (ctxTarget.kind === 'folder'));
         showFor('pin',         canPin);
         showFor('unpin',       ctxTarget.kind === 'file'   && ctxTarget.pinned);
         // Stash colour + emoji on the ctxTarget so the icon modal knows the
@@ -814,8 +819,9 @@ ctxMenu.querySelectorAll('button').forEach(b => {
         if (act === 'rename' && ctxTarget.kind === 'folder') nimRenameFolder(ctxTarget.id, ctxTarget.name);
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'newSubfolder' && ctxTarget.kind === 'folder') openNewFolderModal(ctxTarget.id);
-        if (act === 'move' && ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id);
-        if (act === 'copy' && ctxTarget.kind === 'file') openCopySingle(ctxTarget.id);
+        // v1.10.110: Ordner-Varianten mitrouten.
+        if (act === 'move') { if (ctxTarget.kind === 'file') openMoveSingle(ctxTarget.id); else openMoveSingleFolder(ctxTarget.id); }
+        if (act === 'copy') { if (ctxTarget.kind === 'file') openCopySingle(ctxTarget.id); else openCopySingleFolder(ctxTarget.id); }
         if (act === 'pin' && ctxTarget.kind === 'file') pinFile(ctxTarget.id);
         if (act === 'unpin' && ctxTarget.kind === 'file') unpinFile(ctxTarget.id);
         if (act === 'delete') {
@@ -834,11 +840,16 @@ ctxMenu.querySelectorAll('button').forEach(b => {
 // (b) welche Action beim Bestätigen läuft.
 let moveIds = [];
 let copyIds = [];
+// v1.10.110: Move/Copy können jetzt auch Ordner betreffen. moveKind/copyKind
+// steuert, ob performMove/performCopy den Datei- oder den Ordner-Endpoint ruft.
+let moveKind = 'file';
+let copyKind = 'file';
 const pickerState = { move: { target: null, expanded: new Set() },
                        copy: { target: null, expanded: new Set() } };
 
 async function openMoveModal() {
     moveIds = selectedIds();
+    moveKind = 'file';
     if (!moveIds.length) return;
     const tpl = @Json.Serialize(T["move.hint.multi"].Value);
     document.getElementById('moveHint').textContent = tpl.replace("{n}", moveIds.length);
@@ -846,20 +857,37 @@ async function openMoveModal() {
 }
 async function openMoveSingle(id) {
     moveIds = [id];
+    moveKind = 'file';
     document.getElementById('moveHint').textContent = @Json.Serialize(T["move.hint.single"].Value);
     await openFolderPicker('move', true);
 }
+// v1.10.110: Ordner verschieben (same-scope reparent).
+async function openMoveSingleFolder(id) {
+    moveIds = [id];
+    moveKind = 'folder';
+    document.getElementById('moveHint').textContent = @Json.Serialize(T["move.hint.single_folder"].Value);
+    await openFolderPicker('move', true, id);
+}
 async function openCopySingle(id) {
     copyIds = [id];
+    copyKind = 'file';
     document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single"].Value);
     await openFolderPicker('copy', /* scoped */ false);
+}
+// v1.10.110: Ordner kopieren (rekursiv, Ziel scope-übergreifend erlaubt).
+async function openCopySingleFolder(id) {
+    copyIds = [id];
+    copyKind = 'folder';
+    document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single_folder"].Value);
+    await openFolderPicker('copy', /* scoped */ false, id);
 }
 
 /// Renders a fold-out folder tree in modalMove / modalCopy. `scoped`
 /// limits the picker to the CURRENT scope (used by Move — cross-scope
 /// moves are refused by the server anyway); Copy shows all writable
-/// folders across all scopes.
-async function openFolderPicker(mode, scoped) {
+/// folders across all scopes. `excludeId` (optional) blendet einen Ordner
+/// aus der Auswahl aus — beim Ordner-Move/Copy den Ordner selbst.
+async function openFolderPicker(mode, scoped, excludeId) {
     pickerState[mode] = { target: null, expanded: new Set() };
     const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
     picker.innerHTML = '<div class="muted" style="padding:16px">Lädt…</div>';
@@ -881,6 +909,12 @@ async function openFolderPicker(mode, scoped) {
         if (!r.ok) { picker.innerHTML = '<div class="muted">Fehler beim Laden</div>'; return; }
         items = await r.json();
     }
+    // v1.10.110: beim Ordner-Move/Copy den Ordner selbst als Ziel ausblenden
+    // (der Server lehnt Zyklus eh mit 409 ab, aber so sieht der User ihn gar
+    // nicht erst). Unterordner filtern wir nicht clientseitig — der Baum
+    // enthält ohnehin nur beschreibbare Ordner, und der Server fängt den
+    // Descendant-Fall ab.
+    if (excludeId) items = items.filter(x => x.id !== excludeId);
     renderFolderPicker(picker, items, mode);
 }
 
@@ -975,25 +1009,31 @@ function renderFolderPicker(picker, items, mode) {
 async function performMove() {
     const t = pickerState.move.target;
     if (!t) return;
-    let ok = 0, fail = 0;
+    // v1.10.110: Ordner → Ordner-Endpoint, Datei → Datei-Endpoint.
+    const base = moveKind === 'folder' ? '/api/v1/folders/' : '/api/v1/files/';
+    let ok = 0, fail = 0, errMsg = '';
     for (const id of moveIds) {
-        const r = await fetch('/api/v1/files/' + id + '/move', {
+        const r = await fetch(base + id + '/move', {
             method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
             body: JSON.stringify({ folderId: t.id }),
         });
-        if (r.ok) ok++; else fail++;
+        if (r.ok) ok++; else {
+            fail++;
+            if (!errMsg) { try { const d = await r.json(); errMsg = d.detail || d.title || ('HTTP ' + r.status); } catch { errMsg = 'HTTP ' + r.status; } }
+        }
     }
     document.getElementById('modalMove').classList.remove('open');
-    if (fail) nimAlert(ok + ' verschoben, ' + fail + ' fehlgeschlagen', { kind: 'warning' });
+    if (fail) nimAlert(ok + ' verschoben, ' + fail + ' fehlgeschlagen: ' + errMsg, { kind: 'error' });
     else { nimToast('Verschoben nach ' + t.name, { kind: 'success' }); setTimeout(() => location.reload(), 400); }
 }
 
 async function performCopy() {
     const t = pickerState.copy.target;
     if (!t) return;
+    const base = copyKind === 'folder' ? '/api/v1/folders/' : '/api/v1/files/';
     let ok = 0, fail = 0, errMsg = '';
     for (const id of copyIds) {
-        const r = await fetch('/api/v1/files/' + id + '/copy', {
+        const r = await fetch(base + id + '/copy', {
             method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
             body: JSON.stringify({ folderId: t.id }),
         });
