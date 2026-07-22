@@ -88,28 +88,35 @@ final class OneShotLocation: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
-        switch m.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            m.requestLocation()
-        case .denied, .restricted:
-            finish(nil)
-        default:
-            break
+    // v1.10.119: Delegate-Callbacks kommen von CoreLocation auf einem
+    // beliebigen Thread → nonisolated. Wir ziehen NUR Sendable-Werte
+    // (Enum, Coordinate-Struct) raus und hüpfen für den State-Zugriff auf
+    // den MainActor. Behebt die Swift-6-Data-Race-Warnung.
+    nonisolated func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
+        let status = m.authorizationStatus
+        Task { @MainActor in
+            switch status {
+            case .authorizedWhenInUse, .authorizedAlways:
+                self.manager.requestLocation()
+            case .denied, .restricted:
+                self.finish(nil, setLast: false)
+            default:
+                break
+            }
         }
     }
 
-    func locationManager(_ m: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(_ m: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let c = locations.last?.coordinate
-        last = c
-        finish(c)
+        Task { @MainActor in self.finish(c, setLast: true) }
     }
 
-    func locationManager(_ m: CLLocationManager, didFailWithError error: Error) {
-        finish(nil)
+    nonisolated func locationManager(_ m: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in self.finish(nil, setLast: false) }
     }
 
-    private func finish(_ c: CLLocationCoordinate2D?) {
+    private func finish(_ c: CLLocationCoordinate2D?, setLast: Bool) {
+        if setLast { last = c }
         continuation?.resume(returning: c)
         continuation = nil
     }
