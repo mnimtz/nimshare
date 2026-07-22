@@ -486,7 +486,10 @@ namespace NimShare.Migrations.SqlServer.Migrations
                         column: x => x.OwnerUserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        // v1.10.115: NoAction — WikiPages hat mehrere Users-FKs
+                        // (CreatedBy/LastEditedBy), SQL Server verbietet Cascade
+                        // zusätzlich dazu.
+                        onDelete: ReferentialAction.NoAction);
                     table.ForeignKey(
                         name: "FK_WikiPages_WikiPages_ParentPageId",
                         column: x => x.ParentPageId,
@@ -552,7 +555,11 @@ namespace NimShare.Migrations.SqlServer.Migrations
                         column: x => x.OwnerId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        // v1.10.115: NoAction statt Cascade — SQL Server verbietet
+                        // mehrere Cascade-Pfade zur selben Tabelle (Files hat auch
+                        // LockedByUserId→Users). Datei-Aufräumen beim Löschen eines
+                        // Kontos macht DeleteAccount ohnehin im Code (inkl. Blobs).
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateTable(

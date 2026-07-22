@@ -61,7 +61,7 @@ struct PermissionsSheet: View {
                         Label("Nur für explizit Berechtigte sichtbar", systemImage: "lock.fill")
                     }
                     .disabled(!canManage || loading)
-                    .onChange(of: isPrivate) { newValue in
+                    .onChange(of: isPrivate) { _, newValue in
                         // Nur echte User-Umschaltungen an den Server senden.
                         guard newValue != serverIsPrivate else { return }
                         Task { await togglePrivacy(newValue) }
@@ -81,7 +81,7 @@ struct PermissionsSheet: View {
                     if kind == .user {
                         TextField("Nach Nutzer suchen…", text: $userQuery)
                             .autocorrectionDisabled()
-                            .onChange(of: userQuery) { newValue in
+                            .onChange(of: userQuery) { _, newValue in
                                 searchTask?.cancel()
                                 searchTask = Task { await searchUsers(newValue) }
                             }

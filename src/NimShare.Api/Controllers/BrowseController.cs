@@ -213,6 +213,7 @@ public class BrowseController : Controller
     /// </summary>
     public record CreateFolderReq(Guid ParentId, string Name);
 
+    [Authorize(Policy = "ApiUser")]
     [HttpPost("/api/v1/folders")]
     public async Task<IActionResult> ApiCreateFolder([FromBody] CreateFolderReq req,
         [FromServices] IActivityLogger activity, CancellationToken ct)
@@ -255,6 +256,7 @@ public class BrowseController : Controller
     /// context menu. Both fields are optional; null clears back to the default.</summary>
     public record FolderIconReq(string? Emoji, string? Color);
 
+    [Authorize(Policy = "ApiUser")]
     [HttpPost("/api/v1/folders/{id:guid}/icon")]
     public async Task<IActionResult> UpdateFolderIcon(Guid id, [FromBody] FolderIconReq req, CancellationToken ct)
     {
@@ -280,6 +282,7 @@ public class BrowseController : Controller
     /// alte Form-Post-Endpoint bleibt für den bestehenden Web-Flow.</summary>
     public record RenameReq(string Name);
 
+    [Authorize(Policy = "ApiUser")]
     [HttpPost("/api/v1/folders/{id:guid}/rename")]
     public async Task<IActionResult> ApiRenameFolder(Guid id, [FromBody] RenameReq req, CancellationToken ct)
     {
@@ -333,6 +336,7 @@ public class BrowseController : Controller
     /// </summary>
     public record PrivacyReq(bool IsPrivate);
 
+    [Authorize(Policy = "ApiUser")]
     [HttpPatch("/api/v1/folders/{id:guid}/privacy")]
     public async Task<IActionResult> UpdateFolderPrivacy(Guid id, [FromBody] PrivacyReq req, CancellationToken ct)
     {
@@ -357,6 +361,7 @@ public class BrowseController : Controller
     /// aktueller IsPrivate-Zustand + alle Grants (User + Group) auf DIESEN
     /// Ordner. Wir joinen DirectShare→User/Group für kompakte Anzeige.
     /// </summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/{id:guid}/permissions")]
     public async Task<IActionResult> FolderPermissions(Guid id, CancellationToken ct)
     {
@@ -407,6 +412,7 @@ public class BrowseController : Controller
     /// ruft diesen vor dem Delete-Post; wenn Inhalt gefunden → Extra-Frage
     /// „X Dateien + Y Unterordner mit in den Papierkorb?"
     /// </summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/{id:guid}/contents-count")]
     public async Task<IActionResult> FolderContentsCount(Guid id, CancellationToken ct)
     {
@@ -428,6 +434,7 @@ public class BrowseController : Controller
     /// das müsste Scope+Owner auf dem ganzen Teilbaum + allen Dateien
     /// umschreiben. Validiert: kein Root, kein Zyklus, keine Namenskollision.
     /// </summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpPost("/api/v1/folders/{id:guid}/move")]
     public async Task<IActionResult> MoveFolder(Guid id, [FromBody] FolderMoveReq req, CancellationToken ct)
     {
@@ -465,6 +472,7 @@ public class BrowseController : Controller
     /// in einen Ziel-Ordner. Scope/Owner der Kopien richten sich nach dem
     /// Ziel (wie bei Datei-Copy). Quota-Vorabprüfung bei Personal-Ziel.
     /// </summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpPost("/api/v1/folders/{id:guid}/copy")]
     public async Task<IActionResult> CopyFolder(Guid id, [FromBody] FolderCopyReq req,
         [FromServices] IBlobStorageService blobs, CancellationToken ct)
@@ -611,6 +619,7 @@ public class BrowseController : Controller
         !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : "/browse";
 
     /// <summary>Flat list of the current user's writable folders — used by the Move modal.</summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/writable")]
     public async Task<IActionResult> WritableFolders(string scope, Guid? exclude, CancellationToken ct)
     {
@@ -655,6 +664,7 @@ public class BrowseController : Controller
     /// hinweg. Fürs Copy-Modal, das Cross-Scope-Kopien erlaubt (z.B. Datei
     /// aus Group → Public). Rückgabe enthält Scope für Client-side Grouping.
     /// </summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/writable-all")]
     public async Task<IActionResult> WritableFoldersAll(CancellationToken ct)
     {
@@ -701,6 +711,7 @@ public class BrowseController : Controller
     }
 
     /// <summary>Full folder tree for the current scope — used by the left tree panel.</summary>
+    [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/tree")]
     public async Task<IActionResult> Tree(string scope, Guid? groupId, CancellationToken ct)
     {

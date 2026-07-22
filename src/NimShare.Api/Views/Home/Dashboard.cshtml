@@ -21,6 +21,14 @@
         <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
     </div>
 
+    @* v1.10.115: KI-Begrüssung — freundlich/humorvoll, per JS nachgeladen
+       damit die Seite nicht auf den AI-Call wartet. Wetter optional über
+       die Browser-Geolocation (nur wenn der Nutzer zustimmt). *@
+    <div id="aiGreeting" class="card" style="display:none;border-left:3px solid var(--tw-accent);background:var(--tw-accent-soft, rgba(0,40,84,.05));margin-bottom:var(--sp-4)">
+        <span style="font-size:1.1rem">👋</span>
+        <span id="aiGreetingText" style="margin-left:8px"></span>
+    </div>
+
     <div class="row" style="gap:var(--sp-6);align-items:stretch">
         <div class="card" style="flex:1;min-width:220px">
             <div class="muted">@T["dashboard.stat.files"]</div>
@@ -107,6 +115,29 @@
 
 @section Scripts {
 <script>
+// v1.10.115: KI-Begrüssung laden. Zuerst ohne Standort (sofort), dann —
+// falls der Nutzer Geolocation erlaubt — mit Wetter nachlegen.
+(function loadAiGreeting() {
+    const box = document.getElementById('aiGreeting');
+    const txt = document.getElementById('aiGreetingText');
+    if (!box || !txt) return;
+    async function fetchGreeting(lat, lon) {
+        let url = '/api/v1/ai/greeting';
+        if (lat != null && lon != null) url += '?lat=' + lat + '&lon=' + lon;
+        try {
+            const r = await fetch(url, { credentials: 'same-origin' });
+            if (!r.ok) return;
+            const d = await r.json();
+            if (d.greeting) { txt.textContent = d.greeting; box.style.display = ''; }
+        } catch {}
+    }
+    fetchGreeting(null, null);
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            p => fetchGreeting(p.coords.latitude.toFixed(3), p.coords.longitude.toFixed(3)),
+            () => {}, { timeout: 5000, maximumAge: 600000 });
+    }
+})();
 async function quickShare(fileId, name) {
     const dlg = document.getElementById('quickShareDlg');
     const T = dlg.dataset;
