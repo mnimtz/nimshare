@@ -411,6 +411,73 @@ public class AiController : ControllerBase
         return d == 0 ? 0 : dot / d;
     }
 
+    // v1.10.112 — RAG-Passagen-Auswahl (keyword-basiert, ohne Embedding-Call).
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "der","die","das","und","oder","ein","eine","ist","sind","wie","was","wo","wer",
+        "the","and","or","a","an","is","are","how","what","where","who","of","to","in","for","on","with","kann","man"
+    };
+
+    private static List<string> Tokenize(string s) =>
+        System.Text.RegularExpressions.Regex.Split(s.ToLowerInvariant(), @"[^\p{L}\p{Nd}]+")
+            .Where(t => t.Length >= 3 && !StopWords.Contains(t))
+            .Distinct().ToList();
+
+    /// <summary>
+    /// Wählt aus dem Volltext das für die Frage relevanteste Fenster: Text in
+    /// Absätze splitten, jeden Absatz nach Query-Term-Treffern scoren, die
+    /// besten aneinanderreihen bis maxChars erreicht ist. Findet keine Terme
+    /// Treffer (z. B. sehr kurze/leere Frage), fällt auf den Textanfang zurück.
+    /// </summary>
+    private static string SelectRelevantWindow(string text, List<string> queryTerms, int maxChars)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        text = text.Replace("\r", "");
+        if (text.Length <= maxChars) return text;
+        if (queryTerms.Count == 0) return text[..maxChars];
+
+        // Absätze (mind. Doppel-Zeilenumbruch), sonst grob in 400er-Blöcke.
+        var paras = text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
+            .SelectMany(p => p.Length > 600
+                ? SplitEvery(p, 500)
+                : new[] { p })
+            .ToList();
+        var scored = paras.Select((p, idx) =>
+        {
+            var lower = p.ToLowerInvariant();
+            var score = queryTerms.Sum(t => CountOccurrences(lower, t));
+            return (Para: p.Trim(), Score: score, Idx: idx);
+        })
+        .Where(x => x.Score > 0)
+        .OrderByDescending(x => x.Score)
+        .ToList();
+
+        if (scored.Count == 0) return text[..maxChars];
+
+        // Beste Absätze in ursprünglicher Reihenfolge zusammenfügen bis maxChars.
+        var chosen = scored.Take(8).OrderBy(x => x.Idx).Select(x => x.Para).ToList();
+        var sb = new System.Text.StringBuilder();
+        foreach (var p in chosen)
+        {
+            if (sb.Length + p.Length + 2 > maxChars) { sb.Append("…\n"); break; }
+            sb.Append(p).Append("\n\n");
+        }
+        return sb.ToString().Trim();
+    }
+
+    private static IEnumerable<string> SplitEvery(string s, int n)
+    {
+        for (int i = 0; i < s.Length; i += n)
+            yield return s.Substring(i, Math.Min(n, s.Length - i));
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        int count = 0, idx = 0;
+        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) != -1) { count++; idx += needle.Length; }
+        return count;
+    }
+
     // ── #7 Chat with files (RAG over embeddings) ───────────────────────────
 
     public record ChatReq(string Question, string Scope, Guid? GroupId);
@@ -452,27 +519,36 @@ public class AiController : ControllerBase
                 detail: detail);
         }
 
-        // Re-use the retrieval path (private helper — bypasses HTTP wrapper).
-        var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 6), me, access, ct);
+        // v1.10.112: mehr Kandidaten (8 statt 6) — bessere Abdeckung bei
+        // umfangreicher Dokumentation.
+        var (ok, hits, err) = await RetrieveHitsAsync(new SearchReq(req.Question, req.Scope, req.GroupId, 8), me, access, ct);
         if (!ok) return err!;
         if (hits.Count == 0)
             return Ok(new { answer = string.Empty, citations = Array.Empty<SearchHit>() });
 
-        // Build passages using cached summaries where available; expand with
-        // extracted text otherwise. Batch-load the files in ONE query — the
-        // hit-loop's FindAsync-per-hit was N+1 (7 db round-trips per chat).
+        // v1.10.112: Kern-Verbesserung für „Antworten stecken tief im Doku".
+        // Vorher fütterte der Chat nur die 2-3-Satz-AiSummary (bzw. die ersten
+        // 800 Zeichen) — Details im Fließtext waren unsichtbar. Jetzt ziehen
+        // wir den VOLLEN extrahierten Text jedes Treffers und picken die
+        // frage-relevanten Absätze per Keyword-Scoring (~1800 Zeichen/Doc).
+        // Kein Embedding-Call pro Chunk → günstig, keine Migration nötig.
         var hitIds = hits.Select(h => h.Id).ToArray();
         var files = await _db.Files
             .Where(f => hitIds.Contains(f.Id))
             .ToDictionaryAsync(f => f.Id, ct);
+        var queryTerms = Tokenize(req.Question);
         var passages = new List<string>();
         for (int i = 0; i < hits.Count; i++)
         {
             if (!files.TryGetValue(hits[i].Id, out var file)) continue;
-            var text = !string.IsNullOrEmpty(file.AiSummary)
-                ? file.AiSummary
-                : await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct) ?? file.Name;
-            passages.Add($"[{i + 1}] {file.Name}: {(text.Length > 800 ? text[..800] : text)}");
+            // Bevorzugt der bereits extrahierte Volltext (ExtractedText-Spalte),
+            // sonst frisch extrahieren, sonst die Summary als Fallback.
+            var fullText = !string.IsNullOrWhiteSpace(file.ExtractedText)
+                ? file.ExtractedText
+                : await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct)
+                  ?? file.AiSummary ?? file.Name;
+            var relevant = SelectRelevantWindow(fullText, queryTerms, maxChars: 1800);
+            passages.Add($"[{i + 1}] {file.Name}:\n{relevant}");
         }
         var provider = await _ai.CreateProviderAsync(ct);
         var lang = CurrentLanguageIso();

@@ -26,9 +26,11 @@ else
     <div class="chat-shell">
         <div class="chat-toolbar">
             <label for="chatScope">@T["chat.scope"]</label>
+            @* v1.10.112: Default auf Öffentlich — dort liegt die geteilte
+               Dokumentation, über die man typischerweise chattet. *@
             <select id="chatScope">
+                <option value="Public" selected>@T["browse.tile.public"]</option>
                 <option value="Personal">@T["browse.tile.personal"]</option>
-                <option value="Public">@T["browse.tile.public"]</option>
                 @foreach (var g in groups)
                 {
                     <option value="Group|@g.Id">@g.Name</option>

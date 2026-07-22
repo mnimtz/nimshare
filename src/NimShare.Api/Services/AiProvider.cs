@@ -344,10 +344,23 @@ public class GeminiProvider : IAiProvider
 
     public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default)
     {
-        var joined = string.Join("\n---\n", passages.Take(6));
-        return GenerateAsync(
-            $"Answer using ONLY these passages. Reply in ISO '{language}'. Cite passage numbers like [1] where helpful.\n\nPassages:\n{joined}\n\nQuestion: {question}",
-            0.2, ct);
+        // v1.10.112: besserer RAG-Prompt. Vorher „answer using ONLY these
+        // passages" ohne weitere Führung → knappe, oft unbefriedigende
+        // Antworten. Jetzt: als hilfreicher Doku-Assistent synthetisieren,
+        // konkret + strukturiert antworten, Quellen zitieren, ehrlich sagen
+        // wenn die Doku die Antwort nicht hergibt.
+        var joined = string.Join("\n\n===\n\n", passages.Take(8));
+        var prompt =
+            "Du bist ein hilfreicher Assistent, der Fragen ausschließlich anhand der bereitgestellten Dokument-Auszüge beantwortet. " +
+            $"Antworte in der Sprache mit ISO-Code '{language}'.\n\n" +
+            "Regeln:\n" +
+            "- Nutze NUR die Auszüge unten. Erfinde nichts dazu.\n" +
+            "- Fasse zusammen und kombiniere Infos über mehrere Auszüge hinweg, statt sie nur zu zitieren.\n" +
+            "- Sei konkret: nenne Schritte, Werte, Namen wenn sie im Text stehen. Bei mehreren Schritten nutze eine kurze Aufzählung.\n" +
+            "- Verweise auf die Quelle mit der Nummer in eckigen Klammern, z. B. [2].\n" +
+            "- Wenn die Auszüge die Frage nicht beantworten, sage das ehrlich und knapp — rate nicht.\n\n" +
+            $"Dokument-Auszüge:\n{joined}\n\nFrage: {question}\n\nAntwort:";
+        return GenerateAsync(prompt, 0.25, ct);
     }
 
     public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
