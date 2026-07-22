@@ -1310,4 +1310,16 @@ Merci d'utiliser NimShare.</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Un nom est requis.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Saisis une URL http(s) valide.</value></data>
   <data name="linkcol.confirm.delete" xml:space="preserve"><value>Supprimer le lien « {name} » ?</value></data>
+  <data name="nav.backup" xml:space="preserve"><value>Sauvegarde</value></data>
+  <data name="backup.title" xml:space="preserve"><value>Sauvegarde &amp; Restauration</value></data>
+  <data name="backup.lede" xml:space="preserve"><value>Sauvegarde complète de la base de données — tout sauf le contenu des fichiers dans le stockage blob.</value></data>
+  <data name="backup.export.title" xml:space="preserve"><value>Créer une sauvegarde</value></data>
+  <data name="backup.export.desc" xml:space="preserve"><value>Télécharge toute la base de données (utilisateurs, dossiers, métadonnées des fichiers, liens, groupes, réglages …) au format JSON. Le contenu réel des fichiers dans le stockage blob n'est PAS inclus.</value></data>
+  <data name="backup.export.button" xml:space="preserve"><value>Télécharger la sauvegarde</value></data>
+  <data name="backup.restore.title" xml:space="preserve"><value>Restaurer</value></data>
+  <data name="backup.restore.desc" xml:space="preserve"><value>Remplace TOUTE la base de données actuelle par la sauvegarde importée. Irréversible. Teste d'abord sur une instance hors production.</value></data>
+  <data name="backup.restore.file" xml:space="preserve"><value>Fichier de sauvegarde (.json)</value></data>
+  <data name="backup.restore.type_confirm" xml:space="preserve"><value>Tape RESTORE pour confirmer</value></data>
+  <data name="backup.restore.button" xml:space="preserve"><value>Restaurer maintenant</value></data>
+  <data name="backup.restore.confirm_js" xml:space="preserve"><value>Vraiment écraser toute la base de données avec cette sauvegarde ? Action irréversible.</value></data>
 </root>

@@ -1,0 +1,48 @@
+@{
+    ViewData["Title"] = T["backup.title"];
+    Layout = "_AppShell";
+}
+<div class="workspace-inner">
+    <div class="page-header">
+        <div>
+            <h1>💾 @T["backup.title"]</h1>
+            <p class="lede">@T["backup.lede"]</p>
+        </div>
+    </div>
+
+    @if (TempData["BackupOk"] is string ok)
+    {
+        <div class="card" style="border-left:3px solid var(--status-ok, #22a06b);background:rgba(34,160,107,.08)">@ok</div>
+    }
+    @if (TempData["BackupError"] is string err)
+    {
+        <div class="card" style="border-left:3px solid var(--status-critical, #d64545);background:rgba(214,69,69,.08)">@err</div>
+    }
+
+    <div class="card">
+        <h2>@T["backup.export.title"]</h2>
+        <p class="muted">@T["backup.export.desc"]</p>
+        <a class="btn btn-primary" href="/settings/backup/export">⬇ @T["backup.export.button"]</a>
+    </div>
+
+    <div class="card" style="margin-top:var(--sp-4);border:1px solid var(--status-critical, #d64545)">
+        <h2 style="color:var(--status-critical, #d64545)">@T["backup.restore.title"]</h2>
+        <p class="muted">@T["backup.restore.desc"]</p>
+        <form method="post" action="/settings/backup/restore" enctype="multipart/form-data"
+              onsubmit="return confirm('@T["backup.restore.confirm_js"]');">
+            @Html.AntiForgeryToken()
+            <div class="field">
+                <label>@T["backup.restore.file"]</label>
+                <input type="file" name="file" accept="application/json,.json" required/>
+            </div>
+            <div class="field">
+                <label>@T["backup.restore.type_confirm"]</label>
+                <input type="text" name="confirm" placeholder="RESTORE" autocomplete="off" required
+                       style="max-width:200px;font-family:monospace"/>
+            </div>
+            <button class="btn" style="background:var(--status-critical, #d64545);color:#fff" type="submit">
+                ⚠ @T["backup.restore.button"]
+            </button>
+        </form>
+    </div>
+</div>

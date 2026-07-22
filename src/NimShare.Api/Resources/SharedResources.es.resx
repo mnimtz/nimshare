@@ -1310,4 +1310,16 @@ Gracias por usar NimShare.</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Se requiere un nombre.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Introduce una URL http(s) válida.</value></data>
   <data name="linkcol.confirm.delete" xml:space="preserve"><value>¿Eliminar el enlace "{name}"?</value></data>
+  <data name="nav.backup" xml:space="preserve"><value>Copia de seguridad</value></data>
+  <data name="backup.title" xml:space="preserve"><value>Copia de seguridad y restauración</value></data>
+  <data name="backup.lede" xml:space="preserve"><value>Copia completa de la base de datos — todo excepto el contenido de los archivos en el blob storage.</value></data>
+  <data name="backup.export.title" xml:space="preserve"><value>Crear copia</value></data>
+  <data name="backup.export.desc" xml:space="preserve"><value>Descarga toda la base de datos (usuarios, carpetas, metadatos de archivos, enlaces, grupos, ajustes …) como archivo JSON. El contenido real de los archivos en el blob storage NO se incluye.</value></data>
+  <data name="backup.export.button" xml:space="preserve"><value>Descargar copia</value></data>
+  <data name="backup.restore.title" xml:space="preserve"><value>Restaurar</value></data>
+  <data name="backup.restore.desc" xml:space="preserve"><value>Reemplaza TODA la base de datos actual por la copia subida. No se puede deshacer. Pruébalo primero en una instancia de no producción.</value></data>
+  <data name="backup.restore.file" xml:space="preserve"><value>Archivo de copia (.json)</value></data>
+  <data name="backup.restore.type_confirm" xml:space="preserve"><value>Escribe RESTORE para confirmar</value></data>
+  <data name="backup.restore.button" xml:space="preserve"><value>Restaurar ahora</value></data>
+  <data name="backup.restore.confirm_js" xml:space="preserve"><value>¿Sobrescribir toda la base de datos con esta copia? No se puede deshacer.</value></data>
 </root>

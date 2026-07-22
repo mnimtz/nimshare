@@ -1314,4 +1314,16 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Ein Name ist erforderlich.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Gib eine gültige http(s)-URL ein.</value></data>
   <data name="linkcol.confirm.delete" xml:space="preserve"><value>Den Link „{name}" löschen?</value></data>
+  <data name="nav.backup" xml:space="preserve"><value>Backup</value></data>
+  <data name="backup.title" xml:space="preserve"><value>Backup &amp; Wiederherstellung</value></data>
+  <data name="backup.lede" xml:space="preserve"><value>Vollständiges Datenbank-Backup — alles außer den Datei-Inhalten im Blob-Speicher.</value></data>
+  <data name="backup.export.title" xml:space="preserve"><value>Backup erstellen</value></data>
+  <data name="backup.export.desc" xml:space="preserve"><value>Lädt die gesamte Datenbank (Nutzer, Ordner, Datei-Metadaten, Links, Gruppen, Einstellungen …) als JSON-Datei herunter. Die eigentlichen Datei-Inhalte im Blob-Speicher sind NICHT enthalten.</value></data>
+  <data name="backup.export.button" xml:space="preserve"><value>Backup herunterladen</value></data>
+  <data name="backup.restore.title" xml:space="preserve"><value>Wiederherstellen</value></data>
+  <data name="backup.restore.desc" xml:space="preserve"><value>Ersetzt die GESAMTE aktuelle Datenbank durch das hochgeladene Backup. Nicht umkehrbar. Teste es zuerst auf einer Nicht-Produktiv-Instanz.</value></data>
+  <data name="backup.restore.file" xml:space="preserve"><value>Backup-Datei (.json)</value></data>
+  <data name="backup.restore.type_confirm" xml:space="preserve"><value>Zum Bestätigen RESTORE eingeben</value></data>
+  <data name="backup.restore.button" xml:space="preserve"><value>Jetzt wiederherstellen</value></data>
+  <data name="backup.restore.confirm_js" xml:space="preserve"><value>Die gesamte Datenbank wirklich mit diesem Backup überschreiben? Das kann nicht rückgängig gemacht werden.</value></data>
 </root>

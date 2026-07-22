@@ -1309,4 +1309,16 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Een naam is verplicht.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Voer een geldige http(s)-URL in.</value></data>
   <data name="linkcol.confirm.delete" xml:space="preserve"><value>De link "{name}" verwijderen?</value></data>
+  <data name="nav.backup" xml:space="preserve"><value>Back-up</value></data>
+  <data name="backup.title" xml:space="preserve"><value>Back-up &amp; herstel</value></data>
+  <data name="backup.lede" xml:space="preserve"><value>Volledige database-back-up — alles behalve de bestandsinhoud in de blob-opslag.</value></data>
+  <data name="backup.export.title" xml:space="preserve"><value>Back-up maken</value></data>
+  <data name="backup.export.desc" xml:space="preserve"><value>Downloadt de hele database (gebruikers, mappen, bestandsmetadata, links, groepen, instellingen …) als JSON-bestand. De eigenlijke bestandsinhoud in de blob-opslag zit er NIET in.</value></data>
+  <data name="backup.export.button" xml:space="preserve"><value>Back-up downloaden</value></data>
+  <data name="backup.restore.title" xml:space="preserve"><value>Herstellen</value></data>
+  <data name="backup.restore.desc" xml:space="preserve"><value>Vervangt de HELE huidige database door de geüploade back-up. Onomkeerbaar. Test eerst op een niet-productie-instantie.</value></data>
+  <data name="backup.restore.file" xml:space="preserve"><value>Back-upbestand (.json)</value></data>
+  <data name="backup.restore.type_confirm" xml:space="preserve"><value>Typ RESTORE om te bevestigen</value></data>
+  <data name="backup.restore.button" xml:space="preserve"><value>Nu herstellen</value></data>
+  <data name="backup.restore.confirm_js" xml:space="preserve"><value>De hele database echt overschrijven met deze back-up? Dit kan niet ongedaan worden gemaakt.</value></data>
 </root>

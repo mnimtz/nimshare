@@ -1308,4 +1308,16 @@ Thanks for using NimShare.</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>A name is required.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Enter a valid http(s) URL.</value></data>
   <data name="linkcol.confirm.delete" xml:space="preserve"><value>Delete the link "{name}"?</value></data>
+  <data name="nav.backup" xml:space="preserve"><value>Backup</value></data>
+  <data name="backup.title" xml:space="preserve"><value>Backup &amp; Restore</value></data>
+  <data name="backup.lede" xml:space="preserve"><value>Full database backup — everything except the file contents in blob storage.</value></data>
+  <data name="backup.export.title" xml:space="preserve"><value>Create backup</value></data>
+  <data name="backup.export.desc" xml:space="preserve"><value>Downloads the entire database (users, folders, files metadata, links, groups, settings …) as a JSON file. The actual file contents in blob storage are NOT included.</value></data>
+  <data name="backup.export.button" xml:space="preserve"><value>Download backup</value></data>
+  <data name="backup.restore.title" xml:space="preserve"><value>Restore</value></data>
+  <data name="backup.restore.desc" xml:space="preserve"><value>Replaces the ENTIRE current database with the uploaded backup. This cannot be undone. Test on a non-production instance first.</value></data>
+  <data name="backup.restore.file" xml:space="preserve"><value>Backup file (.json)</value></data>
+  <data name="backup.restore.type_confirm" xml:space="preserve"><value>Type RESTORE to confirm</value></data>
+  <data name="backup.restore.button" xml:space="preserve"><value>Restore now</value></data>
+  <data name="backup.restore.confirm_js" xml:space="preserve"><value>Really overwrite the whole database with this backup? This cannot be undone.</value></data>
 </root>

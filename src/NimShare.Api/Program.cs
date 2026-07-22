@@ -333,6 +333,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<IFolderService, FolderService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddSingleton<ITotpService, TotpService>();
