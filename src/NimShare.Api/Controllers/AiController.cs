@@ -43,7 +43,11 @@ public class AiController : ControllerBase
     }
 
     // ── v1.10.114: KI-Startseiten-Begrüssung ────────────────────────────────
-    public record GreetingResponse(string Greeting);
+    // v1.10.128: Anrede (salutation) und Nachricht (body) getrennt, damit der
+    // Client sie ordentlich formatieren kann (Zeile 1 „Guten Morgen, Marcus,",
+    // darunter die Nachricht). `greeting` bleibt als voller Text erhalten
+    // (Web-Rückwärtskompatibilität).
+    public record GreetingResponse(string Greeting, string Salutation, string Body);
 
     /// <summary>
     /// Kurze, freundlich-lustige Begrüssung für die App-Startseite. Nutzt
@@ -102,11 +106,18 @@ public class AiController : ControllerBase
             statusText = await FetchStatusSummaryAsync(settings.StatusPageUrl!, httpFactory, ct);
         }
 
+        // v1.10.128: Anrede serverseitig bauen (Zeile 1), die KI liefert nur
+        // noch die Nachricht darunter — so kann der Client sauber formatieren.
+        var hiWord = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
+        var salutation = string.IsNullOrEmpty(firstName) ? $"{hiWord}," : $"{hiWord}, {firstName},";
+
         var lang = CurrentLanguageIso();
         var provider = await _ai.CreateProviderAsync(ct);
         var prompt =
-            $"Schreibe eine kurze, warme und leicht humorvolle Begrüssung (max. 3 Sätze) für {(string.IsNullOrEmpty(firstName) ? "den Nutzer" : firstName)} " +
-            $"in einer Datei-Sharing-App. Es ist gerade {daypart}. " +
+            "Schreibe eine kurze, warme und leicht humorvolle Nachricht (1–2 Sätze) für die Startseite " +
+            "einer Datei-Sharing-App. WICHTIG: KEINE Anrede und KEINEN Namen — die Begrüssung wird separat " +
+            "vorangestellt. Beginne direkt mit der Nachricht. " +
+            $"Es ist gerade {daypart}. " +
             (weather is not null ? $"Das Wetter am Standort ist {weather} — beziehe es locker mit ein. " : "") +
             (statusText is not null
                 ? $"Aktueller Cloud-Status (aus einer Status-Seite): »{statusText}«. "
@@ -115,27 +126,22 @@ public class AiController : ControllerBase
                         : $"Berücksichtige dabei AUSSCHLIESSLICH diese Produkte: {settings.StatusPageProducts}. Alle anderen Dienste auf der Seite ignorieren. ")
                   + "Fasse den Status der relevanten Produkte in EINEM lockeren Satz zusammen — alles grün → kurz beruhigend erwähnen; gibt es eine Störung, nenne die betroffenen Produkte knapp und sachlich (kein Alarm). "
                 : "") +
-            "Kein Emoji-Overkill (höchstens eins), keine Anführungszeichen, keine Anrede-Floskel wie 'Betreff'. " +
-            $"Antworte in der Sprache mit ISO-Code '{lang}'. Nur die Begrüssung, sonst nichts.";
+            "Kein Emoji-Overkill (höchstens eins), keine Anführungszeichen. " +
+            $"Antworte in der Sprache mit ISO-Code '{lang}'. Nur die Nachricht, sonst nichts.";
 
-        string greeting;
+        string body;
         try
         {
             var ai = await provider.FreeformAsync(prompt, lang, ct);
-            greeting = string.IsNullOrWhiteSpace(ai)
-                ? FallbackGreeting(firstName, hour)
-                : ai.Trim().Trim('"');
+            body = string.IsNullOrWhiteSpace(ai) ? FallbackBody() : ai.Trim().Trim('"');
         }
-        catch { greeting = FallbackGreeting(firstName, hour); }
+        catch { body = FallbackBody(); }
 
-        return Ok(new GreetingResponse(greeting));
+        var greeting = $"{salutation} {body}";
+        return Ok(new GreetingResponse(greeting, salutation, body));
     }
 
-    private static string FallbackGreeting(string name, int hour)
-    {
-        var hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
-        return string.IsNullOrEmpty(name) ? $"{hi}! Schön, dass du da bist." : $"{hi}, {name}! Schön, dass du da bist.";
-    }
+    private static string FallbackBody() => "schön, dass du da bist.";
 
     // ── v1.10.122: Wetter-Symbol + heutige Vorhersage ───────────────────────
     public record WeatherResponse(

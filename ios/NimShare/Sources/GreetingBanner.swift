@@ -7,7 +7,8 @@ import CoreLocation
 /// eine Begrüssung, nur ohne Wetter. Ein Fingertipp lädt eine neue.
 struct GreetingBanner: View {
     @EnvironmentObject var auth: AuthStore
-    @State private var text: String?
+    @State private var salutation: String?
+    @State private var message: String?
     @State private var loading = false
     @StateObject private var loc = OneShotLocation()
 
@@ -25,18 +26,22 @@ struct GreetingBanner: View {
 
     @ViewBuilder
     private var content: some View {
-        if let t = text {
-            // v1.10.125: Ausgewogene Grösse — nicht so gross dass sie die
-            // Kacheln verdrängt (v1.10.123), aber auch nicht so winzig dass
-            // sie verloren wirkt (v1.10.124). subheadline, primäre Farbe,
-            // vollständiger Text (kein hartes Abschneiden). Das adaptive
-            // Raster gleicht die natürliche Höhe automatisch aus.
+        if let msg = message {
+            // v1.10.128: Ordentliche Anrede-Formatierung — Zeile 1 die Anrede
+            // mit Namen (fett, ersetzt den weggefallenen „Dateien"-Titel),
+            // darunter die Nachricht. Links ausgerichtet, echter Header-Look.
             HStack(alignment: .top, spacing: 10) {
-                Text("👋").font(.title3)
-                Text(t)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    if let s = salutation, !s.isEmpty {
+                        Text("👋 \(s)")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    Text(msg)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer(minLength: 0)
                 if loading { ProgressView().controlSize(.mini) }
             }
@@ -56,7 +61,7 @@ struct GreetingBanner: View {
     }
 
     private func initialLoad() async {
-        guard text == nil, !loading else { return }
+        guard message == nil, !loading else { return }
         // Zuerst schnell ohne Standort begrüssen, damit sofort etwas da ist.
         await load(lat: nil, lon: nil)
         // Dann — falls möglich — mit Standort fürs Wetter nachlegen.
@@ -73,20 +78,29 @@ struct GreetingBanner: View {
     private func load(lat: Double?, lon: Double?) async {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
-        do { text = try await api.greeting(lat: lat, lon: lon) }
+        do {
+            let g = try await api.greeting(lat: lat, lon: lon)
+            salutation = g.salutation
+            message = g.message
+        }
         catch {
             // v1.10.120: Server hat den Greeting-Endpoint (noch) nicht oder
             // ein Netzfehler — lokalen Fallback zeigen statt gar nichts, aber
             // nur wenn noch keine (echte) Begrüssung geladen wurde.
-            if text == nil { text = localFallback() }
+            if message == nil {
+                let f = localFallback()
+                salutation = f.salutation
+                message = f.message
+            }
         }
     }
 
-    private func localFallback() -> String {
+    private func localFallback() -> (salutation: String, message: String) {
         let hour = Calendar.current.component(.hour, from: Date())
         let hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend"
         let name = auth.user?.displayName.split(separator: " ").first.map(String.init) ?? ""
-        return name.isEmpty ? "\(hi)! Schön, dass du da bist." : "\(hi), \(name)! Schön, dass du da bist."
+        let sal = name.isEmpty ? "\(hi)," : "\(hi), \(name),"
+        return (sal, "schön, dass du da bist.")
     }
 }
 

@@ -556,8 +556,14 @@ final class NimShareAPI: ObservableObject {
     }
 
     // v1.10.114: KI-Startseiten-Begrüssung (optional mit Standort fürs Wetter).
-    struct GreetingResponse: Decodable { let greeting: String }
-    func greeting(lat: Double? = nil, lon: Double? = nil) async throws -> String {
+    // v1.10.128: Anrede + Nachricht getrennt für ordentliche Formatierung.
+    struct GreetingResponse: Decodable {
+        let greeting: String
+        let salutation: String?
+        let body: String?
+    }
+    struct Greeting { let salutation: String; let message: String }
+    func greeting(lat: Double? = nil, lon: Double? = nil) async throws -> Greeting {
         var q: [URLQueryItem] = []
         if let la = lat, let lo = lon {
             q.append(.init(name: "lat", value: String(la)))
@@ -565,7 +571,12 @@ final class NimShareAPI: ObservableObject {
         }
         let req = request("GET", "api/v1/ai/greeting", query: q)
         let (data, _) = try await perform(req)
-        return try decode(GreetingResponse.self, data).greeting
+        let r = try decode(GreetingResponse.self, data)
+        // Ältere Server ohne salutation/body: ganzen Text als Nachricht zeigen.
+        if let s = r.salutation, let b = r.body, !s.isEmpty {
+            return Greeting(salutation: s, message: b)
+        }
+        return Greeting(salutation: "", message: r.greeting)
     }
 
     // v1.10.122: Wetter-Symbol + heutige Vorhersage fürs Nav-Symbol.

@@ -22,7 +22,12 @@ struct BrowseRootView: View {
                 adaptiveHome
             }
         }
-        .navigationTitle("Dateien")
+        // v1.10.128: Grosser „Dateien"-Titel entfernt — er nahm nur Platz weg.
+        // Die formatierte Begrüssung (Anrede + Nachricht) dient jetzt als
+        // Header. Nav-Bar bleibt inline (leer) erhalten, damit das Wetter-
+        // Symbol oben rechts weiter Platz hat.
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // v1.10.122: Wetter-Symbol oben rechts (heutige Vorhersage, GPS).
             ToolbarItem(placement: .topBarTrailing) {
