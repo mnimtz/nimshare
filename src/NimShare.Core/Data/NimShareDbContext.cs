@@ -43,6 +43,7 @@ public class NimShareDbContext : DbContext
     // v1.10.82: App-Store-Blocker (Apple 1.2 UGC-Guideline)
     public DbSet<BlockedUser> BlockedUsers => Set<BlockedUser>();
     public DbSet<ContentReport> ContentReports => Set<ContentReport>();
+    public DbSet<LinkEntry> LinkEntries => Set<LinkEntry>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

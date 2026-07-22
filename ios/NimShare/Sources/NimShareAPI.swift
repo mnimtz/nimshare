@@ -857,34 +857,44 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
-    // ── Wiki (mapped to server PageDto) ──
-    struct WikiPageDto: Codable, Identifiable, Hashable {
+    // ── v1.10.111: Linksammlung (löst Wiki ab) ──
+    // Eine geteilte, flache Liste. Alle sehen sie, nur Admins pflegen.
+    struct LinkEntryDto: Codable, Identifiable, Hashable {
         let id: UUID
-        let scope: String
-        let ownerUserId: UUID?
-        let ownerGroupId: UUID?
-        let parentPageId: UUID?
         let title: String
-        let slug: String
-        let contentMarkdown: String?
+        let url: String
+        let description: String?
+        let emoji: String?
         let sortOrder: Int
-        let createdByName: String
-        let lastEditedByName: String?
-        let createdAt: Date
-        let updatedAt: Date
     }
-    /// Scope: "Personal" | "Public" | "Group".
-    func wikiPages(scope: String, groupId: UUID? = nil) async throws -> [WikiPageDto] {
-        var q: [URLQueryItem] = [.init(name: "scope", value: scope)]
-        if let g = groupId { q.append(.init(name: "groupId", value: g.uuidString)) }
-        let req = request("GET", "api/v1/wiki/pages", query: q)
+    func linkCollection() async throws -> [LinkEntryDto] {
+        let req = request("GET", "api/v1/link-collection")
         let (data, _) = try await perform(req)
-        return try decode([WikiPageDto].self, data)
+        return try decode([LinkEntryDto].self, data)
     }
-    func wikiPage(_ id: UUID) async throws -> WikiPageDto {
-        let req = request("GET", "api/v1/wiki/pages/\(id)")
+    struct LinkEntryBody: Encodable {
+        let title: String
+        let url: String
+        let description: String?
+        let emoji: String?
+    }
+    @discardableResult
+    func createLink(title: String, url: String, description: String?, emoji: String?) async throws -> LinkEntryDto {
+        let body = try Self.jsonEncoder.encode(LinkEntryBody(title: title, url: url, description: description, emoji: emoji))
+        let req = request("POST", "api/v1/link-collection", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
-        return try decode(WikiPageDto.self, data)
+        return try decode(LinkEntryDto.self, data)
+    }
+    @discardableResult
+    func updateLink(id: UUID, title: String, url: String, description: String?, emoji: String?) async throws -> LinkEntryDto {
+        let body = try Self.jsonEncoder.encode(LinkEntryBody(title: title, url: url, description: description, emoji: emoji))
+        let req = request("PUT", "api/v1/link-collection/\(id)", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(LinkEntryDto.self, data)
+    }
+    func deleteLink(id: UUID) async throws {
+        let req = request("DELETE", "api/v1/link-collection/\(id)")
+        _ = try await perform(req)
     }
 
     // ── API-Tokens ──

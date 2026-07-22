@@ -35,10 +35,11 @@ struct ProfileView: View {
                 }
             }
 
-            // v1.10.88: iOS-Parität — Wiki, API-Tokens, Webhooks
+            // v1.10.88: iOS-Parität — Linksammlung, API-Tokens, Webhooks
+            // (v1.10.111: Wiki durch Linksammlung ersetzt)
             Section("Wissen & Automatisierung") {
-                NavigationLink { WikiView() } label: {
-                    Label("Wiki", systemImage: "book")
+                NavigationLink { LinkCollectionView() } label: {
+                    Label("Linksammlung", systemImage: "link")
                 }
                 NavigationLink { ApiTokensView() } label: {
                     Label("API-Tokens", systemImage: "key")

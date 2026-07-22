@@ -20,39 +20,92 @@
 }
 else
 {
-    <div class="card" style="max-width:900px">
-        <div class="row" style="gap:var(--sp-3);flex-wrap:wrap;align-items:flex-end">
-            <div class="field" style="flex:1;min-width:220px">
-                <label>@T["chat.scope"]</label>
-                <select id="chatScope">
-                    <option value="Personal">@T["browse.tile.personal"]</option>
-                    <option value="Public">@T["browse.tile.public"]</option>
-                    @foreach (var g in groups)
-                    {
-                        <option value="Group|@g.Id">@g.Name</option>
-                    }
-                </select>
-            </div>
+    @* v1.10.111: Chat als vollhohe, luftige Fläche statt kleiner fixer Box.
+       Flex-Column füllt den verfügbaren Viewport; Log wächst, Eingabe bleibt
+       unten angedockt. *@
+    <div class="chat-shell">
+        <div class="chat-toolbar">
+            <label for="chatScope">@T["chat.scope"]</label>
+            <select id="chatScope">
+                <option value="Personal">@T["browse.tile.personal"]</option>
+                <option value="Public">@T["browse.tile.public"]</option>
+                @foreach (var g in groups)
+                {
+                    <option value="Group|@g.Id">@g.Name</option>
+                }
+            </select>
+            <span class="chat-toolbar-note muted">@T["chat.note"]</span>
         </div>
-        <div id="chatLog" style="min-height:200px;max-height:520px;overflow-y:auto;padding:var(--sp-3);background:var(--tw-gray-100);border-radius:var(--r-sm);margin-top:var(--sp-3)"></div>
-        <div class="row" style="margin-top:var(--sp-3);gap:var(--sp-2)">
-            <input type="text" id="chatQ" placeholder="@T["chat.placeholder"]" style="flex:1" onkeydown="if(event.key==='Enter')chatSend()"/>
+        <div id="chatLog" class="chat-log">
+            <div class="chat-empty muted">💬 @T["chat.placeholder"]</div>
+        </div>
+        <div class="chat-input-row">
+            <textarea id="chatQ" rows="1" placeholder="@T["chat.placeholder"]"
+                      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
+                      oninput="chatAutoGrow(this)"></textarea>
             <button class="btn btn-primary" id="chatBtn" onclick="chatSend()">@T["chat.ask"]</button>
         </div>
-        <div class="muted" style="margin-top:var(--sp-3);font-size:.8rem">@T["chat.note"]</div>
     </div>
+    <style>
+        /* Chat füllt den Bereich unter dem Page-Header. 100dvh minus grobe
+           Header/Padding-Reserve; auf Mobil greift dvh sauber. */
+        .chat-shell {
+            display: flex; flex-direction: column;
+            height: calc(100dvh - 210px); min-height: 420px;
+            max-width: 1100px; background: var(--tw-white);
+            border: 1px solid var(--tw-gray-300); border-radius: var(--r-md);
+            overflow: hidden;
+        }
+        .chat-toolbar {
+            display: flex; align-items: center; gap: var(--sp-3);
+            padding: var(--sp-3) var(--sp-4);
+            border-bottom: 1px solid var(--tw-gray-200); flex-wrap: wrap;
+        }
+        .chat-toolbar label { font-weight: 600; font-size: .85rem; }
+        .chat-toolbar select { min-width: 200px; }
+        .chat-toolbar-note { font-size: .78rem; margin-left: auto; }
+        .chat-log {
+            flex: 1; overflow-y: auto; padding: var(--sp-4);
+            background: var(--tw-gray-100); display: flex; flex-direction: column;
+        }
+        .chat-empty { margin: auto; font-size: 1rem; opacity: .7; }
+        .chat-input-row {
+            display: flex; gap: var(--sp-2); align-items: flex-end;
+            padding: var(--sp-3) var(--sp-4);
+            border-top: 1px solid var(--tw-gray-200); background: var(--tw-white);
+        }
+        .chat-input-row textarea {
+            flex: 1; resize: none; max-height: 160px; line-height: 1.5;
+            padding: 10px 12px; border-radius: var(--r-sm);
+            border: 1px solid var(--tw-gray-300); font: inherit;
+        }
+        .chat-input-row .btn { align-self: stretch; padding-inline: var(--sp-5); }
+        @@media (max-width: 640px) {
+            .chat-shell { height: calc(100dvh - 170px); }
+            .chat-toolbar-note { display: none; }
+        }
+    </style>
 }
 
 <script>
 const log = document.getElementById('chatLog');
+// v1.10.111: Eingabe-Textarea wächst mit dem Text (bis max-height per CSS).
+function chatAutoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
 async function chatSend() {
-    const q = document.getElementById('chatQ').value.trim();
+    const qEl = document.getElementById('chatQ');
+    const q = qEl.value.trim();
     if (!q) return;
+    // Leerstaat-Hinweis beim ersten Senden entfernen.
+    log.querySelector('.chat-empty')?.remove();
     const scopeSel = document.getElementById('chatScope').value;
     let scope = scopeSel, groupId = null;
     if (scopeSel.startsWith('Group|')) { scope = 'Group'; groupId = scopeSel.slice(6); }
     appendMsg('you', q);
-    document.getElementById('chatQ').value = '';
+    qEl.value = '';
+    chatAutoGrow(qEl);
     document.getElementById('chatBtn').disabled = true;
     appendMsg('assistant', @Json.Serialize(T["chat.thinking"].Value), 'thinking');
     try {
@@ -90,9 +143,12 @@ async function chatSend() {
 function appendMsg(who, text, extra) {
     const el = document.createElement('div');
     el.className = 'msg ' + who + (extra ? ' ' + extra : '');
-    el.style.cssText = 'margin:6px 0;padding:8px 12px;border-radius:8px;line-height:1.4;white-space:pre-wrap;'
-        + (who==='you' ? 'background:var(--tw-accent);color:white;text-align:right;margin-left:20%;'
-                       : 'background:white;border:1px solid var(--tw-gray-300);margin-right:20%;');
+    // v1.10.111: Bubbles per align-self statt margin-hack; max-width für
+    // angenehme Zeilenlänge im breiteren Fenster.
+    el.style.cssText = 'margin:6px 0;padding:10px 14px;border-radius:12px;line-height:1.5;'
+        + 'white-space:pre-wrap;max-width:78%;'
+        + (who==='you' ? 'background:var(--tw-accent);color:white;align-self:flex-end;border-bottom-right-radius:4px;'
+                       : 'background:white;border:1px solid var(--tw-gray-300);align-self:flex-start;border-bottom-left-radius:4px;');
     el.textContent = text;
     log.appendChild(el);
     log.scrollTop = log.scrollHeight;

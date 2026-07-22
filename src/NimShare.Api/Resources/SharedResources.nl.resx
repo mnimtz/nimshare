@@ -1294,4 +1294,19 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Sjabloon opgeslagen en geselecteerd.</value></data>
   <data name="move.hint.single_folder" xml:space="preserve"><value>Kies waar je deze map naartoe verplaatst.</value></data>
   <data name="copy.hint.single_folder" xml:space="preserve"><value>Kies de doelmap voor de kopie.</value></data>
+  <data name="nav.linkcol" xml:space="preserve"><value>Linkverzameling</value></data>
+  <data name="linkcol.title" xml:space="preserve"><value>Linkverzameling</value></data>
+  <data name="linkcol.lede" xml:space="preserve"><value>Handige, gedeelde links voor het hele team.</value></data>
+  <data name="linkcol.add" xml:space="preserve"><value>Link toevoegen</value></data>
+  <data name="linkcol.add_first" xml:space="preserve"><value>Eerste link toevoegen</value></data>
+  <data name="linkcol.edit" xml:space="preserve"><value>Link bewerken</value></data>
+  <data name="linkcol.empty" xml:space="preserve"><value>Nog geen links.</value></data>
+  <data name="linkcol.field.emoji" xml:space="preserve"><value>Pictogram</value></data>
+  <data name="linkcol.field.title" xml:space="preserve"><value>Naam</value></data>
+  <data name="linkcol.field.url" xml:space="preserve"><value>Link (URL)</value></data>
+  <data name="linkcol.field.desc" xml:space="preserve"><value>Beschrijving</value></data>
+  <data name="linkcol.field.desc_ph" xml:space="preserve"><value>Optionele korte notitie</value></data>
+  <data name="linkcol.err.title" xml:space="preserve"><value>Een naam is verplicht.</value></data>
+  <data name="linkcol.err.url" xml:space="preserve"><value>Voer een geldige http(s)-URL in.</value></data>
+  <data name="linkcol.confirm.delete" xml:space="preserve"><value>De link "{name}" verwijderen?</value></data>
 </root>

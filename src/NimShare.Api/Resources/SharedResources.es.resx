@@ -1295,4 +1295,19 @@ Gracias por usar NimShare.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Plantilla guardada y seleccionada.</value></data>
   <data name="move.hint.single_folder" xml:space="preserve"><value>Elige a dónde mover esta carpeta.</value></data>
   <data name="copy.hint.single_folder" xml:space="preserve"><value>Elige la carpeta de destino de la copia.</value></data>
+  <data name="nav.linkcol" xml:space="preserve"><value>Colección de enlaces</value></data>
+  <data name="linkcol.title" xml:space="preserve"><value>Colección de enlaces</value></data>
+  <data name="linkcol.lede" xml:space="preserve"><value>Enlaces útiles compartidos para todo el equipo.</value></data>
+  <data name="linkcol.add" xml:space="preserve"><value>Añadir enlace</value></data>
+  <data name="linkcol.add_first" xml:space="preserve"><value>Añadir el primer enlace</value></data>
+  <data name="linkcol.edit" xml:space="preserve"><value>Editar enlace</value></data>
+  <data name="linkcol.empty" xml:space="preserve"><value>Aún no hay enlaces.</value></data>
+  <data name="linkcol.field.emoji" xml:space="preserve"><value>Icono</value></data>
+  <data name="linkcol.field.title" xml:space="preserve"><value>Nombre</value></data>
+  <data name="linkcol.field.url" xml:space="preserve"><value>Enlace (URL)</value></data>
+  <data name="linkcol.field.desc" xml:space="preserve"><value>Descripción</value></data>
+  <data name="linkcol.field.desc_ph" xml:space="preserve"><value>Nota breve (opcional)</value></data>
+  <data name="linkcol.err.title" xml:space="preserve"><value>Se requiere un nombre.</value></data>
+  <data name="linkcol.err.url" xml:space="preserve"><value>Introduce una URL http(s) válida.</value></data>
+  <data name="linkcol.confirm.delete" xml:space="preserve"><value>¿Eliminar el enlace "{name}"?</value></data>
 </root>

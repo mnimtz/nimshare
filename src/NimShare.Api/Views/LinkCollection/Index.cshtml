@@ -1,0 +1,165 @@
+@using NimShare.Core.Entities
+@{
+    ViewData["Title"] = T["linkcol.title"];
+    Layout = "_AppShell";
+    var links = (List<LinkEntry>)(ViewData["Links"] ?? new List<LinkEntry>());
+    var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+}
+<div class="page-header">
+    <div>
+        <h1>🔗 @T["linkcol.title"]</h1>
+        <p class="lede">@T["linkcol.lede"]</p>
+    </div>
+    @if (isAdmin)
+    {
+        <div>
+            <button class="btn btn-primary" onclick="lcOpenAdd()">➕ @T["linkcol.add"]</button>
+        </div>
+    }
+</div>
+
+@if (links.Count == 0)
+{
+    <div class="card" style="text-align:center;padding:48px 20px">
+        <div style="font-size:3rem;opacity:.5">🔗</div>
+        <p class="muted" style="margin-top:8px">@T["linkcol.empty"]</p>
+        @if (isAdmin)
+        {
+            <button class="btn btn-primary" style="margin-top:12px" onclick="lcOpenAdd()">➕ @T["linkcol.add_first"]</button>
+        }
+    </div>
+}
+else
+{
+    <div class="lc-grid" id="lcGrid">
+        @foreach (var l in links)
+        {
+            <div class="lc-card" data-id="@l.Id">
+                <a class="lc-open" href="@l.Url" target="_blank" rel="noopener noreferrer">
+                    <span class="lc-emoji">@(string.IsNullOrEmpty(l.Emoji) ? "🔗" : l.Emoji)</span>
+                    <span class="lc-body">
+                        <span class="lc-title">@l.Title</span>
+                        @if (!string.IsNullOrEmpty(l.Description))
+                        {
+                            <span class="lc-desc">@l.Description</span>
+                        }
+                        <span class="lc-url">@l.Url</span>
+                    </span>
+                    <span class="lc-arrow">↗</span>
+                </a>
+                @if (isAdmin)
+                {
+                    <div class="lc-admin">
+                        <button title="@T["actions.rename"]" onclick='lcOpenEdit(@Json.Serialize(l.Id), @Json.Serialize(l.Title), @Json.Serialize(l.Url), @Json.Serialize(l.Description ?? ""), @Json.Serialize(l.Emoji ?? ""))'>✎</button>
+                        <button title="@T["actions.delete"]" onclick='lcDelete(@Json.Serialize(l.Id), @Json.Serialize(l.Title))'>🗑</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@if (isAdmin)
+{
+    <div class="modal-backdrop" id="lcModal" onclick="if(event.target===this)closeLcModal()">
+        <div class="modal-panel" style="max-width:520px">
+            <h2 id="lcModalTitle">@T["linkcol.add"]</h2>
+            <input type="hidden" id="lcId"/>
+            <div class="field">
+                <label>@T["linkcol.field.emoji"]</label>
+                <input type="text" id="lcEmoji" maxlength="4" placeholder="🔗" style="width:80px;text-align:center;font-size:1.4rem"/>
+            </div>
+            <div class="field">
+                <label>@T["linkcol.field.title"] *</label>
+                <input type="text" id="lcTitle" placeholder="Tungsten Software Center"/>
+            </div>
+            <div class="field">
+                <label>@T["linkcol.field.url"] *</label>
+                <input type="url" id="lcUrl" placeholder="https://delivery.tungstenautomation.com/"/>
+            </div>
+            <div class="field">
+                <label>@T["linkcol.field.desc"]</label>
+                <input type="text" id="lcDesc" placeholder="@T["linkcol.field.desc_ph"]"/>
+            </div>
+            <div class="actions">
+                <button class="btn btn-ghost" onclick="closeLcModal()">@T["modal.cancel"]</button>
+                <button class="btn btn-primary" id="lcSaveBtn" onclick="lcSave()">@T["modal.save"]</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .lc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--sp-3); }
+    .lc-card { position: relative; border: 1px solid var(--tw-gray-300); border-radius: var(--r-md);
+               background: var(--tw-white); transition: box-shadow .12s, border-color .12s; }
+    .lc-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); border-color: var(--tw-accent); }
+    .lc-open { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-4);
+               text-decoration: none; color: inherit; }
+    .lc-emoji { font-size: 1.8rem; line-height: 1; flex: 0 0 auto; }
+    .lc-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+    .lc-title { font-weight: 600; color: var(--tw-primary); }
+    .lc-desc { font-size: .85rem; color: var(--tw-muted-blue); }
+    .lc-url { font-size: .75rem; color: var(--tw-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lc-arrow { color: var(--tw-muted-blue); flex: 0 0 auto; }
+    .lc-admin { position: absolute; top: 6px; right: 6px; display: none; gap: 2px; }
+    .lc-card:hover .lc-admin { display: flex; }
+    .lc-admin button { background: var(--tw-white); border: 1px solid var(--tw-gray-300); border-radius: 6px;
+                       cursor: pointer; padding: 3px 7px; font-size: .85rem; }
+    .lc-admin button:hover { background: var(--tw-gray-100); }
+</style>
+
+@if (isAdmin)
+{
+    <script>
+    function lcOpenAdd() {
+        document.getElementById('lcModalTitle').textContent = @Json.Serialize(T["linkcol.add"].Value);
+        document.getElementById('lcId').value = '';
+        document.getElementById('lcEmoji').value = '';
+        document.getElementById('lcTitle').value = '';
+        document.getElementById('lcUrl').value = '';
+        document.getElementById('lcDesc').value = '';
+        document.getElementById('lcModal').classList.add('open');
+        setTimeout(() => document.getElementById('lcTitle').focus(), 50);
+    }
+    function lcOpenEdit(id, title, url, desc, emoji) {
+        document.getElementById('lcModalTitle').textContent = @Json.Serialize(T["linkcol.edit"].Value);
+        document.getElementById('lcId').value = id;
+        document.getElementById('lcEmoji').value = emoji || '';
+        document.getElementById('lcTitle').value = title || '';
+        document.getElementById('lcUrl').value = url || '';
+        document.getElementById('lcDesc').value = desc || '';
+        document.getElementById('lcModal').classList.add('open');
+    }
+    function closeLcModal() { document.getElementById('lcModal').classList.remove('open'); }
+    async function lcSave() {
+        const id = document.getElementById('lcId').value;
+        const body = {
+            title: document.getElementById('lcTitle').value.trim(),
+            url: document.getElementById('lcUrl').value.trim(),
+            description: document.getElementById('lcDesc').value.trim(),
+            emoji: document.getElementById('lcEmoji').value.trim(),
+        };
+        if (!body.title) { nimAlert(@Json.Serialize(T["linkcol.err.title"].Value)); return; }
+        if (!/^https?:\/\//i.test(body.url)) { nimAlert(@Json.Serialize(T["linkcol.err.url"].Value)); return; }
+        document.getElementById('lcSaveBtn').disabled = true;
+        try {
+            const url = id ? '/api/v1/link-collection/' + id : '/api/v1/link-collection';
+            const method = id ? 'PUT' : 'POST';
+            const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, credentials: 'same-origin', body: JSON.stringify(body) });
+            if (!r.ok) {
+                let msg = 'HTTP ' + r.status;
+                try { const p = await r.json(); msg = p.title || p.detail || msg; } catch {}
+                nimAlert(msg, { kind: 'error' }); return;
+            }
+            location.reload();
+        } finally { document.getElementById('lcSaveBtn').disabled = false; }
+    }
+    async function lcDelete(id, title) {
+        const tpl = @Json.Serialize(T["linkcol.confirm.delete"].Value);
+        if (!await nimConfirm(tpl.replace('{name}', title), { danger: true })) return;
+        const r = await fetch('/api/v1/link-collection/' + id, { method: 'DELETE', credentials: 'same-origin' });
+        if (r.ok) location.reload(); else nimAlert('HTTP ' + r.status, { kind: 'error' });
+    }
+    </script>
+}
