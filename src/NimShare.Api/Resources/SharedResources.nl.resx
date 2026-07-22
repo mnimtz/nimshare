@@ -131,6 +131,8 @@
   <data name="users.active"><value>Actief</value></data>
   <data name="users.disabled"><value>Gedeactiveerd</value></data>
   <data name="users.type"><value>Aanmelding</value></data>
+  <data name="users.last_login" xml:space="preserve"><value>Laatste login</value></data>
+  <data name="users.never" xml:space="preserve"><value>Nooit</value></data>
   <data name="users.actions"><value>Acties</value></data>
   <data name="users.action.disable"><value>Deactiveren</value></data>
   <data name="users.action.enable"><value>Activeren</value></data>

@@ -65,7 +65,9 @@ public class LocalAuthService : ILocalAuthService
         var user = await _db.Users.SingleOrDefaultAsync(u => u.Email == email, ct);
         if (user is null || !user.IsActive || string.IsNullOrEmpty(user.PasswordHash)) return null;
         if (!_hasher.Verify(password ?? "", user.PasswordHash)) return null;
-        user.LastSeenAt = DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow;
+        user.LastSeenAt = now;
+        user.LastLoginAt = now;   // v1.10.139: echtes „letzter Login" (Web + iOS)
         await _db.SaveChangesAsync(ct);
         return user;
     }

@@ -48,6 +48,8 @@
   <data name="users.active"><value>Activo</value></data>
   <data name="users.disabled"><value>Deshabilitado</value></data>
   <data name="users.type"><value>Inicio de sesión</value></data>
+  <data name="users.last_login" xml:space="preserve"><value>Último acceso</value></data>
+  <data name="users.never" xml:space="preserve"><value>Nunca</value></data>
   <data name="users.actions"><value>Acciones</value></data>
   <data name="users.action.disable"><value>Deshabilitar</value></data>
   <data name="users.action.enable"><value>Habilitar</value></data>

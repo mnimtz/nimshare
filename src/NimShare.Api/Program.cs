@@ -699,6 +699,9 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         ("AiGateways", "StatusPageUrl", "TEXT", "nvarchar(1000)"),
         // v1.10.118: Produkt-Filter für die Status-Begrüssung.
         ("AiGateways", "StatusPageProducts", "TEXT", "nvarchar(1000)"),
+        // v1.10.139: „Letzter Login" (DateTimeOffset? → SQLite long/INTEGER via
+        // globalem Converter, SqlServer datetimeoffset).
+        ("Users", "LastLoginAt", "INTEGER", "datetimeoffset"),
     };
     foreach (var w in wanted)
     {

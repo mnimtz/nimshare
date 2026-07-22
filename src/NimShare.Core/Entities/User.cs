@@ -70,6 +70,10 @@ public class User
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastSeenAt { get; set; }
+    /// <summary>v1.10.139 — Zeitpunkt der letzten erfolgreichen Anmeldung
+    /// (Web-Cookie ODER iOS-API). Anders als LastSeenAt, das bei jedem Request
+    /// aktualisiert wird, wird dies NUR beim tatsächlichen Login gesetzt.</summary>
+    public DateTimeOffset? LastLoginAt { get; set; }
 
     public ICollection<StorageFile> Files { get; set; } = new List<StorageFile>();
     public ICollection<ShareLink> ShareLinks { get; set; } = new List<ShareLink>();

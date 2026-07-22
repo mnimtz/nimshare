@@ -187,6 +187,7 @@
         <th>@T["nav.groups"]</th>
         <th>@T["users.state"]</th>
         <th>@T["users.type"]</th>
+        <th>@T["users.last_login"]</th>
         <th>@T["users.actions"]</th>
     </tr>
     </thead>
@@ -244,6 +245,16 @@
                 @if (u.PasswordHash is not null)
                 {
                     <span class="chip">Local</span>
+                }
+            </td>
+            <td class="muted" style="white-space:nowrap">
+                @if (u.LastLoginAt is DateTimeOffset ll)
+                {
+                    <span title="@ll.UtcDateTime.ToString("u")">@ll.ToLocalTime().ToString("g")</span>
+                }
+                else
+                {
+                    <text>@T["users.never"]</text>
                 }
             </td>
             <td>
