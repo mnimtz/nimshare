@@ -33,6 +33,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo to share via NimShare.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a photo or file to share via NimShare.</string>
 	<key>UILaunchScreen</key>

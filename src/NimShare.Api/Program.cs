@@ -492,6 +492,15 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] Running EnsureFolderIsPrivateColumnAsync…");
         await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
         Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync done.");
+        // v1.10.121: Rescue für die LinkEntries-Tabelle (Linksammlung, V185).
+        // Auf DBs, bei denen der MigrateAsync-Loop wegen eines V184-Replays
+        // („duplicate column IsPrivate") abbrach, wurde V185 nie angewandt →
+        // „no such table: LinkEntries"-500 in Web + iOS. Idempotentes
+        // CREATE TABLE IF NOT EXISTS + History-Stamp, läuft ab jetzt bei
+        // jedem Start und ausserhalb des Retry-Loops.
+        Console.Error.WriteLine("[STARTUP] Running EnsureLinkEntriesTableAsync…");
+        await EnsureLinkEntriesTableAsync(db, isSqlServer);
+        Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync done.");
     }
     catch (Exception ex)
     {
@@ -844,6 +853,101 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
     catch (Exception ex)
     {
         Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync failed: " + ex.Message);
+    }
+}
+
+// v1.10.121: Legt die LinkEntries-Tabelle (Linksammlung, Migration V185) an,
+// falls sie fehlt, und stempelt V185 in __EFMigrationsHistory. Nötig, weil auf
+// Bestands-DBs der MigrateAsync-Loop an einem V184-Replay hängen bleiben und
+// V185 dadurch nie ausführen konnte → „no such table: LinkEntries". CREATE
+// TABLE IF NOT EXISTS ist idempotent; auf frischen DBs, die V185 regulär via
+// MigrateAsync bekommen, ist die Tabelle bereits da und der Aufruf ein No-op.
+static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db, bool isSqlServer)
+{
+    const string V185 = "20260722120000_V185_LinkEntries";
+    try
+    {
+        var connStr = db.Database.GetConnectionString();
+        if (isSqlServer)
+        {
+            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            await cn.OpenAsync();
+            using (var create = cn.CreateCommand())
+            {
+                create.CommandText =
+                    "IF OBJECT_ID(N'[LinkEntries]', N'U') IS NULL " +
+                    "CREATE TABLE [LinkEntries] (" +
+                    "[Id] uniqueidentifier NOT NULL CONSTRAINT [PK_LinkEntries] PRIMARY KEY, " +
+                    "[Title] nvarchar(200) NOT NULL, " +
+                    "[Url] nvarchar(2000) NOT NULL, " +
+                    "[Description] nvarchar(500) NULL, " +
+                    "[Emoji] nvarchar(8) NULL, " +
+                    "[SortOrder] int NOT NULL, " +
+                    "[CreatedByUserId] uniqueidentifier NOT NULL, " +
+                    "[CreatedAt] bigint NOT NULL, " +
+                    "[UpdatedAt] bigint NOT NULL)";
+                await create.ExecuteNonQueryAsync();
+            }
+            using (var idx = cn.CreateCommand())
+            {
+                idx.CommandText =
+                    "IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LinkEntries') " +
+                    "AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_LinkEntries_SortOrder' " +
+                    "AND object_id = OBJECT_ID('LinkEntries')) " +
+                    "CREATE INDEX [IX_LinkEntries_SortOrder] ON [LinkEntries] ([SortOrder])";
+                await idx.ExecuteNonQueryAsync();
+            }
+            using (var stamp = cn.CreateCommand())
+            {
+                stamp.CommandText =
+                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
+                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
+                stamp.Parameters.AddWithValue("@mid", V185);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V185 (SqlServer).");
+            }
+        }
+        else
+        {
+            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+            await cn.OpenAsync();
+            using (var create = cn.CreateCommand())
+            {
+                create.CommandText =
+                    "CREATE TABLE IF NOT EXISTS \"LinkEntries\" (" +
+                    "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_LinkEntries\" PRIMARY KEY, " +
+                    "\"Title\" TEXT NOT NULL, " +
+                    "\"Url\" TEXT NOT NULL, " +
+                    "\"Description\" TEXT NULL, " +
+                    "\"Emoji\" TEXT NULL, " +
+                    "\"SortOrder\" INTEGER NOT NULL, " +
+                    "\"CreatedByUserId\" TEXT NOT NULL, " +
+                    "\"CreatedAt\" INTEGER NOT NULL, " +
+                    "\"UpdatedAt\" INTEGER NOT NULL)";
+                await create.ExecuteNonQueryAsync();
+            }
+            using (var idx = cn.CreateCommand())
+            {
+                idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_LinkEntries_SortOrder\" ON \"LinkEntries\" (\"SortOrder\")";
+                await idx.ExecuteNonQueryAsync();
+            }
+            using (var stamp = cn.CreateCommand())
+            {
+                stamp.CommandText =
+                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                    "SELECT $mid, '8.0.10' " +
+                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+                stamp.Parameters.AddWithValue("$mid", V185);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V185 (SQLite).");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync failed: " + ex.Message);
     }
 }
 

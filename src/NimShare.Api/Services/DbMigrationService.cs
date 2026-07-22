@@ -103,7 +103,7 @@ public class DbMigrationService : IDbMigrationService
         catch (Exception ex)
         {
             sw.Stop();
-            return new CopyResult(false, 0, 0, sw.Elapsed, ex.Message);
+            return new CopyResult(false, 0, 0, sw.Elapsed, Flatten(ex));
         }
     }
 
@@ -122,6 +122,9 @@ public class DbMigrationService : IDbMigrationService
             // Parent tables first — every entity below either has no FKs or
             // only references entities earlier in this list.
             ("Users",                (s,t,c) => CopySet<NimShare.Core.Entities.User>(s, t, c)),
+            ("LinkEntries",          (s,t,c) => CopySet<NimShare.Core.Entities.LinkEntry>(s, t, c)),
+            ("BlockedUsers",         (s,t,c) => CopySet<NimShare.Core.Entities.BlockedUser>(s, t, c)),
+            ("ContentReports",       (s,t,c) => CopySet<NimShare.Core.Entities.ContentReport>(s, t, c)),
             ("Groups",               (s,t,c) => CopySet<NimShare.Core.Entities.Group>(s, t, c)),
             ("GroupMemberships",     (s,t,c) => CopySet<NimShare.Core.Entities.GroupMembership>(s, t, c)),
             ("Invitations",          (s,t,c) => CopySet<NimShare.Core.Entities.Invitation>(s, t, c)),
@@ -134,6 +137,7 @@ public class DbMigrationService : IDbMigrationService
             ("Files",                (s,t,c) => CopySet<NimShare.Core.Entities.StorageFile>(s, t, c)),
             ("StorageFileVersions",  (s,t,c) => CopySet<NimShare.Core.Entities.StorageFileVersion>(s, t, c)),
             ("FileEmbeddings",       (s,t,c) => CopySet<NimShare.Core.Entities.FileEmbedding>(s, t, c)),
+            ("FilePins",             (s,t,c) => CopySet<NimShare.Core.Entities.FilePin>(s, t, c)),
             ("ShareLinks",           (s,t,c) => CopySet<NimShare.Core.Entities.ShareLink>(s, t, c)),
             ("ShareLinkAccesses",    (s,t,c) => CopySet<NimShare.Core.Entities.ShareLinkAccess>(s, t, c)),
             ("UploadRequests",       (s,t,c) => CopySet<NimShare.Core.Entities.UploadRequestLink>(s, t, c)),
@@ -191,7 +195,25 @@ public class DbMigrationService : IDbMigrationService
             for (int i = 0; i < tables.Count; i++)
             {
                 var (name, copy) = tables[i];
-                var n = await copy(source, target, ct);
+                long n;
+                try
+                {
+                    n = await copy(source, target, ct);
+                }
+                catch (Exception ex)
+                {
+                    // v1.10.121: Die eigentliche Ursache eines Kopier-Fehlers
+                    // (FK-Verletzung, String-Truncation, NOT-NULL) steckt in
+                    // der InnerException — EFs Aussenmeldung ist nur „See the
+                    // inner exception". Wir entfalten die ganze Kette UND
+                    // nennen die Tabelle, an der es scheiterte, damit der
+                    // Admin überhaupt etwas zum Anfassen hat.
+                    sw.Stop();
+                    var detail = Flatten(ex);
+                    _log.LogError(ex, "Data copy failed on table {Table}", name);
+                    return new CopyResult(false, i, totalRows, sw.Elapsed,
+                        $"Tabelle „{name}\": {detail}");
+                }
                 totalRows += n;
                 progress?.Report(new CopyProgress(name, i + 1, tables.Count, totalRows));
                 _log.LogInformation("Copied {Count} rows into {Table}", n, name);
@@ -203,8 +225,30 @@ public class DbMigrationService : IDbMigrationService
         {
             sw.Stop();
             _log.LogError(ex, "Data copy failed");
-            return new CopyResult(false, 0, totalRows, sw.Elapsed, ex.Message);
+            return new CopyResult(false, 0, totalRows, sw.Elapsed, Flatten(ex));
         }
+    }
+
+    /// <summary>
+    /// v1.10.121: Entfaltet die komplette InnerException-Kette zu einer Zeile.
+    /// EF Core wirft <c>DbUpdateException</c> mit der nichtssagenden Meldung
+    /// „An error occurred while saving the entity changes. See the inner
+    /// exception for details." — die echte Ursache (z. B. eine SqlException
+    /// „The INSERT statement conflicted with the FOREIGN KEY constraint …" oder
+    /// „String or binary data would be truncated in column …") liegt eine oder
+    /// mehrere Ebenen tiefer. Ohne dieses Entfalten sah der Admin nie die
+    /// eigentliche Fehlermeldung.
+    /// </summary>
+    private static string Flatten(Exception ex)
+    {
+        var parts = new List<string>();
+        for (Exception? cur = ex; cur is not null; cur = cur.InnerException)
+        {
+            var msg = cur.Message?.Trim();
+            if (!string.IsNullOrEmpty(msg) && (parts.Count == 0 || parts[^1] != msg))
+                parts.Add(msg);
+        }
+        return string.Join(" → ", parts);
     }
 
     private static async Task<long> CopySet<T>(NimShareDbContext source, NimShareDbContext target, CancellationToken ct)
