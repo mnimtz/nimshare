@@ -13,26 +13,23 @@
     }
 }
 <div class="workspace-inner">
+    @* v1.10.138: EINE Begrüssung. Der Header grüsst (Anrede + Name); die KI
+       liefert nur die Nachricht darunter (ohne eigene Anrede → keine doppelte
+       Begrüssung mehr). Bis der AI-Call zurück ist, steht der statische,
+       lokalisierte Standard-Untertitel da. Wetter-Chip daneben. *@
     <div class="page-header">
         <div>
             <h1>@T["dashboard.greeting"], @ViewData["UserName"]</h1>
-            <p class="lede">@T["dashboard.lede"]</p>
+            <p class="lede">
+                <span id="dashLedeText">@T["dashboard.lede"]</span>
+                <span id="aiWeather" title="" style="display:none;margin-left:10px;white-space:nowrap;font-weight:600">
+                    <span id="aiWeatherEmoji" style="font-size:1.05rem"></span>
+                    <span id="aiWeatherTemp" style="margin-left:3px"></span>
+                    <span id="aiWeatherRange" class="muted" style="margin-left:6px;font-weight:400;font-size:.85em"></span>
+                </span>
+            </p>
         </div>
         <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
-    </div>
-
-    @* v1.10.115: KI-Begrüssung — freundlich/humorvoll, per JS nachgeladen
-       damit die Seite nicht auf den AI-Call wartet. Wetter optional über
-       die Browser-Geolocation (nur wenn der Nutzer zustimmt). *@
-    <div id="aiGreeting" class="card" style="display:none;border-left:3px solid var(--tw-accent);background:var(--tw-accent-soft, rgba(0,40,84,.05));margin-bottom:var(--sp-4)">
-        <span style="font-size:1.1rem">👋</span>
-        <span id="aiGreetingText" style="margin-left:8px"></span>
-        @* v1.10.122: Wetter-Symbol + heutige Vorhersage, direkt nach der Begrüssung. *@
-        <span id="aiWeather" title="" style="display:none;margin-left:10px;white-space:nowrap;font-weight:600">
-            <span id="aiWeatherEmoji" style="font-size:1.15rem"></span>
-            <span id="aiWeatherTemp" style="margin-left:3px"></span>
-            <span id="aiWeatherRange" class="muted" style="margin-left:6px;font-weight:400;font-size:.85em"></span>
-        </span>
     </div>
 
     <div class="row" style="gap:var(--sp-6);align-items:stretch">
@@ -124,9 +121,12 @@
 // v1.10.115: KI-Begrüssung laden. Zuerst ohne Standort (sofort), dann —
 // falls der Nutzer Geolocation erlaubt — mit Wetter nachlegen.
 (function loadAiGreeting() {
-    const box = document.getElementById('aiGreeting');
-    const txt = document.getElementById('aiGreetingText');
-    if (!box || !txt) return;
+    // v1.10.138: Der Header grüsst bereits (Anrede + Name). Hier nur die
+    // KI-NACHRICHT (body, OHNE Anrede) in den Untertitel schreiben — sonst
+    // stünde „Hallo …" doppelt. Fällt der AI-Call aus, bleibt der statische
+    // lokalisierte Standard-Untertitel stehen.
+    const lede = document.getElementById('dashLedeText');
+    if (!lede) return;
     async function fetchGreeting(lat, lon) {
         let url = '/api/v1/ai/greeting';
         if (lat != null && lon != null) url += '?lat=' + lat + '&lon=' + lon;
@@ -134,7 +134,8 @@
             const r = await fetch(url, { credentials: 'same-origin' });
             if (!r.ok) return;
             const d = await r.json();
-            if (d.greeting) { txt.textContent = d.greeting; box.style.display = ''; }
+            const msg = d.body || d.greeting;   // body: neue getrennte Nachricht
+            if (msg) lede.textContent = msg;
         } catch {}
     }
     // v1.10.122: Wetter-Symbol + heutige Vorhersage neben der Begrüssung.
