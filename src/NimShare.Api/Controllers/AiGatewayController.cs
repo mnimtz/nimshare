@@ -81,7 +81,8 @@ public class AiGatewayController : Controller
     public record SaveForm(AiProvider Provider, string? Model, string? Endpoint, string? ApiKey,
         bool EnableAutoSummary, bool EnableSmartTags, bool EnableSemanticSearch,
         bool EnableGuidedUploadRequests, bool EnableContentRiskDetection,
-        bool EnableDraftedShareEmails, bool EnableChatWithFiles, bool EnableOcr);
+        bool EnableDraftedShareEmails, bool EnableChatWithFiles, bool EnableOcr,
+        string? StatusPageUrl);
 
     [HttpPost("/settings/ai")]
     [ValidateAntiForgeryToken]
@@ -102,6 +103,7 @@ public class AiGatewayController : Controller
             EnableDraftedShareEmails = form.EnableDraftedShareEmails,
             EnableChatWithFiles = form.EnableChatWithFiles,
             EnableOcr = form.EnableOcr,
+            StatusPageUrl = string.IsNullOrWhiteSpace(form.StatusPageUrl) ? null : form.StatusPageUrl.Trim(),
         };
         await _ai.SaveAsync(incoming, form.ApiKey, me.Id, ct);
         TempData["Notice"] = _l["notice.ai_saved"].Value;

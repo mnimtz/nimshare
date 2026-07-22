@@ -1326,4 +1326,6 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Zum Bestätigen RESTORE eingeben</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Jetzt wiederherstellen</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Die gesamte Datenbank wirklich mit diesem Backup überschreiben? Das kann nicht rückgängig gemacht werden.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>Status-Seiten-URL (optional)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>Wenn gesetzt, prüft die Startseiten-Begrüssung diese Cloud-Status-Seite und erwähnt den aktuellen Status. Nur http(s).</value></data>
 </root>

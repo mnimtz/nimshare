@@ -1322,4 +1322,6 @@ Grazie per usare NimShare.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Digita RESTORE per confermare</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Ripristina ora</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Sovrascrivere davvero l'intero database con questo backup? Non è reversibile.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>URL della pagina di stato (facoltativo)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>Se impostata, il saluto in home controlla questa pagina di stato cloud e menziona lo stato attuale. Solo http(s).</value></data>
 </root>

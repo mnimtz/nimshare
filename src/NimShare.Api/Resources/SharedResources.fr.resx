@@ -1322,4 +1322,6 @@ Merci d'utiliser NimShare.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Tape RESTORE pour confirmer</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Restaurer maintenant</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Vraiment écraser toute la base de données avec cette sauvegarde ? Action irréversible.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>URL de la page de statut (optionnel)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>Si définie, le message d'accueil vérifie cette page de statut cloud et mentionne l'état actuel. http(s) uniquement.</value></data>
 </root>

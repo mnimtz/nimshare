@@ -92,12 +92,25 @@ public class AiController : ControllerBase
             catch { /* Wetter ist optional — Begrüssung geht auch ohne */ }
         }
 
+        // v1.10.117: optionaler Cloud-Status von einer konfigurierten
+        // Status-Seite (z. B. incident.io). Server-seitig holen, auf reinen
+        // Text reduzieren, die KI baut ihn locker ein.
+        string? statusText = null;
+        var settings = await _ai.LoadAsync(ct);
+        if (!string.IsNullOrWhiteSpace(settings.StatusPageUrl))
+        {
+            statusText = await FetchStatusSummaryAsync(settings.StatusPageUrl!, httpFactory, ct);
+        }
+
         var lang = CurrentLanguageIso();
         var provider = await _ai.CreateProviderAsync(ct);
         var prompt =
-            $"Schreibe eine EINZIGE kurze, warme und leicht humorvolle Begrüssung (max. 2 Sätze) für {(string.IsNullOrEmpty(firstName) ? "den Nutzer" : firstName)} " +
+            $"Schreibe eine kurze, warme und leicht humorvolle Begrüssung (max. 3 Sätze) für {(string.IsNullOrEmpty(firstName) ? "den Nutzer" : firstName)} " +
             $"in einer Datei-Sharing-App. Es ist gerade {daypart}. " +
             (weather is not null ? $"Das Wetter am Standort ist {weather} — beziehe es locker mit ein. " : "") +
+            (statusText is not null
+                ? $"Aktueller Cloud-Status (aus einer Status-Seite): »{statusText}«. Fasse den Status in EINEM lockeren Satz zusammen — alles grün → kurz beruhigend erwähnen; gibt es eine Störung, nenne betroffene Dienste knapp und sachlich (kein Alarm). "
+                : "") +
             "Kein Emoji-Overkill (höchstens eins), keine Anführungszeichen, keine Anrede-Floskel wie 'Betreff'. " +
             $"Antworte in der Sprache mit ISO-Code '{lang}'. Nur die Begrüssung, sonst nichts.";
 
@@ -118,6 +131,38 @@ public class AiController : ControllerBase
     {
         var hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
         return string.IsNullOrEmpty(name) ? $"{hi}! Schön, dass du da bist." : $"{hi}, {name}! Schön, dass du da bist.";
+    }
+
+    /// <summary>
+    /// v1.10.117 — holt eine öffentliche Status-Seite, reduziert sie auf
+    /// reinen Text und liefert eine kompakte, KI-lesbare Zusammenfassung.
+    /// Robust gegen HTML-Änderungen (die KI liest den Text), timeout-sicher.
+    /// </summary>
+    private static async Task<string?> FetchStatusSummaryAsync(string url, IHttpClientFactory httpFactory, CancellationToken ct)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)
+            || (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps))
+            return null;
+        try
+        {
+            var http = httpFactory.CreateClient();
+            http.Timeout = TimeSpan.FromSeconds(5);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("NimShare-Status/1.0");
+            using var resp = await http.GetAsync(u, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var html = await resp.Content.ReadAsStringAsync(ct);
+
+            // Script/Style raus, dann alle Tags strippen, Whitespace kollabieren.
+            html = System.Text.RegularExpressions.Regex.Replace(html, @"<script[\s\S]*?</script>", " ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            html = System.Text.RegularExpressions.Regex.Replace(html, @"<style[\s\S]*?</style>", " ", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var text = System.Text.RegularExpressions.Regex.Replace(html, @"<[^>]+>", " ");
+            text = System.Net.WebUtility.HtmlDecode(text);
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+            if (text.Length == 0) return null;
+            // Auf einen kompakten, aussagekräftigen Ausschnitt begrenzen.
+            return text.Length > 1200 ? text[..1200] : text;
+        }
+        catch { return null; }
     }
 
     private static string WeatherCodeToText(int code) => code switch

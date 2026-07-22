@@ -1322,4 +1322,6 @@ Gracias por usar NimShare.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Escribe RESTORE para confirmar</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Restaurar ahora</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>¿Sobrescribir toda la base de datos con esta copia? No se puede deshacer.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>URL de la página de estado (opcional)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>Si se define, el saludo de inicio consulta esta página de estado de la nube y menciona el estado actual. Solo http(s).</value></data>
 </root>

@@ -30,6 +30,14 @@ public class AiGatewaySettings
     /// <summary>For Azure OpenAI: full endpoint URL of the resource.</summary>
     public string? Endpoint { get; set; }
 
+    /// <summary>
+    /// v1.10.117 — optionale URL einer öffentlichen Status-Seite (z. B.
+    /// https://status.tungstencloud.com/europe). Ist sie gesetzt, holt die
+    /// KI-Startseiten-Begrüssung den aktuellen Cloud-Status und baut ihn
+    /// locker mit ein („übrigens, alle Dienste laufen rund"). Nur http/https.
+    /// </summary>
+    public string? StatusPageUrl { get; set; }
+
     // ── Per-feature toggles ───────────────────────────────────────────────
     public bool EnableAutoSummary { get; set; }
     public bool EnableSmartTags { get; set; }

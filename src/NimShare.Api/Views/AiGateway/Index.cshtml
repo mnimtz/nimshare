@@ -57,6 +57,12 @@
         <label for="ApiKey">@T["ai.api_key"]</label>
         <input type="password" name="ApiKey" id="ApiKey" placeholder="@(string.IsNullOrEmpty(Model.ApiKeyEncrypted) ? "" : T["email_gateway.leave_blank"].Value)"/>
         <div class="helper">@T["ai.api_key_helper"]</div>
+    </div>
+    @* v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung. *@
+    <div class="field">
+        <label for="StatusPageUrl">@T["ai.status_url"]</label>
+        <input type="url" name="StatusPageUrl" id="StatusPageUrl" value="@Model.StatusPageUrl" placeholder="https://status.example.com"/>
+        <div class="helper">@T["ai.status_url_helper"]</div>
         @{
             var keyStatus = ViewData["ApiKeyStatus"] as string;
         }

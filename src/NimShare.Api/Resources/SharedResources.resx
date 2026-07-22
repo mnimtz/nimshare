@@ -1320,4 +1320,6 @@ Thanks for using NimShare.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Type RESTORE to confirm</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Restore now</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Really overwrite the whole database with this backup? This cannot be undone.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>Status page URL (optional)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>If set, the home-screen greeting checks this cloud status page and mentions the current status. Only http(s).</value></data>
 </root>

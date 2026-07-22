@@ -1321,4 +1321,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="backup.restore.type_confirm" xml:space="preserve"><value>Typ RESTORE om te bevestigen</value></data>
   <data name="backup.restore.button" xml:space="preserve"><value>Nu herstellen</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>De hele database echt overschrijven met deze back-up? Dit kan niet ongedaan worden gemaakt.</value></data>
+  <data name="ai.status_url" xml:space="preserve"><value>Status-pagina-URL (optioneel)</value></data>
+  <data name="ai.status_url_helper" xml:space="preserve"><value>Indien ingesteld controleert de startpagina-begroeting deze cloudstatuspagina en vermeldt de huidige status. Alleen http(s).</value></data>
 </root>
