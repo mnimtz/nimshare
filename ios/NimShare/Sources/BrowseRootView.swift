@@ -50,14 +50,19 @@ struct BrowseRootView: View {
     /// sehr kleine Geräte / sehr lange Begrüssungen erhalten.
     private var adaptiveHome: some View {
         GeometryReader { geo in
-            let specs = tileSpecs
+            let libs = librarySpecs
+            let overviews = overviewSpecs
             let cols = geo.size.width > 700 ? 3 : 2
-            let rows = max(1, Int(ceil(Double(specs.count) / Double(cols))))
+            let libRows = max(1, Int(ceil(Double(libs.count) / Double(cols))))
+            let ovRows = max(1, Int(ceil(Double(overviews.count) / Double(cols))))
+            let totalRows = libRows + ovRows
             let outerPad: CGFloat = 16
             let gap: CGFloat = 12
-            // Verfügbare Höhe fürs Raster = Screen − Begrüssung − Ränder − Lücke.
-            let avail = geo.size.height - greetingHeight - outerPad * 2 - gap
-            let tileH = max(78, (avail - CGFloat(rows - 1) * gap) / CGFloat(rows))
+            let dividerH: CGFloat = 22   // Höhe des Trenn-Blocks
+            // Verfügbare Höhe fürs Raster = Screen − Begrüssung − Ränder −
+            // Lücken (Begrüssung→Lib, Lib→Divider, Divider→Übersicht) − Divider.
+            let avail = geo.size.height - greetingHeight - outerPad * 2 - gap * 3 - dividerH
+            let tileH = max(78, (avail - CGFloat(totalRows - 1) * gap) / CGFloat(totalRows))
             let columns = Array(repeating: GridItem(.flexible(), spacing: gap), count: cols)
 
             ScrollView {
@@ -66,8 +71,20 @@ struct BrowseRootView: View {
                         .background(GeometryReader { g in
                             Color.clear.preference(key: GreetHeightKey.self, value: g.size.height)
                         })
+                    // Bibliotheken — die eigentlichen Ablageorte.
                     LazyVGrid(columns: columns, spacing: gap) {
-                        ForEach(specs) { s in
+                        ForEach(libs) { s in
+                            NavigationLink { s.dest() } label: { tileCard(s, height: tileH) }
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    // v1.10.131: optische Trennung — macht klar, dass die
+                    // ersten beiden Kacheln die Ablage sind und darunter die
+                    // Übersichten kommen.
+                    sectionDivider
+                    // Übersichten & Werkzeuge.
+                    LazyVGrid(columns: columns, spacing: gap) {
+                        ForEach(overviews) { s in
                             NavigationLink { s.dest() } label: { tileCard(s, height: tileH) }
                                 .buttonStyle(.plain)
                         }
@@ -78,6 +95,20 @@ struct BrowseRootView: View {
             }
             .onPreferenceChange(GreetHeightKey.self) { greetingHeight = $0 }
         }
+    }
+
+    /// v1.10.131: dezente, beschriftete Trennlinie zwischen Bibliotheken und
+    /// Übersichten.
+    private var sectionDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+            Text("Übersichten")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+        }
+        .padding(.vertical, 2)
     }
 
     /// Eine Kachel: Icon oben, Titel darunter. Alle Größen skalieren mit der
@@ -127,10 +158,10 @@ struct BrowseRootView: View {
         let dest: () -> AnyView
     }
 
-    private var tileSpecs: [TileSpec] {
+    /// Bibliotheken (Persönlich, dann Öffentlich) — die eigentlichen Ablage-
+    /// orte für Dateien/Ordner. Gruppen bewusst nicht als Kachel (v1.10.103).
+    private var librarySpecs: [TileSpec] {
         var t: [TileSpec] = []
-        // Bibliotheken (Persönlich, dann Öffentlich) — wie in v1.10.103,
-        // Gruppen bewusst nicht als Kachel.
         for tile in scopes.filter({ $0.scope.lowercased() == "personal" })
                         + scopes.filter({ $0.scope.lowercased() == "public" }) {
             let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
@@ -139,7 +170,12 @@ struct BrowseRootView: View {
                               icon: tile.systemImage, tint: Theme.tungstenBlue,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
-        // Übersichten.
+        return t
+    }
+
+    /// Übersichten & Werkzeuge — unter der Trennlinie.
+    private var overviewSpecs: [TileSpec] {
+        var t: [TileSpec] = []
         t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: .yellow, dest: { AnyView(FavoritesView()) }))
         t.append(TileSpec(id: "shared", title: "Freigegeben", subtitle: "für mich", icon: "person.crop.circle.badge.checkmark", tint: Theme.tungstenBlue, dest: { AnyView(SharedWithMeView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
