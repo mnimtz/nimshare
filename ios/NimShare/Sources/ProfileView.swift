@@ -26,6 +26,14 @@ struct ProfileView: View {
                 }
             }
 
+            // v1.10.126: Papierkorb von der Startseiten-Kachel hierher —
+            // dafür ist „Linksammlung" jetzt eine Kachel auf der Startseite.
+            Section("Dateien") {
+                NavigationLink { TrashView() } label: {
+                    Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
+                }
+            }
+
             Section("Signaturen") {
                 NavigationLink { CertificatesView() } label: {
                     Label("Meine Zertifikate", systemImage: "seal")
@@ -35,12 +43,9 @@ struct ProfileView: View {
                 }
             }
 
-            // v1.10.88: iOS-Parität — Linksammlung, API-Tokens, Webhooks
-            // (v1.10.111: Wiki durch Linksammlung ersetzt)
+            // v1.10.88: iOS-Parität — API-Tokens, Webhooks
+            // (v1.10.126: Linksammlung als Startseiten-Kachel ausgelagert)
             Section("Wissen & Automatisierung") {
-                NavigationLink { LinkCollectionView() } label: {
-                    Label("Linksammlung", systemImage: "link")
-                }
                 NavigationLink { ApiTokensView() } label: {
                     Label("API-Tokens", systemImage: "key")
                 }

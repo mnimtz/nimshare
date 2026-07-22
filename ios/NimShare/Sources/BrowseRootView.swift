@@ -140,7 +140,9 @@ struct BrowseRootView: View {
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
         t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
         t.append(TileSpec(id: "activity", title: "Aktivität", subtitle: nil, icon: "clock.fill", tint: Theme.tungstenBlue, dest: { AnyView(ActivityView()) }))
-        t.append(TileSpec(id: "trash", title: "Papierkorb", subtitle: nil, icon: "trash", tint: Theme.warnRed, dest: { AnyView(TrashView()) }))
+        // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
+        // Linksammlung.
+        t.append(TileSpec(id: "linkcol", title: "Linksammlung", subtitle: nil, icon: "link.circle.fill", tint: Theme.tungstenBlue, dest: { AnyView(LinkCollectionView()) }))
         return t
     }
 
