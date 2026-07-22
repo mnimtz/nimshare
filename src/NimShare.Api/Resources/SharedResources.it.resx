@@ -1324,4 +1324,6 @@ Grazie per usare NimShare.</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Sovrascrivere davvero l'intero database con questo backup? Non è reversibile.</value></data>
   <data name="ai.status_url" xml:space="preserve"><value>URL della pagina di stato (facoltativo)</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Se impostata, il saluto in home controlla questa pagina di stato cloud e menziona lo stato attuale. Solo http(s).</value></data>
+  <data name="ai.status_products" xml:space="preserve"><value>Prodotti da includere (facoltativo)</value></data>
+  <data name="ai.status_products_helper" xml:space="preserve"><value>Separati da virgole. Solo questi prodotti della pagina di stato vengono citati nel saluto. Vuoto = tutti. Non serve l'ortografia esatta — l'IA fa la corrispondenza.</value></data>
 </root>

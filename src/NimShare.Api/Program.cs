@@ -688,6 +688,8 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         ("SignatureAudits", "IpAddress", "TEXT", "nvarchar(45)"),
         // v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung.
         ("AiGateways", "StatusPageUrl", "TEXT", "nvarchar(1000)"),
+        // v1.10.118: Produkt-Filter für die Status-Begrüssung.
+        ("AiGateways", "StatusPageProducts", "TEXT", "nvarchar(1000)"),
     };
     foreach (var w in wanted)
     {

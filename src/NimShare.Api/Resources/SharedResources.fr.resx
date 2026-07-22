@@ -1324,4 +1324,6 @@ Merci d'utiliser NimShare.</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Vraiment écraser toute la base de données avec cette sauvegarde ? Action irréversible.</value></data>
   <data name="ai.status_url" xml:space="preserve"><value>URL de la page de statut (optionnel)</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Si définie, le message d'accueil vérifie cette page de statut cloud et mentionne l'état actuel. http(s) uniquement.</value></data>
+  <data name="ai.status_products" xml:space="preserve"><value>Produits à inclure (optionnel)</value></data>
+  <data name="ai.status_products_helper" xml:space="preserve"><value>Séparés par des virgules. Seuls ces produits de la page de statut sont mentionnés dans l'accueil. Vide = tous. L'orthographe exacte n'est pas requise — l'IA fait la correspondance.</value></data>
 </root>

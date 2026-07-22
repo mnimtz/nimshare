@@ -1323,4 +1323,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>De hele database echt overschrijven met deze back-up? Dit kan niet ongedaan worden gemaakt.</value></data>
   <data name="ai.status_url" xml:space="preserve"><value>Status-pagina-URL (optioneel)</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Indien ingesteld controleert de startpagina-begroeting deze cloudstatuspagina en vermeldt de huidige status. Alleen http(s).</value></data>
+  <data name="ai.status_products" xml:space="preserve"><value>Producten om op te nemen (optioneel)</value></data>
+  <data name="ai.status_products_helper" xml:space="preserve"><value>Kommagescheiden. Alleen deze producten van de statuspagina worden in de begroeting genoemd. Leeg = alle. Exacte spelling niet nodig — de AI matcht soepel.</value></data>
 </root>

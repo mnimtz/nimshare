@@ -1322,4 +1322,6 @@ Thanks for using NimShare.</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>Really overwrite the whole database with this backup? This cannot be undone.</value></data>
   <data name="ai.status_url" xml:space="preserve"><value>Status page URL (optional)</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>If set, the home-screen greeting checks this cloud status page and mentions the current status. Only http(s).</value></data>
+  <data name="ai.status_products" xml:space="preserve"><value>Products to include (optional)</value></data>
+  <data name="ai.status_products_helper" xml:space="preserve"><value>Comma-separated. Only these products from the status page are mentioned in the greeting. Leave empty for all. Exact spelling not required — the AI matches loosely.</value></data>
 </root>

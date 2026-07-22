@@ -58,11 +58,17 @@
         <input type="password" name="ApiKey" id="ApiKey" placeholder="@(string.IsNullOrEmpty(Model.ApiKeyEncrypted) ? "" : T["email_gateway.leave_blank"].Value)"/>
         <div class="helper">@T["ai.api_key_helper"]</div>
     </div>
-    @* v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung. *@
+    @* v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung.
+       v1.10.118: + Produkt-Filter. *@
     <div class="field">
         <label for="StatusPageUrl">@T["ai.status_url"]</label>
         <input type="url" name="StatusPageUrl" id="StatusPageUrl" value="@Model.StatusPageUrl" placeholder="https://status.example.com"/>
         <div class="helper">@T["ai.status_url_helper"]</div>
+    </div>
+    <div class="field">
+        <label for="StatusPageProducts">@T["ai.status_products"]</label>
+        <input type="text" name="StatusPageProducts" id="StatusPageProducts" value="@Model.StatusPageProducts" placeholder="Printix, PowerPDF Cloud Editor, Power PDF Cloud Licensing Server"/>
+        <div class="helper">@T["ai.status_products_helper"]</div>
         @{
             var keyStatus = ViewData["ApiKeyStatus"] as string;
         }

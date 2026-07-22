@@ -1324,4 +1324,6 @@ Gracias por usar NimShare.</value></data>
   <data name="backup.restore.confirm_js" xml:space="preserve"><value>¿Sobrescribir toda la base de datos con esta copia? No se puede deshacer.</value></data>
   <data name="ai.status_url" xml:space="preserve"><value>URL de la página de estado (opcional)</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Si se define, el saludo de inicio consulta esta página de estado de la nube y menciona el estado actual. Solo http(s).</value></data>
+  <data name="ai.status_products" xml:space="preserve"><value>Productos a incluir (opcional)</value></data>
+  <data name="ai.status_products_helper" xml:space="preserve"><value>Separados por comas. Solo estos productos de la página de estado se mencionan en el saludo. Vacío = todos. No hace falta la ortografía exacta — la IA hace la coincidencia.</value></data>
 </root>

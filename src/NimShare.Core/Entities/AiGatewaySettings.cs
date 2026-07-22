@@ -38,6 +38,14 @@ public class AiGatewaySettings
     /// </summary>
     public string? StatusPageUrl { get; set; }
 
+    /// <summary>
+    /// v1.10.118 — kommagetrennte Liste der Produkte/Dienste, die aus der
+    /// Status-Seite in die Begrüssung einfliessen sollen (z. B. „Printix,
+    /// PowerPDF Cloud Editor"). Leer = alle. Die KI matcht die Namen locker
+    /// gegen den Seitentext, exakte Schreibweise ist nicht nötig.
+    /// </summary>
+    public string? StatusPageProducts { get; set; }
+
     // ── Per-feature toggles ───────────────────────────────────────────────
     public bool EnableAutoSummary { get; set; }
     public bool EnableSmartTags { get; set; }

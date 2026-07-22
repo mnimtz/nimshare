@@ -109,7 +109,11 @@ public class AiController : ControllerBase
             $"in einer Datei-Sharing-App. Es ist gerade {daypart}. " +
             (weather is not null ? $"Das Wetter am Standort ist {weather} — beziehe es locker mit ein. " : "") +
             (statusText is not null
-                ? $"Aktueller Cloud-Status (aus einer Status-Seite): »{statusText}«. Fasse den Status in EINEM lockeren Satz zusammen — alles grün → kurz beruhigend erwähnen; gibt es eine Störung, nenne betroffene Dienste knapp und sachlich (kein Alarm). "
+                ? $"Aktueller Cloud-Status (aus einer Status-Seite): »{statusText}«. "
+                  + (string.IsNullOrWhiteSpace(settings.StatusPageProducts)
+                        ? ""
+                        : $"Berücksichtige dabei AUSSCHLIESSLICH diese Produkte: {settings.StatusPageProducts}. Alle anderen Dienste auf der Seite ignorieren. ")
+                  + "Fasse den Status der relevanten Produkte in EINEM lockeren Satz zusammen — alles grün → kurz beruhigend erwähnen; gibt es eine Störung, nenne die betroffenen Produkte knapp und sachlich (kein Alarm). "
                 : "") +
             "Kein Emoji-Overkill (höchstens eins), keine Anführungszeichen, keine Anrede-Floskel wie 'Betreff'. " +
             $"Antworte in der Sprache mit ISO-Code '{lang}'. Nur die Begrüssung, sonst nichts.";

@@ -886,6 +886,7 @@ public class AiGatewayService : IAiGatewayService
         s.Model = incoming.Model;
         s.Endpoint = incoming.Endpoint;
         s.StatusPageUrl = incoming.StatusPageUrl; // v1.10.117
+        s.StatusPageProducts = incoming.StatusPageProducts; // v1.10.118
         // v1.10.29: AGGRESSIVE Sanitize. Trim reicht nicht — Marcus's Key
         // hatte 61 Zeichen statt der 39 die Google standardmäßig ausgibt.
         // Klar: Copy-Paste-Reste, Zero-Width-Chars, NBSPs, wrap-artige Anführungs-
