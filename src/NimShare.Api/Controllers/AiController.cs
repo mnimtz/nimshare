@@ -114,10 +114,14 @@ public class AiController : ControllerBase
         var lang = CurrentLanguageIso();
         var provider = await _ai.CreateProviderAsync(ct);
         var prompt =
-            "Schreibe eine kurze, warme und leicht humorvolle Nachricht (1–2 Sätze) für die Startseite " +
-            "einer Datei-Sharing-App. WICHTIG: KEINE Anrede und KEINEN Namen — die Begrüssung wird separat " +
+            "Schreibe eine kurze, warme und WITZIGE Nachricht (1–2 Sätze) für die Startseite " +
+            "einer Datei-Sharing-App. Sei richtig humorvoll: ein kleiner Wortwitz, eine " +
+            "augenzwinkernde Bemerkung oder ein charmant-frecher Spruch sind ausdrücklich erwünscht — " +
+            "gern auch mal ein Kalauer, solange es sympathisch und nicht albern wirkt. Nie platt, nie " +
+            "beleidigend, kein Fachjargon. " +
+            "WICHTIG: KEINE Anrede und KEINEN Namen — die Begrüssung wird separat " +
             "vorangestellt. Beginne direkt mit der Nachricht. " +
-            $"Es ist gerade {daypart}. " +
+            $"Es ist gerade {daypart} — bau die Tageszeit ruhig pointiert mit ein. " +
             (weather is not null ? $"Das Wetter am Standort ist {weather} — beziehe es locker mit ein. " : "") +
             (statusText is not null
                 ? $"Aktueller Cloud-Status (aus einer Status-Seite): »{statusText}«. "
