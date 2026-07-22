@@ -27,6 +27,12 @@
     <div id="aiGreeting" class="card" style="display:none;border-left:3px solid var(--tw-accent);background:var(--tw-accent-soft, rgba(0,40,84,.05));margin-bottom:var(--sp-4)">
         <span style="font-size:1.1rem">👋</span>
         <span id="aiGreetingText" style="margin-left:8px"></span>
+        @* v1.10.122: Wetter-Symbol + heutige Vorhersage, direkt nach der Begrüssung. *@
+        <span id="aiWeather" title="" style="display:none;margin-left:10px;white-space:nowrap;font-weight:600">
+            <span id="aiWeatherEmoji" style="font-size:1.15rem"></span>
+            <span id="aiWeatherTemp" style="margin-left:3px"></span>
+            <span id="aiWeatherRange" class="muted" style="margin-left:6px;font-weight:400;font-size:.85em"></span>
+        </span>
     </div>
 
     <div class="row" style="gap:var(--sp-6);align-items:stretch">
@@ -131,10 +137,27 @@
             if (d.greeting) { txt.textContent = d.greeting; box.style.display = ''; }
         } catch {}
     }
+    // v1.10.122: Wetter-Symbol + heutige Vorhersage neben der Begrüssung.
+    async function fetchWeather(lat, lon) {
+        try {
+            const r = await fetch('/api/v1/ai/weather?lat=' + lat + '&lon=' + lon, { credentials: 'same-origin' });
+            if (!r.ok) return;
+            const w = await r.json();
+            const wrap = document.getElementById('aiWeather');
+            document.getElementById('aiWeatherEmoji').textContent = w.emoji || '';
+            document.getElementById('aiWeatherTemp').textContent = w.tempC + '°';
+            document.getElementById('aiWeatherRange').textContent = '↑' + w.highC + '° ↓' + w.lowC + '°';
+            if (wrap) { wrap.title = w.text || ''; wrap.style.display = ''; }
+        } catch {}
+    }
     fetchGreeting(null, null);
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            p => fetchGreeting(p.coords.latitude.toFixed(3), p.coords.longitude.toFixed(3)),
+            p => {
+                const lat = p.coords.latitude.toFixed(3), lon = p.coords.longitude.toFixed(3);
+                fetchGreeting(lat, lon);
+                fetchWeather(lat, lon);
+            },
             () => {}, { timeout: 5000, maximumAge: 600000 });
     }
 })();

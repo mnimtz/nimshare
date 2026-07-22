@@ -568,6 +568,26 @@ final class NimShareAPI: ObservableObject {
         return try decode(GreetingResponse.self, data).greeting
     }
 
+    // v1.10.122: Wetter-Symbol + heutige Vorhersage fürs Nav-Symbol.
+    struct WeatherInfo: Decodable {
+        let tempC: Int
+        let highC: Int
+        let lowC: Int
+        let code: Int
+        let text: String
+        let emoji: String
+        let sfSymbol: String
+    }
+    func weather(lat: Double, lon: Double) async throws -> WeatherInfo {
+        let q: [URLQueryItem] = [
+            .init(name: "lat", value: String(lat)),
+            .init(name: "lon", value: String(lon))
+        ]
+        let req = request("GET", "api/v1/ai/weather", query: q)
+        let (data, _) = try await perform(req)
+        return try decode(WeatherInfo.self, data)
+    }
+
     /// Flat writable-all list used to populate the folder-picker tree.
     struct WritableFolderNode: Decodable, Identifiable {
         let id: UUID

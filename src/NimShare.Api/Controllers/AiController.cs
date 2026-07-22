@@ -137,6 +137,88 @@ public class AiController : ControllerBase
         return string.IsNullOrEmpty(name) ? $"{hi}! Schön, dass du da bist." : $"{hi}, {name}! Schön, dass du da bist.";
     }
 
+    // ── v1.10.122: Wetter-Symbol + heutige Vorhersage ───────────────────────
+    public record WeatherResponse(
+        int TempC, int HighC, int LowC, int Code,
+        string Text, string Emoji, string SfSymbol);
+
+    /// <summary>
+    /// Kompaktes, strukturiertes Wetter für ein Symbol in der App: aktuelle
+    /// Temperatur + heutiges Hoch/Tief + ein Wetter-Code, den der Client als
+    /// Emoji (Web) oder SF-Symbol (iOS) rendert. Open-Meteo, kein API-Key.
+    /// Getrennt vom /greeting-Text, damit iOS ein eigenständiges Nav-Symbol
+    /// und Web einen Chip neben der Begrüssung anzeigen kann.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("weather")]
+    public async Task<IActionResult> Weather(double? lat, double? lon,
+        [FromServices] IHttpClientFactory httpFactory, CancellationToken ct)
+    {
+        if (lat is not double la || lon is not double lo
+            || Math.Abs(la) > 90 || Math.Abs(lo) > 180)
+            return BadRequest(new { error = "lat/lon required" });
+        try
+        {
+            var http = httpFactory.CreateClient();
+            http.Timeout = TimeSpan.FromSeconds(4);
+            var url = $"https://api.open-meteo.com/v1/forecast?latitude={la.ToString(CultureInfo.InvariantCulture)}"
+                    + $"&longitude={lo.ToString(CultureInfo.InvariantCulture)}"
+                    + "&current=temperature_2m,weather_code"
+                    + "&daily=temperature_2m_max,temperature_2m_min,weather_code"
+                    + "&timezone=auto&forecast_days=1";
+            using var resp = await http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode)
+                return Problem(statusCode: 502, title: "weather upstream error");
+            using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            var root = doc.RootElement;
+            var cur = root.GetProperty("current");
+            var temp = (int)Math.Round(cur.GetProperty("temperature_2m").GetDouble());
+            // Der Tages-Code beschreibt "heute" besser als der Momentanwert.
+            var daily = root.GetProperty("daily");
+            int code = daily.GetProperty("weather_code")[0].GetInt32();
+            int high = (int)Math.Round(daily.GetProperty("temperature_2m_max")[0].GetDouble());
+            int low = (int)Math.Round(daily.GetProperty("temperature_2m_min")[0].GetDouble());
+            var body = new WeatherResponse(
+                temp, high, low, code,
+                WeatherCodeToText(code), WeatherCodeToEmoji(code), WeatherCodeToSymbol(code));
+            return Ok(body);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch { return Problem(statusCode: 502, title: "weather unavailable"); }
+    }
+
+    private static string WeatherCodeToEmoji(int code) => code switch
+    {
+        0 => "☀️",
+        1 or 2 => "🌤️",
+        3 => "☁️",
+        45 or 48 => "🌫️",
+        51 or 53 or 55 or 56 or 57 => "🌦️",
+        61 or 63 or 65 or 66 or 67 => "🌧️",
+        71 or 73 or 75 or 77 => "❄️",
+        80 or 81 or 82 => "🌧️",
+        85 or 86 => "🌨️",
+        95 or 96 or 99 => "⛈️",
+        _ => "🌡️"
+    };
+
+    // SF-Symbol-Namen (iOS 17+). Werden auf dem Client mit .symbolRenderingMode
+    // multicolor eingefärbt.
+    private static string WeatherCodeToSymbol(int code) => code switch
+    {
+        0 => "sun.max.fill",
+        1 or 2 => "cloud.sun.fill",
+        3 => "cloud.fill",
+        45 or 48 => "cloud.fog.fill",
+        51 or 53 or 55 or 56 or 57 => "cloud.drizzle.fill",
+        61 or 63 or 65 or 66 or 67 => "cloud.rain.fill",
+        71 or 73 or 75 or 77 => "snowflake",
+        80 or 81 or 82 => "cloud.heavyrain.fill",
+        85 or 86 => "cloud.snow.fill",
+        95 or 96 or 99 => "cloud.bolt.rain.fill",
+        _ => "thermometer.medium"
+    };
+
     /// <summary>
     /// v1.10.117 — holt eine öffentliche Status-Seite, reduziert sie auf
     /// reinen Text und liefert eine kompakte, KI-lesbare Zusammenfassung.

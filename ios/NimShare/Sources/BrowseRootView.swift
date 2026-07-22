@@ -19,6 +19,12 @@ struct BrowseRootView: View {
             }
         }
         .navigationTitle("Dateien")
+        .toolbar {
+            // v1.10.122: Wetter-Symbol oben rechts (heutige Vorhersage, GPS).
+            ToolbarItem(placement: .topBarTrailing) {
+                WeatherToolbarItem()
+            }
+        }
         .task { await load(showSpinner: true) }
         .refreshable { await load(showSpinner: false) }
     }
