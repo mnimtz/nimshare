@@ -555,6 +555,19 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // v1.10.114: KI-Startseiten-Begrüssung (optional mit Standort fürs Wetter).
+    struct GreetingResponse: Decodable { let greeting: String }
+    func greeting(lat: Double? = nil, lon: Double? = nil) async throws -> String {
+        var q: [URLQueryItem] = []
+        if let la = lat, let lo = lon {
+            q.append(.init(name: "lat", value: String(la)))
+            q.append(.init(name: "lon", value: String(lo)))
+        }
+        let req = request("GET", "api/v1/ai/greeting", query: q)
+        let (data, _) = try await perform(req)
+        return try decode(GreetingResponse.self, data).greeting
+    }
+
     /// Flat writable-all list used to populate the folder-picker tree.
     struct WritableFolderNode: Decodable, Identifiable {
         let id: UUID

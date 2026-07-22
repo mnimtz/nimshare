@@ -25,6 +25,8 @@ struct BrowseRootView: View {
 
     private var content: some View {
         List {
+            // v1.10.114: KI-Begrüssung ganz oben.
+            GreetingBanner()
             Section("Bibliotheken") {
                 ForEach(scopes.filter { $0.scope.lowercased() == "personal" }) { tile in
                     scopeRow(tile)

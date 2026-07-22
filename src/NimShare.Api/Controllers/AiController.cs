@@ -42,6 +42,99 @@ public class AiController : ControllerBase
         return code;
     }
 
+    // ── v1.10.114: KI-Startseiten-Begrüssung ────────────────────────────────
+    public record GreetingResponse(string Greeting);
+
+    /// <summary>
+    /// Kurze, freundlich-lustige Begrüssung für die App-Startseite. Nutzt
+    /// Name + Tageszeit; bei übergebenem lat/lon zusätzlich das aktuelle
+    /// Wetter (Open-Meteo, kein API-Key). Fällt auf eine statische Begrüssung
+    /// zurück, wenn kein AI-Provider konfiguriert ist.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("greeting")]
+    public async Task<IActionResult> Greeting(double? lat, double? lon,
+        [FromServices] ICurrentUserService users,
+        [FromServices] IHttpClientFactory httpFactory,
+        [FromServices] ITimeService time,
+        CancellationToken ct)
+    {
+        var me = await users.GetOrProvisionAsync(User, ct);
+        var firstName = (me.DisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? me.DisplayName ?? "";
+        var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, time.DisplayZone);
+        var hour = now.Hour;
+        var daypart = hour < 5 ? "mitten in der Nacht"
+            : hour < 11 ? "am Morgen"
+            : hour < 14 ? "zur Mittagszeit"
+            : hour < 18 ? "am Nachmittag"
+            : hour < 22 ? "am Abend"
+            : "spät abends";
+
+        // Optionales Wetter via Open-Meteo (frei, ohne Key).
+        string? weather = null;
+        if (lat is double la && lon is double lo && Math.Abs(la) <= 90 && Math.Abs(lo) <= 180)
+        {
+            try
+            {
+                var http = httpFactory.CreateClient();
+                http.Timeout = TimeSpan.FromSeconds(4);
+                var url = $"https://api.open-meteo.com/v1/forecast?latitude={la.ToString(CultureInfo.InvariantCulture)}&longitude={lo.ToString(CultureInfo.InvariantCulture)}&current=temperature_2m,weather_code";
+                using var resp = await http.GetAsync(url, ct);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+                    var cur = doc.RootElement.GetProperty("current");
+                    var temp = cur.GetProperty("temperature_2m").GetDouble();
+                    var code = cur.GetProperty("weather_code").GetInt32();
+                    weather = $"{Math.Round(temp)}°C, {WeatherCodeToText(code)}";
+                }
+            }
+            catch { /* Wetter ist optional — Begrüssung geht auch ohne */ }
+        }
+
+        var lang = CurrentLanguageIso();
+        var provider = await _ai.CreateProviderAsync(ct);
+        var prompt =
+            $"Schreibe eine EINZIGE kurze, warme und leicht humorvolle Begrüssung (max. 2 Sätze) für {(string.IsNullOrEmpty(firstName) ? "den Nutzer" : firstName)} " +
+            $"in einer Datei-Sharing-App. Es ist gerade {daypart}. " +
+            (weather is not null ? $"Das Wetter am Standort ist {weather} — beziehe es locker mit ein. " : "") +
+            "Kein Emoji-Overkill (höchstens eins), keine Anführungszeichen, keine Anrede-Floskel wie 'Betreff'. " +
+            $"Antworte in der Sprache mit ISO-Code '{lang}'. Nur die Begrüssung, sonst nichts.";
+
+        string greeting;
+        try
+        {
+            var ai = await provider.FreeformAsync(prompt, lang, ct);
+            greeting = string.IsNullOrWhiteSpace(ai)
+                ? FallbackGreeting(firstName, hour)
+                : ai.Trim().Trim('"');
+        }
+        catch { greeting = FallbackGreeting(firstName, hour); }
+
+        return Ok(new GreetingResponse(greeting));
+    }
+
+    private static string FallbackGreeting(string name, int hour)
+    {
+        var hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
+        return string.IsNullOrEmpty(name) ? $"{hi}! Schön, dass du da bist." : $"{hi}, {name}! Schön, dass du da bist.";
+    }
+
+    private static string WeatherCodeToText(int code) => code switch
+    {
+        0 => "klar",
+        1 or 2 => "leicht bewölkt",
+        3 => "bewölkt",
+        45 or 48 => "neblig",
+        51 or 53 or 55 or 56 or 57 => "Nieselregen",
+        61 or 63 or 65 or 66 or 67 => "Regen",
+        71 or 73 or 75 or 77 => "Schnee",
+        80 or 81 or 82 => "Schauer",
+        85 or 86 => "Schneeschauer",
+        95 or 96 or 99 => "Gewitter",
+        _ => "wechselhaft"
+    };
+
     /// <summary>
     /// Auto-summary for a file. Callable ANONYMOUSLY only if the visitor
     /// has landed via a valid share link (slug provided).

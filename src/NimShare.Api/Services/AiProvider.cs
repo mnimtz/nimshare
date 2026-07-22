@@ -20,6 +20,8 @@ public interface IAiProvider
     Task<float[]?> EmbedAsync(string text, CancellationToken ct = default);
     /// <summary>Answer a question grounded in the caller's file corpus. Text passages are the retrieved chunks.</summary>
     Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default);
+    /// <summary>v1.10.114 — freier Prompt (z. B. Startseiten-Begrüssung). Kein RAG, keine Struktur.</summary>
+    Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default);
     /// <summary>Personalise an upload-request cover email for a specific recipient.</summary>
     Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default);
     /// <summary>Describe an image (Vision). Returns null if the provider or the configured model doesn't support vision.</summary>
@@ -33,6 +35,7 @@ public class NullAiProvider : IAiProvider
     public Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null);
     public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
 }
@@ -115,6 +118,10 @@ public class OpenAiProvider : IAiProvider
             temperature: 0.2,
             ct);
     }
+
+    // v1.10.114: OpenAI-Freiform (Startseiten-Begrüssung).
+    public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) =>
+        ChatAsync(system: $"Reply in the language whose ISO code is '{language}'.", user: prompt, temperature: 0.9, ct);
 
     public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
     {
@@ -362,6 +369,11 @@ public class GeminiProvider : IAiProvider
             $"Dokument-Auszüge:\n{joined}\n\nFrage: {question}\n\nAntwort:";
         return GenerateAsync(prompt, 0.25, ct);
     }
+
+    // v1.10.114: Gemini-Freiform (Startseiten-Begrüssung) — höhere Temperatur
+    // für etwas Persönlichkeit/Humor.
+    public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) =>
+        GenerateAsync(prompt, 0.9, ct);
 
     public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
     {
@@ -723,6 +735,10 @@ public class AnthropicProvider : IAiProvider
             $"Answer using ONLY these passages. Reply in ISO '{language}'. Cite [1] where helpful.",
             $"Passages:\n{joined}\n\nQuestion: {question}", 0.2, ct);
     }
+
+    // v1.10.114: Anthropic-Freiform (Startseiten-Begrüssung).
+    public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) =>
+        MessagesAsync($"Reply in the language whose ISO code is '{language}'.", prompt, 0.9, ct);
 
     public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null); // Anthropic doesn't ship embeddings — semantic search falls back to null
 

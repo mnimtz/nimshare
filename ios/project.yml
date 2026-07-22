@@ -15,8 +15,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    MARKETING_VERSION: "1.10.113"
-    CURRENT_PROJECT_VERSION: "27"
+    MARKETING_VERSION: "1.10.114"
+    CURRENT_PROJECT_VERSION: "28"
 targets:
   NimShare:
     type: application
@@ -49,6 +49,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSPhotoLibraryUsageDescription: "Choose a photo or file to share via NimShare."
         NSCameraUsageDescription: "Take a photo to share via NimShare."
+        # v1.10.114: optionaler Standort für die Wetter-Begrüssung auf der Startseite.
+        NSLocationWhenInUseUsageDescription: "NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: email.nimtz.nimshare
