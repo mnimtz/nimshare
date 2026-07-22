@@ -9,6 +9,7 @@ struct GreetingBanner: View {
     @EnvironmentObject var auth: AuthStore
     @State private var salutation: String?
     @State private var message: String?
+    @State private var weather: NimShareAPI.WeatherInfo?
     @State private var loading = false
     @StateObject private var loc = OneShotLocation()
 
@@ -42,8 +43,14 @@ struct GreetingBanner: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
-                if loading { ProgressView().controlSize(.mini) }
+                Spacer(minLength: 8)
+                // v1.10.140: Wetter oben rechts IN der Begrüssungs-Box (vorher
+                // ein eigenes Nav-Bar-Symbol, das eine ganze Zeile Höhe kostete).
+                if loading {
+                    ProgressView().controlSize(.mini)
+                } else if let w = weather {
+                    weatherChip(w)
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -58,6 +65,25 @@ struct GreetingBanner: View {
             // `.task` läuft), ist aber unsichtbar bis die Begrüssung da ist.
             Color.clear.frame(height: 0)
         }
+    }
+
+    /// v1.10.140: kompaktes Wetter oben rechts in der Begrüssungs-Box:
+    /// Symbol + aktuelle Temperatur, darunter Hoch/Tief.
+    @ViewBuilder
+    private func weatherChip(_ w: NimShareAPI.WeatherInfo) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            HStack(spacing: 3) {
+                Image(systemName: w.sfSymbol)
+                    .symbolRenderingMode(.multicolor)
+                Text("\(w.tempC)°")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+            Text("↑\(w.highC)° ↓\(w.lowC)°")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .fixedSize()
     }
 
     private func initialLoad() async {
@@ -92,6 +118,11 @@ struct GreetingBanner: View {
                 salutation = f.salutation
                 message = f.message
             }
+        }
+        // v1.10.140: Wetter mitladen, sobald Standort da ist — Anzeige rechts
+        // oben in der Box.
+        if let la = lat, let lo = lon {
+            weather = try? await api.weather(lat: la, lon: lo)
         }
     }
 

@@ -23,17 +23,11 @@ struct BrowseRootView: View {
             }
         }
         // v1.10.128: Grosser „Dateien"-Titel entfernt — er nahm nur Platz weg.
-        // Die formatierte Begrüssung (Anrede + Nachricht) dient jetzt als
-        // Header. Nav-Bar bleibt inline (leer) erhalten, damit das Wetter-
-        // Symbol oben rechts weiter Platz hat.
+        // Die formatierte Begrüssung (Anrede + Nachricht) dient als Header.
+        // v1.10.140: Wetter-Symbol wanderte aus der Nav-Bar direkt in die
+        // Begrüssungs-Box (oben rechts) — spart die Nav-Zeile komplett.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            // v1.10.122: Wetter-Symbol oben rechts (heutige Vorhersage, GPS).
-            ToolbarItem(placement: .topBarTrailing) {
-                WeatherToolbarItem()
-            }
-        }
         .task { await load(showSpinner: true) }
         .refreshable { await load(showSpinner: false) }
     }
