@@ -23,7 +23,7 @@ final class AuthStore: ObservableObject {
 
     /// v1.10.59: Werksseitig eingestellte Standard-URL. Marcus's Vorgabe.
     /// User kann via "Server ändern" trotzdem umschalten wenn nötig.
-    static let defaultServerURL = URL(string: "https://nimshare.azurewebsites.net")!
+    static let defaultServerURL = URL(string: "https://nimshare.com")!
 
     /// v1.10.59: letzter erfolgreicher Login — für "Email merken" auf der
     /// Login-Seite. Passwort läuft komplett über iOS Keychain-AutoFill

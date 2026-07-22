@@ -151,7 +151,7 @@ struct LoginView: View {
                             Image(systemName: "server.rack")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            Text(auth.serverURL?.host ?? "nimshare.azurewebsites.net")
+                            Text(auth.serverURL?.host ?? "nimshare.com")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
