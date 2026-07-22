@@ -572,11 +572,29 @@ final class NimShareAPI: ObservableObject {
         let req = request("GET", "api/v1/ai/greeting", query: q)
         let (data, _) = try await perform(req)
         let r = try decode(GreetingResponse.self, data)
-        // Ältere Server ohne salutation/body: ganzen Text als Nachricht zeigen.
+        // Neuer Server liefert Anrede + Nachricht getrennt.
         if let s = r.salutation, let b = r.body, !s.isEmpty {
             return Greeting(salutation: s, message: b)
         }
-        return Greeting(salutation: "", message: r.greeting)
+        // Älterer Server liefert nur den vollen Text — clientseitig in Anrede
+        // (bis zum ersten ! oder .) und Nachricht splitten, damit die zwei-
+        // zeilige Formatierung auch ohne Server-Update greift.
+        return Self.split(r.greeting)
+    }
+
+    static func split(_ full: String) -> Greeting {
+        let t = full.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Erste Satzgrenze suchen: "! " oder ". "
+        if let r = t.range(of: "! ") ?? t.range(of: ". ") {
+            let sal = String(t[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)
+            let msg = String(t[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+            if !sal.isEmpty, !msg.isEmpty {
+                // Anrede sauber mit Komma abschliessen.
+                let salComma = sal.hasSuffix(",") ? sal : sal + ","
+                return Greeting(salutation: salComma, message: msg)
+            }
+        }
+        return Greeting(salutation: "", message: t)
     }
 
     // v1.10.122: Wetter-Symbol + heutige Vorhersage fürs Nav-Symbol.
