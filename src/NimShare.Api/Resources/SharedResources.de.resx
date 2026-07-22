@@ -1299,13 +1299,13 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.pick_user" xml:space="preserve"><value>Wähle eine Person aus den Vorschlägen.</value></data>
   <data name="move.hint.single_folder" xml:space="preserve"><value>Wähle das Ziel für diesen Ordner.</value></data>
   <data name="copy.hint.single_folder" xml:space="preserve"><value>Wähle den Zielordner für die Kopie.</value></data>
-  <data name="nav.linkcol" xml:space="preserve"><value>Linksammlung</value></data>
-  <data name="linkcol.title" xml:space="preserve"><value>Linksammlung</value></data>
-  <data name="linkcol.lede" xml:space="preserve"><value>Geteilte, praktische Links für das ganze Team.</value></data>
-  <data name="linkcol.add" xml:space="preserve"><value>Link hinzufügen</value></data>
-  <data name="linkcol.add_first" xml:space="preserve"><value>Ersten Link hinzufügen</value></data>
-  <data name="linkcol.edit" xml:space="preserve"><value>Link bearbeiten</value></data>
-  <data name="linkcol.empty" xml:space="preserve"><value>Noch keine Links.</value></data>
+  <data name="nav.linkcol" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.title" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.lede" xml:space="preserve"><value>Geteilte, praktische Bookmarks für das ganze Team.</value></data>
+  <data name="linkcol.add" xml:space="preserve"><value>Bookmark hinzufügen</value></data>
+  <data name="linkcol.add_first" xml:space="preserve"><value>Erstes Bookmark hinzufügen</value></data>
+  <data name="linkcol.edit" xml:space="preserve"><value>Bookmark bearbeiten</value></data>
+  <data name="linkcol.empty" xml:space="preserve"><value>Noch keine Bookmarks.</value></data>
   <data name="linkcol.field.emoji" xml:space="preserve"><value>Symbol</value></data>
   <data name="linkcol.field.title" xml:space="preserve"><value>Name</value></data>
   <data name="linkcol.field.url" xml:space="preserve"><value>Link (URL)</value></data>
@@ -1313,7 +1313,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="linkcol.field.desc_ph" xml:space="preserve"><value>Optionale kurze Notiz</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Ein Name ist erforderlich.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Gib eine gültige http(s)-URL ein.</value></data>
-  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Den Link „{name}" löschen?</value></data>
+  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Das Bookmark „{name}“ löschen?</value></data>
   <data name="nav.backup" xml:space="preserve"><value>Backup</value></data>
   <data name="backup.title" xml:space="preserve"><value>Backup &amp; Wiederherstellung</value></data>
   <data name="backup.lede" xml:space="preserve"><value>Vollständiges Datenbank-Backup — alles außer den Datei-Inhalten im Blob-Speicher.</value></data>

@@ -182,8 +182,9 @@ struct BrowseRootView: View {
         t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
         t.append(TileSpec(id: "activity", title: "Aktivität", subtitle: nil, icon: "clock.fill", tint: Theme.tungstenBlue, dest: { AnyView(ActivityView()) }))
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
-        // Linksammlung.
-        t.append(TileSpec(id: "linkcol", title: "Linksammlung", subtitle: nil, icon: "link.circle.fill", tint: Theme.tungstenBlue, dest: { AnyView(LinkCollectionView()) }))
+        // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
+        // „Meine Links"). Fixer Begriff in allen Sprachen.
+        t.append(TileSpec(id: "linkcol", title: "Bookmarks", subtitle: nil, icon: "bookmark.fill", tint: Theme.tungstenBlue, dest: { AnyView(LinkCollectionView()) }))
         return t
     }
 

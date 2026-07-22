@@ -27,11 +27,11 @@ struct LinkCollectionView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if links.isEmpty {
                 ContentUnavailableView(
-                    "Noch keine Links",
-                    systemImage: "link",
+                    "Noch keine Bookmarks",
+                    systemImage: "bookmark",
                     description: Text(isAdmin
-                        ? "Tippe oben rechts auf +, um den ersten Link hinzuzufügen."
-                        : "Sobald ein Admin Links hinzufügt, erscheinen sie hier."))
+                        ? "Tippe oben rechts auf +, um das erste Bookmark hinzuzufügen."
+                        : "Sobald ein Admin Bookmarks hinzufügt, erscheinen sie hier."))
             } else {
                 List {
                     ForEach(links) { l in
@@ -51,7 +51,7 @@ struct LinkCollectionView: View {
                 }
             }
         }
-        .navigationTitle("🔗 Linksammlung")
+        .navigationTitle("Bookmarks")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isAdmin {
@@ -141,7 +141,7 @@ struct LinkCollectionEditSheet: View {
                     TextField("Kurze Notiz", text: $desc)
                 }
             }
-            .navigationTitle(target.isNew ? "Link hinzufügen" : "Link bearbeiten")
+            .navigationTitle(target.isNew ? "Bookmark hinzufügen" : "Bookmark bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }

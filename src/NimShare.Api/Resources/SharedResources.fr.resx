@@ -1295,13 +1295,13 @@ Merci d'utiliser NimShare.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Modèle enregistré et sélectionné.</value></data>
   <data name="move.hint.single_folder" xml:space="preserve"><value>Choisis la destination de ce dossier.</value></data>
   <data name="copy.hint.single_folder" xml:space="preserve"><value>Choisis le dossier de destination de la copie.</value></data>
-  <data name="nav.linkcol" xml:space="preserve"><value>Liens utiles</value></data>
-  <data name="linkcol.title" xml:space="preserve"><value>Liens utiles</value></data>
-  <data name="linkcol.lede" xml:space="preserve"><value>Des liens pratiques partagés pour toute l'équipe.</value></data>
-  <data name="linkcol.add" xml:space="preserve"><value>Ajouter un lien</value></data>
-  <data name="linkcol.add_first" xml:space="preserve"><value>Ajouter le premier lien</value></data>
-  <data name="linkcol.edit" xml:space="preserve"><value>Modifier le lien</value></data>
-  <data name="linkcol.empty" xml:space="preserve"><value>Aucun lien pour l'instant.</value></data>
+  <data name="nav.linkcol" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.title" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.lede" xml:space="preserve"><value>Des bookmarks pratiques et partagés pour toute l’équipe.</value></data>
+  <data name="linkcol.add" xml:space="preserve"><value>Ajouter un bookmark</value></data>
+  <data name="linkcol.add_first" xml:space="preserve"><value>Ajouter le premier bookmark</value></data>
+  <data name="linkcol.edit" xml:space="preserve"><value>Modifier le bookmark</value></data>
+  <data name="linkcol.empty" xml:space="preserve"><value>Aucun bookmark pour le moment.</value></data>
   <data name="linkcol.field.emoji" xml:space="preserve"><value>Icône</value></data>
   <data name="linkcol.field.title" xml:space="preserve"><value>Nom</value></data>
   <data name="linkcol.field.url" xml:space="preserve"><value>Lien (URL)</value></data>
@@ -1309,7 +1309,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="linkcol.field.desc_ph" xml:space="preserve"><value>Note courte (facultatif)</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Un nom est requis.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Saisis une URL http(s) valide.</value></data>
-  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Supprimer le lien « {name} » ?</value></data>
+  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Supprimer le bookmark « {name} » ?</value></data>
   <data name="nav.backup" xml:space="preserve"><value>Sauvegarde</value></data>
   <data name="backup.title" xml:space="preserve"><value>Sauvegarde &amp; Restauration</value></data>
   <data name="backup.lede" xml:space="preserve"><value>Sauvegarde complète de la base de données — tout sauf le contenu des fichiers dans le stockage blob.</value></data>

@@ -1295,13 +1295,13 @@ Grazie per usare NimShare.</value></data>
   <data name="templates.saved_ok" xml:space="preserve"><value>Modello salvato e selezionato.</value></data>
   <data name="move.hint.single_folder" xml:space="preserve"><value>Scegli dove spostare questa cartella.</value></data>
   <data name="copy.hint.single_folder" xml:space="preserve"><value>Scegli la cartella di destinazione della copia.</value></data>
-  <data name="nav.linkcol" xml:space="preserve"><value>Raccolta link</value></data>
-  <data name="linkcol.title" xml:space="preserve"><value>Raccolta link</value></data>
-  <data name="linkcol.lede" xml:space="preserve"><value>Link utili condivisi per tutto il team.</value></data>
-  <data name="linkcol.add" xml:space="preserve"><value>Aggiungi link</value></data>
-  <data name="linkcol.add_first" xml:space="preserve"><value>Aggiungi il primo link</value></data>
-  <data name="linkcol.edit" xml:space="preserve"><value>Modifica link</value></data>
-  <data name="linkcol.empty" xml:space="preserve"><value>Ancora nessun link.</value></data>
+  <data name="nav.linkcol" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.title" xml:space="preserve"><value>Bookmarks</value></data>
+  <data name="linkcol.lede" xml:space="preserve"><value>Bookmark utili e condivisi per tutto il team.</value></data>
+  <data name="linkcol.add" xml:space="preserve"><value>Aggiungi bookmark</value></data>
+  <data name="linkcol.add_first" xml:space="preserve"><value>Aggiungi il primo bookmark</value></data>
+  <data name="linkcol.edit" xml:space="preserve"><value>Modifica bookmark</value></data>
+  <data name="linkcol.empty" xml:space="preserve"><value>Ancora nessun bookmark.</value></data>
   <data name="linkcol.field.emoji" xml:space="preserve"><value>Icona</value></data>
   <data name="linkcol.field.title" xml:space="preserve"><value>Nome</value></data>
   <data name="linkcol.field.url" xml:space="preserve"><value>Link (URL)</value></data>
@@ -1309,7 +1309,7 @@ Grazie per usare NimShare.</value></data>
   <data name="linkcol.field.desc_ph" xml:space="preserve"><value>Nota breve (facoltativa)</value></data>
   <data name="linkcol.err.title" xml:space="preserve"><value>Il nome è obbligatorio.</value></data>
   <data name="linkcol.err.url" xml:space="preserve"><value>Inserisci un URL http(s) valido.</value></data>
-  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Eliminare il link "{name}"?</value></data>
+  <data name="linkcol.confirm.delete" xml:space="preserve"><value>Eliminare il bookmark "{name}"?</value></data>
   <data name="nav.backup" xml:space="preserve"><value>Backup</value></data>
   <data name="backup.title" xml:space="preserve"><value>Backup e ripristino</value></data>
   <data name="backup.lede" xml:space="preserve"><value>Backup completo del database — tutto tranne il contenuto dei file nel blob storage.</value></data>
