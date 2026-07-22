@@ -96,11 +96,24 @@ struct GreetingBanner: View {
     }
 
     private func localFallback() -> (salutation: String, message: String) {
+        // v1.10.137: in der App-Sprache statt hart Deutsch (nur relevant, wenn
+        // der Server offline ist — sonst kommt die Anrede lokalisiert vom Server).
+        let lang = Bundle.main.preferredLocalizations.first ?? "de"
         let hour = Calendar.current.component(.hour, from: Date())
-        let hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend"
+        let slot = hour < 11 ? 0 : hour < 18 ? 1 : 2
+        let hi: String
+        let msg: String
+        switch lang {
+        case "de": hi = [ "Guten Morgen", "Hallo", "Guten Abend" ][slot]; msg = "schön, dass du da bist."
+        case "fr": hi = [ "Bonjour", "Bonjour", "Bonsoir" ][slot];        msg = "ravi de vous revoir."
+        case "it": hi = [ "Buongiorno", "Ciao", "Buonasera" ][slot];      msg = "bello rivederti."
+        case "es": hi = [ "Buenos días", "Hola", "Buenas tardes" ][slot]; msg = "qué bueno verte."
+        case "nl": hi = [ "Goedemorgen", "Hallo", "Goedenavond" ][slot];  msg = "fijn dat je er bent."
+        default:   hi = [ "Good morning", "Hello", "Good evening" ][slot]; msg = "nice to see you."
+        }
         let name = auth.user?.displayName.split(separator: " ").first.map(String.init) ?? ""
         let sal = name.isEmpty ? "\(hi)," : "\(hi), \(name),"
-        return (sal, "schön, dass du da bist.")
+        return (sal, msg)
     }
 }
 

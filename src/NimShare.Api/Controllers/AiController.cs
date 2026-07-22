@@ -108,10 +108,11 @@ public class AiController : ControllerBase
 
         // v1.10.128: Anrede serverseitig bauen (Zeile 1), die KI liefert nur
         // noch die Nachricht darunter — so kann der Client sauber formatieren.
-        var hiWord = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend";
+        // v1.10.137: Anrede in der Nutzersprache statt hart Deutsch.
+        var lang = CurrentLanguageIso();
+        var hiWord = SalutationWord(lang, hour);
         var salutation = string.IsNullOrEmpty(firstName) ? $"{hiWord}," : $"{hiWord}, {firstName},";
 
-        var lang = CurrentLanguageIso();
         var provider = await _ai.CreateProviderAsync(ct);
         var prompt =
             "Schreibe eine kurze, warme und WITZIGE Nachricht (1–2 Sätze) für die Startseite " +
@@ -137,15 +138,41 @@ public class AiController : ControllerBase
         try
         {
             var ai = await provider.FreeformAsync(prompt, lang, ct);
-            body = string.IsNullOrWhiteSpace(ai) ? FallbackBody() : ai.Trim().Trim('"');
+            body = string.IsNullOrWhiteSpace(ai) ? FallbackBody(lang) : ai.Trim().Trim('"');
         }
-        catch { body = FallbackBody(); }
+        catch { body = FallbackBody(lang); }
 
         var greeting = $"{salutation} {body}";
         return Ok(new GreetingResponse(greeting, salutation, body));
     }
 
-    private static string FallbackBody() => "schön, dass du da bist.";
+    // v1.10.137: Anrede-Wort nach Tageszeit UND Sprache. Fällt auf Englisch
+    // zurück, wenn die Sprache nicht in den unterstützten 6 ist.
+    private static string SalutationWord(string lang, int hour)
+    {
+        var slot = hour < 11 ? 0 : hour < 18 ? 1 : 2;   // Morgen / Tag / Abend
+        return (lang, slot) switch
+        {
+            ("de", 0) => "Guten Morgen", ("de", 1) => "Hallo",      ("de", _) => "Guten Abend",
+            ("fr", 0) => "Bonjour",      ("fr", 1) => "Bonjour",    ("fr", _) => "Bonsoir",
+            ("it", 0) => "Buongiorno",   ("it", 1) => "Ciao",       ("it", _) => "Buonasera",
+            ("es", 0) => "Buenos días",  ("es", 1) => "Hola",       ("es", _) => "Buenas tardes",
+            ("nl", 0) => "Goedemorgen",  ("nl", 1) => "Hallo",      ("nl", _) => "Goedenavond",
+            (_,    0) => "Good morning",  (_,   1) => "Hello",       (_,    _) => "Good evening",
+        };
+    }
+
+    // v1.10.137: Fallback-Nachricht in der Nutzersprache (wenn die KI nichts
+    // liefert / kein Provider konfiguriert ist).
+    private static string FallbackBody(string lang) => lang switch
+    {
+        "de" => "schön, dass du da bist.",
+        "fr" => "ravi de vous revoir.",
+        "it" => "bello rivederti.",
+        "es" => "qué bueno verte.",
+        "nl" => "fijn dat je er bent.",
+        _    => "nice to see you.",
+    };
 
     // ── v1.10.122: Wetter-Symbol + heutige Vorhersage ───────────────────────
     public record WeatherResponse(

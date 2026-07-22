@@ -47,6 +47,11 @@ final class NimShareAPI: ObservableObject {
         var req = URLRequest(url: comp.url!)
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
+        // v1.10.137: Sprache der App (Schnittmenge Gerät ∩ unterstützte
+        // Sprachen) explizit mitschicken, damit serverseitige Inhalte wie die
+        // KI-Begrüssung IMMER in derselben Sprache kommen wie die App-UI —
+        // nicht nur nach dem, was URLSession vom Gerät ableitet.
+        req.setValue(Bundle.main.preferredLocalizations.first ?? "de", forHTTPHeaderField: "Accept-Language")
         if let ct = contentType { req.setValue(ct, forHTTPHeaderField: "Content-Type") }
         if let t = token { req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
         if let b = body { req.httpBody = b }
