@@ -25,8 +25,12 @@
             @* v1.10.53: statt sync onsubmit-confirm → nimConfirm mit
                preventDefault + async. Form-Ref wird VOR dem await
                festgehalten damit sie noch gültig ist. *@
+            @* v1.10.109: onsubmit einfach-quotiert, weil @@Json.Serialize literale "
+               liefert die ein "-Attribut vorzeitig beenden würden → onsubmit stumm,
+               Formular submittet ohne Rückfrage. Einfach-quotiert: die " aus dem JSON
+               sind darin gültig; Apostrophe im Text escapt der JSON-Encoder als '. *@
             <form method="post" action="/groups/@Model.Id/delete" style="display:inline"
-                  onsubmit="const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["groups.confirm.delete"].Value),{danger:true}))f.submit();})();return false;">
+                  onsubmit='const f=this;event.preventDefault();(async()=>{if(await nimConfirm(@Json.Serialize(T["groups.confirm.delete"].Value),{danger:true}))f.submit();})();return false;'>
     @Html.AntiForgeryToken()
                 <button class="btn btn-ghost">@T["groups.delete"]</button>
             </form>

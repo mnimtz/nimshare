@@ -39,7 +39,10 @@ else
                         <span class="fm-icon @(isFile ? "fm-icon-file" : "fm-icon-folder")">@(isFile ? "📄" : "📁")</span>
                         @if (isFile)
                         {
-                            <a href="#" onclick="event.preventDefault();fetch('/api/v1/files/'+@Json.Serialize(f.FileId)+'/preview-url').then(r=>r.json()).then(d=>window.open(d.url,'_blank'))">@name</a>
+                            @* v1.10.109: FileId direkt in die URL interpolieren statt
+                               @@Json.Serialize (das erzeugt literale " → bricht das
+                               "-Attribut → Link tot). GUID hat keine Sonderzeichen. *@
+                            <a href="#" onclick="event.preventDefault();fetch('/api/v1/files/@f.FileId/preview-url').then(r=>r.json()).then(d=>window.open(d.url,'_blank'))">@name</a>
                         }
                         else
                         {
