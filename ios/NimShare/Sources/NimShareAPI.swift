@@ -534,6 +534,27 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // v1.10.113: Ordner verschieben/kopieren/löschen (Web-Parität).
+    func moveFolder(id: UUID, targetFolderId: UUID) async throws {
+        let body = try Self.jsonEncoder.encode(MoveFileBody(folderId: targetFolderId))
+        let req = request("POST", "api/v1/folders/\(id)/move", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    func copyFolder(id: UUID, targetFolderId: UUID) async throws {
+        let body = try Self.jsonEncoder.encode(MoveFileBody(folderId: targetFolderId))
+        let req = request("POST", "api/v1/folders/\(id)/copy", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    func deleteFolder(id: UUID, force: Bool = true) async throws {
+        let req = request("DELETE", "api/v1/folders/\(id)", query: [.init(name: "force", value: force ? "true" : "false")])
+        _ = try await perform(req)
+    }
+    // v1.10.113: Share-Link (Meine Links) löschen.
+    func deleteShareLink(id: UUID) async throws {
+        let req = request("DELETE", "api/v1/links/\(id)")
+        _ = try await perform(req)
+    }
+
     /// Flat writable-all list used to populate the folder-picker tree.
     struct WritableFolderNode: Decodable, Identifiable {
         let id: UUID
@@ -664,6 +685,15 @@ final class NimShareAPI: ObservableObject {
     func createContact(email: String, name: String, company: String? = nil, notes: String? = nil, tags: String? = nil) async throws -> ContactDto {
         let body = try Self.jsonEncoder.encode(CreateContactBody(email: email, name: name, company: company, notes: notes, tags: tags))
         let req = request("POST", "api/v1/contacts", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ContactDto.self, data)
+    }
+    // v1.10.113: Kontakt bearbeiten (Long-Press → Bearbeiten).
+    @discardableResult
+    func updateContact(id: UUID, email: String, name: String, company: String? = nil,
+                       notes: String? = nil, tags: String? = nil) async throws -> ContactDto {
+        let body = try Self.jsonEncoder.encode(CreateContactBody(email: email, name: name, company: company, notes: notes, tags: tags))
+        let req = request("PATCH", "api/v1/contacts/\(id)", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ContactDto.self, data)
     }

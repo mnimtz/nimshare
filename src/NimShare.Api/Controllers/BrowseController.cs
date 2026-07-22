@@ -293,6 +293,24 @@ public class BrowseController : Controller
         return Ok(new { id = folder.Id, name = folder.Name });
     }
 
+    // v1.10.113: JSON-Delete für iOS (der MVC-Post braucht AntiForgery +
+    // Redirect, was der App-Client nicht liefern kann). force=true löscht
+    // rekursiv inkl. Inhalt (→ Papierkorb), sonst nur leere Ordner.
+    [Authorize(Policy = "ApiUser")]
+    [HttpDelete("/api/v1/folders/{id:guid}")]
+    public async Task<IActionResult> ApiDeleteFolder(Guid id, bool force, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (folder.ParentFolderId is null) return Problem(statusCode: 422, title: "Cannot delete a library root.");
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        try { await _folders.DeleteAsync(folder, cascade: force, ct); }
+        catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: ex.Message); }
+        catch (Exception ex) { return Problem(statusCode: 500, title: "Delete failed", detail: ex.Message); }
+        return NoContent();
+    }
+
     // ── POST: delete folder ────────────────────────────────────────────────
     [HttpPost("folders/{id:guid}/delete")]
     [ValidateAntiForgeryToken]

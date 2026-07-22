@@ -10,6 +10,8 @@ struct LinksView: View {
     @State private var links: [ShareLinkDto] = []
     @State private var loading = true
     @State private var error: String?
+    // v1.10.113: Löschbestätigung für einen Share-Link.
+    @State private var pendingDelete: ShareLinkDto?
 
     var body: some View {
         Group {
@@ -31,12 +33,12 @@ struct LinksView: View {
                     let mine = links.filter { $0.isPublic != true }
                     if !mine.isEmpty {
                         Section("👤 Privat") {
-                            ForEach(mine) { row($0) }
+                            ForEach(mine) { linkRow($0) }
                         }
                     }
                     if !publicLinks.isEmpty {
                         Section("🌍 Öffentlich") {
-                            ForEach(publicLinks) { row($0) }
+                            ForEach(publicLinks) { linkRow($0) }
                         }
                     }
                 }
@@ -45,6 +47,46 @@ struct LinksView: View {
         .navigationTitle("Meine Links")
         .task { await load() }
         .refreshable { await load() }
+        // v1.10.113: Löschbestätigung.
+        .alert("Link löschen?", isPresented: Binding(
+            get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }
+        )) {
+            Button("Abbrechen", role: .cancel) { pendingDelete = nil }
+            Button("Löschen", role: .destructive) {
+                if let l = pendingDelete { Task { await delete(l) } }
+                pendingDelete = nil
+            }
+        } message: {
+            Text("Der Freigabelink wird dauerhaft entfernt. Die Datei selbst bleibt erhalten.")
+        }
+    }
+
+    // v1.10.113: Row + Wisch/Kontext-Aktionen (Löschen, Kopieren, Teilen).
+    @ViewBuilder
+    private func linkRow(_ link: ShareLinkDto) -> some View {
+        row(link)
+            .contextMenu {
+                Button { UIPasteboard.general.string = link.url } label: {
+                    Label("Link kopieren", systemImage: "doc.on.doc")
+                }
+                if let u = URL(string: link.url) {
+                    ShareLink(item: u) { Label("Teilen", systemImage: "square.and.arrow.up") }
+                }
+                Button(role: .destructive) { pendingDelete = link } label: {
+                    Label("Löschen", systemImage: "trash")
+                }
+            }
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) { pendingDelete = link } label: {
+                    Label("Löschen", systemImage: "trash")
+                }
+            }
+    }
+
+    private func delete(_ link: ShareLinkDto) async {
+        guard let api = auth.api else { return }
+        do { try await api.deleteShareLink(id: link.id); await load() }
+        catch let ex { error = ex.localizedDescription }
     }
 
     private func row(_ link: ShareLinkDto) -> some View {

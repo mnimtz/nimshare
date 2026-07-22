@@ -150,6 +150,10 @@ struct UploadRequestCreateSheet: View {
     @EnvironmentObject var auth: AuthStore
     @Environment(\.dismiss) private var dismiss
 
+    // v1.10.113: optionaler Ziel-Ordnername (Long-Press „Upload anfordern"
+    // auf einem Ordner). nil → Server-Default „Received".
+    var targetFolderName: String? = nil
+
     @State private var slug = ""
     @State private var password = ""
     @State private var maxUploadsText = ""
@@ -246,6 +250,7 @@ struct UploadRequestCreateSheet: View {
                 maxUploads: Int(maxUploadsText.trimmingCharacters(in: .whitespaces)),
                 expiresAt: useExpiry ? expiryDate : nil,
                 message: message.isEmpty ? nil : message,
+                targetFolder: (targetFolderName?.isEmpty == false) ? targetFolderName! : "Received",
                 notifyOnUpload: notifyOnUpload
             )
         } catch let ex { error = ex.localizedDescription }

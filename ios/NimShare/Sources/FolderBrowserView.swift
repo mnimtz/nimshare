@@ -41,12 +41,24 @@ struct FolderBrowserView: View {
     enum FolderPickerOp: Identifiable {
         case move(fileId: UUID, name: String)
         case copy(fileId: UUID, name: String)
+        // v1.10.113: Ordner verschieben/kopieren (Web-Parität).
+        case moveFolder(folderId: UUID, name: String)
+        case copyFolder(folderId: UUID, name: String)
         var id: String {
-            switch self { case .move(let f, _): return "m-\(f)"; case .copy(let f, _): return "c-\(f)" }
+            switch self {
+            case .move(let f, _): return "m-\(f)"
+            case .copy(let f, _): return "c-\(f)"
+            case .moveFolder(let f, _): return "mf-\(f)"
+            case .copyFolder(let f, _): return "cf-\(f)"
+            }
         }
     }
     // v1.10.79: Delete-Confirmation. Kein One-Tap-Datenverlust mehr.
     @State private var pendingDelete: (id: UUID, name: String)?
+    // v1.10.113: separate Ordner-Löschbestätigung (rekursiv).
+    @State private var pendingFolderDelete: (id: UUID, name: String)?
+    // v1.10.113: Upload-Anfrage für einen bestimmten Ordner.
+    @State private var uploadReqFolderName: String?
     // v1.10.104: Berechtigungen-Sheet (Public „Windows-ACL"). Nur für
     // Public-Scope-Ordner sinnvoll — Long-Press blendet den Eintrag
     // in Personal/Group aus.
@@ -137,8 +149,8 @@ struct FolderBrowserView: View {
         .sheet(item: $shareTarget) { t in
             ShareLinkCreateSheet(target: t, itemName: shareItemName)
         }
-        .sheet(isPresented: $showUploadRequest) {
-            UploadRequestCreateSheet()
+        .sheet(isPresented: $showUploadRequest, onDismiss: { uploadReqFolderName = nil }) {
+            UploadRequestCreateSheet(targetFolderName: uploadReqFolderName)
         }
         // v1.10.72: Bulk-Move/Copy — dasselbe FolderPickerSheet wie
         // Single-Item, aber loopt über die Selection.
@@ -158,7 +170,28 @@ struct FolderBrowserView: View {
                 FolderPickerSheet(title: "\"\(name)\" kopieren nach") { targetId, targetPath in
                     Task { await performCopy(fileId: fid, targetId: targetId, targetPath: targetPath) }
                 }
+            case .moveFolder(let fid, let name):
+                FolderPickerSheet(title: "\"\(name)\" verschieben nach") { targetId, targetPath in
+                    Task { await performMoveFolder(folderId: fid, targetId: targetId, targetPath: targetPath) }
+                }
+            case .copyFolder(let fid, let name):
+                FolderPickerSheet(title: "\"\(name)\" kopieren nach") { targetId, targetPath in
+                    Task { await performCopyFolder(folderId: fid, targetId: targetId, targetPath: targetPath) }
+                }
             }
+        }
+        // v1.10.113: Ordner-Löschbestätigung (rekursiv → Papierkorb).
+        .alert("Ordner löschen?", isPresented: Binding(
+            get: { pendingFolderDelete != nil },
+            set: { if !$0 { pendingFolderDelete = nil } }
+        )) {
+            Button("Abbrechen", role: .cancel) { pendingFolderDelete = nil }
+            Button("In Papierkorb", role: .destructive) {
+                if let d = pendingFolderDelete { Task { await deleteFolder(d.id) } }
+                pendingFolderDelete = nil
+            }
+        } message: {
+            Text(#"„\#(pendingFolderDelete?.name ?? "")" wird mit seinem gesamten Inhalt in den Papierkorb verschoben."#)
         }
         // v1.10.70: Rename-Alert (Datei ODER Ordner)
         .alert("Umbenennen", isPresented: Binding(
@@ -262,6 +295,11 @@ struct FolderBrowserView: View {
                                       systemImage: scope.lowercased() == "public"
                                         ? "lock.shield" : "person.crop.circle.badge.plus")
                             }
+                            // v1.10.113: Upload anfordern für DIESEN Ordner (Web-Parität).
+                            Button {
+                                uploadReqFolderName = f.name
+                                showUploadRequest = true
+                            } label: { Label("Upload anfordern", systemImage: "tray.and.arrow.down") }
                             Button {
                                 newFolderParent = f.id
                                 newFolderName = ""
@@ -270,8 +308,18 @@ struct FolderBrowserView: View {
                                 renaming = ("folder", f.id, f.name)
                                 renameText = f.name
                             } label: { Label("Umbenennen", systemImage: "pencil") }
+                            // v1.10.113: Ordner verschieben/kopieren (Backend v1.10.110).
+                            Button {
+                                pickerOp = .moveFolder(folderId: f.id, name: f.name)
+                            } label: { Label("Verschieben nach…", systemImage: "folder") }
+                            Button {
+                                pickerOp = .copyFolder(folderId: f.id, name: f.name)
+                            } label: { Label("Kopieren nach…", systemImage: "doc.on.doc") }
                             Button { Task { await toggleFav(folderId: f.id) } } label: {
                                 Label("Favorit", systemImage: "star")
+                            }
+                            Button(role: .destructive) { pendingFolderDelete = (f.id, f.name) } label: {
+                                Label("In Papierkorb", systemImage: "trash")
                             }
                         }
                     }
@@ -386,6 +434,23 @@ struct FolderBrowserView: View {
             try await api.deleteFile(id)
             await load()
         } catch let ex { error = ex.localizedDescription }
+    }
+
+    // v1.10.113: Ordner-Operationen (Web-Parität).
+    private func deleteFolder(_ id: UUID) async {
+        guard let api = auth.api else { return }
+        do { try await api.deleteFolder(id: id, force: true); await load() }
+        catch let ex { error = ex.localizedDescription }
+    }
+    private func performMoveFolder(folderId: UUID, targetId: UUID, targetPath: String) async {
+        guard let api = auth.api else { return }
+        do { try await api.moveFolder(id: folderId, targetFolderId: targetId); await load() }
+        catch let ex { error = ex.localizedDescription }
+    }
+    private func performCopyFolder(folderId: UUID, targetId: UUID, targetPath: String) async {
+        guard let api = auth.api else { return }
+        do { try await api.copyFolder(id: folderId, targetFolderId: targetId); await load() }
+        catch let ex { error = ex.localizedDescription }
     }
 
     // v1.10.66: Share-Link mit Default-Optionen erstellen. Der User sieht

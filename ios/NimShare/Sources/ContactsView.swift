@@ -21,6 +21,8 @@ struct ContactsView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var showAdd = false
+    // v1.10.113: Kontakt bearbeiten via Long-Press.
+    @State private var editContact: ContactDto?
     // v1.10.82: pending State für Report/Block-Sheet
     @State private var pendingReportUser: (id: UUID, name: String)?
 
@@ -57,6 +59,10 @@ struct ContactsView: View {
         .refreshable { await loadAll() }
         .sheet(isPresented: $showAdd) {
             AddContactSheet { Task { await loadMy() } }
+        }
+        // v1.10.113: Bearbeiten-Sheet (Long-Press auf „Meine Kontakte").
+        .sheet(item: $editContact) { c in
+            AddContactSheet(existing: c) { Task { await loadMy() } }
         }
         // v1.10.82: Report-Sheet für User-Meldungen aus dem Directory heraus.
         .sheet(item: Binding(
@@ -116,10 +122,20 @@ struct ContactsView: View {
                         }
                     }
                     .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                    // v1.10.113: Long-Press → Bearbeiten/Löschen.
+                    .contextMenu {
+                        Button { editContact = c } label: { Label("Bearbeiten", systemImage: "pencil") }
+                        Button(role: .destructive) { Task { await deleteContact(c.id) } } label: {
+                            Label("Löschen", systemImage: "trash")
+                        }
+                    }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             Task { await deleteContact(c.id) }
                         } label: { Label("Löschen", systemImage: "trash") }
+                        Button { editContact = c } label: { Label("Bearbeiten", systemImage: "pencil") }
+                            .tint(Theme.tungstenBlue)
                     }
                 }
             }
@@ -242,6 +258,8 @@ struct ContactsView: View {
 struct AddContactSheet: View {
     @EnvironmentObject var auth: AuthStore
     @Environment(\.dismiss) private var dismiss
+    // v1.10.113: optionaler Bestands-Kontakt → Bearbeiten-Modus.
+    var existing: ContactDto? = nil
     let onSaved: () -> Void
     @State private var email = ""
     @State private var name = ""
@@ -266,13 +284,18 @@ struct AddContactSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             }
-            .navigationTitle("Kontakt anlegen")
+            .navigationTitle(existing == nil ? "Kontakt anlegen" : "Kontakt bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Abbrechen") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Speichern") { Task { await save() } }
                         .disabled(busy || !email.contains("@") || name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear {
+                if let c = existing {
+                    email = c.email; name = c.name; company = c.company ?? ""
                 }
             }
             .overlay { if busy { ProgressView() } }
@@ -282,10 +305,15 @@ struct AddContactSheet: View {
     private func save() async {
         guard let api = auth.api else { return }
         busy = true; error = nil; defer { busy = false }
+        let e = email.trimmingCharacters(in: .whitespaces)
+        let n = name.trimmingCharacters(in: .whitespaces)
+        let comp = company.isEmpty ? nil : company
         do {
-            _ = try await api.createContact(email: email.trimmingCharacters(in: .whitespaces),
-                name: name.trimmingCharacters(in: .whitespaces),
-                company: company.isEmpty ? nil : company)
+            if let c = existing {
+                _ = try await api.updateContact(id: c.id, email: e, name: n, company: comp)
+            } else {
+                _ = try await api.createContact(email: e, name: n, company: comp)
+            }
             onSaved()
             dismiss()
         } catch let ex { error = ex.localizedDescription }
