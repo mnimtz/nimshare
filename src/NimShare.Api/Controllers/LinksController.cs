@@ -271,8 +271,5 @@ public class LinksController : ControllerBase
         TargetName: l.File?.Name ?? l.Folder?.Name);
 
     private string BuildPublicUrl(string slug)
-    {
-        var req = HttpContext.Request;
-        return $"{req.Scheme}://{req.Host}/s/{slug}";
-    }
+        => HttpContext.Request.PublicUrl($"/s/{slug}");
 }

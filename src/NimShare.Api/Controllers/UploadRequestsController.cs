@@ -65,7 +65,7 @@ public class UploadRequestsController : ControllerBase
         {
             link.Id,
             link.Slug,
-            Url = $"{Request.Scheme}://{Request.Host}/u/{link.Slug}",
+            Url = Request.PublicUrl($"/u/{link.Slug}"),
             link.ExpiresAt,
             link.MaxUploads,
             link.TargetFolder,

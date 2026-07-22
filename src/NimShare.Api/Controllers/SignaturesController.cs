@@ -349,7 +349,7 @@ public class SignaturesController : ControllerBase
         SignatureParticipant p, EmailTemplate? template, CancellationToken ct)
     {
         var raw = ExtractStashedToken(p);
-        var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
+        var url = Request.PublicUrl($"/sign/{p.Id}?t={raw}");
         var isSigner = p.Role == SignatureParticipantRole.Signer;
 
         string subject, body;
@@ -453,7 +453,7 @@ public class SignaturesController : ControllerBase
                 var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                     .Replace("+", "-").Replace("/", "_").TrimEnd('=');
                 p.TokenHash = _hasher.Hash(raw);
-                var url = $"{Request.Scheme}://{Request.Host}/sign/{p.Id}?t={raw}";
+                var url = Request.PublicUrl($"/sign/{p.Id}?t={raw}");
                 var action = _l[p.Role == SignatureParticipantRole.Signer
                     ? "sig.manual_remind.action_sign" : "sig.manual_remind.action_review"].Value;
                 var subject = _l["sig.manual_remind.subject", r.Title].Value;

@@ -11,7 +11,7 @@
     var maxY = Math.Max(1, buckets.Max(b => Math.Max(b.Landings, Math.Max(b.Downloads, b.PasswordFails))));
     var target = Model.File?.Name ?? Model.Folder?.Name ?? "—";
     var isActive = !Model.IsRevoked && (Model.ExpiresAt is null || Model.ExpiresAt > DateTimeOffset.UtcNow);
-    var landingUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/s/{Model.Slug}";
+    var landingUrl = Context.Request.PublicUrl($"/s/{Model.Slug}");
 }
 <div class="page-header">
     <div>

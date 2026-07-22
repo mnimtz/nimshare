@@ -66,7 +66,7 @@ public class InvitationsController : Controller
         await _db.SaveChangesAsync(ct);
 
         // Build the acceptance URL from the current request scheme+host.
-        var url = $"{Request.Scheme}://{Request.Host}/accept-invite/{invite.Id}?t={token}";
+        var url = Request.PublicUrl($"/accept-invite/{invite.Id}?t={token}");
         var subject = $"{me.DisplayName} invited you to NimShare";
         var body = $"Hello,\n\n{me.DisplayName} ({me.Email}) has invited you to NimShare.\n\nOpen this link to set your password and sign in:\n{url}\n\nThe link expires on {invite.ExpiresAt:u}.\n\n— NimShare";
         try
@@ -169,7 +169,7 @@ public class InvitationsController : Controller
         inv.RevokedAt = null;
         await _db.SaveChangesAsync(ct);
 
-        var url = $"{Request.Scheme}://{Request.Host}/accept-invite/{inv.Id}?t={token}";
+        var url = Request.PublicUrl($"/accept-invite/{inv.Id}?t={token}");
         var subject = $"{me.DisplayName} invited you to NimShare (Erinnerung)";
         var body = $"Hallo,\n\n{me.DisplayName} ({me.Email}) hat dich zu NimShare eingeladen.\n\nÖffne diesen Link um dein Passwort zu setzen:\n{url}\n\nDer Link läuft am {inv.ExpiresAt:u} ab.\n\n— NimShare";
         try
@@ -204,7 +204,7 @@ public class InvitationsController : Controller
         inv.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
         inv.RevokedAt = null;
         await _db.SaveChangesAsync(ct);
-        var url = $"{Request.Scheme}://{Request.Host}/accept-invite/{inv.Id}?t={token}";
+        var url = Request.PublicUrl($"/accept-invite/{inv.Id}?t={token}");
         // Als TempData weitergeben damit die View einen „Copy"-Toast rendern kann.
         TempData["InviteLink"] = url;
         TempData["InviteLinkEmail"] = inv.Email;

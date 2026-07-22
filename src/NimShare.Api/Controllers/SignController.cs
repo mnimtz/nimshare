@@ -662,7 +662,7 @@ public class SignController : Controller
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
-        var url = $"{Request.Scheme}://{Request.Host}/sign/{delegateP.Id}?t={raw}";
+        var url = Request.PublicUrl($"/sign/{delegateP.Id}?t={raw}");
         var initiator = req.Initiator?.DisplayName ?? "NimShare";
 
         // Recipient email must be in THEIR language (best-effort default: the
@@ -725,7 +725,7 @@ public class SignController : Controller
         string raw;
         try { raw = stash.Unprotect(next.DeclinedReason!["TOKEN:".Length..]); }
         catch { return; }
-        var url = $"{Request.Scheme}://{Request.Host}/sign/{next.Id}?t={raw}";
+        var url = Request.PublicUrl($"/sign/{next.Id}?t={raw}");
         var initiator = req.Initiator?.DisplayName ?? "NimShare";
         var localizer = HttpContext.RequestServices
             .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<NimShare.Api.SharedResources>>();
