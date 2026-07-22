@@ -12,30 +12,41 @@ struct GreetingBanner: View {
     @StateObject private var loc = OneShotLocation()
 
     var body: some View {
-        Group {
-            if let t = text {
-                HStack(alignment: .top, spacing: 10) {
-                    Text("👋").font(.title3)
-                    Text(t)
-                        .font(.callout)
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    if loading { ProgressView().controlSize(.mini) }
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Theme.tungstenBlue.opacity(0.08))
-                )
-                .contentShape(Rectangle())
-                .onTapGesture { Task { await reload() } }
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+        // v1.10.120: WICHTIG — die View muss immer präsent sein, damit
+        // `.task` zuverlässig feuert. Vorher war der Root eine leere Group
+        // (text == nil → EmptyView), auf der `.task` nicht ausgelöst wurde
+        // → die Begrüssung wurde nie geladen und tauchte nie auf.
+        content
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .task { await initialLoad() }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let t = text {
+            HStack(alignment: .top, spacing: 10) {
+                Text("👋").font(.title3)
+                Text(t)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if loading { ProgressView().controlSize(.mini) }
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Theme.tungstenBlue.opacity(0.08))
+            )
+            .contentShape(Rectangle())
+            .onTapGesture { Task { await reload() } }
+        } else {
+            // Nullhöhen-Platzhalter: hält die Zeile in der Hierarchie (damit
+            // `.task` läuft), ist aber unsichtbar bis die Begrüssung da ist.
+            Color.clear.frame(height: 0)
         }
-        .task { await initialLoad() }
     }
 
     private func initialLoad() async {
@@ -57,7 +68,19 @@ struct GreetingBanner: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { text = try await api.greeting(lat: lat, lon: lon) }
-        catch { /* Begrüssung ist Beiwerk — Fehler still schlucken */ }
+        catch {
+            // v1.10.120: Server hat den Greeting-Endpoint (noch) nicht oder
+            // ein Netzfehler — lokalen Fallback zeigen statt gar nichts, aber
+            // nur wenn noch keine (echte) Begrüssung geladen wurde.
+            if text == nil { text = localFallback() }
+        }
+    }
+
+    private func localFallback() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let hi = hour < 11 ? "Guten Morgen" : hour < 18 ? "Hallo" : "Guten Abend"
+        let name = auth.user?.displayName.split(separator: " ").first.map(String.init) ?? ""
+        return name.isEmpty ? "\(hi)! Schön, dass du da bist." : "\(hi), \(name)! Schön, dass du da bist."
     }
 }
 
