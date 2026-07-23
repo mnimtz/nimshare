@@ -34,7 +34,9 @@ public class UploadRequestsController : ControllerBase
         string? TargetFolder,
         bool NotifyOnUpload,
         string? RecurringDaysOfWeek = null,
-        int? RecurringWindowDays = null);
+        int? RecurringWindowDays = null,
+        // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
+        Guid? SigningCertificateId = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRequest req, CancellationToken ct)
@@ -44,6 +46,15 @@ public class UploadRequestsController : ControllerBase
         try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
+
+        // v1.10.146: Absender-Zertifikat, nur eigene akzeptieren.
+        Guid? certId = null;
+        if (req.SigningCertificateId is Guid cid)
+        {
+            var owned = await _db.SigningCertificates
+                .AnyAsync(c => c.Id == cid && c.OwnerUserId == user.Id, ct);
+            if (owned) certId = cid;
+        }
 
         var link = new UploadRequestLink
         {
@@ -57,6 +68,7 @@ public class UploadRequestsController : ControllerBase
             NotifyOnUpload = req.NotifyOnUpload,
             RecurringDaysOfWeek = string.IsNullOrWhiteSpace(req.RecurringDaysOfWeek) ? null : req.RecurringDaysOfWeek!.Trim(),
             RecurringWindowDays = req.RecurringWindowDays is > 0 ? req.RecurringWindowDays.Value : 7,
+            SigningCertificateId = certId,
         };
         _db.UploadRequests.Add(link);
         await _db.SaveChangesAsync(ct);

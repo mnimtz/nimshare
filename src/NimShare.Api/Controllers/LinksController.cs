@@ -37,7 +37,9 @@ public class LinksController : ControllerBase
         DateTimeOffset? ExpiresAt,
         int? MaxDownloads,
         string? Message,
-        bool NotifyOnAccess);
+        bool NotifyOnAccess,
+        // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
+        Guid? SigningCertificateId = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -47,7 +49,18 @@ public class LinksController : ControllerBase
         bool IsPublic,
         // v1.10.71: Wofür ist der Link? iOS/Web zeigt jetzt "Datei: X"
         // oder "Ordner: Y" statt bloß Slug. TargetKind = "file"|"folder"|null.
-        string? TargetKind, string? TargetName);
+        string? TargetKind, string? TargetName,
+        // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
+        SignerInfo? Signer = null);
+
+    public record SignerInfo(
+        Guid CertificateId,
+        string Subject,
+        string Issuer,
+        string Thumbprint,
+        DateTimeOffset NotBefore,
+        DateTimeOffset NotAfter,
+        bool IsSelfIssued);
 
     // v1.10.41: Live-Check für den Share-Dialog. Während der User tippt
     // fragt das Frontend hier an (debounce 400ms), zeigt sofort ob der
@@ -105,6 +118,16 @@ public class LinksController : ControllerBase
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
 
+        // v1.10.146: Absender-Zertifikat — nur eigene akzeptieren, sonst leise
+        // ignorieren (kein Fehler, damit der Link trotzdem erstellt wird).
+        Guid? certId = null;
+        if (req.SigningCertificateId is Guid cid)
+        {
+            var owned = await _db.SigningCertificates
+                .AnyAsync(c => c.Id == cid && c.OwnerUserId == user.Id, ct);
+            if (owned) certId = cid;
+        }
+
         var link = new ShareLink
         {
             FileId = file?.Id,
@@ -116,9 +139,14 @@ public class LinksController : ControllerBase
             MaxDownloads = req.MaxDownloads,
             Message = req.Message,
             NotifyOnAccess = req.NotifyOnAccess,
+            SigningCertificateId = certId,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
+        // v1.10.146: Signer für Response-DTO nachladen (Include beim frischen
+        // Entity greift noch nicht).
+        if (certId is Guid cid2)
+            link.SigningCertificate = await _db.SigningCertificates.FindAsync(new object[] { cid2 }, ct);
 
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(user.Id, WebhookEvent.LinkCreated,
@@ -144,6 +172,7 @@ public class LinksController : ControllerBase
         var rows = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
+            .Include(l => l.SigningCertificate)
             .Where(l => l.OwnerId == user.Id)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
@@ -154,7 +183,9 @@ public class LinksController : ControllerBase
     public async Task<ActionResult<LinkDto>> GetById(Guid id, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        var link = await _db.ShareLinks
+            .Include(l => l.File).Include(l => l.Folder).Include(l => l.SigningCertificate)
+            .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         return link is null ? NotFound() : Ok(ToDto(link));
     }
 
@@ -268,7 +299,14 @@ public class LinksController : ControllerBase
               || (l.Folder != null && l.Folder.Scope == FileScope.Public)
               || l.IsPublic,
         TargetKind: l.File != null ? "file" : (l.Folder != null ? "folder" : null),
-        TargetName: l.File?.Name ?? l.Folder?.Name);
+        TargetName: l.File?.Name ?? l.Folder?.Name,
+        Signer: BuildSignerInfo(l.SigningCertificate));
+
+    // v1.10.146: Signer-Info fürs Landing-Badge; nur bei vorhandenem Zertifikat.
+    internal static SignerInfo? BuildSignerInfo(SigningCertificate? c)
+        => c is null ? null : new SignerInfo(
+            c.Id, c.SubjectCommonName, c.Issuer, c.Thumbprint,
+            c.NotBefore, c.NotAfter, c.IsSelfIssued);
 
     private string BuildPublicUrl(string slug)
         => HttpContext.Request.PublicUrl($"/s/{slug}");

@@ -702,6 +702,9 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         // v1.10.139: „Letzter Login" (DateTimeOffset? → SQLite long/INTEGER via
         // globalem Converter, SqlServer datetimeoffset).
         ("Users", "LastLoginAt", "INTEGER", "datetimeoffset"),
+        // v1.10.146: Optionales Absender-Zertifikat für Share- und Upload-Links.
+        ("ShareLinks", "SigningCertificateId", "TEXT", "uniqueidentifier"),
+        ("UploadRequests", "SigningCertificateId", "TEXT", "uniqueidentifier"),
     };
     foreach (var w in wanted)
     {

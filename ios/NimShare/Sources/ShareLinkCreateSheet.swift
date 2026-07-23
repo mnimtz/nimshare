@@ -28,6 +28,9 @@ struct ShareLinkCreateSheet: View {
     @State private var busy = false
     @State private var error: String?
     @State private var result: ShareLinkDto?
+    // v1.10.146: Zertifikat-Picker.
+    @State private var certs: [CertDto] = []
+    @State private var selectedCertId: UUID? = nil
 
     var body: some View {
         NavigationStack {
@@ -35,6 +38,14 @@ struct ShareLinkCreateSheet: View {
                 resultView(r)
             } else {
                 formView
+                    .task {
+                        // Zertifikate nachladen; Default vorwählen falls vorhanden.
+                        guard certs.isEmpty, let api = auth.api else { return }
+                        if let list = try? await api.listCertificates() {
+                            certs = list
+                            selectedCertId = list.first(where: { $0.isDefault })?.id
+                        }
+                    }
             }
         }
     }
@@ -73,6 +84,19 @@ struct ShareLinkCreateSheet: View {
             }
             Section {
                 Toggle("Benachrichtigen wenn Link geöffnet wird", isOn: $notifyOnAccess)
+            }
+            // v1.10.146: Absender-Zertifikat (nur wenn welche vorhanden).
+            if !certs.isEmpty {
+                Section("Absender-Zertifikat (optional)") {
+                    Picker("Zertifikat", selection: $selectedCertId) {
+                        Text("Kein Zertifikat").tag(UUID?.none)
+                        ForEach(certs, id: \.id) { c in
+                            Text(c.name + (c.isDefault ? " ★" : "")).tag(UUID?.some(c.id))
+                        }
+                    }
+                    Text("Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             Section {
@@ -137,7 +161,8 @@ struct ShareLinkCreateSheet: View {
                 maxDownloads: maxDl,
                 expiresAt: useExpiry ? expiryDate : nil,
                 message: message.isEmpty ? nil : message,
-                notifyOnAccess: notifyOnAccess
+                notifyOnAccess: notifyOnAccess,
+                signingCertificateId: selectedCertId    // v1.10.146
             )
             result = link
         } catch let ex { error = ex.localizedDescription }
@@ -165,6 +190,9 @@ struct UploadRequestCreateSheet: View {
     @State private var busy = false
     @State private var error: String?
     @State private var result: NimShareAPI.UploadRequestResult?
+    // v1.10.146: Zertifikat-Picker.
+    @State private var certs: [CertDto] = []
+    @State private var selectedCertId: UUID? = nil
 
     var body: some View {
         NavigationStack {
@@ -172,6 +200,13 @@ struct UploadRequestCreateSheet: View {
                 resultView(r)
             } else {
                 formView
+                    .task {
+                        guard certs.isEmpty, let api = auth.api else { return }
+                        if let list = try? await api.listCertificates() {
+                            certs = list
+                            selectedCertId = list.first(where: { $0.isDefault })?.id
+                        }
+                    }
             }
         }
     }
@@ -200,6 +235,19 @@ struct UploadRequestCreateSheet: View {
             }
             Section {
                 Toggle("Bei Upload benachrichtigen", isOn: $notifyOnUpload)
+            }
+            // v1.10.146: Absender-Zertifikat (nur wenn welche vorhanden).
+            if !certs.isEmpty {
+                Section("Absender-Zertifikat (optional)") {
+                    Picker("Zertifikat", selection: $selectedCertId) {
+                        Text("Kein Zertifikat").tag(UUID?.none)
+                        ForEach(certs, id: \.id) { c in
+                            Text(c.name + (c.isDefault ? " ★" : "")).tag(UUID?.some(c.id))
+                        }
+                    }
+                    Text("Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             Section {
@@ -251,7 +299,8 @@ struct UploadRequestCreateSheet: View {
                 expiresAt: useExpiry ? expiryDate : nil,
                 message: message.isEmpty ? nil : message,
                 targetFolder: (targetFolderName?.isEmpty == false) ? targetFolderName! : "Received",
-                notifyOnUpload: notifyOnUpload
+                notifyOnUpload: notifyOnUpload,
+                signingCertificateId: selectedCertId    // v1.10.146
             )
         } catch let ex { error = ex.localizedDescription }
     }

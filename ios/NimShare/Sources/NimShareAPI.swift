@@ -466,14 +466,18 @@ final class NimShareAPI: ObservableObject {
         let expiresAt: Date?
         let message: String?
         let notifyOnAccess: Bool
+        // v1.10.146: optionales Absender-Zertifikat.
+        let signingCertificateId: UUID?
     }
     /// Create a share link with default options (no password, no expiry, no
     /// download limit). Returns the freshly created ShareLinkDto — caller
-    /// pastes/shows the .url.
-    func createShareLink(fileId: UUID? = nil, folderId: UUID? = nil) async throws -> ShareLinkDto {
+    /// pastes/shows the .url. v1.10.146: optional signing certificate.
+    func createShareLink(fileId: UUID? = nil, folderId: UUID? = nil,
+                         signingCertificateId: UUID? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: nil, password: nil,
-            maxDownloads: nil, expiresAt: nil, message: nil, notifyOnAccess: false))
+            maxDownloads: nil, expiresAt: nil, message: nil, notifyOnAccess: false,
+            signingCertificateId: signingCertificateId))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)
@@ -487,6 +491,8 @@ final class NimShareAPI: ObservableObject {
         let message: String?
         let targetFolder: String
         let notifyOnUpload: Bool
+        // v1.10.146: optionales Absender-Zertifikat.
+        let signingCertificateId: UUID?
     }
     struct UploadRequestResult: Decodable {
         let id: UUID
@@ -495,10 +501,13 @@ final class NimShareAPI: ObservableObject {
     }
     /// Create an upload-request link (reverse-share). Uploaded files land in
     /// the owner's Personal → "Received" folder (server default).
-    func createUploadRequest(message: String? = nil) async throws -> UploadRequestResult {
+    /// v1.10.146: optional signing certificate.
+    func createUploadRequest(message: String? = nil,
+                             signingCertificateId: UUID? = nil) async throws -> UploadRequestResult {
         let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
             slug: nil, password: nil, maxUploads: nil, expiresAt: nil,
-            message: message, targetFolder: "Received", notifyOnUpload: true))
+            message: message, targetFolder: "Received", notifyOnUpload: true,
+            signingCertificateId: signingCertificateId))
         let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(UploadRequestResult.self, data)
@@ -815,11 +824,12 @@ final class NimShareAPI: ObservableObject {
     func createShareLinkFull(fileId: UUID? = nil, folderId: UUID? = nil,
                              slug: String? = nil, password: String? = nil,
                              maxDownloads: Int? = nil, expiresAt: Date? = nil,
-                             message: String? = nil, notifyOnAccess: Bool = false) async throws -> ShareLinkDto {
+                             message: String? = nil, notifyOnAccess: Bool = false,
+                             signingCertificateId: UUID? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
-            notifyOnAccess: notifyOnAccess))
+            notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)
@@ -830,10 +840,12 @@ final class NimShareAPI: ObservableObject {
     func createUploadRequestFull(slug: String? = nil, password: String? = nil,
                                  maxUploads: Int? = nil, expiresAt: Date? = nil,
                                  message: String? = nil, targetFolder: String = "Received",
-                                 notifyOnUpload: Bool = true) async throws -> UploadRequestResult {
+                                 notifyOnUpload: Bool = true,
+                                 signingCertificateId: UUID? = nil) async throws -> UploadRequestResult {
         let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
             slug: slug, password: password, maxUploads: maxUploads, expiresAt: expiresAt,
-            message: message, targetFolder: targetFolder, notifyOnUpload: notifyOnUpload))
+            message: message, targetFolder: targetFolder, notifyOnUpload: notifyOnUpload,
+            signingCertificateId: signingCertificateId))
         let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(UploadRequestResult.self, data)

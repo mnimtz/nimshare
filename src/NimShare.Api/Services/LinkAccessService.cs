@@ -39,6 +39,7 @@ public class LinkAccessService : ILinkAccessService
         => _db.ShareLinks
             .Include(x => x.File)
             .Include(x => x.Owner)
+            .Include(x => x.SigningCertificate)   // v1.10.146: Landing-Badge
             .SingleOrDefaultAsync(x => x.Slug == slug, ct);
 
     public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)

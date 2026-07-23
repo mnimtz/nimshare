@@ -32,12 +32,14 @@ public class UploadRequestPublicController : Controller
     public async Task<IActionResult> Landing(string slug, CancellationToken ct)
     {
         var link = await _db.UploadRequests.Include(l => l.Owner)
+            .Include(l => l.SigningCertificate)   // v1.10.146
             .SingleOrDefaultAsync(l => l.Slug == slug, ct);
         if (link is null) return View("NotFound");
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired");
         return View("UploadLanding", new UploadLandingViewModel(
-            link.Slug, RenderMarkdown(link.Message), link.PasswordHash is not null, link.Owner.DisplayName));
+            link.Slug, RenderMarkdown(link.Message), link.PasswordHash is not null, link.Owner.DisplayName,
+            ShareController.BuildLandingSigner(link.SigningCertificate)));
     }
 
     public record InitUploadRequest(string Filename, long SizeBytes, string ContentType, string? Password);
@@ -151,4 +153,5 @@ public class UploadRequestPublicController : Controller
     }
 }
 
-public record UploadLandingViewModel(string Slug, string MessageHtml, bool HasPassword, string OwnerName);
+public record UploadLandingViewModel(string Slug, string MessageHtml, bool HasPassword, string OwnerName,
+    LandingSignerInfo? Signer = null);   // v1.10.146

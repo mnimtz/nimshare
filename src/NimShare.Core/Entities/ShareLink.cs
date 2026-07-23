@@ -65,6 +65,15 @@ public class ShareLink
     /// </summary>
     public bool RequireEmailVerify { get; set; }
 
+    /// <summary>
+    /// v1.10.146 — Optionales Absender-Zertifikat, das der Ersteller beim
+    /// Erzeugen des Links hinzugefügt hat. Wird auf der Landing als schmale
+    /// „✓ Signiert von …"-Zeile mit Details-Popover angezeigt — dezenter
+    /// Absender-Ausweis, keine kryptografische Payload-Signatur.
+    /// </summary>
+    public Guid? SigningCertificateId { get; set; }
+    public SigningCertificate? SigningCertificate { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

@@ -1328,4 +1328,14 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Indien ingesteld controleert de startpagina-begroeting deze cloudstatuspagina en vermeldt de huidige status. Alleen http(s).</value></data>
   <data name="ai.status_products" xml:space="preserve"><value>Producten om op te nemen (optioneel)</value></data>
   <data name="ai.status_products_helper" xml:space="preserve"><value>Kommagescheiden. Alleen deze producten van de statuspagina worden in de begroeting genoemd. Leeg = alle. Exacte spelling niet nodig — de AI matcht soepel.</value></data>
+  <data name="share.cert.line" xml:space="preserve"><value>Ondertekend door {0}</value></data>
+  <data name="share.cert.details_title" xml:space="preserve"><value>Afzender-certificaat</value></data>
+  <data name="share.cert.subject" xml:space="preserve"><value>Naam</value></data>
+  <data name="share.cert.issuer" xml:space="preserve"><value>Uitgegeven door</value></data>
+  <data name="share.cert.thumbprint" xml:space="preserve"><value>Vingerafdruk</value></data>
+  <data name="share.cert.valid_until" xml:space="preserve"><value>Geldig tot</value></data>
+  <data name="share.cert.self_issued" xml:space="preserve"><value>Zelf-uitgegeven — de afzender is de uitgever.</value></data>
+  <data name="share.cert.picker_label" xml:space="preserve"><value>Afzender-certificaat</value></data>
+  <data name="share.cert.picker_none" xml:space="preserve"><value>Geen certificaat</value></data>
+  <data name="share.cert.picker_hint" xml:space="preserve"><value>Koppel je certificaat zodat de ontvanger ziet wie de link heeft gemaakt.</value></data>
 </root>

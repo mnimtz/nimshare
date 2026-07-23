@@ -104,6 +104,12 @@
             </div>
             <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> @T["links.restrict.otp_label"]</label>
         </details>
+        @* v1.10.146: Absender-Zertifikat-Picker (lädt eigene Zertifikate). *@
+        <div class="field" style="margin-top:10px">
+            <label>@T["share.cert.picker_label"]</label>
+            <select id="shareCert"><option value="">@T["share.cert.picker_none"]</option></select>
+            <div class="helper">@T["share.cert.picker_hint"]</div>
+        </div>
         <div id="shareResult" style="display:none">
             <div class="modal-result">
                 <input id="shareUrl" readonly/>
@@ -145,6 +151,12 @@
         <div class="field">
             <label>@T["upload.message"]</label>
             <textarea id="urMsg" rows="2"></textarea>
+        </div>
+        @* v1.10.146: Absender-Zertifikat auch für Upload-Anfragen. *@
+        <div class="field">
+            <label>@T["share.cert.picker_label"]</label>
+            <select id="urCert"><option value="">@T["share.cert.picker_none"]</option></select>
+            <div class="helper">@T["share.cert.picker_hint"]</div>
         </div>
         <div id="urResult" style="display:none">
             <div class="modal-result">
@@ -353,7 +365,30 @@ function openUploadRequestModal(folderId) {
     openModal('modalUploadReq');
 }
 
+// v1.10.146: Zertifikat-Dropdowns beim Öffnen der Modals einmalig füllen.
+async function ensureCertsLoaded() {
+    if (window.__certsLoaded) return;
+    window.__certsLoaded = true;
+    try {
+        const r = await fetch('/api/v1/certificates', { credentials: 'same-origin' });
+        if (!r.ok) return;
+        const list = await r.json();
+        for (const selId of ['shareCert', 'urCert']) {
+            const sel = document.getElementById(selId);
+            if (!sel) continue;
+            list.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name + (c.isDefault ? ' ★' : '');
+                if (c.isDefault) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+    } catch {}
+}
+
 async function createShareLink() {
+    await ensureCertsLoaded();
     const body = {
         slug: document.getElementById('shareSlug').value || null,
         password: document.getElementById('sharePw').value || null,
@@ -361,6 +396,7 @@ async function createShareLink() {
         expiresAt: document.getElementById('shareExp').value ? new Date(document.getElementById('shareExp').value).toISOString() : null,
         message: document.getElementById('shareMsg').value || null,
         notifyOnAccess: document.getElementById('shareNotify').checked,
+        signingCertificateId: document.getElementById('shareCert').value || null,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;
@@ -398,6 +434,7 @@ function copyShareUrl() {
 }
 
 async function createUploadRequest() {
+    await ensureCertsLoaded();
     const body = {
         slug: document.getElementById('urSlug').value || null,
         password: document.getElementById('urPw').value || null,
@@ -406,6 +443,7 @@ async function createUploadRequest() {
         message: document.getElementById('urMsg').value || null,
         targetFolder: 'Received',
         notifyOnUpload: true,
+        signingCertificateId: document.getElementById('urCert').value || null,
     };
     const r = await fetch('/api/v1/upload-requests', {
         method: 'POST',

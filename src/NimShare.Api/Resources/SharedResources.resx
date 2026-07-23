@@ -1327,4 +1327,14 @@ Thanks for using NimShare.</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>If set, the home-screen greeting checks this cloud status page and mentions the current status. Only http(s).</value></data>
   <data name="ai.status_products" xml:space="preserve"><value>Products to include (optional)</value></data>
   <data name="ai.status_products_helper" xml:space="preserve"><value>Comma-separated. Only these products from the status page are mentioned in the greeting. Leave empty for all. Exact spelling not required — the AI matches loosely.</value></data>
+  <data name="share.cert.line" xml:space="preserve"><value>Signed by {0}</value></data>
+  <data name="share.cert.details_title" xml:space="preserve"><value>Sender certificate</value></data>
+  <data name="share.cert.subject" xml:space="preserve"><value>Subject</value></data>
+  <data name="share.cert.issuer" xml:space="preserve"><value>Issued by</value></data>
+  <data name="share.cert.thumbprint" xml:space="preserve"><value>Fingerprint</value></data>
+  <data name="share.cert.valid_until" xml:space="preserve"><value>Valid until</value></data>
+  <data name="share.cert.self_issued" xml:space="preserve"><value>Self-issued — Marcus is the issuer.</value></data>
+  <data name="share.cert.picker_label" xml:space="preserve"><value>Sender certificate</value></data>
+  <data name="share.cert.picker_none" xml:space="preserve"><value>No certificate</value></data>
+  <data name="share.cert.picker_hint" xml:space="preserve"><value>Attach your certificate so the recipient sees who created this link.</value></data>
 </root>

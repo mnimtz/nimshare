@@ -1329,4 +1329,14 @@ Gracias por usar NimShare.</value></data>
   <data name="ai.status_url_helper" xml:space="preserve"><value>Si se define, el saludo de inicio consulta esta página de estado de la nube y menciona el estado actual. Solo http(s).</value></data>
   <data name="ai.status_products" xml:space="preserve"><value>Productos a incluir (opcional)</value></data>
   <data name="ai.status_products_helper" xml:space="preserve"><value>Separados por comas. Solo estos productos de la página de estado se mencionan en el saludo. Vacío = todos. No hace falta la ortografía exacta — la IA hace la coincidencia.</value></data>
+  <data name="share.cert.line" xml:space="preserve"><value>Firmado por {0}</value></data>
+  <data name="share.cert.details_title" xml:space="preserve"><value>Certificado del remitente</value></data>
+  <data name="share.cert.subject" xml:space="preserve"><value>Nombre</value></data>
+  <data name="share.cert.issuer" xml:space="preserve"><value>Emitido por</value></data>
+  <data name="share.cert.thumbprint" xml:space="preserve"><value>Huella</value></data>
+  <data name="share.cert.valid_until" xml:space="preserve"><value>Válido hasta</value></data>
+  <data name="share.cert.self_issued" xml:space="preserve"><value>Autoemitido — el remitente es el emisor.</value></data>
+  <data name="share.cert.picker_label" xml:space="preserve"><value>Certificado del remitente</value></data>
+  <data name="share.cert.picker_none" xml:space="preserve"><value>Sin certificado</value></data>
+  <data name="share.cert.picker_hint" xml:space="preserve"><value>Adjunta tu certificado para que el destinatario vea quién creó el enlace.</value></data>
 </root>

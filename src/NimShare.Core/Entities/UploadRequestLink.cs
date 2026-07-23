@@ -28,6 +28,12 @@ public class UploadRequestLink
     public bool NotifyOnUpload { get; set; } = true;
     public bool IsRevoked { get; set; }
 
+    /// <summary>
+    /// v1.10.146 — Optionales Absender-Zertifikat wie bei ShareLink.
+    /// </summary>
+    public Guid? SigningCertificateId { get; set; }
+    public SigningCertificate? SigningCertificate { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastUploadAt { get; set; }
 

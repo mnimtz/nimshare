@@ -93,7 +93,8 @@ public class ShareController : Controller
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
                 files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
-                ResolveOwnerAvatar(link.Owner), folderTheme));
+                ResolveOwnerAvatar(link.Owner), folderTheme,
+                BuildLandingSigner(link.SigningCertificate)));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -133,8 +134,15 @@ public class ShareController : Controller
             link.ExpiresAt,
             link.Owner.DisplayName,
             theme,
-            ResolveOwnerAvatar(link.Owner)));
+            ResolveOwnerAvatar(link.Owner),
+            BuildLandingSigner(link.SigningCertificate)));
     }
+
+    // v1.10.146: Zertifikats-Infos für Landing-Badge extrahieren.
+    internal static LandingSignerInfo? BuildLandingSigner(NimShare.Core.Entities.SigningCertificate? c)
+        => c is null ? null : new LandingSignerInfo(
+            c.SubjectCommonName, c.Issuer, c.Thumbprint,
+            c.NotBefore, c.NotAfter, c.IsSelfIssued);
 
     /// <summary>Returns the owner's avatar URL for public rendering, but only
     /// when they've opted in via profile settings. Prefers the uploaded blob
@@ -367,7 +375,9 @@ public class ShareController : Controller
 public record FolderLandingViewModel(
     string Slug, string FolderName, string MessageHtml,
     bool HasPassword, string OwnerName,
-    List<FolderLandingFile> Files, string? OwnerAvatarUrl, LandingTheme Theme);
+    List<FolderLandingFile> Files, string? OwnerAvatarUrl, LandingTheme Theme,
+    // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
+    LandingSignerInfo? Signer = null);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,
@@ -389,7 +399,14 @@ public record LandingViewModel(
     DateTimeOffset? ExpiresAt,
     string OwnerName,
     LandingTheme Theme,
-    string? OwnerAvatarUrl);
+    string? OwnerAvatarUrl,
+    // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
+    LandingSignerInfo? Signer = null);
+
+/// <summary>v1.10.146 — Absender-Zertifikats-Info für die Landing.</summary>
+public record LandingSignerInfo(
+    string Subject, string Issuer, string Thumbprint,
+    DateTimeOffset NotBefore, DateTimeOffset NotAfter, bool IsSelfIssued);
 
 public record GateViewModel(string Slug, bool RequireOtp, bool otpSent, string? error);
 
