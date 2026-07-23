@@ -666,9 +666,9 @@ struct FileRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: file.iconName)
-                .foregroundStyle(Theme.tungstenBlue)
-                .frame(width: 24, alignment: .center)
+            // v1.10.143: präzises Format-Icon statt einfarbigem SF-Symbol.
+            FileFormatBadge(name: file.name, size: 30)
+                .frame(width: 26, alignment: .center)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
                 Text(file.name).lineLimit(2)

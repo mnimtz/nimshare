@@ -144,7 +144,8 @@ public class FilesController : ControllerBase
     /// </summary>
     [HttpPost("bulk-zip")]
     public async Task<IActionResult> BulkZip([FromBody] BulkZipRequest req,
-        [FromServices] IFileAccessService access, CancellationToken ct)
+        [FromServices] IFileAccessService access,
+        [FromServices] ILogger<FilesController> log, CancellationToken ct)
     {
         if (req.FileIds is null || req.FileIds.Length == 0) return BadRequest();
         if (req.FileIds.Length > 500) return Problem(statusCode: 413, title: "Zu viele Dateien (max. 500).");
@@ -162,29 +163,75 @@ public class FilesController : ControllerBase
             : req.ArchiveName!.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
                 ? req.ArchiveName : req.ArchiveName + ".zip";
 
-        Response.Headers.ContentDisposition = $"attachment; filename=\"{name}\"";
-        Response.ContentType = "application/zip";
-        // Chunked because we don't know the total size upfront.
-        Response.Headers["X-Accel-Buffering"] = "no";
+        var items = allowed.Select(f => (f.BlobPath, EntryName: f.Name)).ToList();
+        return await BuildZipResultAsync(items, name, log, ct);
+    }
 
-        using (var zip = new System.IO.Compression.ZipArchive(Response.Body,
-            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+    /// <summary>
+    /// v1.10.143 — baut das ZIP zuerst vollständig in eine Temp-Datei und
+    /// liefert es dann als saubere Datei-Antwort. Vorher wurde direkt in
+    /// Response.Body gestreamt — scheiterte ein Blob-Download (fehlendes/
+    /// falsch konfiguriertes Blob) während die Antwort noch gepuffert war,
+    /// bekam der Client einen harten HTTP 500 (oder ein korruptes Archiv).
+    /// Jetzt: ein einzelner fehlender Blob wird übersprungen und geloggt, das
+    /// ZIP bleibt gültig; nur wenn KEINE Datei lesbar war, kommt ein klarer
+    /// Fehler VOR dem Streaming. Temp-Datei wird nach dem Download automatisch
+    /// gelöscht (DeleteOnClose).
+    /// </summary>
+    private async Task<IActionResult> BuildZipResultAsync(
+        IReadOnlyList<(string BlobPath, string EntryName)> items,
+        string archiveName, ILogger log, CancellationToken ct)
+    {
+        var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nimshare-zip-{Guid.NewGuid():N}.zip");
+        int written = 0, skipped = 0;
+        try
         {
-            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var f in allowed)
+            await using (var fs = new System.IO.FileStream(tmp, System.IO.FileMode.Create,
+                System.IO.FileAccess.ReadWrite, System.IO.FileShare.None, 1 << 16, System.IO.FileOptions.Asynchronous))
+            using (var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create))
             {
-                ct.ThrowIfCancellationRequested();
-                var entryName = MakeUnique(f.Name, used);
-                var entry = zip.CreateEntry(entryName, System.IO.Compression.CompressionLevel.NoCompression);
-                using var es = entry.Open();
-                try { await _blobs.DownloadToAsync(f.BlobPath, es, ct); }
-                catch (OperationCanceledException) { throw; }
-                // Any other error must not leak a half-written entry into the
-                // zip. Bubble up so the client sees a broken transfer instead
-                // of a silently corrupt archive.
+                var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (blobPath, entryName) in items)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var name = MakeUnique(entryName, used);
+                    var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                    try
+                    {
+                        await using var es = entry.Open();
+                        await _blobs.DownloadToAsync(blobPath, es, ct);
+                        written++;
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        // Einzelnen Blob-Fehler NICHT die ganze ZIP killen —
+                        // Eintrag (evtl. leer) bleibt, wir machen weiter.
+                        skipped++;
+                        log.LogWarning(ex, "ZIP: Blob {Blob} übersprungen: {Msg}", blobPath, ex.Message);
+                    }
+                }
             }
+
+            if (written == 0)
+            {
+                try { System.IO.File.Delete(tmp); } catch { }
+                return Problem(statusCode: 502, title: "ZIP fehlgeschlagen",
+                    detail: "Keine der Dateien konnte aus dem Speicher gelesen werden.");
+            }
+
+            if (skipped > 0)
+                Response.Headers["X-Zip-Skipped"] = skipped.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            var read = new System.IO.FileStream(tmp, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                System.IO.FileShare.Read, 1 << 16, System.IO.FileOptions.Asynchronous | System.IO.FileOptions.DeleteOnClose);
+            return File(read, "application/zip", archiveName);
         }
-        return new EmptyResult();
+        catch
+        {
+            try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
+            throw;
+        }
     }
 
     /// <summary>
@@ -199,6 +246,7 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> FolderZip(Guid id,
         [FromServices] IFileAccessService access,
         [FromServices] IFolderService folders,
+        [FromServices] ILogger<FilesController> log,
         CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
@@ -255,25 +303,11 @@ public class FilesController : ControllerBase
                 detail: $"Der Ordner enthält {totalBytes / (1024 * 1024)} MB — max. 2048 MB pro ZIP-Download.");
 
         var name = $"{SanitizePathSegment(root.Name)}-{DateTimeOffset.UtcNow:yyyyMMdd}.zip";
-        Response.Headers.ContentDisposition = $"attachment; filename=\"{name}\"";
-        Response.ContentType = "application/zip";
-        Response.Headers["X-Accel-Buffering"] = "no";
-
-        using (var zip = new System.IO.Compression.ZipArchive(Response.Body,
-            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
-        {
-            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (f, prefix) in allowed)
-            {
-                ct.ThrowIfCancellationRequested();
-                var entryPath = string.IsNullOrEmpty(prefix) ? f.Name : prefix + "/" + f.Name;
-                entryPath = MakeUnique(entryPath, used);
-                var entry = zip.CreateEntry(entryPath, System.IO.Compression.CompressionLevel.NoCompression);
-                using var es = entry.Open();
-                await _blobs.DownloadToAsync(f.BlobPath, es, ct);
-            }
-        }
-        return new EmptyResult();
+        var items = allowed
+            .Select(x => (x.file.BlobPath,
+                          EntryName: string.IsNullOrEmpty(x.prefix) ? x.file.Name : x.prefix + "/" + x.file.Name))
+            .ToList();
+        return await BuildZipResultAsync(items, name, log, ct);
     }
 
     private static string SanitizePathSegment(string s)

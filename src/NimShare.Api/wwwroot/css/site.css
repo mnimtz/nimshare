@@ -2154,6 +2154,10 @@ body.nav-open { position: relative; }
 .fm-icon-file.vid { background: #dbeafe; color: #1e40af; }
 .fm-icon-file.zip { background: #f4e3ff; color: #8b5cf6; }
 .fm-icon-file.txt { background: #f1f5f9; color: #475569; }
+/* v1.10.143: Präzise SVG-Format-Icons statt Buchstaben-Kasten — Container
+   transparent, das SVG trägt Form + Farbe. */
+.fm-icon.fm-fmt { background: transparent; }
+.fm-icon.fm-fmt svg { display: block; width: 30px; height: 30px; }
 
 .fm-row-actions {
     display: inline-flex;
