@@ -1464,6 +1464,9 @@ async function ds_add() {
         body: JSON.stringify(body),
     });
     if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
+    // v1.10.144: Hinweis, wenn der öffentliche Ordner beim Freigeben
+    // automatisch auf privat gestellt wurde.
+    try { const dd = await r.json(); if (dd && dd.autoPrivatized && window.nimToast) nimToast(@Json.Serialize(T["permissions.auto_private"].Value), { kind: 'info' }); } catch {}
     document.getElementById('dsPicker').value = '';
     await ds_loadShares();
 }

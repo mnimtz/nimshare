@@ -1277,6 +1277,7 @@ Gracias por usar NimShare.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Solo visible para las personas autorizadas</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Carpeta privada — oculta para quien no tenga un permiso explícito.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Privada</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Carpeta ahora privada — solo la ven las personas con quienes la compartes.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Añadir usuario o grupo</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>Nadie tiene acceso todavía.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>No se pudieron cargar los permisos</value></data>

@@ -1287,6 +1287,7 @@ Thanks for using NimShare.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Only for people I grant access to</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Private folder — hidden from everyone without an explicit grant.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Private</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Folder set to private — now only people you share it with can see it.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Add a user or group</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>No one has been granted access yet.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>Could not load the permissions</value></data>

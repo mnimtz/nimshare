@@ -1276,6 +1276,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Alleen zichtbaar voor uitgenodigde personen</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Privémap — verborgen voor iedereen zonder expliciete toegang.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Privé</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Map is nu privé — alleen personen met wie je deelt zien hem.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Gebruiker of groep toevoegen</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>Nog niemand heeft toegang.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>Machtigingen konden niet worden geladen</value></data>

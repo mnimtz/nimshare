@@ -1277,6 +1277,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Visible uniquement pour les personnes autorisées</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Dossier privé — masqué à toute personne sans autorisation explicite.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Privé</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Dossier passé en privé — seules les personnes avec qui vous le partagez le voient.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Ajouter un utilisateur ou un groupe</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>Personne n'a encore d'accès.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>Impossible de charger les autorisations</value></data>

@@ -1277,6 +1277,7 @@ Grazie per usare NimShare.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Visibile solo alle persone autorizzate</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Cartella privata — nascosta a chiunque non abbia un permesso esplicito.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Privata</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Cartella impostata su privata — ora la vedono solo le persone con cui la condividi.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Aggiungi utente o gruppo</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>Nessuno ha ancora accesso.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>Impossibile caricare le autorizzazioni</value></data>

@@ -1293,6 +1293,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="permissions.private_toggle" xml:space="preserve"><value>Nur für explizit Berechtigte sichtbar</value></data>
   <data name="permissions.private_hint" xml:space="preserve"><value>Privater Ordner — unsichtbar für alle ohne expliziten Zugriff.</value></data>
   <data name="permissions.private" xml:space="preserve"><value>Privat</value></data>
+  <data name="permissions.auto_private" xml:space="preserve"><value>Ordner ist jetzt privat — nur noch Freigegebene sehen ihn.</value></data>
   <data name="permissions.add_row" xml:space="preserve"><value>Person oder Gruppe hinzufügen</value></data>
   <data name="permissions.no_grants" xml:space="preserve"><value>Noch niemand berechtigt.</value></data>
   <data name="permissions.load_failed" xml:space="preserve"><value>Berechtigungen konnten nicht geladen werden</value></data>

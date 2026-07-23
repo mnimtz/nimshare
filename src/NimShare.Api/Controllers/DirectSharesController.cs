@@ -133,18 +133,19 @@ public class DirectSharesController : ControllerBase
         // permission than you have yourself" — otherwise a Read-recipient
         // could re-share as Write and escalate. Compute the caller's own
         // effective permission on the item, then require perm ≤ that.
-        DirectSharePermission? mine;
+        DirectSharePermission? mine = null;
         if (req.FileId is Guid fid)
         {
             var file = await _db.Files.FindAsync(new object[] { fid }, ct);
             if (file is null) return NotFound();
             mine = await _access.EffectivePermissionOnFileAsync(me, file, ct);
         }
-        else
+        Folder? sharedFolder = null;
+        if (req.FolderId is Guid)
         {
-            var folder = await _db.Folders.FindAsync(new object[] { req.FolderId!.Value }, ct);
-            if (folder is null) return NotFound();
-            mine = await _access.EffectivePermissionOnFolderAsync(me, folder, ct);
+            sharedFolder = await _db.Folders.FindAsync(new object[] { req.FolderId!.Value }, ct);
+            if (sharedFolder is null) return NotFound();
+            mine = await _access.EffectivePermissionOnFolderAsync(me, sharedFolder, ct);
         }
         if (mine is null) return Forbid();
         if (perm > mine)
@@ -173,6 +174,20 @@ public class DirectSharesController : ControllerBase
             };
             _db.DirectShares.Add(share);
         }
+
+        // v1.10.144: Auto-Privatschalten. Wird eine Freigabe auf einen
+        // ÖFFENTLICHEN Ordner gesetzt, wird er automatisch privat
+        // (deny-by-default) — sonst bliebe er additiv für ALLE sichtbar und
+        // die Freigabe „beschränkt" gar nichts. So heisst „Gruppe X freigeben"
+        // tatsächlich „nur X (plus Ersteller/Admin) sehen ihn". Persönliche/
+        // Gruppen-Scope-Ordner sind davon unberührt.
+        bool autoPrivatized = false;
+        if (sharedFolder is { Scope: FileScope.Public, IsPrivate: false })
+        {
+            sharedFolder.IsPrivate = true;
+            autoPrivatized = true;
+        }
+
         await _db.SaveChangesAsync(ct);
         await _log.LogAsync(ActivityKind.DirectShareGranted, me,
             $"granted {perm} on {(req.FileId is null ? "folder" : "file")} to {(req.UserId is null ? "group" : "user")}",
@@ -202,7 +217,9 @@ public class DirectSharesController : ControllerBase
                         href: "/shared-with-me", fileId: req.FileId, ct: ct);
             }
         }
-        return Ok(new { id = share.Id });
+        // autoPrivatized meldet der UI, dass der öffentliche Ordner beim
+        // Freigeben automatisch auf privat gestellt wurde (für einen Hinweis).
+        return Ok(new { id = share.Id, autoPrivatized });
     }
 
     [HttpDelete("{id:guid}")]
