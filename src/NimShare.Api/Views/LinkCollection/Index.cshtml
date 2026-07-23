@@ -67,7 +67,18 @@ else
             <input type="hidden" id="lcId"/>
             <div class="field">
                 <label>@T["linkcol.field.emoji"]</label>
-                <input type="text" id="lcEmoji" maxlength="4" placeholder="🔗" style="width:80px;text-align:center;font-size:1.4rem"/>
+                @* v1.10.145: Emoji-Picker statt reinem Textfeld — Klick auf ein
+                   Symbol landet im Feld; Custom-Emoji weiter tippbar. *@
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <input type="text" id="lcEmoji" maxlength="4" placeholder="🔗" style="width:80px;text-align:center;font-size:1.4rem"/>
+                    <div id="lcEmojiPicker" style="display:flex;flex-wrap:wrap;gap:4px;max-width:360px">
+                        @foreach (var e in new[] { "🔗","📄","📁","📊","📚","📦","🏢","💼","🚀","⚙️","🔧","🌐","☁️","💾","🎯","⭐","📌","🔒","🛠","📝","🗂","💡","📅","📞" })
+                        {
+                            <button type="button" class="lc-emoji-btn" data-e="@e" title="@e"
+                                    style="font-size:1.3rem;padding:4px 8px;border:1px solid var(--tw-gray-300);background:var(--tw-white);border-radius:6px;cursor:pointer">@e</button>
+                        }
+                    </div>
+                </div>
             </div>
             <div class="field">
                 <label>@T["linkcol.field.title"] *</label>
@@ -112,6 +123,19 @@ else
 @if (isAdmin)
 {
     <script>
+    // v1.10.145: Klick auf ein Picker-Symbol → in Emoji-Feld übernehmen +
+    // visuelles Feedback (aktives Emoji hervorheben). Event-Delegation, damit
+    // es auch für Buttons klappt, die nachträglich gerendert werden.
+    document.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('.lc-emoji-btn');
+        if (!btn) return;
+        ev.preventDefault();
+        const inp = document.getElementById('lcEmoji');
+        if (!inp) return;
+        inp.value = btn.dataset.e || btn.textContent.trim();
+        document.querySelectorAll('.lc-emoji-btn').forEach(b => b.style.borderColor = 'var(--tw-gray-300)');
+        btn.style.borderColor = 'var(--tw-accent, #0075db)';
+    });
     function lcOpenAdd() {
         document.getElementById('lcModalTitle').textContent = @Json.Serialize(T["linkcol.add"].Value);
         document.getElementById('lcId').value = '';

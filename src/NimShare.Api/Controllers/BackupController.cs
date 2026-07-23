@@ -69,15 +69,33 @@ public class BackupController : Controller
         {
             using var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
             var json = await reader.ReadToEndAsync(ct);
-            var (tables, rows) = await _backup.ImportAsync(json, ct);
+            // v1.10.145: Admin-Email an Restore reichen → Self-Lockout-Schutz
+            // im Service bricht ab, wenn der handelnde Admin im Backup fehlt.
+            var me = await _users.GetOrProvisionAsync(User, ct);
+            var (tables, rows) = await _backup.ImportAsync(json, me.Email, ct);
             _log.LogWarning("Admin RESTORED DB from backup: {Tables} tables, {Rows} rows.", tables, rows);
             TempData["BackupOk"] = $"Wiederhergestellt: {rows} Zeilen aus {tables} Tabellen. Bitte neu anmelden.";
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "DB restore failed.");
-            TempData["BackupError"] = "Wiederherstellung fehlgeschlagen: " + ex.Message;
+            // v1.10.145: echte Ursache entfalten (DbUpdateException versteckt
+            // sonst z. B. „Cannot insert explicit value for identity column").
+            TempData["BackupError"] = "Wiederherstellung fehlgeschlagen: " + Flatten(ex);
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>v1.10.145 — Entfaltet die komplette InnerException-Kette.</summary>
+    private static string Flatten(Exception ex)
+    {
+        var parts = new List<string>();
+        for (Exception? cur = ex; cur is not null; cur = cur.InnerException)
+        {
+            var msg = cur.Message?.Trim();
+            if (!string.IsNullOrEmpty(msg) && (parts.Count == 0 || parts[^1] != msg))
+                parts.Add(msg);
+        }
+        return string.Join(" → ", parts);
     }
 }

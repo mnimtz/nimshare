@@ -126,8 +126,27 @@ struct LinkCollectionEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                // v1.10.145: Symbol-Picker — Textfeld für Custom-Emoji plus
+                // eine tap-bare Symbol-Reihe (spart die Tastatur, die auf iOS
+                // sonst keinen bequemen Emoji-Weg bietet).
                 Section("Symbol") {
                     TextField("🔗", text: $emoji).font(.title2)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(["🔗","📄","📁","📊","📚","📦","🏢","💼","🚀","⚙️","🔧","🌐","☁️","💾","🎯","⭐","📌","🔒","🛠","📝","🗂","💡","📅","📞"], id: \.self) { e in
+                                Button { emoji = e } label: {
+                                    Text(e).font(.title2)
+                                        .padding(.horizontal, 8).padding(.vertical, 4)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(emoji == e ? Theme.tungstenBlue : Color.gray.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
                 }
                 Section("Name") {
                     TextField("Tungsten Software Center", text: $title)

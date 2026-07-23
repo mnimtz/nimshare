@@ -17,6 +17,9 @@ public interface IBackupService
 {
     Task<string> ExportAsync(CancellationToken ct = default);
     Task<(int Tables, int Rows)> ImportAsync(string json, CancellationToken ct = default);
+    /// <summary>v1.10.145 — Restore mit Self-Lockout-Schutz: bricht ab, wenn
+    /// die E-Mail des aktuell handelnden Admins nicht im Backup enthalten ist.</summary>
+    Task<(int Tables, int Rows)> ImportAsync(string json, string? actingAdminEmail, CancellationToken ct = default);
 }
 
 public class BackupService : IBackupService
@@ -89,14 +92,60 @@ public class BackupService : IBackupService
         return JsonSerializer.Serialize(payload, JsonOpts);
     }
 
-    public async Task<(int Tables, int Rows)> ImportAsync(string json, CancellationToken ct = default)
+    public Task<(int Tables, int Rows)> ImportAsync(string json, CancellationToken ct = default)
+        => ImportAsync(json, actingAdminEmail: null, ct);
+
+    /// <summary>
+    /// v1.10.145 — Restore-Kern mit drei Härtungen aus dem Audit:
+    /// (1) SqlServer-Identity-Spalten (ShareLinkAccesses/SignatureAudits) über
+    ///     SET IDENTITY_INSERT ON umgehen, sonst „Cannot insert explicit value
+    ///     for identity column" → Restore konnte auf Produktion NIE laufen;
+    /// (2) Self-Lockout-Schutz: wenn die E-Mail des aktuell handelnden Admins
+    ///     im Backup FEHLT, wird der Restore VOR dem Wipe abgebrochen — nach
+    ///     dem DB-Umzug-Schreck genau die Absicherung, die wir brauchten;
+    /// (3) Aufrufer kann echte InnerException-Kette entfalten (siehe Controller).
+    /// </summary>
+    public async Task<(int Tables, int Rows)> ImportAsync(string json, string? actingAdminEmail, CancellationToken ct = default)
     {
         using var doc = JsonDocument.Parse(json);
         if (!doc.RootElement.TryGetProperty("tables", out var tablesEl))
             throw new InvalidOperationException("Backup-Datei hat kein 'tables'-Objekt.");
 
         var ordered = OrderedEntityTypes();
-        var byName = ordered.ToDictionary(t => t.Name);
+
+        // (2) Self-Lockout-Schutz: bevor überhaupt etwas gewiped wird, prüfen
+        // ob der aktuelle Admin im Backup vorkommt. Sonst wäre er nach dem
+        // Restore weg → Willkommens-/Admin-anlegen-Seite → alle ausgesperrt.
+        if (!string.IsNullOrWhiteSpace(actingAdminEmail))
+        {
+            var usersEt = ordered.FirstOrDefault(t => t.ClrType.Name == "User");
+            if (usersEt is null || !tablesEl.TryGetProperty(usersEt.Name, out var usersEl) || usersEl.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("Backup enthält keine Users-Tabelle — Restore würde dich aussperren.");
+            var needle = actingAdminEmail.Trim().ToLowerInvariant();
+            bool present = false;
+            foreach (var u in usersEl.EnumerateArray())
+            {
+                if (u.TryGetProperty("Email", out var em) && em.ValueKind == JsonValueKind.String
+                    && string.Equals(em.GetString()?.Trim().ToLowerInvariant(), needle, StringComparison.Ordinal))
+                { present = true; break; }
+            }
+            if (!present)
+                throw new InvalidOperationException(
+                    $"Dein Admin-Konto ({actingAdminEmail}) ist im Backup nicht enthalten. Restore würde dich aussperren — abgebrochen.");
+        }
+
+        var isSqlServer = _db.Database.IsSqlServer();
+        // Identity-Tabellen ermitteln (Property mit ValueGenerated == OnAdd auf
+        // integralem PK) — deckt heute ShareLinkAccesses + SignatureAudits ab,
+        // arbeitet aber generisch für alle künftigen.
+        var identityTables = ordered
+            .Where(t => t.FindPrimaryKey()?.Properties.All(p =>
+                p.ValueGenerated == Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.OnAdd
+                && (p.ClrType == typeof(long) || p.ClrType == typeof(int))) == true)
+            .Select(t => t.GetTableName())
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Select(n => n!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // Provider-übergreifend transaktional. Kinder zuerst löschen (reverse),
         // dann Eltern-zuerst wieder einfügen.
@@ -122,6 +171,16 @@ public class BackupService : IBackupService
             var clr = et.ClrType;
             var props = et.GetProperties().ToList();
             tableCount++;
+
+            // (1) IDENTITY_INSERT für SqlServer-Identity-Tabellen einschalten,
+            // damit explizite Id-Werte aus dem Backup akzeptiert werden.
+            var tableName = et.GetTableName();
+            var needsIdentityInsert = isSqlServer && !string.IsNullOrEmpty(tableName)
+                                      && identityTables.Contains(tableName!)
+                                      && rowsEl.GetArrayLength() > 0;
+            if (needsIdentityInsert)
+                await _db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] ON", ct);
+
             foreach (var rowEl in rowsEl.EnumerateArray())
             {
                 var entity = Activator.CreateInstance(clr)!;
@@ -140,6 +199,9 @@ public class BackupService : IBackupService
             }
             // Batchweise speichern, damit große Backups nicht den Change-Tracker sprengen.
             await _db.SaveChangesAsync(ct);
+
+            if (needsIdentityInsert)
+                await _db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] OFF", ct);
         }
 
         await tx.CommitAsync(ct);
