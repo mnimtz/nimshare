@@ -1061,19 +1061,27 @@ static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bo
             }
             var ops = migration.UpOperations;
 
-            // Muster 1: genau EINE CreateTable, sonst nur CreateIndex-Ops.
+            // Muster 1: nur CreateTable + CreateIndex-Ops, ALLE Tabellen
+            // existieren bereits. Deckt v1.10.161 auf V183 (BlockedUsers +
+            // ContentReports gleichzeitig) — der Vorgänger-Regex "genau EINE
+            // Tabelle" fiel dort noch durch und die Migration crashte an
+            // "table BlockedUsers already exists".
             var creates = ops.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.CreateTableOperation>().ToList();
-            var indexes = ops.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.CreateIndexOperation>().ToList();
             bool onlyTableAndIndexes = ops.All(o =>
                 o is Microsoft.EntityFrameworkCore.Migrations.Operations.CreateTableOperation
                 || o is Microsoft.EntityFrameworkCore.Migrations.Operations.CreateIndexOperation);
-            if (creates.Count == 1 && onlyTableAndIndexes)
+            if (creates.Count >= 1 && onlyTableAndIndexes)
             {
-                var table = creates[0].Name;
-                if (await TableExistsAsync(db, table, isSqlServer))
+                bool allTablesPresent = true;
+                foreach (var ct in creates)
+                {
+                    if (!await TableExistsAsync(db, ct.Name, isSqlServer)) { allTablesPresent = false; break; }
+                }
+                if (allTablesPresent)
                 {
                     await StampMigrationAsync(db, migId, isSqlServer);
-                    Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → Tabelle {table} existiert bereits, gestempelt.");
+                    var tableList = string.Join(", ", creates.Select(c => c.Name));
+                    Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → Tabellen {tableList} existieren bereits, gestempelt.");
                     continue;
                 }
             }
