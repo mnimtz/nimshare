@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = T["connectors.title"].Value;
     Layout = "_AppShell";
+    var isAdmin = User.IsInRole("Admin");
 }
 <div class="workspace-inner" style="max-width:1000px;margin:0 auto">
     <div class="page-head">
@@ -17,8 +18,81 @@
         <div class="card" style="background:#fdecea;border-left:3px solid #c22;margin:12px 0">@err</div>
     }
 
+    @if (isAdmin)
+    {
+        @* v1.10.164: Admin-Setup-Panel — ersetzt das appsettings.json-Copy-
+           Paste. Deep-Link öffnet Entra Portal direkt an der App-Registration-
+           Blade; die Werte, die Marcus in Entra eintragen muss, stehen als
+           Copy-Buttons daneben. Nach Speichern wird der "OneDrive verbinden"-
+           Button aktiv. *@
+        <div class="card" id="adminSetup" style="margin:12px 0;background:linear-gradient(135deg, rgba(0,40,84,.04), rgba(0,40,84,.01));border-left:3px solid var(--tw-primary)">
+            <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+                <div style="font-size:1.8rem">⚙️</div>
+                <div style="flex:1;min-width:340px">
+                    <div style="font-weight:600">@T["connectors.setup.title"]</div>
+                    <div id="setupStatus" class="muted" style="font-size:.9rem;margin-top:2px">@T["connectors.loading"]</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="toggleSetupWizard()" id="btnSetupToggle">@T["connectors.setup.configure"]</button>
+            </div>
+
+            <div id="setupWizard" style="display:none;margin-top:16px">
+                <h3 style="margin-top:0">@T["connectors.setup.wizard.title"]</h3>
+                <ol style="line-height:1.7;font-size:.9rem">
+                    <li>
+                        @Html.Raw(T["connectors.setup.step1_html"].Value)
+                        <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:6px">
+                            🚀 @T["connectors.setup.step1_button"]
+                        </a>
+                    </li>
+                    <li>
+                        @T["connectors.setup.step2"]
+                        <div class="row" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+                            <span class="muted" style="font-size:.8rem">@T["connectors.setup.name"]:</span>
+                            <code class="mono" id="valName">NimShare Connectors</code>
+                            <button class="btn btn-ghost btn-sm" onclick="copy('valName')">📋</button>
+                        </div>
+                    </li>
+                    <li>
+                        @T["connectors.setup.step3"]
+                        <div class="row" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+                            <span class="muted" style="font-size:.8rem">Redirect-URI:</span>
+                            <code class="mono" id="valRedirect">…</code>
+                            <button class="btn btn-ghost btn-sm" onclick="copy('valRedirect')">📋</button>
+                        </div>
+                    </li>
+                    <li>
+                        @T["connectors.setup.step4"]
+                        <div class="muted" style="font-size:.85rem">Files.Read · User.Read · offline_access</div>
+                    </li>
+                    <li>
+                        @T["connectors.setup.step5"]
+                    </li>
+                </ol>
+
+                <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:16px;background:var(--tw-gray-100);padding:12px;border-radius:8px">
+                    <div class="field" style="flex:2;min-width:260px">
+                        <label>Application (client) ID</label>
+                        <input type="text" id="fldClientId" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off"/>
+                    </div>
+                    <div class="field" style="flex:2;min-width:260px">
+                        <label>Client Secret (Value)</label>
+                        <input type="password" id="fldSecret" placeholder="@T["connectors.setup.secret_placeholder"]" autocomplete="off"/>
+                    </div>
+                    <div class="field" style="flex:1;min-width:140px">
+                        <label>Tenant</label>
+                        <input type="text" id="fldTenant" value="common" placeholder="common"/>
+                    </div>
+                </div>
+                <div class="row" style="gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button class="btn btn-ghost" onclick="clearSetup()">🗑 @T["connectors.setup.clear"]</button>
+                    <button class="btn btn-primary" onclick="saveSetup()">💾 @T["connectors.setup.save"]</button>
+                </div>
+            </div>
+        </div>
+    }
+
     <div class="row" style="gap:8px;margin:16px 0;flex-wrap:wrap">
-        <a href="/settings/connectors/onedrive/start" class="btn btn-primary">☁️ @T["connectors.add.onedrive"]</a>
+        <a href="/settings/connectors/onedrive/start" class="btn btn-primary" id="btnConnectOnedrive">☁️ @T["connectors.add.onedrive"]</a>
     </div>
 
     <div class="card">
@@ -241,4 +315,69 @@
     }
 
     loadConnectors();
+
+    // v1.10.164: Admin-Setup-Status + Wizard-Logik
+    async function loadSetupStatus() {
+        const el = document.getElementById('adminSetup');
+        if (!el) return; // Nicht-Admin
+        try {
+            const r = await fetch('/api/v1/admin/connectors/settings/onedrive', { credentials: 'same-origin' });
+            if (!r.ok) return;
+            const s = await r.json();
+            document.getElementById('valRedirect').textContent = s.suggestedRedirectUri;
+            const stat = document.getElementById('setupStatus');
+            const btnConnect = document.getElementById('btnConnectOnedrive');
+            if (s.configured) {
+                stat.textContent = @Json.Serialize(T["connectors.setup.status.configured"].Value) + ' (ClientId: ' + s.clientId.substring(0, 8) + '…, Tenant: ' + s.tenant + ')';
+                if (btnConnect) btnConnect.classList.remove('disabled');
+            } else {
+                stat.textContent = @Json.Serialize(T["connectors.setup.status.missing"].Value);
+                if (btnConnect) { btnConnect.style.opacity = 0.5; btnConnect.title = @Json.Serialize(T["connectors.setup.status.missing"].Value); }
+            }
+            if (s.clientId) document.getElementById('fldClientId').value = s.clientId;
+            document.getElementById('fldTenant').value = s.tenant || 'common';
+        } catch (e) { /* silent */ }
+    }
+    function toggleSetupWizard() {
+        const w = document.getElementById('setupWizard');
+        w.style.display = w.style.display === 'none' ? 'block' : 'none';
+    }
+    function copy(id) {
+        const t = document.getElementById(id).textContent;
+        navigator.clipboard.writeText(t);
+    }
+    async function saveSetup() {
+        const body = {
+            clientId: document.getElementById('fldClientId').value.trim(),
+            clientSecret: document.getElementById('fldSecret').value.trim() || null,
+            tenant: document.getElementById('fldTenant').value.trim() || 'common',
+        };
+        const r = await fetch('/api/v1/admin/connectors/settings/onedrive', {
+            method: 'PUT', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (r.ok) {
+            document.getElementById('fldSecret').value = '';
+            loadSetupStatus();
+            alert(@Json.Serialize(T["connectors.setup.saved"].Value));
+        } else {
+            alert('HTTP ' + r.status + ': ' + await r.text());
+        }
+    }
+    async function clearSetup() {
+        if (!confirm(@Json.Serialize(T["connectors.setup.confirm_clear"].Value))) return;
+        const r = await fetch('/api/v1/admin/connectors/settings/onedrive', {
+            method: 'DELETE', credentials: 'same-origin',
+        });
+        if (r.ok) {
+            document.getElementById('fldClientId').value = '';
+            document.getElementById('fldSecret').value = '';
+            document.getElementById('fldTenant').value = 'common';
+            loadSetupStatus();
+        } else {
+            alert('HTTP ' + r.status);
+        }
+    }
+    loadSetupStatus();
 </script>

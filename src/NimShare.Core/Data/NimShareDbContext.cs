@@ -51,6 +51,8 @@ public class NimShareDbContext : DbContext
     public DbSet<InstanceCa> InstanceCas => Set<InstanceCa>();
     // v1.10.163: User-authored Verbindungen zu externen Cloud-Speichern.
     public DbSet<Connector> Connectors => Set<Connector>();
+    // v1.10.164: Admin-Config für Konnektor-Provider (OneDrive ClientId/Secret).
+    public DbSet<ConnectorProviderSettings> ConnectorProviderSettings => Set<ConnectorProviderSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -367,6 +369,15 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.DisplayName).HasMaxLength(240).IsRequired();
             e.Property(x => x.ExternalAccountId).HasMaxLength(120);
             e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // v1.10.164: Admin-Config pro Provider (Singleton per Provider-Type).
+        b.Entity<ConnectorProviderSettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Provider).IsUnique();
+            e.Property(x => x.ClientId).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Tenant).HasMaxLength(120).IsRequired();
         });
 
         b.Entity<FilePin>(e =>

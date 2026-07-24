@@ -968,6 +968,24 @@ Please open this link to sign:
   <data name="connectors.import.running" xml:space="preserve"><value>Importing…</value></data>
   <data name="connectors.import.done" xml:space="preserve"><value>Import complete.</value></data>
   <data name="connectors.import.error" xml:space="preserve"><value>Import error</value></data>
+  <!-- v1.10.164: Admin-Setup-Wizard -->
+  <data name="connectors.setup.title" xml:space="preserve"><value>Provider setup (admin)</value></data>
+  <data name="connectors.setup.configure" xml:space="preserve"><value>Configure</value></data>
+  <data name="connectors.setup.status.configured" xml:space="preserve"><value>Ready</value></data>
+  <data name="connectors.setup.status.missing" xml:space="preserve"><value>Not yet configured — set up ClientId + Secret to unlock the connect button.</value></data>
+  <data name="connectors.setup.wizard.title" xml:space="preserve"><value>Register a Microsoft Entra app for OneDrive</value></data>
+  <data name="connectors.setup.step1_html" xml:space="preserve"><value>Open the Entra portal → App registrations → New:</value></data>
+  <data name="connectors.setup.step1_button" xml:space="preserve"><value>Open Entra Portal</value></data>
+  <data name="connectors.setup.step2" xml:space="preserve"><value>Give the app a display name (any name works — this suggestion is fine):</value></data>
+  <data name="connectors.setup.step3" xml:space="preserve"><value>Under "Redirect URI", pick "Web" and paste this exact URL:</value></data>
+  <data name="connectors.setup.step4" xml:space="preserve"><value>Under API permissions → Add → Microsoft Graph → Delegated, grant:</value></data>
+  <data name="connectors.setup.step5" xml:space="preserve"><value>Under Certificates &amp; secrets → New client secret → copy the "Value" (not the ID). Then fill in the three fields below and click Save.</value></data>
+  <data name="connectors.setup.name" xml:space="preserve"><value>Suggested name</value></data>
+  <data name="connectors.setup.secret_placeholder" xml:space="preserve"><value>Leave empty to keep existing</value></data>
+  <data name="connectors.setup.save" xml:space="preserve"><value>Save</value></data>
+  <data name="connectors.setup.saved" xml:space="preserve"><value>Saved. Users can now connect their OneDrive.</value></data>
+  <data name="connectors.setup.clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="connectors.setup.confirm_clear" xml:space="preserve"><value>Really clear the OneDrive provider settings? Existing user connections stay but new "Connect" attempts will fail until this is set again.</value></data>
   <data name="certs.root_ca.title"><value>NimShare Root Certificate for this instance</value></data>
   <data name="certs.root_ca.body"><value>Every certificate you create in NimShare is signed by this instance's Root. Send the link to your recipients so they can import the Root once into their operating system or browser trust store — after that, every signed link from any user on this instance validates automatically without a "unknown authority" warning.</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>

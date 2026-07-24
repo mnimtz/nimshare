@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NimShare.Api.Services;
@@ -176,4 +178,76 @@ public class ConnectorsPageController : Controller
 {
     [HttpGet("/settings/connectors")]
     public IActionResult Index() => View("Index");
+}
+
+/// <summary>Admin-Endpoints für die Provider-Konfiguration (bisher in
+/// appsettings.json). v1.10.164: Admins richten OneDrive-App-Registration
+/// direkt im NimShare-UI ein — kein Copy-Paste zwischen Azure Portal und
+/// App-Setting-Editor.</summary>
+[ApiController]
+[Route("api/v1/admin/connectors/settings")]
+[Authorize(Policy = "ApiUser", Roles = "Admin")]
+public class ConnectorProviderSettingsApiController : ControllerBase
+{
+    private readonly NimShareDbContext _db;
+    private readonly ICurrentUserService _users;
+    private readonly IDataProtector _protector;
+
+    public ConnectorProviderSettingsApiController(NimShareDbContext db, ICurrentUserService users, IDataProtectionProvider dp)
+    {
+        _db = db; _users = users;
+        _protector = dp.CreateProtector("NimShare.Connector.OneDrive.v1");
+    }
+
+    /// <summary>Status: existiert die Config? Nie das Secret returnen —
+    /// nur ob eins gesetzt ist.</summary>
+    public record OneDriveStatusDto(bool Configured, string? ClientId, string Tenant, bool HasSecret, string SuggestedRedirectUri);
+
+    [HttpGet("onedrive")]
+    public async Task<IActionResult> GetOneDrive(CancellationToken ct)
+    {
+        var row = await _db.ConnectorProviderSettings.SingleOrDefaultAsync(x => x.Provider == ConnectorType.OneDriveBusiness, ct);
+        var redirect = $"{Request.Scheme}://{Request.Host}/settings/connectors/onedrive/callback";
+        return Ok(new OneDriveStatusDto(
+            Configured: row is not null && !string.IsNullOrWhiteSpace(row.ClientId),
+            ClientId: row?.ClientId,
+            Tenant: row?.Tenant ?? "common",
+            HasSecret: row?.ClientSecretEncrypted is { Length: > 0 },
+            SuggestedRedirectUri: redirect));
+    }
+
+    public record OneDriveSaveReq(string ClientId, string? ClientSecret, string? Tenant);
+
+    [HttpPut("onedrive")]
+    public async Task<IActionResult> PutOneDrive([FromBody] OneDriveSaveReq req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.ClientId))
+            return Problem(statusCode: 422, title: "ClientId erforderlich.");
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var row = await _db.ConnectorProviderSettings.SingleOrDefaultAsync(x => x.Provider == ConnectorType.OneDriveBusiness, ct);
+        if (row is null)
+        {
+            row = new ConnectorProviderSettings { Provider = ConnectorType.OneDriveBusiness };
+            _db.ConnectorProviderSettings.Add(row);
+        }
+        row.ClientId = req.ClientId.Trim();
+        row.Tenant = string.IsNullOrWhiteSpace(req.Tenant) ? "common" : req.Tenant.Trim();
+        row.UpdatedAt = DateTimeOffset.UtcNow;
+        row.UpdatedByUserId = me.Id;
+        // Secret nur bei explizitem Wert setzen — leer bedeutet „bestehendes behalten".
+        if (!string.IsNullOrWhiteSpace(req.ClientSecret))
+            row.ClientSecretEncrypted = _protector.Protect(Encoding.UTF8.GetBytes(req.ClientSecret.Trim()));
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpDelete("onedrive")]
+    public async Task<IActionResult> DeleteOneDrive(CancellationToken ct)
+    {
+        var row = await _db.ConnectorProviderSettings.SingleOrDefaultAsync(x => x.Provider == ConnectorType.OneDriveBusiness, ct);
+        if (row is null) return NoContent();
+        _db.ConnectorProviderSettings.Remove(row);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
 }

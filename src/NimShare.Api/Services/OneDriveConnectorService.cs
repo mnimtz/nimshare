@@ -54,19 +54,35 @@ public class OneDriveConnectorService : IConnectorService
         _log = log;
     }
 
-    private string ClientId => _cfg["Connectors:OneDrive:ClientId"]
-        ?? throw new InvalidOperationException("Connectors:OneDrive:ClientId not configured");
-    private string ClientSecret => _cfg["Connectors:OneDrive:ClientSecret"]
-        ?? throw new InvalidOperationException("Connectors:OneDrive:ClientSecret not configured");
-    private string Tenant => _cfg["Connectors:OneDrive:Tenant"] ?? "common";
+    // v1.10.164: Config aus der DB (per Admin-UI eingerichtet), Fallback auf
+    // appsettings.json/Env für Bestandsdeploys.
+    private (string ClientId, string ClientSecret, string Tenant) ReadConfig()
+    {
+        var row = _db.ConnectorProviderSettings
+            .SingleOrDefault(x => x.Provider == ConnectorType.OneDriveBusiness);
+        if (row is not null && !string.IsNullOrWhiteSpace(row.ClientId) && row.ClientSecretEncrypted is { Length: > 0 })
+        {
+            var secret = Encoding.UTF8.GetString(_protector.Unprotect(row.ClientSecretEncrypted));
+            return (row.ClientId, secret, string.IsNullOrWhiteSpace(row.Tenant) ? "common" : row.Tenant);
+        }
+        var cid = _cfg["Connectors:OneDrive:ClientId"];
+        var sec = _cfg["Connectors:OneDrive:ClientSecret"];
+        if (string.IsNullOrWhiteSpace(cid) || string.IsNullOrWhiteSpace(sec))
+            throw new InvalidOperationException(
+                "OneDrive-Konnektor ist nicht konfiguriert. Als Admin unter /settings/connectors einrichten oder App-Settings Connectors__OneDrive__ClientId + Connectors__OneDrive__ClientSecret setzen.");
+        var tenant = _cfg["Connectors:OneDrive:Tenant"];
+        return (cid, sec, string.IsNullOrWhiteSpace(tenant) ? "common" : tenant);
+    }
+
     private static readonly string[] Scopes = { "offline_access", "Files.Read", "User.Read" };
 
     public Task<string> BuildAuthorizeUrlAsync(Guid userId, string redirectUri, string state, string codeVerifier)
     {
+        var cfg = ReadConfig();
         var challenge = ComputeCodeChallenge(codeVerifier);
         var qs = new Dictionary<string, string?>
         {
-            ["client_id"] = ClientId,
+            ["client_id"] = cfg.ClientId,
             ["response_type"] = "code",
             ["redirect_uri"] = redirectUri,
             ["response_mode"] = "query",
@@ -75,25 +91,26 @@ public class OneDriveConnectorService : IConnectorService
             ["code_challenge"] = challenge,
             ["code_challenge_method"] = "S256",
         };
-        var url = $"https://login.microsoftonline.com/{Tenant}/oauth2/v2.0/authorize?"
+        var url = $"https://login.microsoftonline.com/{cfg.Tenant}/oauth2/v2.0/authorize?"
             + string.Join('&', qs.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value ?? "")}"));
         return Task.FromResult(url);
     }
 
     public async Task<Connector> CompleteAuthorizeAsync(Guid userId, string code, string redirectUri, string codeVerifier, CancellationToken ct)
     {
+        var cfg = ReadConfig();
         var http = _http.CreateClient();
         var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["client_id"] = ClientId,
-            ["client_secret"] = ClientSecret,
+            ["client_id"] = cfg.ClientId,
+            ["client_secret"] = cfg.ClientSecret,
             ["grant_type"] = "authorization_code",
             ["code"] = code,
             ["redirect_uri"] = redirectUri,
             ["scope"] = string.Join(' ', Scopes),
             ["code_verifier"] = codeVerifier,
         });
-        var resp = await http.PostAsync($"https://login.microsoftonline.com/{Tenant}/oauth2/v2.0/token", form, ct);
+        var resp = await http.PostAsync($"https://login.microsoftonline.com/{cfg.Tenant}/oauth2/v2.0/token", form, ct);
         var body = await resp.Content.ReadAsStringAsync(ct);
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException($"Token exchange failed ({(int)resp.StatusCode}): {body}");
@@ -309,17 +326,18 @@ public class OneDriveConnectorService : IConnectorService
         var cn = await _db.Connectors.SingleOrDefaultAsync(c => c.Id == connectorId, ct)
             ?? throw new InvalidOperationException("Connector not found.");
         var refreshToken = Encoding.UTF8.GetString(_protector.Unprotect(cn.RefreshTokenEncrypted));
+        var cfg = ReadConfig();
 
         var http = _http.CreateClient();
         var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["client_id"] = ClientId,
-            ["client_secret"] = ClientSecret,
+            ["client_id"] = cfg.ClientId,
+            ["client_secret"] = cfg.ClientSecret,
             ["grant_type"] = "refresh_token",
             ["refresh_token"] = refreshToken,
             ["scope"] = string.Join(' ', Scopes),
         });
-        var resp = await http.PostAsync($"https://login.microsoftonline.com/{Tenant}/oauth2/v2.0/token", form, ct);
+        var resp = await http.PostAsync($"https://login.microsoftonline.com/{cfg.Tenant}/oauth2/v2.0/token", form, ct);
         var body = await resp.Content.ReadAsStringAsync(ct);
         if (!resp.IsSuccessStatusCode)
             throw new InvalidOperationException($"Token refresh failed ({(int)resp.StatusCode}): {body}");
