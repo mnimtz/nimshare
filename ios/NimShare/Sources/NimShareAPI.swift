@@ -875,6 +875,26 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // v1.10.148: Bug #7 — Ordner per Id browsen (Für SharedWithMeView-Tap
+    // auf Ordner). Server-Endpoint /api/v1/folders/{id}/browse.
+    struct FolderBrowseResponse: Decodable {
+        struct Sub: Decodable, Identifiable { let id: UUID; let name: String }
+        struct FileRow: Decodable, Identifiable {
+            let id: UUID; let name: String; let sizeBytes: Int64
+            let contentType: String; let createdAt: Date
+        }
+        let id: UUID
+        let name: String
+        let scope: String
+        let subfolders: [Sub]
+        let files: [FileRow]
+    }
+    func browseFolder(_ id: UUID) async throws -> FolderBrowseResponse {
+        let req = request("GET", "api/v1/folders/\(id)/browse")
+        let (data, _) = try await perform(req)
+        return try decode(FolderBrowseResponse.self, data)
+    }
+
     // MARK: - Activity
 
     func activity(all: Bool = false, limit: Int = 100) async throws -> [ActivityDto] {

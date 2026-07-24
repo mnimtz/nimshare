@@ -264,6 +264,9 @@ struct AddContactSheet: View {
     @State private var email = ""
     @State private var name = ""
     @State private var company = ""
+    // v1.10.148: Tags-Feld nachgerüstet. Vorher wurde tags:nil an den Server
+    // gesendet → c.Tags = req.Tags?.Trim() wipe-te im Web gepflegte Tags.
+    @State private var tags = ""
     @State private var busy = false
     @State private var error: String?
 
@@ -282,6 +285,13 @@ struct AddContactSheet: View {
                 Section("Firma (optional)") {
                     TextField("Firma", text: $company)
                 }
+                Section("Tags (optional)") {
+                    TextField("kunde, vip, legal", text: $tags)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Text("Kommagetrennt. Werden im Web für den Filter genutzt.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             }
             .navigationTitle(existing == nil ? "Kontakt anlegen" : "Kontakt bearbeiten")
@@ -296,6 +306,7 @@ struct AddContactSheet: View {
             .onAppear {
                 if let c = existing {
                     email = c.email; name = c.name; company = c.company ?? ""
+                    tags = c.tags ?? ""
                 }
             }
             .overlay { if busy { ProgressView() } }
@@ -308,11 +319,17 @@ struct AddContactSheet: View {
         let e = email.trimmingCharacters(in: .whitespaces)
         let n = name.trimmingCharacters(in: .whitespaces)
         let comp = company.isEmpty ? nil : company
+        // v1.10.148: Tags immer mit-senden (auch leer als leerer String), damit
+        // Server nicht auf null wiped, wenn User im iOS bearbeitet ohne Tags
+        // zu tippen. Server-Verhalten: c.Tags = req.Tags?.Trim() — "" wird
+        // zu leerem String, was der Filter im Web korrekt als „keine Tags"
+        // interpretiert. Nil ist der einzige gefährliche Fall.
+        let tg = tags.trimmingCharacters(in: .whitespaces)
         do {
             if let c = existing {
-                _ = try await api.updateContact(id: c.id, email: e, name: n, company: comp)
+                _ = try await api.updateContact(id: c.id, email: e, name: n, company: comp, tags: tg)
             } else {
-                _ = try await api.createContact(email: e, name: n, company: comp)
+                _ = try await api.createContact(email: e, name: n, company: comp, tags: tg.isEmpty ? nil : tg)
             }
             onSaved()
             dismiss()

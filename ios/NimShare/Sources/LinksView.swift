@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// v1.10.71: 1:1-Parity mit Web-`/settings/links`.
-/// Zeigt drei Sektionen (Privat / Gruppen / Öffentlich, sofern befüllt),
-/// jede Row mit "📄 Datei: X" oder "📁 Ordner: Y" statt bloß Slug,
-/// plus Status-Chip (aktiv / abgelaufen / widerrufen), Downloads,
-/// Password-Icon, Copy + Teilen.
+/// v1.10.71 / v1.10.148: 1:1-Parity mit Web-`/settings/links`.
+/// Zeigt zwei Sektionen (👤 Privat / 🌍 Öffentlich, sofern befüllt) —
+/// eine Gruppen-Sektion war ursprünglich als dritte geplant, ist aber
+/// nicht implementiert: ShareLinkDto trägt kein Group-Kennzeichen,
+/// Gruppen-Scope-Links fallen unter „Privat". Jede Row mit „📄 Datei: X"
+/// oder „📁 Ordner: Y" statt bloß Slug, plus Status-Chip (aktiv /
+/// abgelaufen / widerrufen), Downloads, Password-Icon, Copy + Teilen.
 struct LinksView: View {
     @EnvironmentObject var auth: AuthStore
     @State private var links: [ShareLinkDto] = []

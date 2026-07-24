@@ -425,6 +425,39 @@ public class BrowseController : Controller
         return Ok(new { files, subfolders = subs });
     }
 
+    /// <summary>
+    /// v1.10.148 — Inhalt eines Ordners direkt per ID lesen (statt über
+    /// scope+path). Der Web-„Für mich freigegeben"-Bereich nutzt normale
+    /// Ordner-Links; iOS SharedWithMeView tap-te bisher auf Ordner-Rows
+    /// ohne Handler (Bug #7). Dieser Endpoint erlaubt der iOS-App, den
+    /// geshareten Ordner zu öffnen, ohne dessen Scope/Path zu kennen.
+    /// Nur wer CanRead auf dem Ordner hat (Owner, Direct-Share, oder
+    /// Public-Sichtbarkeit) bekommt Inhalte zurück.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("/api/v1/folders/{id:guid}/browse")]
+    public async Task<IActionResult> BrowseById(Guid id,
+        [FromServices] IFileAccessService access, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanReadAsync(folder, me, ct)) return Forbid();
+        var subs = await _folders.ListSubfoldersAsync(folder, ct);
+        subs = await _folders.FilterVisibleSubfoldersAsync(subs, me, ct);
+        var files = await _folders.ListFilesAsync(folder, ct);
+        return Ok(new
+        {
+            id = folder.Id,
+            name = folder.Name,
+            scope = folder.Scope.ToString(),
+            subfolders = subs.Select(f => new { id = f.Id, name = f.Name }).ToList(),
+            files = files.Where(f => f.Status == StorageFileStatus.Ready)
+                .Select(f => new { id = f.Id, name = f.Name, sizeBytes = f.SizeBytes,
+                                   contentType = f.ContentType, createdAt = f.CreatedAt }).ToList(),
+        });
+    }
+
     // ── v1.10.110: Ordner verschieben + kopieren (Rechtsklick-Parität mit Dateien) ──
     public record FolderMoveReq(Guid FolderId);
 

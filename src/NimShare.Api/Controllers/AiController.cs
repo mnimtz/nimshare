@@ -322,8 +322,20 @@ public class AiController : ControllerBase
             .Include(l => l.File)
             .SingleOrDefaultAsync(l => l.Slug == req.Slug && l.FileId != null, ct);
         if (link is null || link.File is null) return NotFound();
-        if (link.IsRevoked || (link.ExpiresAt is not null && link.ExpiresAt <= DateTimeOffset.UtcNow))
-            return Problem(statusCode: 410, title: "Link expired");
+        // v1.10.148: dieselben Access-Gates wie im Download-Pfad
+        // (ShareController) enforced — vorher konnte ein Slug NACH
+        // Download-Limit-Erreichung / trotz Allow-List-Restriktion die
+        // KI-Zusammenfassung ziehen (Datenleck). IsActive prüft Revoked +
+        // ExpiresAt + MaxDownloads atomic; AllowedEmails/OTP wird über den
+        // Session-Gate-Cookie geprüft, den ShareController.Landing setzt.
+        if (!link.IsActive(DateTimeOffset.UtcNow))
+            return Problem(statusCode: 410, title: "Link no longer available");
+        if (!string.IsNullOrWhiteSpace(link.AllowedEmails))
+        {
+            var gate = HttpContext.Session.GetString($"gate.{link.Slug}");
+            if (gate != "ok")
+                return Problem(statusCode: 403, title: "Recipient verification required");
+        }
 
         var file = link.File;
         var lang = CurrentLanguageIso();

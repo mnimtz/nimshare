@@ -16,32 +16,23 @@ struct SharedWithMeView: View {
                     description: Text("Hier landen Dateien und Ordner, die andere für dich freigeben."))
             } else {
                 List(items) { item in
-                    Button {
-                        if item.kind == "file" {
+                    // v1.10.148: Bug #7 — Ordner-Tap navigierte vorher nirgends,
+                    // Row wirkte eingefroren. Jetzt: für „folder" NavigationLink
+                    // in SharedFolderView, für „file" bleibt der Preview-Button.
+                    if item.kind == "folder" {
+                        NavigationLink {
+                            SharedFolderView(folderId: item.id, initialTitle: item.name)
+                        } label: { rowLabel(item) }
+                    } else {
+                        Button {
                             previewFile = FileItem(
                                 id: item.id, name: item.name, sizeBytes: 0,
                                 contentType: "application/octet-stream",
                                 createdAt: item.sharedAt, ownerName: item.sharedByName,
                                 aiTags: nil, aiRiskFlag: nil)
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: item.kind == "file" ? "doc.fill" : "folder.fill")
-                                .foregroundStyle(item.kind == "file" ? Color.blue : Color.orange)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name).lineLimit(2)
-                                HStack(spacing: 6) {
-                                    Text("von \(item.sharedByName)", comment: "shared-with-me subtitle: 'from <name>'")
-                                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                                    permBadge(item.permissionEnum)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-                        }
+                        } label: { rowLabel(item) }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
@@ -50,6 +41,25 @@ struct SharedWithMeView: View {
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
+    }
+
+    @ViewBuilder
+    private func rowLabel(_ item: SharedWithMeItemDto) -> some View {
+        HStack {
+            Image(systemName: item.kind == "file" ? "doc.fill" : "folder.fill")
+                .foregroundStyle(item.kind == "file" ? Color.blue : Color.orange)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name).lineLimit(2)
+                HStack(spacing: 6) {
+                    Text("von \(item.sharedByName)", comment: "shared-with-me subtitle: 'from <name>'")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    permBadge(item.permissionEnum)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func permBadge(_ perm: DirectSharePermission) -> some View {

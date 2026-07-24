@@ -223,6 +223,13 @@ struct PermissionsSheet: View {
 
     private func searchUsers(_ q: String) async {
         guard let api = auth.api, q.count >= 2 else { userMatches = []; return }
+        // v1.10.148: Bug #8 — Debounce eingeführt (analog DirectShareSheet).
+        // onChange feuert pro Tastendruck einen Task; der vorige wird zwar
+        // gecancelt, aber ohne Sleep-Puffer ging trotzdem pro Zeichen ein
+        // Server-Roundtrip raus. Jetzt: 250ms warten und nach Wach werden
+        // prüfen, ob der Task inzwischen cancelled wurde (User tippt weiter).
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        if Task.isCancelled { return }
         do {
             let items = try await api.searchShareableUsers(q)
             if !Task.isCancelled { userMatches = items }
