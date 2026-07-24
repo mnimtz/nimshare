@@ -67,7 +67,9 @@ struct LinkCollectionView: View {
         .sheet(item: $editing) { t in
             LinkCollectionEditSheet(target: t) { Task { await load() } }
         }
-        .alert("Fehler", isPresented: .constant(error != nil)) {
+        // v1.10.151: write-back-Binding statt .constant.
+        .alert("Fehler", isPresented: Binding(
+            get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK", role: .cancel) { error = nil }
         } message: { Text(error ?? "") }
     }
@@ -168,12 +170,17 @@ struct LinkCollectionEditSheet: View {
                     Button("Speichern") { Task { await save() } }.disabled(saving || !isValid)
                 }
             }
-            .onAppear {
+            // v1.10.149: .task(id:) statt .onAppear — verhindert Wipe der
+            // gerade eingetippten Änderungen, wenn das Sheet nach einer
+            // Alert-Overlay oder App-Background-Rückkehr erneut erscheint.
+            .task(id: target.existing?.id) {
                 if let e = target.existing {
                     emoji = e.emoji ?? ""; title = e.title; url = e.url; desc = e.description ?? ""
                 }
             }
-            .alert("Fehler", isPresented: .constant(error != nil)) {
+            // v1.10.151: write-back-Binding statt .constant.
+            .alert("Fehler", isPresented: Binding(
+                get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) { error = nil }
             } message: { Text(error ?? "") }
         }

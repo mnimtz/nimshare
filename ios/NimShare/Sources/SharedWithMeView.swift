@@ -45,6 +45,11 @@ struct SharedWithMeView: View {
 
     @ViewBuilder
     private func rowLabel(_ item: SharedWithMeItemDto) -> some View {
+        // v1.10.151: Kein manueller Chevron mehr. Für Ordner-Rows zeichnet
+        // NavigationLink automatisch einen Disclosure-Indicator (vorher zwei
+        // Chevrons sichtbar). Datei-Rows öffnen ein Sheet — dort ist ein
+        // Chevron irreführend (verspricht Navigation, liefert Modal), also
+        // ebenfalls weglassen.
         HStack {
             Image(systemName: item.kind == "file" ? "doc.fill" : "folder.fill")
                 .foregroundStyle(item.kind == "file" ? Color.blue : Color.orange)
@@ -58,7 +63,6 @@ struct SharedWithMeView: View {
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
         }
     }
 

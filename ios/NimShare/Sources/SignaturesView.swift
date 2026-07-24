@@ -192,8 +192,15 @@ struct NewSignatureRequestSheet: View {
     /// v1.10.70: Importierte PDF hochladen und automatisch als
     /// pickedFileId setzen. Die Datei landet in Personal-Root (folderId=nil
     /// → Server nimmt den Personal-Root-Folder des Users).
+    ///
+    /// v1.10.150: Streaming-Umbau — vorher `Data(contentsOf:)` synchron VOR
+    /// `busy=true`, blockierte den Main-Actor bei großen iCloud-PDFs (kein
+    /// Spinner) und legte die komplette Datei in RAM ab. Jetzt: erst Spinner
+    /// an, PDF in Temp-Datei kopieren, per `fromFile:`-Overload streamend
+    /// hochladen — keine RAM-Verdopplung, kein UI-Freeze.
     private func handlePickedFile(_ result: Result<[URL], Error>) async {
         guard let api = auth.api else { return }
+        busy = true; error = nil; defer { busy = false }
         do {
             let urls = try result.get()
             guard let src = urls.first else { return }
@@ -201,18 +208,19 @@ struct NewSignatureRequestSheet: View {
             // explizites startAccessingSecurityScopedResource() um sie zu lesen.
             let didStart = src.startAccessingSecurityScopedResource()
             defer { if didStart { src.stopAccessingSecurityScopedResource() } }
-            let data = try Data(contentsOf: src)
-            busy = true; error = nil
             let name = src.lastPathComponent
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + "-" + name)
+            try FileManager.default.copyItem(at: src, to: tmp)
+            defer { try? FileManager.default.removeItem(at: tmp) }
+            let size = ((try? FileManager.default.attributesOfItem(atPath: tmp.path))?[.size] as? NSNumber)?.int64Value ?? 0
             let fid = try await api.uploadFile(name: name, contentType: "application/pdf",
-                folderId: nil, data: data)
-            // Neu geladene File in die lokale Liste einreihen + auswählen
-            files.append(FileItem(id: fid, name: name, sizeBytes: Int64(data.count),
+                folderId: nil, fromFile: tmp)
+            files.append(FileItem(id: fid, name: name, sizeBytes: size,
                 contentType: "application/pdf", createdAt: Date(), ownerName: nil,
                 aiTags: nil, aiRiskFlag: nil))
             pickedFileId = fid
         } catch let ex { error = ex.localizedDescription }
-        busy = false
     }
 
     @State private var showPicker = false

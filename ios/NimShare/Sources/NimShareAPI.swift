@@ -665,6 +665,9 @@ final class NimShareAPI: ObservableObject {
     }
     /// Uploads a local file to the user's Personal library (or a given folder).
     /// Returns the created fileId once /complete succeeds.
+    /// Behält den Data-Pfad für kleine, in-memory erzeugte Blobs (z.B.
+    /// PencilKit-Signaturen). Große Files (PDFs aus dem Files-Picker) sollten
+    /// den `fromFile:`-Overload nutzen, der ohne RAM-Verdopplung streamt.
     func uploadFile(name: String, contentType: String, folderId: UUID?, data: Data) async throws -> UUID {
         let body = try Self.jsonEncoder.encode(InitUploadBody(
             name: name, sizeBytes: Int64(data.count), contentType: contentType, folderId: folderId))
@@ -685,6 +688,34 @@ final class NimShareAPI: ObservableObject {
         }
 
         // Server-side: read blob props back, persist SizeBytes, kick AI post-process.
+        let completeReq = request("POST", "api/v1/files/\(init_.fileId)/complete")
+        _ = try await perform(completeReq)
+        return init_.fileId
+    }
+
+    /// v1.10.150: Streaming-Upload direkt aus einer lokalen Datei — hält die
+    /// PDF NIEMALS komplett im RAM. URLSession streamt aus dem FS zum Azure-
+    /// Endpoint. Für 100 MB+ Dateien der einzig sichere Pfad; kleinere Files
+    /// dürfen weiter den Data-Overload nutzen.
+    func uploadFile(name: String, contentType: String, folderId: UUID?, fromFile fileURL: URL) async throws -> UUID {
+        let attrs = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
+        let body = try Self.jsonEncoder.encode(InitUploadBody(
+            name: name, sizeBytes: size, contentType: contentType, folderId: folderId))
+        let initReq = request("POST", "api/v1/files", body: body, contentType: "application/json")
+        let (initData, _) = try await perform(initReq)
+        let init_ = try decode(InitUploadResp.self, initData)
+
+        guard let url = URL(string: init_.uploadUrl) else { throw ApiError.network("Bad upload URL") }
+        var putReq = URLRequest(url: url)
+        putReq.httpMethod = init_.uploadMethod ?? "PUT"
+        putReq.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+        putReq.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        let (_, putResp) = try await URLSession.shared.upload(for: putReq, fromFile: fileURL)
+        if let http = putResp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ApiError.http(http.statusCode, "Azure Blob upload failed")
+        }
+
         let completeReq = request("POST", "api/v1/files/\(init_.fileId)/complete")
         _ = try await perform(completeReq)
         return init_.fileId

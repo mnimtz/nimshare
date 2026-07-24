@@ -114,14 +114,21 @@ struct ChatView: View {
         }
     }
 
+    @Environment(\.horizontalSizeClass) private var hSize
+
     private func bubble(_ m: ChatMessage) -> some View {
-        VStack(alignment: m.role == .user ? .trailing : .leading, spacing: 6) {
+        // v1.10.151: Bubble-Breite reagiert auf horizontalSizeClass — vorher
+        // hart 320pt → auf iPad-Landscape (1366pt Fensterbreite) blieb der
+        // Chat als schmaler Streifen mit riesigen Rändern. Regular-Klasse
+        // (iPad, landscape iPhone Pro Max) → 640pt max.
+        let bubbleMax: CGFloat = hSize == .regular ? 640 : 320
+        return VStack(alignment: m.role == .user ? .trailing : .leading, spacing: 6) {
             Text(m.text)
                 .padding(10)
                 .background(m.role == .user ? Theme.tungstenBlue : Theme.cardBackground)
                 .foregroundStyle(m.role == .user ? .white : .primary)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .frame(maxWidth: 320, alignment: m.role == .user ? .trailing : .leading)
+                .frame(maxWidth: bubbleMax, alignment: m.role == .user ? .trailing : .leading)
             if !m.citations.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(m.citations.enumerated()), id: \.element.id) { idx, c in

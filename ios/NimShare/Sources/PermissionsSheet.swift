@@ -154,7 +154,12 @@ struct PermissionsSheet: View {
                 }
             }
             .task { await load() }
-            .alert("Fehler", isPresented: .constant(error != nil)) {
+            // v1.10.151: write-back-Binding statt .constant — sonst kann
+            // SwiftUI den Alert bei Framework-Dismiss (Scene-Change,
+            // iPad-Drag-to-Dismiss) nicht schließen und er würde sofort
+            // wieder erscheinen.
+            .alert("Fehler", isPresented: Binding(
+                get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) { error = nil }
             } message: { Text(error ?? "") }
         }

@@ -102,11 +102,14 @@ final class AuthStore: ObservableObject {
             Keychain.set(resp.token, forKey: tokenKey)
             api.setToken(resp.token)
             user = resp.user
-            lastEmail = email  // v1.10.59: für Vorausfüllung beim nächsten Login
+            if rememberCredentials { lastEmail = email }
             state = .signedIn
         case .totpRequired(let challenge):
             pendingTotpChallenge = challenge
-            lastEmail = email  // auch bei 2FA-Zwischenstand für Retry
+            // v1.10.149: lastEmail NICHT während der 2FA-Zwischenstufe schreiben —
+            // LoginView.doLogin() cleanup läuft nur, wenn login() ohne 2FA
+            // zurückkehrt. Bei „Anmeldedaten merken=aus" wurde die Email trotzdem
+            // in UserDefaults persistiert. Erst nach erfolgreichem TOTP setzen.
         }
     }
 
@@ -116,6 +119,8 @@ final class AuthStore: ObservableObject {
         Keychain.set(resp.token, forKey: tokenKey)
         api.setToken(resp.token)
         user = resp.user
+        // v1.10.149: erst hier persistieren — respektiert rememberCredentials.
+        if rememberCredentials { lastEmail = resp.user.email }
         pendingTotpChallenge = nil
         state = .signedIn
     }

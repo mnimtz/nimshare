@@ -20,9 +20,12 @@ struct ProfileView: View {
             }
 
             if let u = auth.user {
-                Section("Storage quota") {
-                    LabeledContent("Quota", value: ByteCountFormatter.string(fromByteCount: u.quotaBytes, countStyle: .file))
-                    LabeledContent("Language", value: u.preferredCulture)
+                // v1.10.149: EN/DE-Mix behoben — vorher hartkodiertes
+                // „Storage quota"/„Quota"/„Language" mitten in deutscher
+                // Section-Umgebung.
+                Section("Speicher") {
+                    LabeledContent("Kontingent", value: ByteCountFormatter.string(fromByteCount: u.quotaBytes, countStyle: .file))
+                    LabeledContent("Sprache", value: u.preferredCulture)
                 }
             }
 

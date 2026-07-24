@@ -68,6 +68,15 @@ struct FolderBrowserView: View {
     }
     @State private var permissionsTarget: PermissionsTargetRef?
 
+    // v1.10.151: Track laufender Download-/Zip-Tasks, damit sie beim Verlassen
+    // der View abgebrochen werden. Vorher liefen 500-MB-Bulk-Zips im Hintergrund
+    // weiter und die Completion feuerte in einen nicht mehr sichtbaren View.
+    @State private var activeTransfers: [Task<Void, Never>] = []
+    private func track(_ t: Task<Void, Never>) {
+        activeTransfers.removeAll { $0.isCancelled }
+        activeTransfers.append(t)
+    }
+
     struct LinkResult: Identifiable {
         let id = UUID()
         let title: String
@@ -130,6 +139,11 @@ struct FolderBrowserView: View {
         }
         .task(id: path) { await load() }
         .refreshable { await load() }
+        .onDisappear {
+            // v1.10.151: laufende Downloads/Zips beim Verlassen abbrechen.
+            activeTransfers.forEach { $0.cancel() }
+            activeTransfers.removeAll()
+        }
         .sheet(item: $previewFile) { file in
             NavigationStack { FilePreviewView(file: file) }
         }
@@ -343,7 +357,7 @@ struct FolderBrowserView: View {
                         .contextMenu {
                             Button { previewFile = f } label: { Label("Vorschau", systemImage: "eye") }
                             Button {
-                                Task { await downloadFile(f) }
+                                track(Task { await downloadFile(f) })
                             } label: { Label("Herunterladen", systemImage: "arrow.down.circle") }
                             Button {
                                 shareItemName = f.name
@@ -488,7 +502,7 @@ struct FolderBrowserView: View {
             } label: { Image(systemName: "doc.on.doc") }
                 .disabled(busy)
             Button {
-                Task { await bulkDownloadZip() }
+                track(Task { await bulkDownloadZip() })
             } label: { Image(systemName: "arrow.down.circle") }
                 .disabled(busy)
             Button(role: .destructive) {

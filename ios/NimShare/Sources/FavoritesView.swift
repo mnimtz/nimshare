@@ -6,7 +6,6 @@ struct FavoritesView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var previewFile: FileItem?
-    @State private var folderTargetInfo: String?  // shown as an alert for now
 
     var body: some View {
         Group {
@@ -18,40 +17,33 @@ struct FavoritesView: View {
             } else {
                 List {
                     ForEach(items) { fav in
-                        Button {
-                            if fav.kind == "file" {
+                        // v1.10.149: Ordner-Favoriten öffnen jetzt SharedFolderView
+                        // (nutzt den scope-agnostischen /api/v1/folders/{id}/browse-
+                        // Endpoint). Vorher zeigte der Tap nur einen „such es dir
+                        // selbst"-Alert — der Kernwert von „Favorit" für Ordner
+                        // war damit weg.
+                        if fav.kind == "folder" {
+                            NavigationLink {
+                                SharedFolderView(folderId: fav.targetId, initialTitle: fav.name)
+                            } label: { favRow(fav) }
+                            .swipeActions {
+                                Button(role: .destructive) { Task { await unstar(fav) } } label: {
+                                    Label(String(localized: "Entfernen"), systemImage: "star.slash")
+                                }
+                            }
+                        } else {
+                            Button {
                                 previewFile = FileItem(
                                     id: fav.targetId, name: fav.name, sizeBytes: 0,
                                     contentType: "application/octet-stream",
                                     createdAt: fav.createdAt, ownerName: nil,
                                     aiTags: nil, aiRiskFlag: nil)
-                            } else {
-                                // Folder favorites: we don't know the scope/path
-                                // just from the favorite row, so surface the id
-                                // to the user rather than pretending the tap
-                                // did nothing.
-                                folderTargetInfo = fav.name
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: fav.kind == "file" ? "doc.fill" : "folder.fill")
-                                    .foregroundStyle(fav.kind == "file" ? Color.blue : Color.orange)
-                                    .frame(width: 24)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(fav.name).lineLimit(2)
-                                    Text(fav.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption).foregroundStyle(.secondary)
+                            } label: { favRow(fav) }
+                            .buttonStyle(.plain)
+                            .swipeActions {
+                                Button(role: .destructive) { Task { await unstar(fav) } } label: {
+                                    Label(String(localized: "Entfernen"), systemImage: "star.slash")
                                 }
-                                Spacer()
-                                Image(systemName: "star.fill").foregroundStyle(.yellow)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                Task { await unstar(fav) }
-                            } label: {
-                                Label(String(localized: "Entfernen"), systemImage: "star.slash")
                             }
                         }
                     }
@@ -63,12 +55,21 @@ struct FavoritesView: View {
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
-        .alert("Ordner öffnen", isPresented: Binding(
-            get: { folderTargetInfo != nil },
-            set: { if !$0 { folderTargetInfo = nil } })) {
-            Button("OK") { folderTargetInfo = nil }
-        } message: {
-            Text("Ordner-Favoriten öffnest du am schnellsten über die Bibliothek. Suche nach „\(folderTargetInfo ?? "")“.")
+    }
+
+    @ViewBuilder
+    private func favRow(_ fav: FavoriteDto) -> some View {
+        HStack {
+            Image(systemName: fav.kind == "file" ? "doc.fill" : "folder.fill")
+                .foregroundStyle(fav.kind == "file" ? Color.blue : Color.orange)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(fav.name).lineLimit(2)
+                Text(fav.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "star.fill").foregroundStyle(.yellow)
         }
     }
 

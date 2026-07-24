@@ -125,10 +125,19 @@ struct QLQuickLookView: UIViewControllerRepresentable {
         return vc
     }
 
-    func updateUIViewController(_ uiViewController: QLPreviewController, context: Context) {}
+    // v1.10.151: Update-Pfad — vorher leer, damit blieb ein re-nutzter
+    // QLPreviewController auf der ursprünglichen URL hängen, auch wenn
+    // SwiftUI mit einer neuen URL updated. Jetzt: Coordinator-URL nachziehen
+    // und reloadData() rufen.
+    func updateUIViewController(_ uiViewController: QLPreviewController, context: Context) {
+        if context.coordinator.url != url {
+            context.coordinator.url = url
+            uiViewController.reloadData()
+        }
+    }
 
     final class Coordinator: NSObject, QLPreviewControllerDataSource {
-        let url: URL
+        var url: URL
         init(url: URL) { self.url = url }
         func numberOfPreviewItems(in controller: QLPreviewController) -> Int { 1 }
         func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {

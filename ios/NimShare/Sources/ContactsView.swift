@@ -303,7 +303,11 @@ struct AddContactSheet: View {
                         .disabled(busy || !email.contains("@") || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .onAppear {
+            // v1.10.149: .task(id:) statt .onAppear — feuert nur einmal pro
+            // Kontakt-Identität. .onAppear feuerte auch bei App-Wechseln oder
+            // aufgelegten Sheets und überschrieb dabei gerade eingetippte
+            // Änderungen mit dem `existing`-Snapshot.
+            .task(id: existing?.id) {
                 if let c = existing {
                     email = c.email; name = c.name; company = c.company ?? ""
                     tags = c.tags ?? ""
