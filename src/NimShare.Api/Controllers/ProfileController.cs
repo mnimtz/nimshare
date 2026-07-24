@@ -45,8 +45,13 @@ public class ProfileController : Controller
         // is absent; the bool binds true/false accordingly).
         me.ShowAvatarOnLandings = form.ShowAvatarOnLandings;
 
-        // Optional password change: only apply if all three password fields are filled.
-        if (!string.IsNullOrEmpty(form.NewPassword) || !string.IsNullOrEmpty(form.CurrentPassword))
+        // v1.10.154: Optionaler Passwort-Wechsel nur dann prüfen, wenn ein
+        // NEUES Passwort gesetzt werden soll. Vorher triggerte der Zweig auch
+        // dann, wenn nur „Aktuelles Passwort" aus Gewohnheit ausgefüllt war
+        // (z.B. beim Bild-Upload) — dann fiel die Länge-Prüfung des leeren
+        // NewPassword und der User bekam eine irreführende „zu kurz"-Meldung
+        // obwohl er gar kein Passwort ändern wollte.
+        if (!string.IsNullOrEmpty(form.NewPassword))
         {
             if (string.IsNullOrEmpty(me.PasswordHash))
             {
