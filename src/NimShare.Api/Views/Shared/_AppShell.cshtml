@@ -154,6 +154,8 @@
                 </div>
             </div>
             <a href="/signatures/certificates" class="@(currentPath.StartsWith("/signatures/certificates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">🔐 @T["nav.sig.certificates"]</a>
+            @* v1.10.163: Konnektoren — Cloud-to-Cloud-Import *@
+            <a href="/settings/connectors" class="@(currentPath.StartsWith("/settings/connectors", StringComparison.OrdinalIgnoreCase) ? "active" : "")">🔌 @T["nav.connectors"]</a>
 
             <a href="/link-collection" class="@Active("/link-collection")">🔗 @T["nav.linkcol"]</a>
             <a href="/notifications" class="@Exact("/notifications")" id="navNotifications">

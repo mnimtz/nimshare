@@ -49,6 +49,8 @@ public class NimShareDbContext : DbContext
     // importieren und alle signierten Links dieser Instanz automatisch valid
     // sind.
     public DbSet<InstanceCa> InstanceCas => Set<InstanceCa>();
+    // v1.10.163: User-authored Verbindungen zu externen Cloud-Speichern.
+    public DbSet<Connector> Connectors => Set<Connector>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -355,6 +357,16 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.SubjectDn).HasMaxLength(400).IsRequired();
             e.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
+        });
+
+        // v1.10.163: Verbindungen zu externen Cloud-Speichern (OneDrive etc.)
+        b.Entity<Connector>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OwnerUserId, x.Type });
+            e.Property(x => x.DisplayName).HasMaxLength(240).IsRequired();
+            e.Property(x => x.ExternalAccountId).HasMaxLength(120);
+            e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<FilePin>(e =>

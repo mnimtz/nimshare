@@ -207,6 +207,23 @@ If you serve NimShare on `nimshare.com` but Azure keeps the `*.azurewebsites.net
 App__PublicBaseUrl = https://nimshare.com
 ```
 
+### Optional: connectors (OneDrive Business import)
+
+Since v1.10.163, users can connect an external cloud storage and import folders/files directly into their NimShare Personal area (cloud-to-cloud streaming, no local download). Currently supported: **OneDrive Business** via Microsoft Graph.
+
+1. Register the app in Entra ID: <https://entra.microsoft.com> → App registrations → New → Web client. Redirect URI: `https://YOUR-HOST/settings/connectors/onedrive/callback`.
+2. Delegated API permissions: `Files.Read` + `User.Read` + `offline_access`. Grant admin consent for your tenant if you want tenant-wide.
+3. Create a Client Secret and copy its value.
+4. In Azure App Service → Configuration:
+   ```
+   Connectors__OneDrive__ClientId = <client-id>
+   Connectors__OneDrive__ClientSecret = <secret-value>
+   Connectors__OneDrive__Tenant = common     # or a specific tenant GUID
+   ```
+5. Restart. Users see `🔌 Connectors` in the sidebar and can add a OneDrive connection.
+
+Without those settings the app runs normally; only the "Connect OneDrive" button responds with a config-missing error.
+
 ### iOS app
 
 The iOS app is a SwiftUI project under [`ios/`](ios/). It's distributed via the App Store (bundle `email.nimtz.nimshare`). To build locally:

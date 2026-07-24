@@ -338,6 +338,11 @@ builder.Services.AddScoped<IBackupService, BackupService>();
 // v1.10.153: NimShare-Instance-Root-CA — signiert alle in-app-erzeugten
 // User-Signing-Certs (Weg A für „intern gültig"-Trust).
 builder.Services.AddScoped<IInstanceCaService, InstanceCaService>();
+// v1.10.163: OneDrive-Import-Konnektor (Roadmap-Punkt „Konnektoren als
+// Import-Tool"). appsettings.json muss Connectors:OneDrive:{ClientId,
+// ClientSecret, Tenant} setzen; ohne diese Config schlägt der Service
+// erst beim ersten OAuth-Redirect fehl (nicht beim Start).
+builder.Services.AddScoped<IConnectorService, OneDriveConnectorService>();
 builder.Services.AddSingleton<ISignerCertReader, SignerCertReader>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();

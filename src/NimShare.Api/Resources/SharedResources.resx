@@ -943,6 +943,31 @@ Please open this link to sign:
   <data name="report.access_kind.landing" xml:space="preserve"><value>Landing</value></data>
   <data name="report.access_kind.download" xml:space="preserve"><value>Download</value></data>
   <data name="report.access_kind.password_fail" xml:space="preserve"><value>Password failed</value></data>
+  <!-- v1.10.163: Connectors — user-authored cloud-storage imports -->
+  <data name="nav.connectors" xml:space="preserve"><value>Connectors</value></data>
+  <data name="connectors.title" xml:space="preserve"><value>Connectors</value></data>
+  <data name="connectors.lede" xml:space="preserve"><value>Connect an external cloud storage and import folders or files into your NimShare Personal area — cloud-to-cloud, no local download needed.</value></data>
+  <data name="connectors.empty" xml:space="preserve"><value>No connectors set up yet. Use the button above to add one.</value></data>
+  <data name="connectors.loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="connectors.col.name" xml:space="preserve"><value>Account</value></data>
+  <data name="connectors.col.type" xml:space="preserve"><value>Type</value></data>
+  <data name="connectors.col.connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="connectors.add.onedrive" xml:space="preserve"><value>Connect OneDrive Business</value></data>
+  <data name="connectors.action.browse" xml:space="preserve"><value>Browse</value></data>
+  <data name="connectors.action.disconnect" xml:space="preserve"><value>Disconnect</value></data>
+  <data name="connectors.confirm.delete" xml:space="preserve"><value>Really disconnect {0}? Ongoing imports finish; new browses will require re-authorization.</value></data>
+  <data name="connectors.browse.title" xml:space="preserve"><value>Browse</value></data>
+  <data name="connectors.browse.root" xml:space="preserve"><value>Root</value></data>
+  <data name="connectors.browse.folder" xml:space="preserve"><value>Folder</value></data>
+  <data name="connectors.browse.file" xml:space="preserve"><value>File</value></data>
+  <data name="connectors.browse.empty" xml:space="preserve"><value>Folder is empty.</value></data>
+  <data name="connectors.import.target_folder" xml:space="preserve"><value>Target folder in NimShare</value></data>
+  <data name="connectors.import.preserve_structure" xml:space="preserve"><value>Keep folder structure</value></data>
+  <data name="connectors.import.button" xml:space="preserve"><value>Import</value></data>
+  <data name="connectors.import.selected" xml:space="preserve"><value>Import {0} item(s)</value></data>
+  <data name="connectors.import.running" xml:space="preserve"><value>Importing…</value></data>
+  <data name="connectors.import.done" xml:space="preserve"><value>Import complete.</value></data>
+  <data name="connectors.import.error" xml:space="preserve"><value>Import error</value></data>
   <data name="certs.root_ca.title"><value>NimShare Root Certificate for this instance</value></data>
   <data name="certs.root_ca.body"><value>Every certificate you create in NimShare is signed by this instance's Root. Send the link to your recipients so they can import the Root once into their operating system or browser trust store — after that, every signed link from any user on this instance validates automatically without a "unknown authority" warning.</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>
