@@ -245,6 +245,23 @@
     </aside>
 
     <main class="workspace">
+        @* v1.10.161: Startup-Health-Banner — sichtbar NUR für Admins, wenn
+           beim App-Start etwas nicht sauber lief (z.B. Migration hängen
+           geblieben). Ersetzt das „ich merke es erst wenn ein User
+           reinklickt"-Muster durch sofortige Sichtbarkeit im Admin-UI. *@
+        @if (isAdmin && NimShare.Api.Controllers.StartupState.Errors.Count > 0)
+        {
+            <div style="background:#fdecea;border-left:4px solid #c22;padding:10px 14px;margin-bottom:16px;border-radius:4px;font-size:.9rem">
+                <strong style="color:#c22">⚠ Startup-Warnung</strong>
+                <ul style="margin:6px 0 0 20px;padding:0">
+                    @foreach (var e in NimShare.Api.Controllers.StartupState.Errors)
+                    {
+                        <li style="color:#7a1e1e">@e</li>
+                    }
+                </ul>
+                <div style="margin-top:6px"><a href="/diagnostics" style="color:#0060df">→ /diagnostics</a></div>
+            </div>
+        }
         @RenderBody()
     </main>
 </div>

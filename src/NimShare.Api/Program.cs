@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using NimShare.Api;
@@ -471,6 +472,14 @@ using (var scope = app.Services.CreateScope())
                 Console.Error.WriteLine($"[STARTUP] Pending migrations before Migrate: {pendingBefore.Count} → {string.Join(", ", pendingBefore)}");
             else
                 Console.Error.WriteLine("[STARTUP] No pending migrations — DB already at current schema.");
+            // v1.10.161: Generischer Pre-Stamp — für jede pending Migration,
+            // die genau eine schon existierende Tabelle oder nur schon
+            // existierende Spalten anlegen will, stempelt sie in die
+            // History (ohne CREATE TABLE/ADD COLUMN erneut zu senden).
+            // Damit erledigen sich die drei bisherigen ad-hoc Rescue-Pfade
+            // (Folders.IsPrivate/LinkEntries/InstanceCas) systematisch für
+            // alle künftigen Migrations desselben Musters.
+            await PreStampAlreadyAppliedMigrationsAsync(db, isSqlServer);
             await db.Database.MigrateAsync();
             var pendingAfter = (await db.Database.GetPendingMigrationsAsync()).ToList();
             if (pendingAfter.Count > 0)
@@ -698,6 +707,19 @@ app.Use((ctx, next) =>
 
 app.MapControllers();
 app.MapRazorPages();
+
+// v1.10.161: /health für Uptime-Monitore. 200 wenn alles ok, 503 wenn
+// StartupState.Errors etwas gemeldet hat (z.B. pending migrations nach
+// MigrateAsync). Ehrliche Signalisierung nach außen — vorher tarnte
+// sich eine halb-migrierte App als „läuft".
+app.MapGet("/health", (HttpContext ctx) =>
+{
+    var errors = NimShare.Api.Controllers.StartupState.Errors;
+    if (errors.Count == 0) return Results.Ok(new { status = "healthy", version = BuildInfo.Version });
+    return Results.Json(
+        new { status = "unhealthy", version = BuildInfo.Version, errors },
+        statusCode: 503);
+}).AllowAnonymous();
 
 app.Run();
 
@@ -1000,6 +1022,166 @@ static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db, bool isSqlSe
     catch (Exception ex)
     {
         Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync failed: " + ex.Message);
+    }
+}
+
+// v1.10.161: Generischer Pre-Stamper. Iteriert die pending-Migrations und
+// stempelt jede, deren Ziel-Objekte in der DB bereits existieren, direkt
+// in __EFMigrationsHistory. Damit vermeidet MigrateAsync das „duplicate
+// column"/„table already exists"-Muster, das V184/V185/V186 alle jeweils
+// silent hat abbrechen lassen. Zwei erkannte Muster reichen für die
+// bisherige NimShare-Migration-Historie:
+//   (1) Migration erzeugt genau EINE Tabelle (+ optionale Indizes) —
+//       Tabelle existiert schon in der DB → stempeln.
+//   (2) Migration fügt nur Spalten hinzu — ALLE Ziel-Spalten existieren
+//       schon → stempeln.
+// Alles darüber hinaus (mehrere Tabellen, ForeignKey-Adds, Data-Seeds)
+// wird nicht angerührt; MigrateAsync bekommt seine Chance wie bisher.
+static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bool isSqlServer)
+{
+    try
+    {
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        if (pending.Count == 0) return;
+
+        // EF-Core-8-Service für die Migration-Metadaten. Weckt die
+        // handwritten Migrations aus der MigrationsAssembly.
+        var migAsm = db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsAssembly>();
+        var activeProvider = db.Database.ProviderName ?? "";
+
+        foreach (var migId in pending)
+        {
+            if (!migAsm.Migrations.TryGetValue(migId, out var migType)) continue;
+            Microsoft.EntityFrameworkCore.Migrations.Migration migration;
+            try { migration = migAsm.CreateMigration(migType, activeProvider); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[STARTUP] PreStamp: konnte Migration {migId} nicht instanziieren: {ex.Message}");
+                continue;
+            }
+            var ops = migration.UpOperations;
+
+            // Muster 1: genau EINE CreateTable, sonst nur CreateIndex-Ops.
+            var creates = ops.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.CreateTableOperation>().ToList();
+            var indexes = ops.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.CreateIndexOperation>().ToList();
+            bool onlyTableAndIndexes = ops.All(o =>
+                o is Microsoft.EntityFrameworkCore.Migrations.Operations.CreateTableOperation
+                || o is Microsoft.EntityFrameworkCore.Migrations.Operations.CreateIndexOperation);
+            if (creates.Count == 1 && onlyTableAndIndexes)
+            {
+                var table = creates[0].Name;
+                if (await TableExistsAsync(db, table, isSqlServer))
+                {
+                    await StampMigrationAsync(db, migId, isSqlServer);
+                    Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → Tabelle {table} existiert bereits, gestempelt.");
+                    continue;
+                }
+            }
+
+            // Muster 2: ausschließlich AddColumn-Ops, alle Ziel-Spalten
+            // existieren schon.
+            var addCols = ops.OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.AddColumnOperation>().ToList();
+            if (addCols.Count > 0 && ops.All(o => o is Microsoft.EntityFrameworkCore.Migrations.Operations.AddColumnOperation))
+            {
+                bool allPresent = true;
+                foreach (var ac in addCols)
+                {
+                    if (!await ColumnExistsAsync(db, ac.Table, ac.Name, isSqlServer)) { allPresent = false; break; }
+                }
+                if (allPresent)
+                {
+                    await StampMigrationAsync(db, migId, isSqlServer);
+                    Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → alle {addCols.Count} Spalten existieren bereits, gestempelt.");
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        // PreStamp ist eine Optimierung, keine Voraussetzung — Fehler
+        // dürfen nicht den Start blockieren. Migration-Loop läuft normal.
+        Console.Error.WriteLine($"[STARTUP] PreStampAlreadyAppliedMigrationsAsync failed: {ex.Message}");
+    }
+}
+
+static async Task<bool> TableExistsAsync(NimShareDbContext db, string table, bool isSqlServer)
+{
+    var conn = db.Database.GetConnectionString();
+    if (isSqlServer)
+    {
+        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText = "SELECT CASE WHEN OBJECT_ID(@t, 'U') IS NULL THEN 0 ELSE 1 END";
+        cmd.Parameters.AddWithValue("@t", $"[{table}]");
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) == 1;
+    }
+    else
+    {
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=$t";
+        cmd.Parameters.AddWithValue("$t", table);
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
+    }
+}
+
+static async Task<bool> ColumnExistsAsync(NimShareDbContext db, string table, string column, bool isSqlServer)
+{
+    var conn = db.Database.GetConnectionString();
+    if (isSqlServer)
+    {
+        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText = "SELECT CASE WHEN COL_LENGTH(@t, @c) IS NULL THEN 0 ELSE 1 END";
+        cmd.Parameters.AddWithValue("@t", table);
+        cmd.Parameters.AddWithValue("@c", column);
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) == 1;
+    }
+    else
+    {
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText = $"PRAGMA table_info(\"{table.Replace("\"", "\"\"")}\")";
+        using var rdr = await cmd.ExecuteReaderAsync();
+        while (await rdr.ReadAsync())
+        {
+            if (string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+}
+
+static async Task StampMigrationAsync(NimShareDbContext db, string migId, bool isSqlServer)
+{
+    var conn = db.Database.GetConnectionString();
+    if (isSqlServer)
+    {
+        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText =
+            "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
+            "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
+            "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
+        cmd.Parameters.AddWithValue("@mid", migId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+    else
+    {
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+        await cn.OpenAsync();
+        using var cmd = cn.CreateCommand();
+        cmd.CommandText =
+            "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+            "SELECT $mid, '8.0.10' " +
+            "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+            "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+        cmd.Parameters.AddWithValue("$mid", migId);
+        await cmd.ExecuteNonQueryAsync();
     }
 }
 
