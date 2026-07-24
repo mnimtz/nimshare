@@ -887,6 +887,8 @@ Ouvrez ce lien pour signer :
   <data name="email_tpl.preview.message"><value>Avant vendredi svp.</value></data>
 
   <data name="certs.title"><value>Certificats de signature</value></data>
+  <data name="certs.root_ca.title"><value>Certificat racine NimShare de cette instance</value></data>
+  <data name="certs.root_ca.body"><value>Chaque certificat que tu crées dans NimShare est signé par la racine de cette instance. Envoie le lien à tes destinataires : dès qu'ils importent la racine une fois dans le magasin de confiance de leur système ou navigateur, chaque partage signé de cette instance est reconnu automatiquement — sans avertissement « autorité inconnue ».</value></data>
   <data name="certs.lede"><value>Créez un certificat auto-signé pour les signatures NimShare ou importez un PKCS#12 (.pfx/.p12) existant.</value></data>
   <data name="certs.new_self"><value>Créer un certificat</value></data>
   <data name="certs.new_self.hint"><value>Un certificat auto-signé vous identifie comme signataire dans NimShare et ajoute une page d'audit vérifiable sur chaque PDF signé. Pour la validation par une AC externe, importez un certificat.</value></data>

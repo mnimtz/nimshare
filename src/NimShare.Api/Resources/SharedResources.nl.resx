@@ -886,6 +886,8 @@ Open deze link om te tekenen:
   <data name="email_tpl.preview.message"><value>Graag voor vrijdag.</value></data>
 
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
+  <data name="certs.root_ca.title"><value>NimShare-hoofdcertificaat van deze instantie</value></data>
+  <data name="certs.root_ca.body"><value>Elk certificaat dat je in NimShare aanmaakt, wordt door de hoofd-CA van deze instantie ondertekend. Stuur de link naar je ontvangers: zodra ze de hoofd-CA één keer in de vertrouwde certificaatopslag van hun besturingssysteem of browser importeren, wordt elke ondertekende link van deze instantie automatisch als betrouwbaar herkend — zonder waarschuwing „onbekende certificaatautoriteit".</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Certificaat maken</value></data>
   <data name="certs.new_self.hint"><value>Een zelfondertekend certificaat identificeert je als ondertekenaar binnen NimShare en voegt een verifieerbare auditpagina toe aan elk getekend PDF. Voor externe CA-validatie is een geïmporteerd certificaat nodig.</value></data>

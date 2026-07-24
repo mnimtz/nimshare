@@ -888,6 +888,8 @@ Please open this link to sign:
   <data name="email_tpl.preview.message"><value>Please by Friday.</value></data>
 
   <data name="certs.title"><value>Signing certificates</value></data>
+  <data name="certs.root_ca.title"><value>NimShare Root Certificate for this instance</value></data>
+  <data name="certs.root_ca.body"><value>Every certificate you create in NimShare is signed by this instance's Root. Send the link to your recipients so they can import the Root once into their operating system or browser trust store — after that, every signed link from any user on this instance validates automatically without a "unknown authority" warning.</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>
   <data name="certs.new_self"><value>Create certificate</value></data>
   <data name="certs.new_self.hint"><value>A self-signed certificate identifies you as the signer inside NimShare and stamps a verifiable audit page onto every signed PDF. External CA validation still needs an imported cert.</value></data>

@@ -887,6 +887,8 @@ Abre este enlace para firmar:
   <data name="email_tpl.preview.message"><value>Antes del viernes por favor.</value></data>
 
   <data name="certs.title"><value>Certificados de firma</value></data>
+  <data name="certs.root_ca.title"><value>Certificado raíz NimShare de esta instancia</value></data>
+  <data name="certs.root_ca.body"><value>Cada certificado que creas en NimShare está firmado por la raíz de esta instancia. Envía el enlace a tus destinatarios: en cuanto importen la raíz una vez en el almacén de confianza de su sistema operativo o navegador, cada enlace firmado de esta instancia se reconocerá automáticamente — sin advertencia de „autoridad desconocida".</value></data>
   <data name="certs.lede"><value>Crea un certificado autofirmado para firmas en NimShare o importa un PKCS#12 (.pfx/.p12) existente.</value></data>
   <data name="certs.new_self"><value>Crear certificado</value></data>
   <data name="certs.new_self.hint"><value>Un certificado autofirmado te identifica como firmante dentro de NimShare y añade una página de auditoría verificable a cada PDF firmado. Para validación por una AC externa importa un certificado.</value></data>
