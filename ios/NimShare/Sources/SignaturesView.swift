@@ -340,6 +340,10 @@ struct NewSignatureRequestSheet: View {
     /// alle Gruppen) — Marcus's Bug: "keine PDFs vorhanden" trat auf wenn
     /// die relevanten PDFs im Public- oder Gruppen-Scope lagen und Personal
     /// leer war. Wir zeigen jetzt jedes lesbare PDF quer über die Scopes.
+    /// v1.10.147: Server liefert unter /browse/scopes nur noch Personal +
+    /// Public (v1.10.102-Änderung). Gruppen müssen wir separat via
+    /// listShareableGroups holen und pro Group-ID browsen — sonst waren
+    /// PDFs in Gruppen-Ordnern unsichtbar für die Wizard-Auswahl.
     private func loadPersonalFiles() async {
         guard let api = auth.api else { return }
         do {
@@ -350,6 +354,17 @@ struct NewSignatureRequestSheet: View {
                     let r = try await api.browse(scope: tile.scope, groupId: tile.groupId, path: nil)
                     collected.append(contentsOf: r.files)
                 } catch { /* stille Fehler pro Scope — nicht den ganzen Sheet blockieren */ }
+            }
+            // v1.10.147: Gruppen zusätzlich abklappern, damit Bestands-PDFs
+            // aus Gruppen-Ordnern signierbar bleiben (Server-Kommentar in
+            // BrowseController.MobileScopes bestätigt diese Absicht).
+            if let groups = try? await api.listShareableGroups() {
+                for g in groups {
+                    do {
+                        let r = try await api.browse(scope: "Group", groupId: g.id, path: nil)
+                        collected.append(contentsOf: r.files)
+                    } catch { /* stille Fehler pro Gruppe — irrelevant */ }
+                }
             }
             // Duplikate (dieselbe File-ID kann via Pin in mehreren Scopes
             // erscheinen) einmalig zeigen.

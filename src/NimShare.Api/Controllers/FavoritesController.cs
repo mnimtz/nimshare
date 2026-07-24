@@ -78,7 +78,11 @@ public class FavoritesController : ControllerBase
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var rows = await _db.UserFavorites
-            .Where(f => f.UserId == me.Id)
+            .Where(f => f.UserId == me.Id
+                // v1.10.147: soft-deleted Files ausblenden — Web hatte den
+                // Filter schon (siehe Index-Action), API-Version nicht → iOS-
+                // Favoriten-Tab zeigte tote Zeilen mit 404 beim Öffnen.
+                && (f.FileId == null || f.File!.Status != NimShare.Core.Entities.StorageFileStatus.Deleted))
             .Include(f => f.File)
             .Include(f => f.Folder)
             .OrderByDescending(f => f.CreatedAt)

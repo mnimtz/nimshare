@@ -29,6 +29,11 @@ struct ProfileView: View {
             // v1.10.126: Papierkorb von der Startseiten-Kachel hierher —
             // dafür ist „Linksammlung" jetzt eine Kachel auf der Startseite.
             Section("Dateien") {
+                // v1.10.147: Upload-Anforderungen sichtbar/widerrufbar
+                // machen — vorher gab's nur Erstellen, keine Listen-Ansicht.
+                NavigationLink { UploadRequestsView() } label: {
+                    Label("Upload-Anforderungen", systemImage: "tray.and.arrow.down")
+                }
                 NavigationLink { TrashView() } label: {
                     Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
                 }

@@ -851,6 +851,30 @@ final class NimShareAPI: ObservableObject {
         return try decode(UploadRequestResult.self, data)
     }
 
+    // v1.10.147: Upload-Requests LISTEN + widerrufen — Server-Endpoints
+    // GET/DELETE /api/v1/upload-requests existieren seit v1.7, iOS rief sie
+    // aber nie an. User erstellte URL, vergaß den Slug, konnte sie nicht
+    // mehr einsehen/löschen ohne Web.
+    struct UploadRequestListItemDto: Decodable, Identifiable {
+        let id: UUID
+        let slug: String
+        let createdAt: Date
+        let expiresAt: Date?
+        let maxUploads: Int?
+        let uploadCount: Int
+        let isRevoked: Bool
+        let targetFolder: String?
+    }
+    func listUploadRequests() async throws -> [UploadRequestListItemDto] {
+        let req = request("GET", "api/v1/upload-requests")
+        let (data, _) = try await perform(req)
+        return try decode([UploadRequestListItemDto].self, data)
+    }
+    func deleteUploadRequest(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/upload-requests/\(id)")
+        _ = try await perform(req)
+    }
+
     // MARK: - Activity
 
     func activity(all: Bool = false, limit: Int = 100) async throws -> [ActivityDto] {

@@ -41,7 +41,8 @@ public class DirectSharesController : ControllerBase
 
     // ── Look-up helpers used by the pickers ─────────────────────────────
     [HttpGet("users")]
-    public async Task<IActionResult> SearchUsers(string q, CancellationToken ct)
+    public async Task<IActionResult> SearchUsers(string q,
+        [FromServices] IModerationService? moderation = null, CancellationToken ct = default)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         q = (q ?? "").Trim();
@@ -50,8 +51,16 @@ public class DirectSharesController : ControllerBase
         if (q.Length < 2) return Ok(Array.Empty<UserOption>());
         var escaped = q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
         var like = "%" + escaped + "%";
+        // v1.10.147: blockierte User rausfiltern (analog zu Adressbuch-
+        // Directory, ContactsController.Directory). App-Store-relevant
+        // (Apple Guideline 1.2 — blockierte User dürfen nirgends mehr
+        // als Empfänger vorgeschlagen werden).
+        var blocked = moderation is null
+            ? new HashSet<Guid>()
+            : await moderation.GetBlockedUserIdsAsync(me.Id, ct);
         var rows = await _db.Users
-            .Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System)
+            .Where(u => u.IsActive && u.Id != me.Id && u.Role != UserRole.System
+                     && !blocked.Contains(u.Id))
             .Where(u => EF.Functions.Like(u.DisplayName, like, "\\") || EF.Functions.Like(u.Email, like, "\\"))
             .OrderBy(u => u.DisplayName)
             .Take(20)
@@ -267,7 +276,10 @@ public class DirectSharesController : ControllerBase
             .Where(s => (s.TargetUserId == me.Id || (s.TargetGroupId != null && myGroupIds.Contains(s.TargetGroupId.Value)))
                 && s.SharedByUserId != me.Id
                 && (s.File == null || s.File.OwnerId != me.Id)
-                && (s.Folder == null || s.Folder.OwnerUserId != me.Id))
+                && (s.Folder == null || s.Folder.OwnerUserId != me.Id)
+                // v1.10.147: soft-deleted Files ausblenden — sonst zeigt iOS
+                // Phantom-Zeilen, Tap führt zu 404. Web hatte den Filter schon.
+                && (s.FileId == null || s.File!.Status != StorageFileStatus.Deleted))
             .Include(s => s.File).Include(s => s.Folder).Include(s => s.SharedByUser)
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(ct);
