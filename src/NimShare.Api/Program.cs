@@ -334,6 +334,10 @@ builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<IFolderService, FolderService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
+// v1.10.153: NimShare-Instance-Root-CA — signiert alle in-app-erzeugten
+// User-Signing-Certs (Weg A für „intern gültig"-Trust).
+builder.Services.AddScoped<IInstanceCaService, InstanceCaService>();
+builder.Services.AddSingleton<ISignerCertReader, SignerCertReader>();
 builder.Services.AddScoped<IActivityLogger, ActivityLogger>();
 builder.Services.AddScoped<IUserNotifier, UserNotifier>();
 builder.Services.AddSingleton<ITotpService, TotpService>();

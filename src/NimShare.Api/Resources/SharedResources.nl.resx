@@ -876,6 +876,8 @@ Open deze link om te tekenen:
   <data name="certs.err.name_pfx_required"><value>Naam en PFX-bestand zijn verplicht.</value></data>
   <data name="certs.err.pfx_too_large"><value>PFX moet kleiner zijn dan 512 KB.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX moet base64 zijn.</value></data>
+  <data name="certs.err.in_use_title"><value>Certificaat is in gebruik</value></data>
+  <data name="certs.err.in_use_detail" xml:space="preserve"><value>{0} link(s) verwijzen nog naar dit certificaat ({1} share, {2} upload). Verwijder of wijs ze eerst opnieuw toe, of behoud het certificaat.</value></data>
 
   <data name="email_tpl.preview.recipient_name"><value>Alice Voorbeeld</value></data>
   <data name="email_tpl.preview.sender_name"><value>Bob Afzender</value></data>
@@ -1338,4 +1340,14 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Afzender-certificaat</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Geen certificaat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Koppel je certificaat zodat de ontvanger ziet wie de link heeft gemaakt.</value></data>
+  <data name="share.cert.line_expired" xml:space="preserve"><value>Ondertekend door {0} — certificaat verlopen</value></data>
+  <data name="share.cert.expired_note" xml:space="preserve"><value>Het certificaat was geldig toen deze link werd aangemaakt, maar is inmiddels verlopen. Ga met het bestand om zoals je gewend bent — afwijzen hoeft niet.</value></data>
+  <data name="share.cert.verify_title" xml:space="preserve"><value>Deze handtekening verifiëren</value></data>
+  <data name="share.cert.verify_step1_html" xml:space="preserve"><value>Eenmalig: importeer het NimShare-basiscertificaat in de vertrouwensopslag van je systeem of browser — </value></data>
+  <data name="share.cert.verify_step2_html" xml:space="preserve"><value>Download daarna het certificaat van de afzender — </value></data>
+  <data name="share.cert.verify_step3" xml:space="preserve"><value>Vergelijk de vingerafdruk hierboven met wat de afzender je via een ander kanaal doorgaf (e-mail, telefoon, chat).</value></data>
+  <data name="share.cert.download_root" xml:space="preserve"><value>NimShare-basiscertificaat downloaden</value></data>
+  <data name="share.cert.download_signer" xml:space="preserve"><value>Certificaat van ondertekenaar downloaden</value></data>
+  <data name="share.cert.tofu_hint" xml:space="preserve"><value>Vergelijk de vingerafdruk hierboven met wat de afzender je apart heeft doorgegeven.</value></data>
+  <data name="share.cert.external_hint" xml:space="preserve"><value>Uitgegeven door een externe certificaatautoriteit.</value></data>
 </root>

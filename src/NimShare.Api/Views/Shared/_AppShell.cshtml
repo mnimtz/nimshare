@@ -129,7 +129,12 @@
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
 
             @{
-                var sigOpen = currentPath.StartsWith("/signatures", StringComparison.OrdinalIgnoreCase);
+                // v1.10.153: Zertifikate aus Signatur-Gruppe rausgezogen zum
+                // eigenen Top-Level-Eintrag — sie werden ja nicht nur für
+                // Signaturen genutzt, sondern auch für Share-/Upload-Link-
+                // Signierung („Verifiziert-Absender"-Landing).
+                var sigOpen = currentPath.StartsWith("/signatures", StringComparison.OrdinalIgnoreCase)
+                              && !currentPath.StartsWith("/signatures/certificates", StringComparison.OrdinalIgnoreCase);
             }
             <div class="nav-group @(sigOpen ? "" : "collapsed")" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
                 <div class="nav-group-head">
@@ -146,11 +151,9 @@
                     <a href="/signatures/contacts" class="nav-sub @(currentPath.StartsWith("/signatures/contacts", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
                         <span class="nav-sub-ic">👥</span>@T["nav.sig.contacts"]
                     </a>
-                    <a href="/signatures/certificates" class="nav-sub @(currentPath.StartsWith("/signatures/certificates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
-                        <span class="nav-sub-ic">🔐</span>@T["nav.sig.certificates"]
-                    </a>
                 </div>
             </div>
+            <a href="/signatures/certificates" class="@(currentPath.StartsWith("/signatures/certificates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">🔐 @T["nav.sig.certificates"]</a>
 
             <a href="/link-collection" class="@Active("/link-collection")">🔗 @T["nav.linkcol"]</a>
             <a href="/notifications" class="@Exact("/notifications")" id="navNotifications">

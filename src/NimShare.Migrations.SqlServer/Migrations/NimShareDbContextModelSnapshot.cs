@@ -1144,6 +1144,51 @@ namespace NimShare.Migrations.SqlServer.Migrations
                     b.ToTable("SigningCertificates");
                 });
 
+            // v1.10.153: NimShare Instance Root-CA (Singleton).
+            modelBuilder.Entity("NimShare.Core.Entities.InstanceCa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("NotAfter")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("NotBefore")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("PfxDataEncrypted")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("SubjectDn")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Thumbprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive", "NotAfter");
+
+                    b.ToTable("InstanceCas");
+                });
+
             modelBuilder.Entity("NimShare.Core.Entities.StorageFile", b =>
                 {
                     b.Property<Guid>("Id")

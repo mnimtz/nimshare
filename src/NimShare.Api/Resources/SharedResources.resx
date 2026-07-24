@@ -878,6 +878,8 @@ Please open this link to sign:
   <data name="certs.err.name_pfx_required"><value>Name and PFX file are required.</value></data>
   <data name="certs.err.pfx_too_large"><value>PFX must be smaller than 512 KB.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX must be base64-encoded.</value></data>
+  <data name="certs.err.in_use_title"><value>Certificate is in use</value></data>
+  <data name="certs.err.in_use_detail" xml:space="preserve"><value>{0} link(s) still reference this certificate ({1} share, {2} upload). Remove or reassign them first, or keep the certificate.</value></data>
 
   <data name="email_tpl.preview.recipient_name"><value>Alice Sample</value></data>
   <data name="email_tpl.preview.sender_name"><value>Bob Sender</value></data>
@@ -1337,4 +1339,14 @@ Thanks for using NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Sender certificate</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>No certificate</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Attach your certificate so the recipient sees who created this link.</value></data>
+  <data name="share.cert.line_expired" xml:space="preserve"><value>Signed by {0} — certificate expired</value></data>
+  <data name="share.cert.expired_note" xml:space="preserve"><value>The certificate was valid when this link was created but has since expired. Handle the file with the usual caution but no need to reject it.</value></data>
+  <data name="share.cert.verify_title" xml:space="preserve"><value>Verify this signature</value></data>
+  <data name="share.cert.verify_step1_html" xml:space="preserve"><value>One-time: import the NimShare root certificate into your OS or browser trust store — </value></data>
+  <data name="share.cert.verify_step2_html" xml:space="preserve"><value>Then download the sender's certificate — </value></data>
+  <data name="share.cert.verify_step3" xml:space="preserve"><value>Compare the fingerprint above with what the sender told you through another channel (email, phone, chat).</value></data>
+  <data name="share.cert.download_root" xml:space="preserve"><value>Download NimShare root</value></data>
+  <data name="share.cert.download_signer" xml:space="preserve"><value>Download signer certificate</value></data>
+  <data name="share.cert.tofu_hint" xml:space="preserve"><value>Compare the fingerprint above with what the sender told you separately.</value></data>
+  <data name="share.cert.external_hint" xml:space="preserve"><value>Issued by an external certificate authority.</value></data>
 </root>

@@ -25,14 +25,16 @@ public class CertificatesApiController : ControllerBase
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IDataProtector _protector;
+    private readonly IInstanceCaService _ca;
     private readonly IStringLocalizer<SharedResources> _l;
     private readonly ILogger<CertificatesApiController> _log;
 
     public CertificatesApiController(NimShareDbContext db, ICurrentUserService users,
-        IDataProtectionProvider dp, IStringLocalizer<SharedResources> l,
+        IDataProtectionProvider dp, IInstanceCaService ca,
+        IStringLocalizer<SharedResources> l,
         ILogger<CertificatesApiController> log)
     {
-        _db = db; _users = users; _l = l; _log = log;
+        _db = db; _users = users; _ca = ca; _l = l; _log = log;
         _protector = dp.CreateProtector("NimShare.SigningCertificate.v1");
     }
 
@@ -69,8 +71,11 @@ public class CertificatesApiController : ControllerBase
         return Ok(items);
     }
 
-    /// <summary>Self-signed certificate — good for internal audit trails and
-    /// visual sign-here stamps. Not accepted by external CA validation.</summary>
+    /// <summary>Generate a new user signing certificate, signed by the NimShare
+    /// Instance-Root-CA (v1.10.153 Weg A). Recipients who trust the NimShare-
+    /// Root once will trust every future cert of any user on this instance.
+    /// The `IsSelfIssued` flag is kept semantically as "created in-app" (vs.
+    /// imported from an external PFX) — the actual Issuer is the CA.</summary>
     [HttpPost("generate")]
     public async Task<IActionResult> Generate([FromBody] GenerateReq req, CancellationToken ct)
     {
@@ -81,60 +86,26 @@ public class CertificatesApiController : ControllerBase
 
         try
         {
-            // Build a distinguished name: CN, optional O, optional C.
             var parts = new List<string> { $"CN={EscapeDn(req.CommonName)}" };
             if (!string.IsNullOrWhiteSpace(req.Organization)) parts.Add($"O={EscapeDn(req.Organization)}");
             if (!string.IsNullOrWhiteSpace(req.Country)) parts.Add($"C={EscapeDn(req.Country[..Math.Min(2, req.Country.Length)])}");
             var dn = new X500DistinguishedName(string.Join(", ", parts));
 
-            using var rsa = RSA.Create(2048);
-            var request = new CertificateRequest(dn, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            // Basic constraints — mark as end-entity, not a CA.
-            request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, false));
-            // Digital signature + non-repudiation (used by CMS/PKCS#7 signing).
-            request.CertificateExtensions.Add(new X509KeyUsageExtension(
-                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation, true));
-            request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
-                new OidCollection { new("1.3.6.1.5.5.7.3.4") /* Email protection */,
-                                    new("1.3.6.1.4.1.311.10.3.12") /* Document signing */ }, false));
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
             var notAfter = notBefore.AddYears(years);
-            using var built = request.CreateSelfSigned(notBefore, notAfter);
-
-            var pfxPassword = Guid.NewGuid().ToString("N"); // ephemeral, only used to serialise
-            // Export can fail on Linux containers if the private key handle
-            // became ephemeral; re-import as Exportable in the same process
-            // then export again. Belt + braces for portability.
-            byte[] pfxBytes;
-            try
-            {
-                pfxBytes = built.Export(X509ContentType.Pfx, pfxPassword);
-            }
-            catch (CryptographicException)
-            {
-                // Fallback path: rebuild the PFX from RSA + cert bytes directly.
-                using var certOnly = new X509Certificate2(built.RawData);
-                using var withKey = certOnly.CopyWithPrivateKey(rsa);
-#pragma warning disable SYSLIB0057
-                using var reimport = new X509Certificate2(
-                    withKey.Export(X509ContentType.Pfx, pfxPassword),
-                    pfxPassword,
-                    X509KeyStorageFlags.Exportable);
-#pragma warning restore SYSLIB0057
-                pfxBytes = reimport.Export(X509ContentType.Pfx, pfxPassword);
-            }
-            var wrapped = _protector.Protect(BundleWithPassword(pfxBytes, pfxPassword));
+            var signed = await _ca.SignUserCertificateAsync(dn, notBefore, notAfter, ct);
+            var wrapped = _protector.Protect(BundleWithPassword(signed.PfxBytes, signed.PfxPassword));
 
             var entity = new SigningCertificate
             {
                 OwnerUserId = me.Id,
                 Name = req.Name.Trim(),
-                SubjectCommonName = ExtractCn(built.SubjectName.Name) ?? req.CommonName,
-                Issuer = built.IssuerName.Name ?? "self",
-                NotBefore = notBefore,
-                NotAfter = notAfter,
-                Thumbprint = built.Thumbprint,
-                IsSelfIssued = true,
+                SubjectCommonName = ExtractCn(signed.SubjectDn) ?? req.CommonName,
+                Issuer = signed.IssuerDn,
+                NotBefore = signed.NotBefore,
+                NotAfter = signed.NotAfter,
+                Thumbprint = signed.Thumbprint,
+                IsSelfIssued = true, // in-app-generated (Semantik seit v1.10.153: „in-app", nicht mehr wörtlich self-signed)
                 PfxDataEncrypted = wrapped,
             };
             await SaveAsync(entity, req.SetAsDefault, ct);
@@ -142,10 +113,6 @@ public class CertificatesApiController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Log the full exception (type + stack) server-side; return the
-            // exception-type + short message to the client. Cert-gen used to
-            // return a generic 500 with no clue why (RSA/Pfx export failures
-            // on hardened Linux containers are hard to diagnose blind).
             _log.LogError(ex, "Certificate generation failed for user {UserId}", me.Id);
             var msg = ex.Message?.Length > 240 ? ex.Message[..240] : ex.Message;
             return Problem(statusCode: 500, title: _l["certs.err.generate_failed"].Value,
@@ -282,6 +249,19 @@ public class CertificatesApiController : ControllerBase
         var me = await _users.GetOrProvisionAsync(User, ct);
         var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
         if (c is null) return NotFound();
+        // v1.10.153: Prüfe Link-Nutzung — Löschen verhindert wenn das Zert an
+        // Share-Links oder Upload-Anforderungen hängt. Sonst würde die Landing
+        // eines schon versendeten Links plötzlich das Signer-Badge verlieren
+        // („✓ Verifiziert" → nichts), was für Empfänger irritierend ist.
+        var shareLinks = await _db.ShareLinks.CountAsync(l => l.SigningCertificateId == id, ct);
+        var uploadLinks = await _db.UploadRequests.CountAsync(l => l.SigningCertificateId == id, ct);
+        var total = shareLinks + uploadLinks;
+        if (total > 0)
+        {
+            return Problem(statusCode: 409,
+                title: _l["certs.err.in_use_title"].Value,
+                detail: string.Format(_l["certs.err.in_use_detail"].Value, total, shareLinks, uploadLinks));
+        }
         _db.SigningCertificates.Remove(c);
         await _db.SaveChangesAsync(ct);
         return NoContent();

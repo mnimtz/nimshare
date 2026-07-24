@@ -877,6 +877,8 @@ Ouvrez ce lien pour signer :
   <data name="certs.err.name_pfx_required"><value>Nom et fichier PFX requis.</value></data>
   <data name="certs.err.pfx_too_large"><value>PFX doit faire moins de 512 Ko.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX doit être en base64.</value></data>
+  <data name="certs.err.in_use_title"><value>Le certificat est utilisé</value></data>
+  <data name="certs.err.in_use_detail" xml:space="preserve"><value>{0} lien(s) référencent encore ce certificat ({1} partage, {2} envoi). Supprime-les ou réaffecte-les d'abord, ou conserve le certificat.</value></data>
 
   <data name="email_tpl.preview.recipient_name"><value>Alice Exemple</value></data>
   <data name="email_tpl.preview.sender_name"><value>Bob Expéditeur</value></data>
@@ -1339,4 +1341,14 @@ Merci d'utiliser NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Certificat de l'expéditeur</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Aucun certificat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Joignez votre certificat pour que le destinataire voie qui a créé ce lien.</value></data>
+  <data name="share.cert.line_expired" xml:space="preserve"><value>Signé par {0} — certificat expiré</value></data>
+  <data name="share.cert.expired_note" xml:space="preserve"><value>Le certificat était valide au moment de la création du lien, mais il a expiré depuis. Traite le fichier avec la prudence habituelle, sans avoir besoin de le rejeter.</value></data>
+  <data name="share.cert.verify_title" xml:space="preserve"><value>Vérifier cette signature</value></data>
+  <data name="share.cert.verify_step1_html" xml:space="preserve"><value>Une seule fois : importe le certificat racine NimShare dans le magasin de confiance de ton système ou de ton navigateur — </value></data>
+  <data name="share.cert.verify_step2_html" xml:space="preserve"><value>Puis télécharge le certificat de l'expéditeur — </value></data>
+  <data name="share.cert.verify_step3" xml:space="preserve"><value>Compare l'empreinte ci-dessus avec ce que l'expéditeur t'a communiqué par un autre canal (e-mail, téléphone, chat).</value></data>
+  <data name="share.cert.download_root" xml:space="preserve"><value>Télécharger le certificat racine NimShare</value></data>
+  <data name="share.cert.download_signer" xml:space="preserve"><value>Télécharger le certificat du signataire</value></data>
+  <data name="share.cert.tofu_hint" xml:space="preserve"><value>Compare l'empreinte ci-dessus avec ce que l'expéditeur t'a indiqué séparément.</value></data>
+  <data name="share.cert.external_hint" xml:space="preserve"><value>Émis par une autorité de certification externe.</value></data>
 </root>

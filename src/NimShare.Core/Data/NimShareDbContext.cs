@@ -44,6 +44,11 @@ public class NimShareDbContext : DbContext
     public DbSet<BlockedUser> BlockedUsers => Set<BlockedUser>();
     public DbSet<ContentReport> ContentReports => Set<ContentReport>();
     public DbSet<LinkEntry> LinkEntries => Set<LinkEntry>();
+    // v1.10.153: Root-CA der Instanz — Singleton. Signiert alle in-app
+    // erzeugten User-Signing-Certs, damit Empfänger die NimShare-Root einmal
+    // importieren und alle signierten Links dieser Instanz automatisch valid
+    // sind.
+    public DbSet<InstanceCa> InstanceCas => Set<InstanceCa>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -321,6 +326,35 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Issuer).HasMaxLength(240);
             e.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
             e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // v1.10.153: FK von ShareLink/UploadRequestLink → SigningCertificate
+        // explizit als SetNull. Die 409-„Zertifikat in Verwendung"-Guard im
+        // CertificatesApiController.Delete verhindert nur den direkten Cert-
+        // Delete. Wenn ein User gelöscht wird, cascadet SigningCertificate
+        // (Owner-FK) mit — die Links bleiben aber bestehen und verlieren nur
+        // ihr Signer-Badge (SigningCertificateId → null). Für einen sauberen
+        // "Snapshot bleibt sichtbar"-Weg müssten Subject/Thumbprint in den
+        // Link denormalisiert werden — offen für spätere Iteration.
+        b.Entity<ShareLink>()
+            .HasOne(l => l.SigningCertificate)
+            .WithMany()
+            .HasForeignKey(l => l.SigningCertificateId)
+            .OnDelete(DeleteBehavior.SetNull);
+        b.Entity<UploadRequestLink>()
+            .HasOne(l => l.SigningCertificate)
+            .WithMany()
+            .HasForeignKey(l => l.SigningCertificateId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // v1.10.153: Root-CA der Instanz — Singleton.
+        b.Entity<InstanceCa>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.IsActive, x.NotAfter });
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.SubjectDn).HasMaxLength(400).IsRequired();
+            e.Property(x => x.Thumbprint).HasMaxLength(64).IsRequired();
         });
 
         b.Entity<FilePin>(e =>

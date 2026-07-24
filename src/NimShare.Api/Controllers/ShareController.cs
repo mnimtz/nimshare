@@ -210,6 +210,26 @@ public class ShareController : Controller
         return NoContent();
     }
 
+    // v1.10.153: Public download des Absender-Zertifikats (Stufe 1). Der
+    // Empfänger klickt auf der Landing „Zertifikat herunterladen" und
+    // vergleicht Fingerprint bzw. importiert es in seinen Trust-Store.
+    [HttpGet("{slug}/signer-cert.cer")]
+    public async Task<IActionResult> SignerCert(string slug, [FromServices] ISignerCertReader reader, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.SigningCertificate is null) return NotFound();
+        var der = reader.GetPublicDer(link.SigningCertificate);
+        var fname = SafeFileName(link.SigningCertificate.SubjectCommonName) + ".cer";
+        return File(der, "application/x-x509-user-cert", fname);
+    }
+
+    private static string SafeFileName(string s)
+    {
+        var chars = s.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.').ToArray();
+        var cleaned = new string(chars);
+        return string.IsNullOrEmpty(cleaned) ? "signer" : cleaned;
+    }
+
     [HttpGet("{slug}/preview")]
     public async Task<IActionResult> Preview(string slug, CancellationToken ct)
     {

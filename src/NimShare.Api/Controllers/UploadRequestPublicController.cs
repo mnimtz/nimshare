@@ -28,6 +28,22 @@ public class UploadRequestPublicController : Controller
         _notify = notify;
     }
 
+    // v1.10.153: Public download des Absender-Zertifikats (Stufe 1). Analog
+    // ShareController.SignerCert — für Upload-Anforderungs-Landings.
+    [HttpGet("{slug}/signer-cert.cer")]
+    public async Task<IActionResult> SignerCert(string slug, [FromServices] ISignerCertReader reader, CancellationToken ct)
+    {
+        var link = await _db.UploadRequests
+            .Include(l => l.SigningCertificate)
+            .SingleOrDefaultAsync(l => l.Slug == slug, ct);
+        if (link is null || link.SigningCertificate is null) return NotFound();
+        var der = reader.GetPublicDer(link.SigningCertificate);
+        var chars = link.SigningCertificate.SubjectCommonName
+            .Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.').ToArray();
+        var fname = (chars.Length == 0 ? "signer" : new string(chars)) + ".cer";
+        return File(der, "application/x-x509-user-cert", fname);
+    }
+
     [HttpGet("{slug}")]
     public async Task<IActionResult> Landing(string slug, CancellationToken ct)
     {

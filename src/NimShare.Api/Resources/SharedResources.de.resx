@@ -884,6 +884,8 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="certs.err.name_pfx_required"><value>Name und PFX-Datei sind Pflicht.</value></data>
   <data name="certs.err.pfx_too_large"><value>PFX muss kleiner als 512 KB sein.</value></data>
   <data name="certs.err.pfx_not_base64"><value>PFX muss Base64-kodiert sein.</value></data>
+  <data name="certs.err.in_use_title"><value>Zertifikat wird verwendet</value></data>
+  <data name="certs.err.in_use_detail" xml:space="preserve"><value>{0} Link(s) verwenden dieses Zertifikat noch ({1} Freigabe, {2} Upload). Bitte zuerst dort entfernen bzw. neu zuweisen — oder das Zertifikat behalten.</value></data>
 
   <data name="email_tpl.preview.recipient_name"><value>Alice Muster</value></data>
   <data name="email_tpl.preview.sender_name"><value>Bob Sender</value></data>
@@ -1343,4 +1345,14 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Absender-Zertifikat</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Kein Zertifikat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.</value></data>
+  <data name="share.cert.line_expired" xml:space="preserve"><value>Signiert von {0} — Zertifikat abgelaufen</value></data>
+  <data name="share.cert.expired_note" xml:space="preserve"><value>Das Zertifikat war beim Erstellen des Links gültig, ist inzwischen aber abgelaufen. Geh mit der Datei wie gewohnt vorsichtig um — ablehnen musst du sie deshalb nicht.</value></data>
+  <data name="share.cert.verify_title" xml:space="preserve"><value>Diese Signatur prüfen</value></data>
+  <data name="share.cert.verify_step1_html" xml:space="preserve"><value>Einmalig: NimShare-Stammzertifikat in den Zertifikatsspeicher deines Systems oder Browsers importieren — </value></data>
+  <data name="share.cert.verify_step2_html" xml:space="preserve"><value>Dann das Zertifikat des Absenders herunterladen — </value></data>
+  <data name="share.cert.verify_step3" xml:space="preserve"><value>Vergleiche den Fingerabdruck oben mit dem, was dir der Absender über einen anderen Kanal genannt hat (E-Mail, Telefon, Chat).</value></data>
+  <data name="share.cert.download_root" xml:space="preserve"><value>NimShare-Stammzertifikat herunterladen</value></data>
+  <data name="share.cert.download_signer" xml:space="preserve"><value>Signaturzertifikat herunterladen</value></data>
+  <data name="share.cert.tofu_hint" xml:space="preserve"><value>Vergleiche den Fingerabdruck oben mit dem, was dir der Absender separat mitgeteilt hat.</value></data>
+  <data name="share.cert.external_hint" xml:space="preserve"><value>Ausgestellt von einer externen Zertifizierungsstelle.</value></data>
 </root>

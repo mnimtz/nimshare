@@ -6,23 +6,11 @@
             <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
             <small>@T["upload.landing.request_by"] @Model.OwnerName</small>
         </div>
-        @* v1.10.146: Absender-Zertifikat-Zeile *@
+        @* v1.10.146/153: Absender-Zertifikat-Badge — teilt Partial mit den Share-Landings. *@
         @if (Model.Signer is not null)
         {
-            var s = Model.Signer;
-            <div style="margin:8px 0 12px;font-size:.9rem;color:var(--tw-primary,#002854)">
-                <span style="color:#0a7f2e">✓</span>
-                @string.Format(T["share.cert.line"].Value, s.Subject)
-                <button type="button" onclick="var e=document.getElementById('certPop');e.style.display=e.style.display==='block'?'none':'block'" style="background:none;border:0;color:inherit;cursor:pointer;padding:0 4px;font-size:1rem">ⓘ</button>
-                <div id="certPop" style="display:none;margin-top:6px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:.85rem;box-shadow:0 4px 12px rgba(0,0,0,.08);max-width:420px">
-                    <strong style="display:block;margin-bottom:4px">@T["share.cert.details_title"]</strong>
-                    <div>@T["share.cert.subject"]: <span style="font-family:monospace">@s.Subject</span></div>
-                    <div>@T["share.cert.issuer"]: <span style="font-family:monospace">@s.Issuer</span></div>
-                    <div>@T["share.cert.valid_until"]: @s.NotAfter.ToString("MM/yyyy")</div>
-                    <div>@T["share.cert.thumbprint"]: <span style="font-family:monospace;word-break:break-all">@s.Thumbprint</span></div>
-                    @if (s.IsSelfIssued) { <div style="margin-top:6px;color:#7a5b00;font-style:italic">@T["share.cert.self_issued"]</div> }
-                </div>
-            </div>
+            @await Html.PartialAsync("_LandingSignerBadge",
+                new NimShare.Api.Views.Shared.LandingSignerBadgeVm(Model.Signer, $"/u/{Model.Slug}/signer-cert.cer"))
         }
         <h1>@T["upload.landing.title"]</h1>
         @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))

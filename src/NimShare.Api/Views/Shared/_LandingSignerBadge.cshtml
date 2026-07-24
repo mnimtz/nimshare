@@ -1,0 +1,86 @@
+@using Microsoft.Extensions.Localization
+@using NimShare.Api.Services
+@using NimShare.Api.Controllers
+@inject IStringLocalizer<SharedResources> T
+@*
+    v1.10.153 (Stufe 1 + 2): Signer-Badge mit Public-Cert-Download,
+    Verify-Anleitung und Ablauf-Warnung. Wird von Landing.cshtml,
+    FolderLanding.cshtml und UploadLanding.cshtml eingebunden — damit
+    die drei Wege eine konsistente Erklärung des "✓ Verifiziert"-Chips
+    präsentieren.
+
+    Model: (LandingSignerInfo Info, string CertDownloadUrl)
+*@
+@model NimShare.Api.Views.Shared.LandingSignerBadgeVm
+@{
+    var s = Model.Info;
+    var now = DateTimeOffset.UtcNow;
+    var isExpired = s.NotAfter < now;
+    var issuedByInstanceCa = s.Issuer.Contains("NimShare Instance CA", StringComparison.OrdinalIgnoreCase);
+    var chipColor = isExpired ? "#c07a00" : "#0a7f2e";
+    var chipIcon = isExpired ? "⚠" : "✓";
+    var popId = "certPop-" + Guid.NewGuid().ToString("N")[..8];
+}
+
+<div style="margin:8px 0 12px;font-size:.9rem;color:var(--tw-primary,#002854)">
+    <span style="color:@chipColor">@chipIcon</span>
+    @if (isExpired)
+    {
+        @string.Format(T["share.cert.line_expired"].Value, s.Subject)
+    }
+    else
+    {
+        @string.Format(T["share.cert.line"].Value, s.Subject)
+    }
+    <button type="button" aria-label="details"
+            onclick="var el=document.getElementById('@popId'); el.style.display=(el.style.display==='block'?'none':'block')"
+            style="background:none;border:0;color:inherit;cursor:pointer;padding:0 4px;font-size:1rem">ⓘ</button>
+
+    <div id="@popId" style="display:none;position:relative;margin-top:6px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px 14px;font-size:.85rem;box-shadow:0 4px 12px rgba(0,0,0,.08);max-width:520px;line-height:1.5">
+        <strong style="display:block;margin-bottom:6px">@T["share.cert.details_title"]</strong>
+        <div>@T["share.cert.subject"]: <span style="font-family:monospace">@s.Subject</span></div>
+        <div>@T["share.cert.issuer"]: <span style="font-family:monospace">@s.Issuer</span></div>
+        <div>@T["share.cert.valid_until"]: @s.NotAfter.ToString("MM/yyyy")</div>
+        <div>@T["share.cert.thumbprint"]: <span style="font-family:monospace;word-break:break-all">@s.Thumbprint</span></div>
+
+        @if (isExpired)
+        {
+            <div style="margin-top:8px;padding:6px 8px;background:#fff4d8;border-left:3px solid #c07a00;border-radius:4px">
+                @T["share.cert.expired_note"]
+            </div>
+        }
+
+        @if (issuedByInstanceCa)
+        {
+            <div style="margin-top:10px">
+                <strong>@T["share.cert.verify_title"]</strong>
+                <ol style="margin:6px 0 0 20px;padding:0">
+                    <li>
+                        @Html.Raw(T["share.cert.verify_step1_html"].Value)
+                        <a href="/nimshare-root.cer" download style="color:var(--tw-primary,#002854);font-weight:600">@T["share.cert.download_root"]</a>
+                    </li>
+                    <li>
+                        @Html.Raw(T["share.cert.verify_step2_html"].Value)
+                        <a href="@Model.CertDownloadUrl" download style="color:var(--tw-primary,#002854);font-weight:600">@T["share.cert.download_signer"]</a>
+                    </li>
+                    <li>@T["share.cert.verify_step3"]</li>
+                </ol>
+            </div>
+        }
+        else if (s.IsSelfIssued)
+        {
+            <div style="margin-top:8px;color:#7a5b00;font-style:italic">@T["share.cert.self_issued"]</div>
+            <div style="margin-top:6px">
+                <a href="@Model.CertDownloadUrl" download style="color:var(--tw-primary,#002854);font-weight:600">@T["share.cert.download_signer"]</a>
+                — @T["share.cert.tofu_hint"]
+            </div>
+        }
+        else
+        {
+            <div style="margin-top:6px">
+                <a href="@Model.CertDownloadUrl" download style="color:var(--tw-primary,#002854);font-weight:600">@T["share.cert.download_signer"]</a>
+                — @T["share.cert.external_hint"]
+            </div>
+        }
+    </div>
+</div>
