@@ -505,6 +505,14 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] Running EnsureLinkEntriesTableAsync…");
         await EnsureLinkEntriesTableAsync(db, isSqlServer);
         Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync done.");
+        // v1.10.155: Rescue für die InstanceCas-Tabelle (Instance-Root-CA, V186).
+        // Analog zu V185 — auf Bestands-DBs, die V186 nicht angewandt bekommen
+        // haben (z.B. wenn MigrateAsync silent an einer vorigen Migration abbrach)
+        // fehlt InstanceCas → jeder Cert-Generate-Aufruf crasht mit
+        // „no such table: InstanceCas". Idempotent + History-Stamp.
+        Console.Error.WriteLine("[STARTUP] Running EnsureInstanceCasTableAsync…");
+        await EnsureInstanceCasTableAsync(db, isSqlServer);
+        Console.Error.WriteLine("[STARTUP] EnsureInstanceCasTableAsync done.");
     }
     catch (Exception ex)
     {
@@ -958,6 +966,101 @@ static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db, bool isSqlSe
     catch (Exception ex)
     {
         Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync failed: " + ex.Message);
+    }
+}
+
+// v1.10.155: Legt die InstanceCas-Tabelle an (Instance-Root-CA, Migration
+// V186), falls sie fehlt, und stempelt V186 in __EFMigrationsHistory —
+// analog zu EnsureLinkEntriesTableAsync (V185). Rescue-Pfad für Bestands-
+// DBs, die den v1.10.153-Deploy erlebt haben, aber V186 nicht angewandt
+// bekommen haben (der wahrscheinlichste Grund: silent MigrateAsync-Abbruch
+// nach einem früheren Migration-Retry).
+static async Task EnsureInstanceCasTableAsync(NimShareDbContext db, bool isSqlServer)
+{
+    const string V186 = "20260724100000_V186_InstanceCa";
+    try
+    {
+        var connStr = db.Database.GetConnectionString();
+        if (isSqlServer)
+        {
+            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            await cn.OpenAsync();
+            using (var create = cn.CreateCommand())
+            {
+                create.CommandText =
+                    "IF OBJECT_ID(N'[InstanceCas]', N'U') IS NULL " +
+                    "CREATE TABLE [InstanceCas] (" +
+                    "[Id] uniqueidentifier NOT NULL CONSTRAINT [PK_InstanceCas] PRIMARY KEY, " +
+                    "[Name] nvarchar(200) NOT NULL, " +
+                    "[SubjectDn] nvarchar(400) NOT NULL, " +
+                    "[NotBefore] datetimeoffset NOT NULL, " +
+                    "[NotAfter] datetimeoffset NOT NULL, " +
+                    "[Thumbprint] nvarchar(64) NOT NULL, " +
+                    "[PfxDataEncrypted] varbinary(max) NOT NULL, " +
+                    "[IsActive] bit NOT NULL, " +
+                    "[CreatedAt] datetimeoffset NOT NULL)";
+                await create.ExecuteNonQueryAsync();
+            }
+            using (var idx = cn.CreateCommand())
+            {
+                idx.CommandText =
+                    "IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'InstanceCas') " +
+                    "AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InstanceCas_IsActive_NotAfter' " +
+                    "AND object_id = OBJECT_ID('InstanceCas')) " +
+                    "CREATE INDEX [IX_InstanceCas_IsActive_NotAfter] ON [InstanceCas] ([IsActive], [NotAfter])";
+                await idx.ExecuteNonQueryAsync();
+            }
+            using (var stamp = cn.CreateCommand())
+            {
+                stamp.CommandText =
+                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
+                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
+                stamp.Parameters.AddWithValue("@mid", V186);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V186 (SqlServer).");
+            }
+        }
+        else
+        {
+            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+            await cn.OpenAsync();
+            using (var create = cn.CreateCommand())
+            {
+                create.CommandText =
+                    "CREATE TABLE IF NOT EXISTS \"InstanceCas\" (" +
+                    "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_InstanceCas\" PRIMARY KEY, " +
+                    "\"Name\" TEXT NOT NULL, " +
+                    "\"SubjectDn\" TEXT NOT NULL, " +
+                    "\"NotBefore\" INTEGER NOT NULL, " +
+                    "\"NotAfter\" INTEGER NOT NULL, " +
+                    "\"Thumbprint\" TEXT NOT NULL, " +
+                    "\"PfxDataEncrypted\" BLOB NOT NULL, " +
+                    "\"IsActive\" INTEGER NOT NULL, " +
+                    "\"CreatedAt\" INTEGER NOT NULL)";
+                await create.ExecuteNonQueryAsync();
+            }
+            using (var idx = cn.CreateCommand())
+            {
+                idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_InstanceCas_IsActive_NotAfter\" ON \"InstanceCas\" (\"IsActive\", \"NotAfter\")";
+                await idx.ExecuteNonQueryAsync();
+            }
+            using (var stamp = cn.CreateCommand())
+            {
+                stamp.CommandText =
+                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                    "SELECT $mid, '8.0.10' " +
+                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+                stamp.Parameters.AddWithValue("$mid", V186);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V186 (SQLite).");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] EnsureInstanceCasTableAsync failed: " + ex.Message);
     }
 }
 
