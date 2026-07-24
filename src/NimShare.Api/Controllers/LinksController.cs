@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -17,16 +18,18 @@ public class LinksController : ControllerBase
     private readonly IPasswordHasher _hasher;
     private readonly IQrCodeService _qr;
     private readonly ICurrentUserService _users;
+    private readonly bool _storeFullIp;
 
     public LinksController(
         NimShareDbContext db, ISlugService slugs, IPasswordHasher hasher,
-        IQrCodeService qr, ICurrentUserService users)
+        IQrCodeService qr, ICurrentUserService users, IConfiguration cfg)
     {
         _db = db;
         _slugs = slugs;
         _hasher = hasher;
         _qr = qr;
         _users = users;
+        _storeFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
     }
 
     public record CreateLinkRequest(
@@ -202,6 +205,127 @@ public class LinksController : ControllerBase
             .Select(a => new { a.At, a.Kind, a.IpHash, a.UserAgent, a.Referer, a.CountryCode })
             .ToListAsync(ct);
         return Ok(new { link.HitCount, link.DownloadCount, link.LastAccessAt, events });
+    }
+
+    // v1.10.158: reichere Report-Aggregate für Web + iOS. Ergänzt den alten
+    // /stats-Endpoint um Country/City/Device/Timezone-Splits, Peak-Hour-
+    // Heatmap und Time-to-Download-Median. StoreFullIp-Flag zeigt der App,
+    // ob sie die IP-Spalte einblenden darf.
+    public record ReportCountRow(string Key, int Count);
+    public record ReportDailyRow(DateOnly Day, int Landings, int Downloads, int PasswordFails);
+    public record ReportHeatCell(int DayOfWeek, int Hour, int Count);
+    public record ReportEvent(DateTimeOffset At, string Kind, string? CountryCode,
+        string? City, string? DeviceType, string? Timezone, string? Referer, string? IpAddress);
+    public record ReportResponse(
+        Guid LinkId, string Slug, int HitCount, int DownloadCount, int UniqueVisitors,
+        double? MedianTimeToDownloadSeconds, DateTimeOffset? LastAccessAt,
+        List<ReportDailyRow> ByDay,
+        List<ReportCountRow> Countries,
+        List<ReportCountRow> Cities,
+        List<ReportCountRow> Devices,
+        List<ReportCountRow> Timezones,
+        List<ReportCountRow> Referrers,
+        List<ReportHeatCell> HourHeatmap,
+        List<ReportEvent> RecentEvents,
+        int TotalEventCount,
+        bool StoreFullIp);
+
+    [HttpGet("{id:guid}/report")]
+    public async Task<IActionResult> Report(Guid id, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        if (link is null) return NotFound();
+
+        var all = await _db.ShareLinkAccesses
+            .Where(a => a.ShareLinkId == id)
+            .OrderByDescending(a => a.At)
+            .ToListAsync(ct);
+
+        var since = DateTimeOffset.UtcNow.Date.AddDays(-29);
+        var byDay = new List<ReportDailyRow>();
+        for (int d = 0; d < 30; d++)
+        {
+            var day = DateOnly.FromDateTime(since.AddDays(d));
+            byDay.Add(new ReportDailyRow(day, 0, 0, 0));
+        }
+        foreach (var e in all.Where(e => e.At >= since))
+        {
+            var day = DateOnly.FromDateTime(e.At.UtcDateTime.Date);
+            var idx = byDay.FindIndex(x => x.Day == day);
+            if (idx < 0) continue;
+            var b = byDay[idx];
+            byDay[idx] = e.Kind switch
+            {
+                ShareLinkAccessKind.Landing => b with { Landings = b.Landings + 1 },
+                ShareLinkAccessKind.Download => b with { Downloads = b.Downloads + 1 },
+                ShareLinkAccessKind.PasswordFail => b with { PasswordFails = b.PasswordFails + 1 },
+                _ => b,
+            };
+        }
+
+        var unique = all.Select(e => e.IpHash).Where(h => !string.IsNullOrEmpty(h)).Distinct().Count();
+
+        var countries = all.Where(e => !string.IsNullOrEmpty(e.CountryCode))
+            .GroupBy(e => e.CountryCode!.ToUpperInvariant())
+            .Select(g => new ReportCountRow(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count).Take(10).ToList();
+        var cities = all.Where(e => !string.IsNullOrEmpty(e.City))
+            .GroupBy(e => e.City!)
+            .Select(g => new ReportCountRow(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count).Take(10).ToList();
+        var devices = all
+            .Select(e => string.IsNullOrEmpty(e.DeviceType) || e.DeviceType == "Unknown" ? "Unknown" : e.DeviceType!)
+            .GroupBy(d => d)
+            .Select(g => new ReportCountRow(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count).ToList();
+        var timezones = all.Where(e => !string.IsNullOrEmpty(e.Timezone))
+            .GroupBy(e => e.Timezone!)
+            .Select(g => new ReportCountRow(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count).Take(10).ToList();
+        var referrers = all.Select(e => e.Referer ?? "")
+            .Select(r =>
+            {
+                if (string.IsNullOrWhiteSpace(r)) return "";
+                try { return new Uri(r).Host; } catch { return "(direct)"; }
+            })
+            .Where(s => !string.IsNullOrEmpty(s))
+            .GroupBy(s => s!)
+            .Select(g => new ReportCountRow(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count).Take(8).ToList();
+
+        var heat = new int[7, 24];
+        foreach (var e in all.Where(e => e.At >= since && e.Kind != ShareLinkAccessKind.PasswordFail))
+            heat[(int)e.At.UtcDateTime.DayOfWeek, e.At.UtcDateTime.Hour]++;
+        var heatCells = new List<ReportHeatCell>(7 * 24);
+        for (int dow = 0; dow < 7; dow++)
+            for (int h = 0; h < 24; h++)
+                heatCells.Add(new ReportHeatCell(dow, h, heat[dow, h]));
+
+        double? medianTtdSec = null;
+        var deltas = new List<double>();
+        foreach (var g in all.GroupBy(e => e.IpHash).Where(g => !string.IsNullOrEmpty(g.Key)))
+        {
+            var fl = g.Where(e => e.Kind == ShareLinkAccessKind.Landing).OrderBy(e => e.At).FirstOrDefault();
+            var fd = g.Where(e => e.Kind == ShareLinkAccessKind.Download).OrderBy(e => e.At).FirstOrDefault();
+            if (fl is null || fd is null || fd.At < fl.At) continue;
+            deltas.Add((fd.At - fl.At).TotalSeconds);
+        }
+        if (deltas.Count > 0)
+        {
+            deltas.Sort();
+            medianTtdSec = deltas[deltas.Count / 2];
+        }
+
+        var events = all.Take(200).Select(a => new ReportEvent(
+            a.At, a.Kind.ToString(), a.CountryCode, a.City, a.DeviceType, a.Timezone, a.Referer,
+            _storeFullIp ? a.IpAddress : null)).ToList();
+
+        return Ok(new ReportResponse(
+            link.Id, link.Slug, link.HitCount, link.DownloadCount, unique,
+            medianTtdSec, link.LastAccessAt, byDay,
+            countries, cities, devices, timezones, referrers,
+            heatCells, events, all.Count, _storeFullIp));
     }
 
     [HttpGet("{id:guid}/qr.svg")]

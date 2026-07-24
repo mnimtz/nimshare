@@ -569,6 +569,57 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
+    // v1.10.158: Link-Report — reiche Aggregate, für die LinkReportView.
+    struct LinkReportCountRow: Codable, Hashable {
+        let key: String
+        let count: Int
+    }
+    struct LinkReportDailyRow: Codable, Hashable {
+        let day: String   // ISO date "yyyy-MM-dd"
+        let landings: Int
+        let downloads: Int
+        let passwordFails: Int
+    }
+    struct LinkReportHeatCell: Codable, Hashable {
+        let dayOfWeek: Int
+        let hour: Int
+        let count: Int
+    }
+    struct LinkReportEvent: Codable, Hashable {
+        let at: Date
+        let kind: String
+        let countryCode: String?
+        let city: String?
+        let deviceType: String?
+        let timezone: String?
+        let referer: String?
+        let ipAddress: String?
+    }
+    struct LinkReportResponse: Codable {
+        let linkId: UUID
+        let slug: String
+        let hitCount: Int
+        let downloadCount: Int
+        let uniqueVisitors: Int
+        let medianTimeToDownloadSeconds: Double?
+        let lastAccessAt: Date?
+        let byDay: [LinkReportDailyRow]
+        let countries: [LinkReportCountRow]
+        let cities: [LinkReportCountRow]
+        let devices: [LinkReportCountRow]
+        let timezones: [LinkReportCountRow]
+        let referrers: [LinkReportCountRow]
+        let hourHeatmap: [LinkReportHeatCell]
+        let recentEvents: [LinkReportEvent]
+        let totalEventCount: Int
+        let storeFullIp: Bool
+    }
+    func linkReport(id: UUID) async throws -> LinkReportResponse {
+        let req = request("GET", "api/v1/links/\(id)/report")
+        let (data, _) = try await perform(req)
+        return try decode(LinkReportResponse.self, data)
+    }
+
     // v1.10.114: KI-Startseiten-Begrüssung (optional mit Standort fürs Wetter).
     // v1.10.128: Anrede + Nachricht getrennt für ordentliche Formatierung.
     struct GreetingResponse: Decodable {

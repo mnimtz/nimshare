@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
 
@@ -14,6 +15,14 @@ public interface ILinkAccessService
     // timezone (aktuell noch nicht befüllt bei Landings — nur Signaturen
     // schicken die TZ per POST).
     Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
+        string? country, string? city, string? device, string? timezone, CancellationToken ct = default);
+
+    // v1.10.158 — Overload mit optionaler Klartext-IP. Wird nur persistiert
+    // wenn ShareLinks:StoreFullIp=true (analog Signatures:StoreFullIp).
+    // ipPlain darf immer übergeben werden — der Service entscheidet, ob er
+    // sie speichert. Rechtsgrundlage: berechtigtes Interesse Art. 6(1)(f).
+    Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ipPlain,
+        string? ua, string? referer,
         string? country, string? city, string? device, string? timezone, CancellationToken ct = default);
 
     /// <summary>
@@ -32,8 +41,17 @@ public interface ILinkAccessService
 public class LinkAccessService : ILinkAccessService
 {
     private readonly NimShareDbContext _db;
+    private readonly bool _storeFullIp;
 
-    public LinkAccessService(NimShareDbContext db) => _db = db;
+    public LinkAccessService(NimShareDbContext db, IConfiguration cfg)
+    {
+        _db = db;
+        // v1.10.158: Gate für Klartext-IP-Speicherung. Default false — der
+        // Betreiber muss aktiv opt-in via appsettings.json /
+        // Env „ShareLinks__StoreFullIp=true" und im Impressum/Datenschutz
+        // die Nutzung erwähnen. Analog zum bestehenden Signaturen-Toggle.
+        _storeFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+    }
 
     public Task<ShareLink?> FindActiveAsync(string slug, CancellationToken ct = default)
         => _db.ShareLinks
@@ -43,9 +61,14 @@ public class LinkAccessService : ILinkAccessService
             .SingleOrDefaultAsync(x => x.Slug == slug, ct);
 
     public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)
-        => LogAsync(link, kind, ipHash, ua, referer, country: null, city: null, device: null, timezone: null, ct);
+        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country: null, city: null, device: null, timezone: null, ct);
 
-    public async Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
+    public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
+        string? country, string? city, string? device, string? timezone, CancellationToken ct = default)
+        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country, city, device, timezone, ct);
+
+    public async Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ipPlain,
+        string? ua, string? referer,
         string? country, string? city, string? device, string? timezone, CancellationToken ct = default)
     {
         _db.ShareLinkAccesses.Add(new ShareLinkAccess
@@ -53,6 +76,12 @@ public class LinkAccessService : ILinkAccessService
             ShareLinkId = link.Id,
             Kind = kind,
             IpHash = ipHash,
+            // v1.10.158: Klartext-IP nur speichern wenn Betreiber-Toggle an.
+            // Trim auf 45 Zeichen (längste IPv6-Textform), damit ein
+            // manipulierter Header nicht die Column sprengt.
+            IpAddress = (_storeFullIp && !string.IsNullOrEmpty(ipPlain))
+                ? (ipPlain.Length > 45 ? ipPlain[..45] : ipPlain)
+                : null,
             UserAgent = ua,
             Referer = referer,
             CountryCode = country,

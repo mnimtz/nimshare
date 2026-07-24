@@ -5,13 +5,37 @@
     ViewData["Title"] = "Link · " + Model.Slug;
     Layout = "_AppShell";
     var events = (List<ShareLinkAccess>)ViewData["Events"]!;
+    var allEventCount = (int)(ViewData["AllEventCount"] ?? events.Count);
     var buckets = (List<LinkReportController.DailyBucket>)ViewData["Buckets"]!;
     var uniques = (int)ViewData["UniqueVisitors"]!;
     var referrers = (List<LinkReportController.ReferrerRow>)ViewData["Referrers"]!;
+    var countries = (List<LinkReportController.CountRow>)ViewData["Countries"]!;
+    var cities = (List<LinkReportController.CountRow>)ViewData["Cities"]!;
+    var devices = (List<LinkReportController.CountRow>)ViewData["Devices"]!;
+    var timezones = (List<LinkReportController.CountRow>)ViewData["Timezones"]!;
+    var heatCells = (List<LinkReportController.HourHeatmapCell>)ViewData["HeatCells"]!;
+    var medianTtd = (TimeSpan?)ViewData["MedianTtd"];
+    var storeFullIp = (bool)ViewData["StoreFullIp"]!;
     var maxY = Math.Max(1, buckets.Max(b => Math.Max(b.Landings, Math.Max(b.Downloads, b.PasswordFails))));
     var target = Model.File?.Name ?? Model.Folder?.Name ?? "—";
     var isActive = !Model.IsRevoked && (Model.ExpiresAt is null || Model.ExpiresAt > DateTimeOffset.UtcNow);
     var landingUrl = Context.Request.PublicUrl($"/s/{Model.Slug}");
+
+    string DeviceIcon(string d) => d switch
+    {
+        "Desktop" => "🖥",
+        "Mobile" => "📱",
+        "Tablet" => "📲",
+        "Bot" => "🤖",
+        _ => "❔",
+    };
+    string FormatTtd(TimeSpan t)
+    {
+        if (t.TotalSeconds < 60) return $"{(int)t.TotalSeconds} s";
+        if (t.TotalMinutes < 60) return $"{(int)t.TotalMinutes} min";
+        if (t.TotalHours < 24) return $"{t.TotalHours:F1} h";
+        return $"{t.TotalDays:F1} d";
+    }
 }
 <div class="page-header">
     <div>
@@ -38,7 +62,7 @@
     </div>
 </div>
 
-<div class="row" style="gap:16px;align-items:stretch;margin-bottom:16px">
+<div class="row" style="gap:16px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap">
     <div class="card" style="flex:1;min-width:180px">
         <div class="muted">Aufrufe (Landing)</div>
         <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@Model.HitCount</div>
@@ -50,6 +74,13 @@
     <div class="card" style="flex:1;min-width:180px">
         <div class="muted">Einzigartige Besucher</div>
         <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@uniques</div>
+    </div>
+    @* v1.10.158: neue Kachel – Median-Zeit zwischen Landing und Download *@
+    <div class="card" style="flex:1;min-width:180px">
+        <div class="muted">Ø Zeit bis Download</div>
+        <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">
+            @(medianTtd is TimeSpan ttd ? FormatTtd(ttd) : "—")
+        </div>
     </div>
     <div class="card" style="flex:1;min-width:180px">
         <div class="muted">Letzter Zugriff</div>
@@ -88,6 +119,154 @@
     </div>
 </div>
 
+<!-- ─────────── v1.10.158: Country + City + Device + Timezone ─────────── -->
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
+    <!-- Länder -->
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">🌍 Länder</h2>
+        @if (!countries.Any())
+        {
+            <p class="muted">Keine Länderdaten (kein GeoIP-Provider konfiguriert oder keine Aufrufe).</p>
+        }
+        else
+        {
+            var total = countries.Sum(c => c.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var c in countries)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * c.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="width:32px;font-size:1.2rem;text-align:center">@LinkReportController.CountryFlag(c.Key)</span>
+                        <span style="flex:1;font-size:.9rem" class="mono">@c.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:var(--tw-primary)"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@c.Count</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <!-- Städte -->
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">🏙 Städte</h2>
+        @if (!cities.Any())
+        {
+            <p class="muted">Keine Städte erfasst.</p>
+        }
+        else
+        {
+            var total = cities.Sum(c => c.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var c in cities)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * c.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="flex:1;font-size:.9rem">@c.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:var(--tw-primary-alt)"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@c.Count</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
+    <!-- Geräte -->
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">📱 Geräte</h2>
+        @if (!devices.Any())
+        {
+            <p class="muted">Noch keine Zugriffe.</p>
+        }
+        else
+        {
+            var total = devices.Sum(d => d.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var d in devices)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * d.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="width:32px;font-size:1.2rem;text-align:center">@DeviceIcon(d.Key)</span>
+                        <span style="flex:1;font-size:.9rem">@d.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:#00A0FB"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@d.Count (@pct%)</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <!-- Zeitzonen -->
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">🕒 Zeitzonen</h2>
+        @if (!timezones.Any())
+        {
+            <p class="muted">Keine Zeitzonen erfasst (Browser-JS-Beacon nicht ausgeliefert).</p>
+        }
+        else
+        {
+            var total = timezones.Sum(t => t.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var t in timezones)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * t.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="flex:1;font-size:.85rem" class="mono">@t.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:#00EB86"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@t.Count</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ─────────── Peak-Hour-Heatmap ─────────── -->
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">🔥 Peak-Zeiten · letzte 30 Tage (UTC)</h2>
+    @{
+        var heatMax = Math.Max(1, heatCells.Max(c => c.Count));
+        var dayLabels = new[] { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
+    }
+    <div style="overflow-x:auto">
+        <table style="border-collapse:separate;border-spacing:2px;font-size:.7rem">
+            <thead>
+                <tr>
+                    <th style="width:32px"></th>
+                    @for (int h = 0; h < 24; h++)
+                    {
+                        <th style="width:24px;text-align:center;color:var(--tw-gray-500);font-weight:normal">@h</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (int dow = 0; dow < 7; dow++)
+                {
+                    <tr>
+                        <td class="muted" style="padding-right:6px;font-weight:600">@dayLabels[dow]</td>
+                        @for (int h = 0; h < 24; h++)
+                        {
+                            var cell = heatCells.First(c => c.DayOfWeek == dow && c.Hour == h);
+                            var intensity = cell.Count == 0 ? 0.0 : (cell.Count / (double)heatMax);
+                            var alpha = 0.08 + 0.92 * intensity;
+                            <td title="@dayLabels[dow] @h:00 UTC · @cell.Count Zugriffe"
+                                style="width:24px;height:20px;background:rgba(0,235,134,@alpha.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));border-radius:2px"></td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="muted" style="font-size:.75rem;margin-top:6px">Intensität skaliert 0–@heatMax Zugriffe pro Zelle · nur Landings + Downloads</div>
+</div>
+
 <!-- ─────────── Referrer + Zeitreihe ─────────── -->
 <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
     <div class="card" style="flex:1;min-width:280px">
@@ -115,7 +294,7 @@
         }
     </div>
     <div class="card" style="flex:2;min-width:320px">
-        <h2 class="card-title">Zugriffs-Log · letzte @events.Count Ereignisse</h2>
+        <h2 class="card-title">Zugriffs-Log · @events.Count von @allEventCount Ereignissen</h2>
         @if (!events.Any())
         {
             <p class="muted">Noch keine Zugriffe.</p>
@@ -130,6 +309,12 @@
                             <th>Typ</th>
                             <th>Ort</th>
                             <th>Gerät</th>
+                            @* v1.10.158: IP-Spalte nur wenn Betreiber-Toggle
+                               ShareLinks:StoreFullIp=true aktiv ist. *@
+                            @if (storeFullIp)
+                            {
+                                <th>IP</th>
+                            }
                             <th>Herkunft</th>
                         </tr>
                     </thead>
@@ -142,8 +327,6 @@
                             ShareLinkAccessKind.PasswordFail => "chip-critical",
                             _ => "chip-warn",
                         };
-                        // v1.10.42: Ort-Zelle kombiniert City + CountryCode.
-                        // Beides null → "—" damit die Zelle nicht leer wirkt.
                         var loc = !string.IsNullOrEmpty(e.City)
                             ? (!string.IsNullOrEmpty(e.CountryCode) ? $"{e.City}, {e.CountryCode}" : e.City)
                             : (e.CountryCode ?? "—");
@@ -152,6 +335,10 @@
                             <td><span class="chip @badge">@e.Kind</span></td>
                             <td>@loc</td>
                             <td>@(string.IsNullOrEmpty(e.DeviceType) || e.DeviceType == "Unknown" ? "—" : e.DeviceType)</td>
+                            @if (storeFullIp)
+                            {
+                                <td class="mono" style="font-size:.75rem">@(e.IpAddress ?? "—")</td>
+                            }
                             <td class="mono" style="font-size:.75rem" title="@e.UserAgent">
                                 @(string.IsNullOrEmpty(e.Referer) ? "(direct)" : e.Referer)
                             </td>
@@ -160,6 +347,12 @@
                     </tbody>
                 </table>
             </div>
+            @if (storeFullIp)
+            {
+                <div class="muted" style="font-size:.75rem;margin-top:6px">
+                    IP-Speicherung ist per Betreiber-Konfiguration <span class="mono">ShareLinks:StoreFullIp=true</span> aktiv (Art. 6 (1) f DSGVO). Für neue Aufrufe wird die Klartext-IP mit dem Ereignis persistiert; ältere Zeilen bleiben ohne IP.
+                </div>
+            }
         }
     </div>
 </div>

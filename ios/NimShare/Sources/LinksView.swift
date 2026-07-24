@@ -64,9 +64,12 @@ struct LinksView: View {
     }
 
     // v1.10.113: Row + Wisch/Kontext-Aktionen (Löschen, Kopieren, Teilen).
+    // v1.10.158: Row ist jetzt NavigationLink zum LinkReportView. Bericht +
+    // Löschen zusätzlich im ContextMenu / SwipeActions damit der einzelne Tap
+    // nicht durch eine Button-Kaskade blockiert wird.
     @ViewBuilder
     private func linkRow(_ link: ShareLinkDto) -> some View {
-        row(link)
+        NavigationLink { LinkReportView(linkId: link.id, slug: link.slug) } label: { row(link) }
             .contextMenu {
                 Button { UIPasteboard.general.string = link.url } label: {
                     Label("Link kopieren", systemImage: "doc.on.doc")

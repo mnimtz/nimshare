@@ -75,8 +75,9 @@ public class ShareController : Controller
             if (folder is null) return View("NotFound");
             var files = await folderSvc.ListFilesAsync(folder, ct);
             var lf0 = await LandingForensicsAsync(ct);
+            var ip0 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
             await _access.LogAsync(link, ShareLinkAccessKind.Landing,
-                _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+                _iphash.Hash(ip0), ip0,
                 Request.Headers.UserAgent, Request.Headers.Referer,
                 lf0.Country, lf0.City, lf0.Device, timezone: null, ct);
             // Folder shares now honour the same template-resolution as file
@@ -116,8 +117,9 @@ public class ShareController : Controller
 
         // Log the landing hit (fire-and-forget-ish, but awaited so we don't lose it).
         var lf1 = await LandingForensicsAsync(ct);
+        var ip1 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         await _access.LogAsync(link, ShareLinkAccessKind.Landing,
-            _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""),
+            _iphash.Hash(ip1), ip1,
             Request.Headers.UserAgent, Request.Headers.Referer,
             lf1.Country, lf1.City, lf1.Device, timezone: null, ct);
 
@@ -327,12 +329,13 @@ public class ShareController : Controller
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
-        var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        var ipHash = _iphash.Hash(ip);
         var lfDl = await LandingForensicsAsync(ct);
         if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
         {
             await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail,
-                ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+                ipHash, ip, Request.Headers.UserAgent, Request.Headers.Referer,
                 lfDl.Country, lfDl.City, lfDl.Device, timezone: null, ct);
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
@@ -342,7 +345,7 @@ public class ShareController : Controller
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
         await _access.LogAsync(link, ShareLinkAccessKind.Download,
-            ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+            ipHash, ip, Request.Headers.UserAgent, Request.Headers.Referer,
             lfDl.Country, lfDl.City, lfDl.Device, timezone: null, ct);
 
         await _notify.NotifyDownloadAsync(link, ipHash, ct);
@@ -362,11 +365,12 @@ public class ShareController : Controller
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
 
-        var ipHash = _iphash.Hash(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "");
+        var ipFf = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        var ipHash = _iphash.Hash(ipFf);
         var lfFf = await LandingForensicsAsync(ct);
         if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
         {
-            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, ipFf, Request.Headers.UserAgent, Request.Headers.Referer,
                 lfFf.Country, lfFf.City, lfFf.Device, timezone: null, ct);
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
@@ -377,7 +381,7 @@ public class ShareController : Controller
 
         if (!await _access.TryConsumeDownloadAsync(link, ct))
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
-        await _access.LogAsync(link, ShareLinkAccessKind.Download, ipHash, Request.Headers.UserAgent, Request.Headers.Referer,
+        await _access.LogAsync(link, ShareLinkAccessKind.Download, ipHash, ipFf, Request.Headers.UserAgent, Request.Headers.Referer,
             lfFf.Country, lfFf.City, lfFf.Device, timezone: null, ct);
         await _notify.NotifyDownloadAsync(link, ipHash, ct);
         var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType);
