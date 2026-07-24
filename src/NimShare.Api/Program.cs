@@ -461,7 +461,28 @@ using (var scope = app.Services.CreateScope())
             // → Migration-Loop bricht ab und JEDE künftige Migration
             // (V185+) bliebe für immer liegen.
             await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
+            // v1.10.160: Vor MigrateAsync die pending-Liste loggen — damit
+            // die Historie „welche Migration hat gerade wann/wo geklemmt?"
+            // im Container-Log nachvollziehbar bleibt. Der bisher stille
+            // Ablauf hat u.a. dazu geführt, dass V184/V185/V186 unbemerkt
+            // ausblieben und erst durch User-Fehler auffielen.
+            var pendingBefore = (await db.Database.GetPendingMigrationsAsync()).ToList();
+            if (pendingBefore.Count > 0)
+                Console.Error.WriteLine($"[STARTUP] Pending migrations before Migrate: {pendingBefore.Count} → {string.Join(", ", pendingBefore)}");
+            else
+                Console.Error.WriteLine("[STARTUP] No pending migrations — DB already at current schema.");
             await db.Database.MigrateAsync();
+            var pendingAfter = (await db.Database.GetPendingMigrationsAsync()).ToList();
+            if (pendingAfter.Count > 0)
+            {
+                Console.Error.WriteLine($"[STARTUP] ⚠ After Migrate STILL pending: {string.Join(", ", pendingAfter)} — Rescue-Pfade (EnsureXxxTable) müssen greifen!");
+                NimShare.Api.Controllers.StartupState.Errors.Add(
+                    "Pending migrations after MigrateAsync: " + string.Join(", ", pendingAfter));
+            }
+            else if (pendingBefore.Count > 0)
+            {
+                Console.Error.WriteLine($"[STARTUP] ✓ MigrateAsync applied all {pendingBefore.Count} pending migrations cleanly.");
+            }
             break;
         }
         catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
@@ -471,6 +492,16 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception ex)
         {
+            // v1.10.160: bei Non-Sqlite-Exception mehr Kontext geben — WELCHE
+            // Migration hat den Fehler ausgelöst? Vorher wurde nur ex.Message
+            // geschrieben, ohne die Migration-Liste — der Root-Cause blieb im
+            // Dunklen (zuletzt aufgefallen bei V186 in v1.10.153).
+            try
+            {
+                var stillPending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+                Console.Error.WriteLine("[STARTUP] Database migration failed. Still pending: " + string.Join(", ", stillPending));
+            }
+            catch { /* GetPendingMigrations kann selbst fehlschlagen wenn DB nicht erreichbar */ }
             Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
             var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
             logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");

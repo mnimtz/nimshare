@@ -909,6 +909,40 @@ Please open this link to sign:
   <data name="report.day.thu" xml:space="preserve"><value>Thu</value></data>
   <data name="report.day.fri" xml:space="preserve"><value>Fri</value></data>
   <data name="report.day.sat" xml:space="preserve"><value>Sat</value></data>
+  <!-- v1.10.160: Rest der Report-Strings (alte hardcoded-DE) auf i18n migriert -->
+  <data name="report.back_to_links" xml:space="preserve"><value>← All links</value></data>
+  <data name="report.header.downloads_of" xml:space="preserve"><value>{0} / {1} downloads</value></data>
+  <data name="report.header.downloads" xml:space="preserve"><value>{0} downloads</value></data>
+  <data name="report.header.stats" xml:space="preserve"><value>{0} views · {1} unique visitors</value></data>
+  <data name="report.status.active" xml:space="preserve"><value>Active</value></data>
+  <data name="report.status.revoked" xml:space="preserve"><value>Revoked</value></data>
+  <data name="report.status.expired" xml:space="preserve"><value>Expired</value></data>
+  <data name="report.button.copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="report.tile.landings" xml:space="preserve"><value>Views (landing)</value></data>
+  <data name="report.tile.downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="report.tile.unique_visitors" xml:space="preserve"><value>Unique visitors</value></data>
+  <data name="report.tile.last_access" xml:space="preserve"><value>Last access</value></data>
+  <data name="report.chart.30day_title" xml:space="preserve"><value>Trend · last 30 days</value></data>
+  <data name="report.chart.legend.landings" xml:space="preserve"><value>Views</value></data>
+  <data name="report.chart.legend.downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="report.chart.scale" xml:space="preserve"><value>Scale 0–{0}</value></data>
+  <data name="report.chart.tooltip.landings" xml:space="preserve"><value>{0}: {1} views</value></data>
+  <data name="report.chart.tooltip.downloads" xml:space="preserve"><value>{0}: {1} downloads</value></data>
+  <data name="report.card.referrers" xml:space="preserve"><value>Origin</value></data>
+  <data name="report.empty.referrers" xml:space="preserve"><value>No referrers captured.</value></data>
+  <data name="report.empty.events" xml:space="preserve"><value>No access yet.</value></data>
+  <data name="report.col.when" xml:space="preserve"><value>When</value></data>
+  <data name="report.col.kind" xml:space="preserve"><value>Type</value></data>
+  <data name="report.col.location" xml:space="preserve"><value>Location</value></data>
+  <data name="report.col.device" xml:space="preserve"><value>Device</value></data>
+  <data name="report.col.ip" xml:space="preserve"><value>IP</value></data>
+  <data name="report.col.referer" xml:space="preserve"><value>Origin</value></data>
+  <data name="report.referer.direct" xml:space="preserve"><value>(direct)</value></data>
+  <data name="report.heatmap.tooltip" xml:space="preserve"><value>{0} {1}:00 UTC · {2} visits</value></data>
+  <data name="report.footer.slug_url_html" xml:space="preserve"><value>Link slug: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
+  <data name="report.access_kind.landing" xml:space="preserve"><value>Landing</value></data>
+  <data name="report.access_kind.download" xml:space="preserve"><value>Download</value></data>
+  <data name="report.access_kind.password_fail" xml:space="preserve"><value>Password failed</value></data>
   <data name="certs.root_ca.title"><value>NimShare Root Certificate for this instance</value></data>
   <data name="certs.root_ca.body"><value>Every certificate you create in NimShare is signed by this instance's Root. Send the link to your recipients so they can import the Root once into their operating system or browser trust store — after that, every signed link from any user on this instance validates automatically without a "unknown authority" warning.</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>
