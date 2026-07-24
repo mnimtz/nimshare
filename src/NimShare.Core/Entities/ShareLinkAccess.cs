@@ -32,4 +32,11 @@ public class ShareLinkAccess
     // IANA-TZ vom Browser via /beacon. Erste Iteration: nur Signaturen
     // schicken die TZ, hier bleibt es meist null.
     public string? Timezone { get; set; }
+
+    // v1.10.156: Optionale Klartext-IP (IPv4 oder IPv6, max 45 Zeichen).
+    // Nur befüllt wenn ShareLinks:StoreFullIp=true — analog dem
+    // Signatures:StoreFullIp-Toggle für SignatureAudits/SignatureParticipants.
+    // Rechtliche Basis: berechtigtes Interesse nach Art. 6(1)(f) DSGVO;
+    // Betreiber muss das im eigenen Impressum/Datenschutz anpassen.
+    public string? IpAddress { get; set; }
 }

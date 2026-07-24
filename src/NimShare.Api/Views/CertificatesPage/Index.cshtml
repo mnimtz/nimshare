@@ -12,6 +12,27 @@
         </div>
     </div>
 
+    @* v1.10.156: Instance-Root-CA-Erklärung + Public-Download für Empfänger.
+       Vorher gab's den Root nur über /nimshare-root.cer als „hidden URL" oder
+       via Popover auf einer signierten Landing — hier prominent für den
+       Cert-Manager selbst, damit Marcus den Empfängern den Link direkt geben
+       kann („Importiere die einmal in deinen Trust-Store"). *@
+    <div class="card" style="margin-top:16px;background:linear-gradient(135deg, rgba(0,40,84,.04), rgba(0,40,84,.01));border-left:3px solid var(--tw-primary)">
+        <div class="row" style="gap:16px;align-items:center;flex-wrap:wrap">
+            <div style="font-size:2rem">🏛️</div>
+            <div style="flex:1;min-width:280px">
+                <div style="font-weight:600;font-size:1rem">@T["certs.root_ca.title"]</div>
+                <div class="muted" style="font-size:.85rem;line-height:1.45;margin-top:4px">
+                    @T["certs.root_ca.body"]
+                </div>
+            </div>
+            <div class="row" style="gap:6px;flex-wrap:wrap">
+                <a href="/nimshare-root.cer" download class="btn btn-secondary btn-sm">⬇️ .cer</a>
+                <a href="/nimshare-root.pem" download class="btn btn-ghost btn-sm">⬇️ .pem</a>
+            </div>
+        </div>
+    </div>
+
     <div class="card" style="margin-top:16px">
         <table class="table" id="certList">
             <thead>

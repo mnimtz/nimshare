@@ -707,6 +707,9 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         // Art. 6(1)(f), Admin-toggle Signatures:StoreFullIp=true).
         ("SignatureParticipants", "IpAddress", "TEXT", "nvarchar(45)"),
         ("SignatureAudits", "IpAddress", "TEXT", "nvarchar(45)"),
+        // v1.10.156: optionale Klartext-IP für Link-Report-Auswertung.
+        // Nur befüllt wenn ShareLinks:StoreFullIp=true (Art. 6(1)(f)).
+        ("ShareLinkAccesses", "IpAddress", "TEXT", "nvarchar(45)"),
         // v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung.
         ("AiGateways", "StatusPageUrl", "TEXT", "nvarchar(1000)"),
         // v1.10.118: Produkt-Filter für die Status-Begrüssung.

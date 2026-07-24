@@ -467,6 +467,8 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.UserAgent).HasMaxLength(300);
             e.Property(x => x.Referer).HasMaxLength(300);
             e.Property(x => x.CountryCode).HasMaxLength(2);
+            // v1.10.156: optionale Klartext-IP (max 45 = längste IPv6-Textform).
+            e.Property(x => x.IpAddress).HasMaxLength(45);
             e.HasOne(x => x.ShareLink).WithMany(l => l.Accesses).HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
         });
 
