@@ -894,6 +894,26 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="email_tpl.preview.message"><value>Bitte bis Freitag.</value></data>
 
   <data name="certs.title"><value>Signatur-Zertifikate</value></data>
+  <data name="report.tile.ttd"><value>Ø Zeit bis Download</value></data>
+  <data name="report.card.countries"><value>Länder</value></data>
+  <data name="report.empty.countries"><value>Keine Länderdaten (kein GeoIP-Provider konfiguriert oder keine Aufrufe).</value></data>
+  <data name="report.card.cities"><value>Städte</value></data>
+  <data name="report.empty.cities"><value>Keine Städte erfasst.</value></data>
+  <data name="report.card.devices"><value>Geräte</value></data>
+  <data name="report.empty.devices"><value>Noch keine Zugriffe.</value></data>
+  <data name="report.card.timezones"><value>Zeitzonen</value></data>
+  <data name="report.empty.timezones"><value>Keine Zeitzonen erfasst (Browser-JS-Beacon nicht ausgeliefert).</value></data>
+  <data name="report.card.peak_hours"><value>Peak-Zeiten · letzte 30 Tage (UTC)</value></data>
+  <data name="report.heatmap.legend"><value>Intensität skaliert 0–{0} Zugriffe pro Zelle · nur Landings und Downloads</value></data>
+  <data name="report.card.events"><value>Zugriffs-Log · {0} von {1} Ereignissen</value></data>
+  <data name="report.ip_notice_html"><value>IP-Speicherung ist per Betreiber-Konfiguration &lt;span class="mono"&gt;ShareLinks:StoreFullIp=true&lt;/span&gt; aktiv (Art. 6 (1) f DSGVO). Für neue Aufrufe wird die Klartext-IP mit dem Ereignis persistiert; ältere Zeilen bleiben ohne IP.</value></data>
+  <data name="report.day.sun"><value>So</value></data>
+  <data name="report.day.mon"><value>Mo</value></data>
+  <data name="report.day.tue"><value>Di</value></data>
+  <data name="report.day.wed"><value>Mi</value></data>
+  <data name="report.day.thu"><value>Do</value></data>
+  <data name="report.day.fri"><value>Fr</value></data>
+  <data name="report.day.sat"><value>Sa</value></data>
   <data name="certs.root_ca.title"><value>NimShare-Root-Zertifikat dieser Instanz</value></data>
   <data name="certs.root_ca.body"><value>Jedes Zertifikat, das du in NimShare erstellst, wird von diesem Instanz-Root signiert. Schick den Link an deine Empfänger: sobald sie den Root einmal in ihr Betriebssystem oder ihren Browser-Trust-Store importieren, wird jede signierte Freigabe dieser Instanz automatisch als vertrauenswürdig anerkannt — ohne „unbekannte Zertifizierungsstelle"-Warnung.</value></data>
   <data name="certs.lede"><value>Erstelle ein eigenes Zertifikat für digitale Signaturen in NimShare oder importiere eine vorhandene PKCS#12-Datei (.pfx/.p12).</value></data>

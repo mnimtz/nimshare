@@ -887,6 +887,26 @@ Ouvrez ce lien pour signer :
   <data name="email_tpl.preview.message"><value>Avant vendredi svp.</value></data>
 
   <data name="certs.title"><value>Certificats de signature</value></data>
+  <data name="report.tile.ttd"><value>Temps médian jusqu'au téléchargement</value></data>
+  <data name="report.card.countries"><value>Pays</value></data>
+  <data name="report.empty.countries"><value>Aucune donnée pays (aucun fournisseur GeoIP configuré ou pas encore de visites).</value></data>
+  <data name="report.card.cities"><value>Villes</value></data>
+  <data name="report.empty.cities"><value>Aucune ville enregistrée.</value></data>
+  <data name="report.card.devices"><value>Appareils</value></data>
+  <data name="report.empty.devices"><value>Pas encore de visites.</value></data>
+  <data name="report.card.timezones"><value>Fuseaux horaires</value></data>
+  <data name="report.empty.timezones"><value>Aucun fuseau horaire capté (balise JS navigateur non délivrée).</value></data>
+  <data name="report.card.peak_hours"><value>Pics d'activité · 30 derniers jours (UTC)</value></data>
+  <data name="report.heatmap.legend"><value>Intensité graduée 0–{0} visites par cellule · uniquement landings et téléchargements</value></data>
+  <data name="report.card.events"><value>Journal d'accès · {0} sur {1} événements</value></data>
+  <data name="report.ip_notice_html"><value>Le stockage IP est activé par la configuration de l'exploitant &lt;span class="mono"&gt;ShareLinks:StoreFullIp=true&lt;/span&gt; (art. 6, § 1, f) RGPD). Pour toute nouvelle visite, l'IP en clair est enregistrée avec l'événement ; les entrées plus anciennes restent sans IP.</value></data>
+  <data name="report.day.sun"><value>Dim</value></data>
+  <data name="report.day.mon"><value>Lun</value></data>
+  <data name="report.day.tue"><value>Mar</value></data>
+  <data name="report.day.wed"><value>Mer</value></data>
+  <data name="report.day.thu"><value>Jeu</value></data>
+  <data name="report.day.fri"><value>Ven</value></data>
+  <data name="report.day.sat"><value>Sam</value></data>
   <data name="certs.root_ca.title"><value>Certificat racine NimShare de cette instance</value></data>
   <data name="certs.root_ca.body"><value>Chaque certificat que tu crées dans NimShare est signé par la racine de cette instance. Envoie le lien à tes destinataires : dès qu'ils importent la racine une fois dans le magasin de confiance de leur système ou navigateur, chaque partage signé de cette instance est reconnu automatiquement — sans avertissement « autorité inconnue ».</value></data>
   <data name="certs.lede"><value>Créez un certificat auto-signé pour les signatures NimShare ou importez un PKCS#12 (.pfx/.p12) existant.</value></data>

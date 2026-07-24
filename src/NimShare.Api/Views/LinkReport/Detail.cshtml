@@ -77,7 +77,7 @@
     </div>
     @* v1.10.158: neue Kachel – Median-Zeit zwischen Landing und Download *@
     <div class="card" style="flex:1;min-width:180px">
-        <div class="muted">Ø Zeit bis Download</div>
+        <div class="muted">@T["report.tile.ttd"]</div>
         <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">
             @(medianTtd is TimeSpan ttd ? FormatTtd(ttd) : "—")
         </div>
@@ -123,10 +123,10 @@
 <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
     <!-- Länder -->
     <div class="card" style="flex:1;min-width:260px">
-        <h2 class="card-title">🌍 Länder</h2>
+        <h2 class="card-title">🌍 @T["report.card.countries"]</h2>
         @if (!countries.Any())
         {
-            <p class="muted">Keine Länderdaten (kein GeoIP-Provider konfiguriert oder keine Aufrufe).</p>
+            <p class="muted">@T["report.empty.countries"]</p>
         }
         else
         {
@@ -149,10 +149,10 @@
     </div>
     <!-- Städte -->
     <div class="card" style="flex:1;min-width:260px">
-        <h2 class="card-title">🏙 Städte</h2>
+        <h2 class="card-title">🏙 @T["report.card.cities"]</h2>
         @if (!cities.Any())
         {
-            <p class="muted">Keine Städte erfasst.</p>
+            <p class="muted">@T["report.empty.cities"]</p>
         }
         else
         {
@@ -177,10 +177,10 @@
 <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
     <!-- Geräte -->
     <div class="card" style="flex:1;min-width:260px">
-        <h2 class="card-title">📱 Geräte</h2>
+        <h2 class="card-title">📱 @T["report.card.devices"]</h2>
         @if (!devices.Any())
         {
-            <p class="muted">Noch keine Zugriffe.</p>
+            <p class="muted">@T["report.empty.devices"]</p>
         }
         else
         {
@@ -203,10 +203,10 @@
     </div>
     <!-- Zeitzonen -->
     <div class="card" style="flex:1;min-width:260px">
-        <h2 class="card-title">🕒 Zeitzonen</h2>
+        <h2 class="card-title">🕒 @T["report.card.timezones"]</h2>
         @if (!timezones.Any())
         {
-            <p class="muted">Keine Zeitzonen erfasst (Browser-JS-Beacon nicht ausgeliefert).</p>
+            <p class="muted">@T["report.empty.timezones"]</p>
         }
         else
         {
@@ -230,10 +230,14 @@
 
 <!-- ─────────── Peak-Hour-Heatmap ─────────── -->
 <div class="card" style="margin-bottom:16px">
-    <h2 class="card-title">🔥 Peak-Zeiten · letzte 30 Tage (UTC)</h2>
+    <h2 class="card-title">🔥 @T["report.card.peak_hours"]</h2>
     @{
         var heatMax = Math.Max(1, heatCells.Max(c => c.Count));
-        var dayLabels = new[] { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
+        // Wochentag-Kürzel — .NET-invariant Sun/Mon/…; über Localizer auf die Landessprache.
+        var dayLabels = new[] {
+            T["report.day.sun"].Value, T["report.day.mon"].Value, T["report.day.tue"].Value,
+            T["report.day.wed"].Value, T["report.day.thu"].Value, T["report.day.fri"].Value,
+            T["report.day.sat"].Value };
     }
     <div style="overflow-x:auto">
         <table style="border-collapse:separate;border-spacing:2px;font-size:.7rem">
@@ -264,7 +268,7 @@
             </tbody>
         </table>
     </div>
-    <div class="muted" style="font-size:.75rem;margin-top:6px">Intensität skaliert 0–@heatMax Zugriffe pro Zelle · nur Landings + Downloads</div>
+    <div class="muted" style="font-size:.75rem;margin-top:6px">@string.Format(T["report.heatmap.legend"].Value, heatMax)</div>
 </div>
 
 <!-- ─────────── Referrer + Zeitreihe ─────────── -->
@@ -294,7 +298,7 @@
         }
     </div>
     <div class="card" style="flex:2;min-width:320px">
-        <h2 class="card-title">Zugriffs-Log · @events.Count von @allEventCount Ereignissen</h2>
+        <h2 class="card-title">@string.Format(T["report.card.events"].Value, events.Count, allEventCount)</h2>
         @if (!events.Any())
         {
             <p class="muted">Noch keine Zugriffe.</p>
@@ -350,7 +354,7 @@
             @if (storeFullIp)
             {
                 <div class="muted" style="font-size:.75rem;margin-top:6px">
-                    IP-Speicherung ist per Betreiber-Konfiguration <span class="mono">ShareLinks:StoreFullIp=true</span> aktiv (Art. 6 (1) f DSGVO). Für neue Aufrufe wird die Klartext-IP mit dem Ereignis persistiert; ältere Zeilen bleiben ohne IP.
+                    @Html.Raw(T["report.ip_notice_html"].Value)
                 </div>
             }
         }

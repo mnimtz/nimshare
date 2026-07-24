@@ -886,6 +886,26 @@ Open deze link om te tekenen:
   <data name="email_tpl.preview.message"><value>Graag voor vrijdag.</value></data>
 
   <data name="certs.title"><value>Handtekening-certificaten</value></data>
+  <data name="report.tile.ttd"><value>Mediane tijd tot download</value></data>
+  <data name="report.card.countries"><value>Landen</value></data>
+  <data name="report.empty.countries"><value>Geen landgegevens (geen GeoIP-provider geconfigureerd of nog geen bezoeken).</value></data>
+  <data name="report.card.cities"><value>Steden</value></data>
+  <data name="report.empty.cities"><value>Geen steden vastgelegd.</value></data>
+  <data name="report.card.devices"><value>Apparaten</value></data>
+  <data name="report.empty.devices"><value>Nog geen bezoeken.</value></data>
+  <data name="report.card.timezones"><value>Tijdzones</value></data>
+  <data name="report.empty.timezones"><value>Geen tijdzones vastgelegd (browser-JS-beacon niet geleverd).</value></data>
+  <data name="report.card.peak_hours"><value>Piektijden · laatste 30 dagen (UTC)</value></data>
+  <data name="report.heatmap.legend"><value>Intensiteit geschaald 0–{0} bezoeken per cel · alleen landings en downloads</value></data>
+  <data name="report.card.events"><value>Toegangslog · {0} van {1} gebeurtenissen</value></data>
+  <data name="report.ip_notice_html"><value>IP-opslag is actief via de operatorconfiguratie &lt;span class="mono"&gt;ShareLinks:StoreFullIp=true&lt;/span&gt; (art. 6 lid 1 f AVG). Voor nieuwe bezoeken wordt het IP-adres in klare tekst bij de gebeurtenis opgeslagen; oudere regels blijven zonder IP.</value></data>
+  <data name="report.day.sun"><value>Zo</value></data>
+  <data name="report.day.mon"><value>Ma</value></data>
+  <data name="report.day.tue"><value>Di</value></data>
+  <data name="report.day.wed"><value>Wo</value></data>
+  <data name="report.day.thu"><value>Do</value></data>
+  <data name="report.day.fri"><value>Vr</value></data>
+  <data name="report.day.sat"><value>Za</value></data>
   <data name="certs.root_ca.title"><value>NimShare-hoofdcertificaat van deze instantie</value></data>
   <data name="certs.root_ca.body"><value>Elk certificaat dat je in NimShare aanmaakt, wordt door de hoofd-CA van deze instantie ondertekend. Stuur de link naar je ontvangers: zodra ze de hoofd-CA één keer in de vertrouwde certificaatopslag van hun besturingssysteem of browser importeren, wordt elke ondertekende link van deze instantie automatisch als betrouwbaar herkend — zonder waarschuwing „onbekende certificaatautoriteit".</value></data>
   <data name="certs.lede"><value>Maak een zelfondertekend certificaat voor NimShare-handtekeningen of importeer een bestaand PKCS#12 (.pfx/.p12).</value></data>

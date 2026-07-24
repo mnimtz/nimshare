@@ -888,6 +888,27 @@ Please open this link to sign:
   <data name="email_tpl.preview.message"><value>Please by Friday.</value></data>
 
   <data name="certs.title"><value>Signing certificates</value></data>
+  <!-- v1.10.159: Link-Report Card-Titles + Empty-States + Heatmap-Legende + IP-Hinweis -->
+  <data name="report.tile.ttd" xml:space="preserve"><value>Median time to download</value></data>
+  <data name="report.card.countries" xml:space="preserve"><value>Countries</value></data>
+  <data name="report.empty.countries" xml:space="preserve"><value>No country data (no GeoIP provider configured or no visits yet).</value></data>
+  <data name="report.card.cities" xml:space="preserve"><value>Cities</value></data>
+  <data name="report.empty.cities" xml:space="preserve"><value>No cities captured.</value></data>
+  <data name="report.card.devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="report.empty.devices" xml:space="preserve"><value>No visits yet.</value></data>
+  <data name="report.card.timezones" xml:space="preserve"><value>Time zones</value></data>
+  <data name="report.empty.timezones" xml:space="preserve"><value>No time zones captured (browser JS beacon not delivered).</value></data>
+  <data name="report.card.peak_hours" xml:space="preserve"><value>Peak hours · last 30 days (UTC)</value></data>
+  <data name="report.heatmap.legend" xml:space="preserve"><value>Intensity scales 0–{0} visits per cell · landings and downloads only</value></data>
+  <data name="report.card.events" xml:space="preserve"><value>Access log · {0} of {1} events</value></data>
+  <data name="report.ip_notice_html" xml:space="preserve"><value>IP storage is enabled by operator configuration &lt;span class="mono"&gt;ShareLinks:StoreFullIp=true&lt;/span&gt; (Art. 6(1)(f) GDPR). New visits will store the plain IP with the event; older rows remain without IP.</value></data>
+  <data name="report.day.sun" xml:space="preserve"><value>Sun</value></data>
+  <data name="report.day.mon" xml:space="preserve"><value>Mon</value></data>
+  <data name="report.day.tue" xml:space="preserve"><value>Tue</value></data>
+  <data name="report.day.wed" xml:space="preserve"><value>Wed</value></data>
+  <data name="report.day.thu" xml:space="preserve"><value>Thu</value></data>
+  <data name="report.day.fri" xml:space="preserve"><value>Fri</value></data>
+  <data name="report.day.sat" xml:space="preserve"><value>Sat</value></data>
   <data name="certs.root_ca.title"><value>NimShare Root Certificate for this instance</value></data>
   <data name="certs.root_ca.body"><value>Every certificate you create in NimShare is signed by this instance's Root. Send the link to your recipients so they can import the Root once into their operating system or browser trust store — after that, every signed link from any user on this instance validates automatically without a "unknown authority" warning.</value></data>
   <data name="certs.lede"><value>Create a self-signed certificate for digital signatures in NimShare, or import an existing PKCS#12 (.pfx/.p12).</value></data>

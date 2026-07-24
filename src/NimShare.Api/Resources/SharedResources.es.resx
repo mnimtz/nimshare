@@ -887,6 +887,26 @@ Abre este enlace para firmar:
   <data name="email_tpl.preview.message"><value>Antes del viernes por favor.</value></data>
 
   <data name="certs.title"><value>Certificados de firma</value></data>
+  <data name="report.tile.ttd"><value>Tiempo mediano hasta la descarga</value></data>
+  <data name="report.card.countries"><value>Países</value></data>
+  <data name="report.empty.countries"><value>Sin datos de país (no hay proveedor GeoIP configurado o aún no hay visitas).</value></data>
+  <data name="report.card.cities"><value>Ciudades</value></data>
+  <data name="report.empty.cities"><value>Sin ciudades registradas.</value></data>
+  <data name="report.card.devices"><value>Dispositivos</value></data>
+  <data name="report.empty.devices"><value>Aún no hay visitas.</value></data>
+  <data name="report.card.timezones"><value>Zonas horarias</value></data>
+  <data name="report.empty.timezones"><value>Sin zonas horarias registradas (baliza JS del navegador no entregada).</value></data>
+  <data name="report.card.peak_hours"><value>Horas pico · últimos 30 días (UTC)</value></data>
+  <data name="report.heatmap.legend"><value>Intensidad escalada 0–{0} visitas por celda · solo landings y descargas</value></data>
+  <data name="report.card.events"><value>Registro de accesos · {0} de {1} eventos</value></data>
+  <data name="report.ip_notice_html"><value>El almacenamiento de IP está activo por configuración del operador &lt;span class="mono"&gt;ShareLinks:StoreFullIp=true&lt;/span&gt; (art. 6.1.f RGPD). En nuevas visitas se guarda la IP en claro junto al evento; las filas más antiguas quedan sin IP.</value></data>
+  <data name="report.day.sun"><value>Dom</value></data>
+  <data name="report.day.mon"><value>Lun</value></data>
+  <data name="report.day.tue"><value>Mar</value></data>
+  <data name="report.day.wed"><value>Mié</value></data>
+  <data name="report.day.thu"><value>Jue</value></data>
+  <data name="report.day.fri"><value>Vie</value></data>
+  <data name="report.day.sat"><value>Sáb</value></data>
   <data name="certs.root_ca.title"><value>Certificado raíz NimShare de esta instancia</value></data>
   <data name="certs.root_ca.body"><value>Cada certificado que creas en NimShare está firmado por la raíz de esta instancia. Envía el enlace a tus destinatarios: en cuanto importen la raíz una vez en el almacén de confianza de su sistema operativo o navegador, cada enlace firmado de esta instancia se reconocerá automáticamente — sin advertencia de „autoridad desconocida".</value></data>
   <data name="certs.lede"><value>Crea un certificado autofirmado para firmas en NimShare o importa un PKCS#12 (.pfx/.p12) existente.</value></data>
