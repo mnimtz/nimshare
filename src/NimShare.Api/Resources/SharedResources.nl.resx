@@ -1262,7 +1262,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="support.faq.signature.a" xml:space="preserve"><value>Every signature workflow is fully logged (IP address, timestamp, device type, timezone). If a certificate is stored, the final PDF also carries a PAdES-B cryptographic signature (SHA-256, PKCS#7) that Adobe Reader verifies natively. The audit report is available as a PDF attachment and JSON export.</value></data>
   <data name="imprint.title" xml:space="preserve"><value>Legal notice</value></data>
   <data name="imprint.operator" xml:space="preserve"><value>Operator of this instance</value></data>
-  <data name="imprint.operator_body" xml:space="preserve"><value>This NimShare instance is operated by:&lt;br&gt;&lt;em&gt;(Please fill in the operator's contact details here — name/company, address, commercial register number, VAT ID.)&lt;/em&gt;</value></data>
+  <data name="imprint.operator_body" xml:space="preserve"><value>Marcus Nimtz&lt;br&gt;(Privépersoon, geen commercieel gebruik)&lt;br&gt;Duitsland</value></data>
   <data name="imprint.contact.title" xml:space="preserve"><value>Contact</value></data>
   <data name="imprint.contact.body" xml:space="preserve"><value>&lt;em&gt;(Please fill in an email address and optionally a phone number)&lt;/em&gt;</value></data>
   <data name="imprint.tech.title" xml:space="preserve"><value>Technical operation</value></data>
