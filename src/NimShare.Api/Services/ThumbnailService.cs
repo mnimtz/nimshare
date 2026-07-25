@@ -52,6 +52,13 @@ public class ThumbnailService : IThumbnailService
     // 4 gleichzeitige HEIC-Decodes sind auf einem 2-GB-Container okay —
     // ein 12-MP-Foto braucht ca. 150 MB Peak, in Summe also ~600 MB.
     private static readonly SemaphoreSlim _slot = new(4, 4);
+    // v1.10.180: Warmup-Deduplication. Client feuert bei 44-Foto-Landing
+    // 44 parallele /thumb-Requests → 44 identische Warmups würden entstehen.
+    // Der ConcurrentDictionary hält den aktuell laufenden Task pro (fileId,
+    // size)-Key und gibt ihn allen Aufrufern zurück. Fertige Warmups fliegen
+    // per ContinueWith(_ => _inflight.TryRemove...) sofort raus.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task> _inflight
+        = new();
 
     // Whitelist der Ausgabegrößen. 400 = Grid-Kachel, 1600 = Lightbox-Retina.
     private static readonly int[] AllowedSizes = { 400, 1600 };
@@ -119,7 +126,12 @@ public class ThumbnailService : IThumbnailService
         bool acquired = false;
         try
         {
-            if (!await _slot.WaitAsync(TimeSpan.FromSeconds(30), ct))
+            // v1.10.180: Slot-Timeout auf 10min. Bei 44 Warmups × ~3s pro Foto
+            // dauert der letzte Slot bis zu 33s auf sein. Vorher waren 30s zu
+            // knapp — die letzten Warmups gaben auf und die Kacheln blieben
+            // beim Fallback. 10min ist grosszügig, Cancellation greift trotzdem
+            // wenn der Prozess runter geht.
+            if (!await _slot.WaitAsync(TimeSpan.FromMinutes(10), ct))
             {
                 _log.LogWarning("Thumb slot timeout for {File}", sourceBlobPath);
                 return;
@@ -161,16 +173,33 @@ public class ThumbnailService : IThumbnailService
         }
     }
 
-    public async Task WarmupAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
+    public Task WarmupAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
         int size, CancellationToken ct = default)
     {
-        try
+        // v1.10.180: Deduplizieren. Bei 44 parallelen /thumb-Requests würden
+        // sonst 44 identische Generate-Läufe starten und alle über den 4-Slot-
+        // Semaphor stauen. Der Client könnte durch schnelles Reloaden das
+        // Vielfache produzieren. GetOrAdd hält den bereits-laufenden Task und
+        // gibt ihn wiederholten Aufrufern zurück.
+        var key = $"{fileId:N}:{size}";
+        return _inflight.GetOrAdd(key, _ =>
         {
-            await GenerateAsync(fileId, sourceBlobPath, sourceContentType, size, ct);
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning(ex, "Thumbnail warmup failed for {File}", sourceBlobPath);
-        }
+            var task = Task.Run(async () =>
+            {
+                try
+                {
+                    await GenerateAsync(fileId, sourceBlobPath, sourceContentType, size, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Thumbnail warmup failed for {File}", sourceBlobPath);
+                }
+                finally
+                {
+                    _inflight.TryRemove(key, out _);
+                }
+            });
+            return task;
+        });
     }
 }

@@ -467,23 +467,13 @@ public class ShareController : Controller
         var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
         if (url is null)
         {
-            // v1.10.179: Cache-Miss → 404 sofort + Warmup im Hintergrund. Der
-            // Client zeigt den v1.10.170-Fallback (Kamera-Icon-Kachel) und beim
-            // nächsten Reload liefert der Cache-Hit die echte Vorschau. So bleibt
-            // der GET-Handler schnell und der Thread-Pool frei.
-            var fid = file.Id;
-            var path = file.BlobPath;
-            var ctype = file.ContentType ?? "";
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var scope = scopes.CreateScope();
-                    var t = scope.ServiceProvider.GetRequiredService<IThumbnailService>();
-                    await t.WarmupAsync(fid, path, ctype, size, CancellationToken.None);
-                }
-                catch { /* swallow — best effort */ }
-            });
+            // v1.10.179+180: Cache-Miss → 404 sofort + Warmup im Hintergrund.
+            // Client zeigt den v1.10.170-Fallback, beim Reload liefert der
+            // Cache-Hit die echte Vorschau. ThumbnailService.WarmupAsync ist
+            // seit v1.10.180 selbst dedup + Task-basiert — hier reicht ein
+            // fire-and-forget-Call ohne Task.Run/Scope, weil der Service
+            // Singleton ist und die Task-Ownership intern läuft.
+            _ = thumbs.WarmupAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, CancellationToken.None);
             return NotFound();
         }
         // Der 302 selbst darf nur kurz gecacht werden, weil die SAS-URL nach
