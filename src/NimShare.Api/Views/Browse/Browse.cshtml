@@ -1203,7 +1203,15 @@ async function openPreview(fileId) {
     const body = document.getElementById('previewBody');
     const ct = (d.contentType || '').toLowerCase();
     if (ct.startsWith('image/')) {
-        body.innerHTML = '<img class="preview-image" src="' + d.url + '"/>';
+        // v1.10.184: HEIC/HEIF kann Chrome/Firefox nicht rendern → über
+        // /thumb-Endpoint als JPG holen, mit onerror-Fallback aufs Original
+        // (Safari zeigt HEIC nativ). Alle anderen image/*-Typen direkt.
+        var isHeic = ct === 'image/heic' || ct === 'image/heif';
+        if (isHeic) {
+            body.innerHTML = '<img class="preview-image" src="/api/v1/files/' + fileId + '/thumb?size=1600" onerror="this.onerror=null;this.src=\'' + d.url + '\'"/>';
+        } else {
+            body.innerHTML = '<img class="preview-image" src="' + d.url + '"/>';
+        }
     } else if (ct === 'application/pdf') {
         body.innerHTML = '<iframe class="preview-frame" src="' + d.url + '"></iframe>';
     } else {

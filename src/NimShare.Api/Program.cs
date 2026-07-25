@@ -393,7 +393,13 @@ builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
 // v1.10.174: Server-Thumbnails für Album-Landings. HEIC → JPEG via Magick.NET,
 // gecacht im Blob unter `thumbs/{fileId:N}/{size}.jpg`. Concurrency intern
 // per statischer SemaphoreSlim(4).
-builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
+// v1.10.184: Singleton statt Scoped. Fire-and-forget-Warmups aus GET-Handlern
+// (ShareController.GalleryThumb, LinksController.Create) closure'n über den
+// injectet Service — als Scoped stirbt der beim Request-Dispose, der Warmup
+// bricht still ab und die 44 Thumbs bleiben aus. Der Service hält nur
+// statische Slot/Dedup-Maps + zwei injected Singletons (Blob + Log),
+// Singleton ist safe.
+builder.Services.AddSingleton<IThumbnailService, ThumbnailService>();
 // v1.10.183: Album-ZIP-Cache. Singleton damit die Dedup-Map über Requests
 // hinweg gilt und der Blob-Client (Singleton) nicht bei jedem Warmup neu
 // aufgebaut wird.

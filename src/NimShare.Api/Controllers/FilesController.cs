@@ -388,6 +388,31 @@ public class FilesController : ControllerBase
         return Ok(new { url = sas.ToString(), contentType = file.ContentType, name = file.Name });
     }
 
+    // v1.10.184: Thumbnail-Redirect für den authentifizierten File-Browser
+    // (Preview-Modal öffnet .HEIC → Chrome kann die Bytes nicht rendern →
+    // Broken-Icon). Reuse des ShareController-Musters mit Warmup fire-and-
+    // forget bei Cache-Miss.
+    [HttpGet("{id:guid}/thumb")]
+    public async Task<IActionResult> Thumb(Guid id, [FromQuery] int size,
+        [FromServices] IFileAccessService access,
+        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+    {
+        if (size <= 0) size = 400;
+        if (!thumbs.IsAllowedSize(size)) return NotFound();
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (file is null) return NotFound();
+        if (!await access.CanReadAsync(user, file, ct)) return Forbid();
+        var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
+        if (url is null)
+        {
+            _ = thumbs.WarmupAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, CancellationToken.None);
+            return NotFound();
+        }
+        Response.Headers["Cache-Control"] = "private, max-age=300";
+        return Redirect(url.ToString());
+    }
+
     /// <summary>
     /// v1.10.70: Office-Preview-URL. Konvertiert DOCX/XLSX/PPTX/ODT/… on-
     /// demand nach PDF (LibreOffice-headless, gecacht als Blob), gibt eine
