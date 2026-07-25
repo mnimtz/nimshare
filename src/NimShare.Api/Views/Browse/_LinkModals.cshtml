@@ -341,12 +341,17 @@ function openShareFileModal(fileId) {
     document.getElementById('shareTargetHint').textContent = @Json.Serialize(T["modal.share.for_file"].Value);
     resetShareModal();
     openModal('modalShare');
+    // v1.10.165: Zertifikat-Liste beim Öffnen des Modals holen — vorher lief
+    // ensureCertsLoaded() erst beim Klick auf „Link erstellen", d.h. der User
+    // sah nur „Kein Zertifikat" auch wenn er längst eines angelegt hatte.
+    ensureCertsLoaded();
 }
 function openShareFolderModal(folderId) {
     currentShareTarget = { type: 'folder', id: folderId };
     document.getElementById('shareTargetHint').textContent = @Json.Serialize(T["modal.share.for_folder"].Value);
     resetShareModal();
     openModal('modalShare');
+    ensureCertsLoaded();
 }
 function resetShareModal() {
     ['shareSlug','sharePw','shareMax','shareExp','shareMsg'].forEach(id => document.getElementById(id).value = '');
@@ -363,6 +368,7 @@ function openUploadRequestModal(folderId) {
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
     document.getElementById('urResult').style.display = 'none';
     openModal('modalUploadReq');
+    ensureCertsLoaded();
 }
 
 // v1.10.146: Zertifikat-Dropdowns beim Öffnen der Modals einmalig füllen.

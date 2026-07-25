@@ -15,6 +15,35 @@ final class AuthStore: ObservableObject {
     @Published var serverURL: URL?
     @Published var api: NimShareAPI?
 
+    // v1.10.165: AI-Consent-Cache (Apple 5.1.1(i)). nil = noch nicht geladen,
+    // false = User hat abgelehnt oder noch nie zugestimmt, true = zugestimmt.
+    // Wird bei bootstrap + Login geladen und nach setAiConsent aktualisiert.
+    @Published var aiConsented: Bool?
+    @Published var aiProviderInfo: NimShareAPI.AiProviderInfo?
+
+    /// Von Feature-Views vor jedem AI-Aufruf zu prüfen. true = geht schon, false = Sheet zeigen.
+    var aiReady: Bool { aiConsented == true }
+
+    /// Wird von AiConsentSheet aufgerufen mit true/false. Persistiert server-seitig.
+    func setAiConsent(_ granted: Bool) async {
+        guard let api else { return }
+        do {
+            let dto = try await api.setAiConsent(granted)
+            aiConsented = dto.consented
+        } catch {
+            // Konservativ: bei Fehler local nicht auf true setzen.
+            aiConsented = false
+        }
+    }
+
+    func refreshAiConsent() async {
+        guard let api else { return }
+        async let consent = api.aiConsent()
+        async let info = api.aiProviderInfo()
+        aiConsented = (try? await consent.consented) ?? false
+        aiProviderInfo = try? await info
+    }
+
     private let defaults = UserDefaults.standard
     private let serverURLKey = "nimshare.serverURL"
     private let tokenKey = "nimshare.jwt"
@@ -62,6 +91,7 @@ final class AuthStore: ObservableObject {
                 let me = try await api.me()
                 user = me
                 state = .signedIn
+                Task { await refreshAiConsent() }
                 return
             } catch ApiError.notAuthorized {
                 // v1.10.79: NUR bei echtem 401 den Token wegwerfen. Vorher
@@ -104,6 +134,7 @@ final class AuthStore: ObservableObject {
             user = resp.user
             if rememberCredentials { lastEmail = email }
             state = .signedIn
+            Task { await refreshAiConsent() }
         case .totpRequired(let challenge):
             pendingTotpChallenge = challenge
             // v1.10.149: lastEmail NICHT während der 2FA-Zwischenstufe schreiben —
@@ -123,6 +154,7 @@ final class AuthStore: ObservableObject {
         if rememberCredentials { lastEmail = resp.user.email }
         pendingTotpChallenge = nil
         state = .signedIn
+        Task { await refreshAiConsent() }
     }
 
     func cancelTotpChallenge() {

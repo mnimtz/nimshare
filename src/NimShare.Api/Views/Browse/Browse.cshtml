@@ -1232,7 +1232,11 @@ function upAddRow(name, sizeBytes) {
             '<span class="up-row-bytes">0 / ' + upFmtBytes(sizeBytes) + '</span>' +
             '<span class="up-row-speed"></span>' +
             '<span class="up-row-eta"></span>' +
-        '</div>';
+        '</div>' +
+        // v1.10.165: sichtbare Fehler-Zeile. Vorher stand der Grund nur als
+        // `title`-Tooltip am ✕ — Marcus sah bei HEIC-Fehlern nur den roten
+        // Balken ohne Text und konnte den Root-Cause nicht diagnostizieren.
+        '<div class="up-row-err" style="display:none; margin-top:4px; padding:6px 8px; background:rgba(220,53,69,0.08); border-radius:4px; color:#dc3545; font-size:12px; word-break:break-word;"></div>';
     body.appendChild(row);
     return row;
 }
@@ -1277,7 +1281,12 @@ function upSetDone(row, ok, msg) {
         if (speedEl) speedEl.textContent = '';
         if (etaEl) etaEl.textContent = '';
     }
-    if (msg) row.querySelector('.up-row-status').title = msg;
+    if (msg) {
+        row.querySelector('.up-row-status').title = msg;
+        // v1.10.165: sichtbar rendern, nicht nur Tooltip.
+        const errEl = row.querySelector('.up-row-err');
+        if (errEl && !ok) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    }
 }
 function xhrPut(url, blob, contentType, onProgress, extraHeaders) {
     return new Promise((resolve, reject) => {
@@ -1286,8 +1295,23 @@ function xhrPut(url, blob, contentType, onProgress, extraHeaders) {
         x.setRequestHeader('Content-Type', contentType);
         (extraHeaders || []).forEach(h => x.setRequestHeader(h[0], h[1]));
         x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total * 100); };
-        x.onload = () => (x.status >= 200 && x.status < 300) ? resolve(x) : reject(new Error('HTTP ' + x.status));
-        x.onerror = () => reject(new Error('Netzwerkfehler'));
+        // v1.10.165: bei 4xx den Azure-Fehler-XML (<Code>…</Code>) mitgeben,
+        // damit der User im UI den echten Grund sieht (RequestBodyTooLarge,
+        // AuthenticationFailed, InvalidBlobOrBlock, CORS-Preflight-Ablehnung
+        // etc.) statt nur „HTTP 403" ohne Kontext.
+        x.onload = () => {
+            if (x.status >= 200 && x.status < 300) return resolve(x);
+            let detail = '';
+            try {
+                const m = (x.responseText || '').match(/<Code>([^<]+)<\/Code>/);
+                if (m) detail = ' – ' + m[1];
+            } catch {}
+            reject(new Error('HTTP ' + x.status + detail));
+        };
+        // onerror deckt echte Netz-/CORS-Fehler ab (Browser blockt vor dem
+        // Response). Text bewusst konkret: „CORS/Netzwerk" hilft mehr als
+        // ein generisches „Netzwerkfehler".
+        x.onerror = () => reject(new Error('CORS/Netzwerk (PUT geblockt vor Response)'));
         x.send(blob);
     });
 }
@@ -1391,7 +1415,11 @@ async function uploadFiles(fileList) {
         document.getElementById('upTitle').textContent = '↑ ' + done + ' / ' + total + (failed ? ' (' + failed + ' Fehler)' : '');
     }
     // Give the user 800 ms to see the "done" ticks before we refresh.
-    setTimeout(() => location.reload(), 800);
+    // v1.10.165: bei Fehlern NICHT auto-reloaden — sonst verschwindet die
+    // Fehler-Zeile bevor der User sie gelesen hat.
+    if (failed === 0) {
+        setTimeout(() => location.reload(), 800);
+    }
 }
 
 // Modal helpers used from generated onclicks.

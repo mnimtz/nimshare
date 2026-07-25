@@ -8,6 +8,9 @@ struct SearchView: View {
     @State private var error: String?
     @State private var hasSearched = false
     @State private var previewFileItem: FileItem?
+    // v1.10.165: AI-Consent-Gate (Apple 5.1.1(i))
+    @State private var showAiConsent = false
+    @State private var pendingQuery: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,10 +68,28 @@ struct SearchView: View {
         .sheet(item: $previewFileItem) { f in
             NavigationStack { FilePreviewView(file: f) }
         }
+        // v1.10.165: AI-Consent-Gate (Apple 5.1.1(i))
+        .sheet(isPresented: $showAiConsent) {
+            AiConsentSheet(onDecided: { granted in
+                if granted, let q = pendingQuery {
+                    pendingQuery = nil
+                    query = q
+                    Task { await run() }
+                } else {
+                    pendingQuery = nil
+                }
+            })
+        }
     }
 
     private func run() async {
         guard let api = auth.api, !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // v1.10.165: vor semantischer Suche Consent prüfen (Embedding-Provider).
+        if !auth.aiReady {
+            pendingQuery = query
+            showAiConsent = true
+            return
+        }
         busy = true; error = nil; hasSearched = true
         defer { busy = false }
         do { results = try await api.semanticSearch(query: query) }

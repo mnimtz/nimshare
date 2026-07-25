@@ -5803,6 +5803,240 @@
           }
         }
       }
+    },
+    "Ablehnen" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Decline" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Rechazar" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Refuser" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Rifiuta" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Weigeren" } }
+      }
+    },
+    "Aktueller Anbieter dieser Instanz" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Current provider for this instance" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Proveedor actual de esta instancia" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fournisseur actuel de cette instance" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Provider attuale di questa istanza" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Huidige provider van deze instantie" } }
+      }
+    },
+    "Anbieter-Info nicht verfügbar. Bitte Netzwerk prüfen und erneut versuchen." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Provider info unavailable. Please check your network and try again." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Información del proveedor no disponible. Comprueba la red y vuelve a intentarlo." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Informations sur le fournisseur indisponibles. Vérifie ta connexion et réessaie." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Informazioni sul provider non disponibili. Controlla la rete e riprova." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Providerinformatie niet beschikbaar. Controleer je netwerk en probeer het opnieuw." } }
+      }
+    },
+    "Anbieter-Info wird geladen…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading provider info…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando información del proveedor…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Chargement des infos fournisseur…" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Caricamento info provider…" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Providerinformatie laden…" } }
+      }
+    },
+    "Auf dieser Instanz ist KI nicht aktiviert." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI is not enabled on this instance." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "La IA no está activada en esta instancia." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "L’IA n’est pas activée sur cette instance." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "L’IA non è attiva su questa istanza." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI is niet ingeschakeld op deze instantie." } }
+      }
+    },
+    "Azure OpenAI (deine Region)" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Azure OpenAI (your region)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Azure OpenAI (tu región)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Azure OpenAI (ta région)" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Azure OpenAI (la tua regione)" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Azure OpenAI (jouw regio)" } }
+      }
+    },
+    "Deine Chat-Anfrage bzw. Suchanfrage" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your chat message or search query" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu mensaje de chat o consulta de búsqueda" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ta question de chat ou de recherche" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "La tua richiesta di chat o di ricerca" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Je chatbericht of zoekopdracht" } }
+      }
+    },
+    "Deine E-Mail, dein Name, deine anderen Dateien" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your email, your name, your other files" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu correo, tu nombre, tus otros archivos" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ton e-mail, ton nom, tes autres fichiers" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "La tua email, il tuo nome, gli altri tuoi file" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Je e-mail, je naam, je andere bestanden" } }
+      }
+    },
+    "Du kannst diese Zustimmung jederzeit im Profil widerrufen. Details in der [Datenschutzerklärung](%@)." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You can revoke this consent at any time in your profile. Details in the [Privacy Policy](%@)." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Puedes revocar este consentimiento en cualquier momento desde tu perfil. Detalles en la [Política de privacidad](%@)." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tu peux révoquer ce consentement à tout moment depuis ton profil. Détails dans la [politique de confidentialité](%@)." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Puoi revocare questo consenso in qualsiasi momento nel tuo profilo. Dettagli nell’[Informativa sulla privacy](%@)." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Je kunt deze toestemming op elk moment intrekken via je profiel. Details in het [privacybeleid](%@)." } }
+      }
+    },
+    "Du kannst diese Zustimmung jederzeit im Profil widerrufen." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You can revoke this consent at any time in your profile." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Puedes revocar este consentimiento en cualquier momento desde tu perfil." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tu peux révoquer ce consentement à tout moment depuis ton profil." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Puoi revocare questo consenso in qualsiasi momento nel tuo profilo." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Je kunt deze toestemming op elk moment intrekken via je profiel." } }
+      }
+    },
+    "Einmalige Zustimmung nach Apple-Richtlinie" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "One-time consent per Apple policy" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Consentimiento único según la política de Apple" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Consentement unique conformément aux règles d’Apple" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Consenso una tantum secondo le linee guida Apple" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Eenmalige toestemming volgens Apple-richtlijnen" } }
+      }
+    },
+    "Endpoint: %@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Endpoint: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Endpoint: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Endpoint : %@" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Endpoint: %@" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Endpoint: %@" } }
+      }
+    },
+    "Erforderlich für Chat mit Dateien, semantische Suche und intelligente Zusammenfassungen. Widerrufen deaktiviert diese Funktionen sofort. Details in der Datenschutzerklärung." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Required for chat with files, semantic search and smart summaries. Revoking disables these features immediately. Details in the privacy policy." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Necesario para chatear con tus archivos, la búsqueda semántica y los resúmenes inteligentes. Al revocar se desactivan estas funciones al instante. Detalles en la política de privacidad." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Requis pour discuter avec tes fichiers, la recherche sémantique et les résumés intelligents. La révocation désactive ces fonctions immédiatement. Détails dans la politique de confidentialité." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Necessario per la chat con i file, la ricerca semantica e i riassunti intelligenti. La revoca disattiva subito queste funzioni. Dettagli nell’informativa sulla privacy." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Vereist voor chat met bestanden, semantisch zoeken en slimme samenvattingen. Intrekken schakelt deze functies direct uit. Details in het privacybeleid." } }
+      }
+    },
+    "Erlauben" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Permitir" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autoriser" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Consenti" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Toestaan" } }
+      }
+    },
+    "KI-Funktionen wie Chat mit deinen Dateien, Zusammenfassungen und intelligente Suche verarbeiten deine Anfrage und relevante Ausschnitte aus deinen Dateien bei einem externen KI-Anbieter." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI features such as chat with your files, summaries and smart search send your query and the relevant excerpts from your files to an external AI provider." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Las funciones de IA como el chat con tus archivos, los resúmenes y la búsqueda inteligente envían tu consulta y los fragmentos relevantes de tus archivos a un proveedor de IA externo." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les fonctions IA telles que le chat avec tes fichiers, les résumés et la recherche intelligente envoient ta requête et les extraits pertinents de tes fichiers à un fournisseur d’IA externe." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Le funzioni IA come la chat con i tuoi file, i riassunti e la ricerca intelligente inviano la tua richiesta e gli estratti pertinenti dei tuoi file a un provider IA esterno." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI-functies zoals chat met je bestanden, samenvattingen en slim zoeken sturen je vraag en de relevante fragmenten uit je bestanden naar een externe AI-provider." } }
+      }
+    },
+    "KI-Nutzung" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI usage" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Uso de la IA" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utilisation de l’IA" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Uso dell’IA" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI-gebruik" } }
+      }
+    },
+    "KI-Verarbeitung aktivieren?" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable AI processing?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Activar el procesamiento con IA?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Activer le traitement par IA ?" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Attivare l’elaborazione IA?" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI-verwerking inschakelen?" } }
+      }
+    },
+    "KI-Verarbeitung erlaubt" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI processing allowed" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Procesamiento con IA permitido" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Traitement par IA autorisé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Elaborazione IA consentita" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI-verwerking toegestaan" } }
+      }
+    },
+    "KI-Zustimmung" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AI consent" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Consentimiento de IA" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Consentement à l’IA" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Consenso all’IA" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "AI-toestemming" } }
+      }
+    },
+    "Kein Datei-Anhang wird komplett übertragen — nur die passenden Text-Fragmente" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No file is transmitted in full — only the matching text fragments" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ningún archivo se transmite entero, solo los fragmentos de texto relevantes" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun fichier n’est transmis intégralement — seuls les fragments de texte pertinents" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Nessun file viene trasmesso per intero — solo i frammenti di testo pertinenti" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Geen bestand wordt volledig verzonden — alleen de bijpassende tekstfragmenten" } }
+      }
+    },
+    "Modell: %@" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Model: %@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Modelo: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modèle : %@" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Modello: %@" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Model: %@" } }
+      }
+    },
+    "Passwörter, Zertifikate, Zugriffs-Tokens" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Passwords, certificates, access tokens" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Contraseñas, certificados, tokens de acceso" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mots de passe, certificats, jetons d’accès" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Password, certificati, token di accesso" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Wachtwoorden, certificaten, toegangstokens" } }
+      }
+    },
+    "Text-Ausschnitte der Dateien, die für deine Anfrage relevant sind" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Text excerpts from the files relevant to your query" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Fragmentos de texto de los archivos relevantes para tu consulta" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Extraits de texte des fichiers pertinents pour ta requête" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Estratti di testo dei file pertinenti alla tua richiesta" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Tekstfragmenten uit de bestanden die relevant zijn voor je vraag" } }
+      }
+    },
+    "Was NICHT gesendet wird" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "What is NOT sent" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lo que NO se envía" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce qui N’est PAS envoyé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cosa NON viene inviato" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Wat NIET wordt verzonden" } }
+      }
+    },
+    "Was gesendet wird" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "What is sent" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lo que se envía" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce qui est envoyé" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cosa viene inviato" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Wat wordt verzonden" } }
+      }
+    },
+    "keiner — KI ist auf dieser Instanz nicht aktiviert" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "none — AI is not enabled on this instance" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ninguno: la IA no está activada en esta instancia" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "aucun — l’IA n’est pas activée sur cette instance" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "nessuno — l’IA non è attiva su questa istanza" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "geen — AI is niet ingeschakeld op deze instantie" } }
+      }
     }
   },
   "version" : "1.1"

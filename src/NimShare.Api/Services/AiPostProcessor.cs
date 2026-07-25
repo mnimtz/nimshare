@@ -61,6 +61,17 @@ public class AiPostProcessor : IAiPostProcessor
             var file = await db.Files.SingleOrDefaultAsync(f => f.Id == fileId);
             if (file is null || file.Status != StorageFileStatus.Ready) return;
 
+            // v1.10.165: Apple-5.1.1(i) — auch der server-seitige Auto-Tag/
+            // Embedding-Pfad muss den Consent des Uploaders respektieren.
+            // Ohne Consent: still zurück (keine AI-Verarbeitung, aber die
+            // Text-Extraktion oben ist rein lokal und darf weiterhin laufen).
+            var owner = await db.Users.SingleOrDefaultAsync(u => u.Id == file.OwnerId);
+            if (owner is null || owner.AiConsentedAt is null)
+            {
+                _log.LogInformation("AI post-processing skipped for file {FileId}: owner {OwnerId} has not consented to AI processing.", fileId, file.OwnerId);
+                return;
+            }
+
             var provider = await gateway.CreateProviderAsync();
             var text = await gateway.ExtractTextAsync(file.BlobPath, file.ContentType, blobs);
 

@@ -62,6 +62,29 @@ struct ProfileView: View {
                 }
             }
 
+            // v1.10.165: AI-Consent-Toggle für Widerruf (Apple 5.1.1(i)).
+            Section {
+                Toggle(isOn: Binding(
+                    get: { auth.aiConsented == true },
+                    set: { newVal in Task { await auth.setAiConsent(newVal) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("KI-Verarbeitung erlaubt")
+                        if let info = auth.aiProviderInfo, info.enabled {
+                            Text("Provider: \(info.provider)\(info.model.map { " · \($0)" } ?? "")")
+                                .font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            Text("Auf dieser Instanz ist KI nicht aktiviert.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("KI-Nutzung")
+            } footer: {
+                Text("Erforderlich für Chat mit Dateien, semantische Suche und intelligente Zusammenfassungen. Widerrufen deaktiviert diese Funktionen sofort. Details in der Datenschutzerklärung.")
+            }
+
             Section("Sicherheit") {
                 NavigationLink { TwoFactorSetupView() } label: {
                     Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield")

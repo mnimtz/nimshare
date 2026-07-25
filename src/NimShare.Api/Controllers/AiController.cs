@@ -64,6 +64,9 @@ public class AiController : ControllerBase
         CancellationToken ct)
     {
         var me = await users.GetOrProvisionAsync(User, ct);
+        // v1.10.165: Apple-5.1.1(i) — Server-Enforcement, damit ein modifizierter
+        // Client oder curl den iOS-Consent-Dialog nicht umgehen kann.
+        if (AiConsentGuard.RequireOrReject(this, me) is IActionResult noConsent) return noConsent;
         var firstName = (me.DisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? me.DisplayName ?? "";
         var now = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, time.DisplayZone);
         var hour = now.Hour;
@@ -400,11 +403,14 @@ public class AiController : ControllerBase
     [HttpPost("draft-email")]
     public async Task<IActionResult> DraftEmail([FromBody] DraftReq req, [FromServices] ICurrentUserService users, CancellationToken ct)
     {
+        var me = await users.GetOrProvisionAsync(User, ct);
+        // v1.10.165: Apple-5.1.1(i) — Draft-Email schickt Dateiname + Kontext
+        // an den Provider.
+        if (AiConsentGuard.RequireOrReject(this, me) is IActionResult noConsent) return noConsent;
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableDraftedShareEmails || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "AI-drafted emails are disabled.");
 
-        var me = await users.GetOrProvisionAsync(User, ct);
         var link = await _db.ShareLinks.Include(l => l.File)
             .SingleOrDefaultAsync(l => l.Id == req.LinkId && l.OwnerId == me.Id, ct);
         if (link is null || link.File is null) return NotFound();
@@ -455,11 +461,13 @@ public class AiController : ControllerBase
         [FromServices] ILogger<AiController> log,
         CancellationToken ct)
     {
+        var me = await users.GetOrProvisionAsync(User, ct);
+        // v1.10.165: Apple-5.1.1(i).
+        if (AiConsentGuard.RequireOrReject(this, me) is IActionResult noConsent) return noConsent;
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableDraftedShareEmails || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "AI-drafted emails are disabled.");
 
-        var me = await users.GetOrProvisionAsync(User, ct);
         var lang = string.IsNullOrWhiteSpace(req.Locale)
             ? (string.IsNullOrWhiteSpace(me.PreferredCulture) ? "en" : me.PreferredCulture)
             : req.Locale;
@@ -624,11 +632,14 @@ public class AiController : ControllerBase
     public async Task<IActionResult> Search([FromBody] SearchReq req,
         [FromServices] ICurrentUserService users, [FromServices] IFileAccessService access, CancellationToken ct)
     {
+        var me = await users.GetOrProvisionAsync(User, ct);
+        // v1.10.165: Apple-5.1.1(i) — semantische Suche schickt die Query zum
+        // Embedding-Provider, also Consent-pflichtig.
+        if (AiConsentGuard.RequireOrReject(this, me) is IActionResult noConsent) return noConsent;
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableSemanticSearch || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "Semantic search is disabled.");
         if (string.IsNullOrWhiteSpace(req.Query)) return BadRequest();
-        var me = await users.GetOrProvisionAsync(User, ct);
         var (ok, hits, err) = await RetrieveHitsAsync(req, me, access, ct);
         if (!ok) return err!;
         return Ok(hits);
@@ -760,6 +771,8 @@ public class AiController : ControllerBase
     public async Task<IActionResult> Chat([FromBody] ChatReq req,
         [FromServices] ICurrentUserService users, [FromServices] IFileAccessService access, CancellationToken ct)
     {
+        var meChat = await users.GetOrProvisionAsync(User, ct);
+        if (AiConsentGuard.RequireOrReject(this, meChat) is IActionResult noConsent) return noConsent;
         var settings = await _ai.LoadAsync(ct);
         if (!settings.EnableChatWithFiles || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "Chat mit Dateien ist deaktiviert.",

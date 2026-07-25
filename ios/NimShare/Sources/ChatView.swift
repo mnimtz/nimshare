@@ -15,6 +15,9 @@ struct ChatView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var previewFileItem: FileItem?
+    // v1.10.165: AI-Consent-Sheet (Apple 5.1.1(i))
+    @State private var showAiConsent = false
+    @State private var pendingQuestion: String?
     // v1.10.66: expliziter FocusState damit "Fertig"-Toolbar-Button
     // die Tastatur zuverlässig einklappt. Marcus's Bug: aus dem Chat
     // kam man nur raus indem man die App neu startet — die Tastatur
@@ -102,6 +105,18 @@ struct ChatView: View {
         .sheet(item: $previewFileItem) { f in
             NavigationStack { FilePreviewView(file: f) }
         }
+        // v1.10.165: AI-Consent-Gate (Apple 5.1.1(i))
+        .sheet(isPresented: $showAiConsent) {
+            AiConsentSheet(onDecided: { granted in
+                if granted, let q = pendingQuestion {
+                    pendingQuestion = nil
+                    input = q
+                    Task { await send() }
+                } else {
+                    pendingQuestion = nil
+                }
+            })
+        }
     }
 
     private var emptyState: some View {
@@ -155,6 +170,13 @@ struct ChatView: View {
         guard let api = auth.api else { return }
         let q = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if q.isEmpty { return }
+        // v1.10.165: Apple-5.1.1(i)-Gate — vor dem allerersten AI-Aufruf muss
+        // der User dem Datentransfer an den Provider zustimmen.
+        if !auth.aiReady {
+            pendingQuestion = q
+            showAiConsent = true
+            return
+        }
         input = ""
         messages.append(.init(role: .user, text: q, citations: []))
         busy = true; error = nil
@@ -167,3 +189,5 @@ struct ChatView: View {
         } catch let ex { error = ex.localizedDescription }
     }
 }
+
+private extension ChatView { /* keep ChatView namespaced */ }

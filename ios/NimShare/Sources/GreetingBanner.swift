@@ -103,6 +103,18 @@ struct GreetingBanner: View {
 
     private func load(lat: Double?, lon: Double?) async {
         guard let api = auth.api else { return }
+        // v1.10.165: KI-Begrüssung ist ein AI-Feature (Prompt basiert auf User-
+        // Name + Uhrzeit + optional Ort). Ohne Consent den Fallback zeigen,
+        // KEIN modales Sheet aufziehen — der Banner ist beim App-Start
+        // sichtbar, ein sofortiges Modal wäre übergriffig. Der User erlebt
+        // das Consent-Sheet beim ersten aktiv-getriggerten Feature (Chat,
+        // Suche).
+        if !auth.aiReady {
+            // Generischer Fallback statt AI-generierter Text.
+            salutation = "Hallo"
+            message = ""
+            return
+        }
         loading = true; defer { loading = false }
         do {
             let g = try await api.greeting(lat: lat, lon: lon)

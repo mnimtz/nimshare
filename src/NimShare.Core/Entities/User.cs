@@ -75,6 +75,12 @@ public class User
     /// aktualisiert wird, wird dies NUR beim tatsächlichen Login gesetzt.</summary>
     public DateTimeOffset? LastLoginAt { get; set; }
 
+    // v1.10.165: expliziter First-Use-Consent für AI-Verarbeitung (Apple 5.1.1(i)).
+    // Vor dem ersten AI-Feature-Aufruf muss der User zustimmen, dass sein Prompt
+    // + relevante Datei-Ausschnitte an den vom Betreiber konfigurierten AI-Provider
+    // gesendet werden. Widerrufbar in Profil-Einstellungen.
+    public DateTimeOffset? AiConsentedAt { get; set; }
+
     public ICollection<StorageFile> Files { get; set; } = new List<StorageFile>();
     public ICollection<ShareLink> ShareLinks { get; set; } = new List<ShareLink>();
     public ICollection<UploadRequestLink> UploadRequests { get; set; } = new List<UploadRequestLink>();

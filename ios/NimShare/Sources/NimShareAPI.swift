@@ -342,6 +342,43 @@ final class NimShareAPI: ObservableObject {
         return try decode(ChatResponseDto.self, data)
     }
 
+    // MARK: - AI Consent (Apple 5.1.1(i))
+    // v1.10.165: iOS holt sich Provider-Info + User-Consent-State, damit der
+    // First-Use-Dialog konkret sagen kann wer der Empfänger ist, und der
+    // Consent server-seitig persistiert wird.
+    struct AiProviderInfo: Codable {
+        let provider: String
+        let model: String?
+        let endpointHint: String?
+        let chatWithFilesEnabled: Bool
+        let autoSummaryEnabled: Bool
+        let visionEnabled: Bool
+        let ocrEnabled: Bool
+        let enabled: Bool
+    }
+    struct AiConsentDto: Codable {
+        let consented: Bool
+        let consentedAt: Date?
+    }
+    struct SetAiConsentBody: Codable { let consented: Bool }
+
+    func aiProviderInfo() async throws -> AiProviderInfo {
+        let req = request("GET", "api/v1/ai/provider-info")
+        let (data, _) = try await perform(req)
+        return try decode(AiProviderInfo.self, data)
+    }
+    func aiConsent() async throws -> AiConsentDto {
+        let req = request("GET", "api/v1/me/ai-consent")
+        let (data, _) = try await perform(req)
+        return try decode(AiConsentDto.self, data)
+    }
+    func setAiConsent(_ granted: Bool) async throws -> AiConsentDto {
+        let body = try Self.jsonEncoder.encode(SetAiConsentBody(consented: granted))
+        let req = request("PUT", "api/v1/me/ai-consent", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(AiConsentDto.self, data)
+    }
+
     // MARK: - Trash
 
     func listTrash() async throws -> [TrashItemDto] {
