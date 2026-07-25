@@ -208,6 +208,10 @@ public class ShareController : Controller
     // wird validiert & auf 60 Zeichen begrenzt.
     public record BeaconTz(string Timezone);
 
+    // v1.10.175: Rate-Limit ausnehmen — der Beacon feuert einmal pro Landing
+    // + zählt gegen den 30-Requests-Bucket. Wenn die Landing selbst 44 Thumbs
+    // triggert, ist der User nach 1 Reload gebannt.
+    [DisableRateLimiting]
     [HttpPost("{slug}/beacon")]
     public async Task<IActionResult> Beacon(string slug, [FromBody] BeaconTz body, CancellationToken ct)
     {
@@ -221,6 +225,7 @@ public class ShareController : Controller
     // v1.10.153: Public download des Absender-Zertifikats (Stufe 1). Der
     // Empfänger klickt auf der Landing „Zertifikat herunterladen" und
     // vergleicht Fingerprint bzw. importiert es in seinen Trust-Store.
+    [DisableRateLimiting]  // v1.10.175: harmloser CER-Download, kein Missbrauchsrisiko
     [HttpGet("{slug}/signer-cert.cer")]
     public async Task<IActionResult> SignerCert(string slug, [FromServices] ISignerCertReader reader, CancellationToken ct)
     {
@@ -238,6 +243,7 @@ public class ShareController : Controller
         return string.IsNullOrEmpty(cleaned) ? "signer" : cleaned;
     }
 
+    [DisableRateLimiting]  // v1.10.175: Bild/Video-Preview per SAS-Redirect, kein Missbrauchsrisiko
     [HttpGet("{slug}/preview")]
     public async Task<IActionResult> Preview(string slug, CancellationToken ct)
     {
@@ -405,6 +411,7 @@ public class ShareController : Controller
     // Preview-Redirect für einzelne Fotos/Videos aus dem Album. Analog zum
     // File-Landing-Preview, aber mit expliziter fileId + Folder-Match, damit
     // niemand einen fremden File-Guid über einen Album-Link durchreichen kann.
+    [DisableRateLimiting]  // v1.10.175: bei einem 44-Foto-Album 44 Requests, sonst instant-429
     [HttpGet("{slug}/media/{fileId:guid}")]
     public async Task<IActionResult> GalleryMedia(string slug, Guid fileId,
         [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)

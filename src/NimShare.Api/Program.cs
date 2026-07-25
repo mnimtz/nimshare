@@ -288,13 +288,20 @@ builder.Services.AddRazorPages()
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
-    // 30 hits per minute per IP for public share/upload landings.
+    // v1.10.175: 240 hits/min/IP. Vorher waren es 30 — das reichte nicht mal
+    // für eine Album-Landing mit vielen Fotos, weil jede Grid-Kachel ein
+    // /media/-GET triggert (44 Fotos = 44 Requests + Landing + Beacon = 46).
+    // Beim Reload → sofort >30 → 429 für den User, obwohl er nichts falsch
+    // gemacht hat. 240/min gibt Kapazität für ~50 Album-Kacheln × 4 Reloads
+    // pro Minute pro Client. Missbrauch (Slug-Brute-Force o.ä.) wird trotzdem
+    // begrenzt — 4/s im Mittel sind für einen menschlichen User locker, für
+    // einen Scanner deutlich zu wenig.
     o.AddPolicy("public-share", ctx =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
             factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
             {
-                PermitLimit = 30,
+                PermitLimit = 240,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
