@@ -70,17 +70,17 @@ public class ThumbnailService : IThumbnailService
 
     public bool IsAllowedSize(int size) => AllowedSizes.Contains(size);
 
-    // v1.10.178 Kill-Switch. Magick.NET-Native-Lib hängt on-load im Linux-
-    // Container (App Service, publish/AnyCPU + fehlendes Runtime-Pack). Statt
-    // wie in v1.10.177 den Thread-Pool zuzumachen, geben wir hier sofort null
-    // zurück → Endpoint 404 → Client-Fallback (v1.10.170 Kamera-Placeholder)
-    // greift ohne Verzögerung. Feature bleibt bis der Native-Lib-Fix da ist.
-    private static readonly bool _disabled = true;
+    // v1.10.179: Kill-Switch wieder aus. Die tatsächliche Ursache für v1.10.177
+    // war NICHT Magick.NET Native-Lib, sondern SNAT-Port-Exhaustion durch das
+    // als Scoped registrierte BlobStorageService — das ist jetzt Singleton
+    // (Program.cs). Zusätzlich neue Semantik: Cache-Miss → sofort null, kein
+    // inline-Convert mehr. GalleryThumb liefert dann 404 → Client-Fallback
+    // (v1.10.170 Kamera-Placeholder). Warmup läuft im Hintergrund; beim
+    // nächsten Reload greift der Cache-Hit → 302-Redirect ohne CPU.
 
     public async Task<Uri?> GetOrCreateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
         int size, CancellationToken ct = default)
     {
-        if (_disabled) return null;
         if (!IsImage(sourceContentType)) return null;
         if (!IsAllowedSize(size)) return null;
         if (string.IsNullOrEmpty(sourceBlobPath)) return null;
@@ -89,21 +89,43 @@ public class ThumbnailService : IThumbnailService
         if (await _blobs.ExistsAsync(cachePath, ct))
             return _blobs.CreateInlineSas(cachePath, "image/jpeg", TimeSpan.FromMinutes(10));
 
-        // Slot mit knappem Timeout — kein zweiter Endpunkt darf hängen wenn
-        // eine Konvertierung stecken bleibt (Native-Lib-Hang o.ä.). 30s ist
-        // grosszügig für iPhone-HEIC-Decodes, kurz genug um Thread-Pool-
-        // Suffocation zu vermeiden.
-        if (!await _slot.WaitAsync(TimeSpan.FromSeconds(30), ct))
-        {
-            _log.LogWarning("Thumb slot timeout for {File}", sourceBlobPath);
-            return null;
-        }
+        // v1.10.179: KEIN inline-Convert mehr im GET-Pfad. Der HTTP-Handler
+        // hat den falschen Ort dafür — 44 Cache-Misses × ~500 ms HEIC-Decode
+        // durch einen 4er-Slot serialisieren die Landing minutenlang. Statt-
+        // dessen: 404 zurückgeben → Client zeigt sofort den v1.10.170-
+        // Fallback → parallel Warmup im Hintergrund → nächster Reload ist
+        // Cache-Hit + instant. Aufrufer (GalleryThumb) darf hier direkt
+        // WarmupAsync fire-and-forgetten.
+        return null;
+    }
+
+    /// <summary>
+    /// v1.10.179: Erzeugt den Thumb blockierend (nur im Warmup-Pfad genutzt).
+    /// Nicht direkt vom Request-Handler aufrufen — den Client interessiert
+    /// nach 404 nicht mehr, was hier passiert.
+    /// </summary>
+    private async Task GenerateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
+        int size, CancellationToken ct)
+    {
+        if (!IsImage(sourceContentType)) return;
+        if (!IsAllowedSize(size)) return;
+        if (string.IsNullOrEmpty(sourceBlobPath)) return;
+        var cachePath = $"{CachePrefix}{fileId:N}/{size}.jpg";
+        if (await _blobs.ExistsAsync(cachePath, ct)) return;
+
+        // v1.10.179: Semaphore-Leak-Fix — nur releasen wenn wir den Slot
+        // tatsächlich bekommen haben. Bei Cancellation wirft WaitAsync ohne
+        // Acquire, der frühere finally-Block hat dann über-relaesed.
+        bool acquired = false;
         try
         {
-            // Doppelt geprüft: zwischen erstem Check und Slot-Acquire könnte
-            // ein anderer Request schon konvertiert haben.
-            if (await _blobs.ExistsAsync(cachePath, ct))
-                return _blobs.CreateInlineSas(cachePath, "image/jpeg", TimeSpan.FromMinutes(10));
+            if (!await _slot.WaitAsync(TimeSpan.FromSeconds(30), ct))
+            {
+                _log.LogWarning("Thumb slot timeout for {File}", sourceBlobPath);
+                return;
+            }
+            acquired = true;
+            if (await _blobs.ExistsAsync(cachePath, ct)) return;
 
             using var srcMs = new MemoryStream();
             await _blobs.DownloadToAsync(sourceBlobPath, srcMs, ct);
@@ -127,16 +149,15 @@ public class ThumbnailService : IThumbnailService
             {
                 _log.LogWarning(ex, "Thumbnail conversion failed for {File} (ct={Ct})",
                     sourceBlobPath, sourceContentType);
-                return null;
+                return;
             }
 
             outMs.Position = 0;
             await _blobs.UploadFromStreamAsync(cachePath, outMs, "image/jpeg", ct);
-            return _blobs.CreateInlineSas(cachePath, "image/jpeg", TimeSpan.FromMinutes(10));
         }
         finally
         {
-            _slot.Release();
+            if (acquired) _slot.Release();
         }
     }
 
@@ -145,7 +166,7 @@ public class ThumbnailService : IThumbnailService
     {
         try
         {
-            await GetOrCreateAsync(fileId, sourceBlobPath, sourceContentType, size, ct);
+            await GenerateAsync(fileId, sourceBlobPath, sourceContentType, size, ct);
         }
         catch (Exception ex)
         {

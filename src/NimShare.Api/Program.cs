@@ -319,7 +319,14 @@ builder.Services.AddSwaggerGen(c =>
 
 // ── App services ───────────────────────────────────────────────────────────
 builder.Services.AddScoped<IDbMigrationService, DbMigrationService>();
-builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+// v1.10.179: BlobStorageService MUSS Singleton sein. Als Scoped kreiert jeder
+// Request einen neuen BlobServiceClient + HttpClient → Azure App Service Linux
+// hat 128 SNAT-Ports pro Instanz mit 240s idle-timeout → unter Last blockieren
+// neue Outbound-Calls stumm für Minuten. Marcus's v1.10.177-Regression („/browse
+// braucht 40-60s, Thumb-Kacheln bleiben ewig grau ohne Fehler") war exakt das.
+// BlobServiceClient ist thread-safe, BlobStorageService hat keinen mutierbaren
+// Instanz-Zustand — Singleton passt.
+builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
 builder.Services.AddSingleton<ITimeService, TimeService>();
 builder.Services.AddScoped<ISlugService, SlugService>();
 builder.Services.AddSingleton<IIpHashService, IpHashService>();
@@ -387,6 +394,8 @@ builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
 // gecacht im Blob unter `thumbs/{fileId:N}/{size}.jpg`. Concurrency intern
 // per statischer SemaphoreSlim(4).
 builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
+// v1.10.178: EXIF-GPS-Reader für die Album-Landing-Karte.
+builder.Services.AddScoped<IExifGpsReader, ExifGpsReader>();
 // v1.10.82: App-Store-Blocker — Account-Löschung + UGC-Moderation
 builder.Services.AddScoped<IUserDeletionService, UserDeletionService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
@@ -806,6 +815,10 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
         // v1.10.146: Optionales Absender-Zertifikat für Share- und Upload-Links.
         ("ShareLinks", "SigningCertificateId", "TEXT", "uniqueidentifier"),
         ("UploadRequests", "SigningCertificateId", "TEXT", "uniqueidentifier"),
+        // v1.10.178: EXIF-GPS-Koordinaten pro Foto für die Album-Landing-Karte.
+        // Beide nullable — Fotos ohne GPS bleiben leer, kein Backfill nötig.
+        ("Files", "Latitude", "REAL", "float"),
+        ("Files", "Longitude", "REAL", "float"),
     };
     foreach (var w in wanted)
     {

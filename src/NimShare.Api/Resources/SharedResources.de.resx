@@ -1465,6 +1465,8 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="landing.gallery.other_files"><value>Weitere Dateien</value></data>
   <data name="landing.gallery.lb.close"><value>Schließen</value></data>
   <data name="landing.gallery.lb.open_original"><value>Original öffnen</value></data>
+  <data name="landing.gallery.map.title"><value>Wo diese Fotos aufgenommen wurden</value></data>
+  <data name="landing.gallery.map.count"><value>{0} von {1} Fotos verortet</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Empfänger dürfen hochladen</value></data>
   <data name="share.gallery.display_label"><value>Als Foto/Video-Album anzeigen</value></data>
   <data name="share.gallery.display_hint"><value>Empfänger sehen eine schöne Foto/Video-Ansicht mit Vorschauen, Lightbox und Vollbild.</value></data>

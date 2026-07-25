@@ -1463,6 +1463,8 @@ Thanks for using NimShare.</value></data>
   <data name="landing.gallery.other_files"><value>Other files</value></data>
   <data name="landing.gallery.lb.close"><value>Close</value></data>
   <data name="landing.gallery.lb.open_original"><value>Open original</value></data>
+  <data name="landing.gallery.map.title"><value>Where these photos were taken</value></data>
+  <data name="landing.gallery.map.count"><value>{0} of {1} photos located</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Recipients may upload</value></data>
   <data name="share.gallery.display_label"><value>Show as photo/video album</value></data>
   <data name="share.gallery.display_hint"><value>Recipients see a rich photo/video view with thumbnails, lightbox and fullscreen.</value></data>

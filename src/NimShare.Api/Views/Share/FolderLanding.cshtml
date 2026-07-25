@@ -105,6 +105,70 @@
             </div>
         }
 
+        @* v1.10.178: Aufnahmeort-Karte oberhalb des Grids. Nur wenn ≥1 Foto
+           GPS-EXIF hat. fitBounds sorgt automatisch für den passenden Zoom
+           (NW+SO-Ecke der Fotos = Kartenrand — Marcus's „links, rechts,
+           oben, unten"-Regel). Leaflet ist self-hosted unter
+           /lib/leaflet/, OSM-Tiles direkt von tile.openstreetmap.org. *@
+        @if (Model.IsGallery && Model.GeoPoints is { Count: > 0 })
+        {
+            <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" />
+            <style>
+                .gal-map-card { margin-top:var(--sp-6); border:1px solid #0002; border-radius:12px; overflow:hidden; background:#f6f6f6; }
+                .gal-map-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; font-size:13px; color:#555; background:#fff; border-bottom:1px solid #0001; }
+                .gal-map-head b { color:#222; }
+                .gal-map { width:100%; height:340px; }
+                .gal-map .leaflet-container { background:#dfe7ef; }
+                @@media (max-width:640px) {
+                    .gal-map { height:240px; }
+                }
+                @@media (max-width:480px) {
+                    .gal-map-card { display:none; }
+                }
+            </style>
+            <div class="gal-map-card">
+                <div class="gal-map-head">
+                    <span><b>📍 @T["landing.gallery.map.title"]</b></span>
+                    <span class="muted">@string.Format(T["landing.gallery.map.count"].Value, Model.GeoPoints.Count, Model.Files.Count(f => IsImage(f.ContentType)))</span>
+                </div>
+                <div class="gal-map" id="galMap"></div>
+            </div>
+            <script src="~/lib/leaflet/leaflet.js"></script>
+            <script>
+            (function() {
+                var pts = @Html.Raw(Json.Serialize(Model.GeoPoints.Select(p => new object[] { p.Lat, p.Lon, p.Name })));
+                if (!pts || pts.length === 0) return;
+                // v1.10.178: Leaflet lädt marker-icons per relativem Pfad zum
+                // eigenen script-Ort — den kennen wir hier explizit, weil wir
+                // self-hosten. Overriden statt das kaputte Default zu haben.
+                L.Icon.Default.mergeOptions({
+                    iconUrl: '/lib/leaflet/images/marker-icon.png',
+                    iconRetinaUrl: '/lib/leaflet/images/marker-icon-2x.png',
+                    shadowUrl: '/lib/leaflet/images/marker-shadow.png'
+                });
+                var map = L.map('galMap', { scrollWheelZoom:false, zoomControl:true }).setView([0,0], 2);
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                }).addTo(map);
+                var latlngs = [];
+                pts.forEach(function(p) {
+                    var m = L.marker([p[0], p[1]]).addTo(map);
+                    if (p[2]) m.bindPopup(String(p[2]).replace(/[<>&"']/g, function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c];}));
+                    latlngs.push([p[0], p[1]]);
+                });
+                if (latlngs.length === 1) {
+                    map.setView(latlngs[0], 14);
+                } else {
+                    // fitBounds mit kleinem Padding, damit die Marker nicht am
+                    // Kartenrand kleben. Marcus's Regel: „links, rechts, oben,
+                    // unten" — Leaflet berechnet Zoom automatisch aus BBox.
+                    map.fitBounds(L.latLngBounds(latlngs), { padding:[24,24], maxZoom: 15 });
+                }
+            })();
+            </script>
+        }
+
         @if (Model.IsGallery)
         {
             @* ── Album-Grid ────────────────────────────────────────────────── *@

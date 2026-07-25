@@ -90,6 +90,14 @@ public class ShareController : Controller
             // and looked un-themed if no admin-global template existed).
             var folderTheme = await ResolveThemeAsync(folder.Scope,
                 folder.OwnerUserId ?? Guid.Empty, link.OwnerId, ct);
+            // v1.10.178: Aufnahmeorte für die Album-Landing-Karte. Nur Fotos
+            // mit EXIF-GPS werden aufgenommen; leere Liste = keine Karte.
+            var isGalleryView = link.DisplayAsGallery || folder.Kind == FolderKind.Gallery;
+            var geo = isGalleryView
+                ? files.Where(f => f.Latitude.HasValue && f.Longitude.HasValue)
+                       .Select(f => new FolderLandingGeoPoint(f.Id, f.Name, f.Latitude!.Value, f.Longitude!.Value))
+                       .ToList()
+                : null;
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
@@ -99,9 +107,10 @@ public class ShareController : Controller
                 // v1.10.167: Landing rendert Gallery, wenn der LINK das explizit
                 // setzt (Ersteller-Wahl beim Freigeben) ODER der Ordner Kind=
                 // Gallery ist. AllowUploads greift nur im Gallery-Modus.
-                IsGallery: link.DisplayAsGallery || folder.Kind == FolderKind.Gallery,
-                AllowUploads: link.AllowUploads && (link.DisplayAsGallery || folder.Kind == FolderKind.Gallery),
-                FolderId: folder.Id));
+                IsGallery: isGalleryView,
+                AllowUploads: link.AllowUploads && isGalleryView,
+                FolderId: folder.Id,
+                GeoPoints: geo));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -438,10 +447,12 @@ public class ShareController : Controller
     // Auth analog zu /media: nur folder-shares, Password-Gate hart geforbid'et
     // (in dem Fall zeigt die Landing eh keine Vorschauen, canPreview=false).
     // Videos → NotFound; die Kachel bleibt beim onerror-Fallback aus v1.10.170.
+    [DisableRateLimiting]  // v1.10.179: Album-Landing lädt N Thumbs parallel
     [HttpGet("{slug}/thumb/{fileId:guid}")]
     public async Task<IActionResult> GalleryThumb(string slug, Guid fileId, [FromQuery] int size,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+        [FromServices] IThumbnailService thumbs,
+        [FromServices] IServiceScopeFactory scopes, CancellationToken ct)
     {
         if (size <= 0) size = 400;
         if (!thumbs.IsAllowedSize(size)) return NotFound();
@@ -454,7 +465,27 @@ public class ShareController : Controller
             f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
         if (file is null) return NotFound();
         var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
-        if (url is null) return NotFound();
+        if (url is null)
+        {
+            // v1.10.179: Cache-Miss → 404 sofort + Warmup im Hintergrund. Der
+            // Client zeigt den v1.10.170-Fallback (Kamera-Icon-Kachel) und beim
+            // nächsten Reload liefert der Cache-Hit die echte Vorschau. So bleibt
+            // der GET-Handler schnell und der Thread-Pool frei.
+            var fid = file.Id;
+            var path = file.BlobPath;
+            var ctype = file.ContentType ?? "";
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    var t = scope.ServiceProvider.GetRequiredService<IThumbnailService>();
+                    await t.WarmupAsync(fid, path, ctype, size, CancellationToken.None);
+                }
+                catch { /* swallow — best effort */ }
+            });
+            return NotFound();
+        }
         // Der 302 selbst darf nur kurz gecacht werden, weil die SAS-URL nach
         // 10 Minuten abläuft — sonst würden Browser den 302 aus dem Cache auf
         // eine tote SAS auflösen. Die dahinterliegende SAS-Antwort (Azure Blob)
@@ -530,6 +561,7 @@ public class ShareController : Controller
     public async Task<IActionResult> GalleryUploadComplete(string slug, Guid fileId,
         [FromBody] GalleryUploadCompleteReq? req,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IExifGpsReader exif,
         [FromServices] IServiceScopeFactory scopeFactory, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
@@ -556,6 +588,19 @@ public class ShareController : Controller
         file.ContentType = probe.ContentType!;
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
+        // v1.10.178: EXIF-GPS für die Album-Landing-Karte. Nur Bilder — Videos
+        // haben zwar auch GPS-Metadaten (mov/mp4 QuickTime), aber der Reader
+        // ist auf Foto-EXIF ausgelegt. Fehler bleiben lautlos: keine Koords,
+        // Foto taucht in der Karte einfach nicht auf.
+        if (probeCt.StartsWith("image/"))
+        {
+            var gps = await exif.TryReadAsync(file.BlobPath, file.ContentType ?? "", ct);
+            if (gps is not null)
+            {
+                file.Latitude = gps.Value.Lat;
+                file.Longitude = gps.Value.Lon;
+            }
+        }
         await db.SaveChangesAsync(ct);
         await _notify.NotifyGalleryUploadAsync(link, file, ct);
         // v1.10.174: Thumbnail asynchron vorwärmen — Grid-Kachel ist beim
@@ -609,8 +654,13 @@ public record FolderLandingViewModel(
     // (nur wenn Gallery) → Upload-Widget für Besucher.
     bool IsGallery = false,
     bool AllowUploads = false,
-    Guid? FolderId = null);
+    Guid? FolderId = null,
+    // v1.10.178: Aufnahmeort-Koordinaten für die Album-Landing-Karte. Leer =
+    // keine Karte rendern. Reihenfolge egal, fitBounds baut aus NW+SO die
+    // Ansicht auf.
+    List<FolderLandingGeoPoint>? GeoPoints = null);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
+public record FolderLandingGeoPoint(Guid Id, string Name, double Lat, double Lon);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,
 /// UserPersonal for Personal files) passed to the download landing view. Nullable

@@ -103,6 +103,14 @@ public class StorageFile
 
     public StorageFileStatus Status { get; set; } = StorageFileStatus.Pending;
 
+    // v1.10.178: EXIF-GPS-Koordinaten des Aufnahmeorts. Nur befüllt für Fotos,
+    // deren EXIF-Header GPSLatitude/Longitude enthält (iPhone-HEIC/JPEG). Wird
+    // beim Upload-Complete einmalig aus dem Blob extrahiert. Album-Landing
+    // rendert daraus eine OSM/Leaflet-Karte oberhalb des Grids — fitBounds
+    // sorgt automatisch für passenden Zoom (NW+SO-Ecke der Fotos).
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ReadyAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }

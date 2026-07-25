@@ -108,6 +108,7 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai,
         [FromServices] IWebhookDispatcher hooks,
         [FromServices] IActivityLogger activity,
+        [FromServices] IExifGpsReader exif,
         CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
@@ -121,6 +122,19 @@ public class FilesController : ControllerBase
         if (!string.IsNullOrEmpty(probe.ContentType)) file.ContentType = probe.ContentType!;
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
+
+        // v1.10.178: EXIF-GPS für die Album-Landing-Karte. Fire-and-forget:
+        // im Fehlerfall bleiben Lat/Lon null und die Karte rendert das Foto
+        // einfach nicht. Nur für Bilder — Videos/Docs überspringen wir hier.
+        if ((file.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            var gps = await exif.TryReadAsync(file.BlobPath, file.ContentType ?? "", ct);
+            if (gps is not null)
+            {
+                file.Latitude = gps.Value.Lat;
+                file.Longitude = gps.Value.Lon;
+            }
+        }
         await _db.SaveChangesAsync(ct);
 
         // Fire-and-forget AI post-processing (tags, risk flag, embedding) when
