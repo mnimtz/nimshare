@@ -61,7 +61,9 @@ public class ShareController : Controller
 
     [HttpGet("{slug}")]
     public async Task<IActionResult> Landing(string slug, [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IFolderService folderSvc, CancellationToken ct)
+        [FromServices] IFolderService folderSvc,
+        [FromServices] IThumbnailService thumbs,
+        [FromServices] IAlbumZipCache zipCache, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null) return View("NotFound");
@@ -98,6 +100,23 @@ public class ShareController : Controller
                        .Select(f => new FolderLandingGeoPoint(f.Id, f.Name, f.Latitude!.Value, f.Longitude!.Value))
                        .ToList()
                 : null;
+
+            // v1.10.186: retroaktives Cache-Warmup für alte Links, die vor
+            // v1.10.181/183 erstellt wurden (kein Pre-Warm bei Link-Create).
+            // Bei jedem Landing-Aufruf im Hintergrund die kompletten Assets
+            // aufbauen; Dedup verhindert Doppel-Läufe wenn 50 Empfänger
+            // gleichzeitig klicken. Nur bei Gallery-Modus (Grid+Lightbox
+            // erwarten Thumbs) und für den ZIP-Download.
+            if (isGalleryView)
+            {
+                foreach (var f in files.Where(f => f.Status == StorageFileStatus.Ready
+                    && (f.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
+                {
+                    _ = thumbs.WarmupAsync(f.Id, f.BlobPath, f.ContentType ?? "", 400, CancellationToken.None);
+                    _ = thumbs.WarmupAsync(f.Id, f.BlobPath, f.ContentType ?? "", 1600, CancellationToken.None);
+                }
+            }
+            _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
