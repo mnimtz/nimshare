@@ -411,9 +411,39 @@ enum ApiError: LocalizedError {
         switch self {
         case .notAuthorized: return NSLocalizedString("Not signed in.", comment: "")
         case .notFound: return NSLocalizedString("Not found.", comment: "")
-        case .http(let code, let body): return "HTTP \(code)\(body.map { ": \($0)" } ?? "")"
+        case .http(let code, let body): return Self.humanizeHttp(code: code, body: body)
         case .decoding(let msg): return "Decoding failed: \(msg)"
         case .network(let msg): return msg
         }
+    }
+
+    // v1.10.174: Server-Response-Bodies können bei Azure App Service während
+    // eines Container-Restarts riesige HTML-Fehlerseiten sein („Web App -
+    // Unavailable" o.ä.). Die dem User als Roh-HTML zu zeigen ist grausam.
+    // Wir erkennen HTML-Bodies + Standard-Status-Codes und geben statt dessen
+    // freundliche, lokalisierte Kurzmeldungen zurück.
+    private static func humanizeHttp(code: Int, body: String?) -> String {
+        let raw = (body ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let isHtml = raw.hasPrefix("<!DOCTYPE") || raw.hasPrefix("<html") || raw.contains("<title>")
+        // Speziell: Azure/App-Service-„stopped/unavailable"-Seiten haben
+        // markante Titel + kommen als 403/503/500 zurück.
+        if isHtml && (raw.contains("web app is stopped") || raw.contains("Web App - Unavailable") || raw.contains("Unavailable")) {
+            return NSLocalizedString(
+                "Server wird gerade aktualisiert. Bitte einen Moment warten und erneut versuchen.",
+                comment: "shown when Azure App Service is mid-restart")
+        }
+        // Andere HTML-Bodies: HTML unterdrücken, generische Status-Meldung.
+        if isHtml {
+            switch code {
+            case 401, 403: return NSLocalizedString("Zugriff verweigert.", comment: "")
+            case 404: return NSLocalizedString("Nicht gefunden.", comment: "")
+            case 500...599: return NSLocalizedString("Server-Fehler (\(code)). Bitte erneut versuchen.", comment: "")
+            default: return NSLocalizedString("Server nicht erreichbar (\(code)).", comment: "")
+            }
+        }
+        // JSON/Plaintext-Bodies: Länge begrenzen (kein 5-KB-Trümmerfeld in
+        // einem SwiftUI-Text) — die ersten 400 Zeichen reichen.
+        let short = raw.count > 400 ? String(raw.prefix(400)) + "…" : raw
+        return "HTTP \(code)" + (short.isEmpty ? "" : ": \(short)")
     }
 }
