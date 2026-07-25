@@ -75,6 +75,12 @@
     <PackageReference Include="PdfPig" Version="0.1.9" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+
+    <!-- v1.10.174: HEIC/JPEG-Thumbnail-Generierung (Server-side, damit
+         Chrome/Firefox iPhone-Fotos anzeigen können). Magick.NET zieht
+         das native ImageMagick + libheif via Runtime-Pack rein — läuft
+         im Docker-Container auf Linux ohne extra apt-get. -->
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
   </ItemGroup>
 
 </Project>

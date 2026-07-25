@@ -421,6 +421,42 @@ public class ShareController : Controller
         return Redirect(sas.ToString());
     }
 
+    // v1.10.174: Server-side Thumbnail für Album-Grid. Konvertiert HEIC (für
+    // Chrome/Firefox, die HEIC nicht rendern) und verkleinert übergroße
+    // Originalfotos, damit die Landing nicht 44 × 8-MB-Bilder herunterlädt.
+    // Ergebnis wird im Blob unter `thumbs/{fileId:N}/{size}.jpg` gecacht;
+    // ab dem zweiten Request geht die Byte-Kette direkt Blob → Client
+    // (SAS-Redirect, App-Instanz sieht das Bild nicht mehr).
+    //
+    // Auth analog zu /media: nur folder-shares, Password-Gate hart geforbid'et
+    // (in dem Fall zeigt die Landing eh keine Vorschauen, canPreview=false).
+    // Videos → NotFound; die Kachel bleibt beim onerror-Fallback aus v1.10.170.
+    [HttpGet("{slug}/thumb/{fileId:guid}")]
+    public async Task<IActionResult> GalleryThumb(string slug, Guid fileId, [FromQuery] int size,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+    {
+        if (size <= 0) size = 400;
+        if (!thumbs.IsAllowedSize(size)) return NotFound();
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null) return NotFound();
+        if (link.PasswordHash is not null) return Forbid();
+        var now = DateTimeOffset.UtcNow;
+        if (!link.IsActive(now)) return NotFound();
+        var file = await db.Files.SingleOrDefaultAsync(
+            f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null) return NotFound();
+        var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
+        if (url is null) return NotFound();
+        // Der 302 selbst darf nur kurz gecacht werden, weil die SAS-URL nach
+        // 10 Minuten abläuft — sonst würden Browser den 302 aus dem Cache auf
+        // eine tote SAS auflösen. Die dahinterliegende SAS-Antwort (Azure Blob)
+        // ist immutable und darf dagegen lange gecacht werden — das regelt
+        // Azure per Blob-Metadaten (nicht dieser Response).
+        Response.Headers["Cache-Control"] = "private, max-age=300";
+        return Redirect(url.ToString());
+    }
+
     // Gallery-Upload — nur für Album-Links mit AllowUploads=true. Legt einen
     // StorageFile-Pending an, gibt eine SAS-UploadUrl zurück, und ein Complete-
     // Endpoint stampt danach den Blob als Ready. Kein Auth nötig (öffentlicher
@@ -486,7 +522,8 @@ public class ShareController : Controller
     [HttpPost("{slug}/gallery-upload/{fileId:guid}/complete")]
     public async Task<IActionResult> GalleryUploadComplete(string slug, Guid fileId,
         [FromBody] GalleryUploadCompleteReq? req,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IServiceScopeFactory scopeFactory, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
@@ -514,6 +551,21 @@ public class ShareController : Controller
         file.ReadyAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         await _notify.NotifyGalleryUploadAsync(link, file, ct);
+        // v1.10.174: Thumbnail asynchron vorwärmen — Grid-Kachel ist beim
+        // ersten Landing-Reload sofort da, statt zu warten bis der erste
+        // Viewer die Konvertierung triggert. Neuer DI-Scope, weil der
+        // Request-Scope beim Return des Handlers disposed wird
+        // (ThumbnailService + BlobStorageService sind Scoped).
+        {
+            var fid = file.Id; var path = file.BlobPath; var ctype = file.ContentType ?? "";
+            _ = Task.Run(async () =>
+            {
+                using var scope = scopeFactory.CreateScope();
+                var t = scope.ServiceProvider.GetRequiredService<IThumbnailService>();
+                if (!t.IsImage(ctype)) return;
+                await t.WarmupAsync(fid, path, ctype, 400, CancellationToken.None);
+            });
+        }
         return Ok(new { id = file.Id, name = file.Name });
     }
 
