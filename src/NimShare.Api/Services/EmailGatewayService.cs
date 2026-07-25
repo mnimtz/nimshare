@@ -232,6 +232,15 @@ public class GatewayBackedNotificationService : INotificationService
         catch (Exception ex) { _log.LogWarning(ex, "notify upload failed"); }
     }
 
+    public async Task NotifyGalleryUploadAsync(ShareLink link, StorageFile file, CancellationToken ct = default)
+    {
+        if (!link.NotifyOnAccess) return;
+        var subject = $"[NimShare] Neues Album-Foto: {file.Name}";
+        var body = $"Hallo {link.Owner.DisplayName},\n\nein Besucher hat gerade eine Datei in dein Album hochgeladen:\n\n- Datei: {file.Name}\n- Album-Link: /s/{link.Slug}\n- Zeit (UTC): {DateTimeOffset.UtcNow:u}\n\n— NimShare";
+        try { await _gateway.SendAsync(link.Owner.Email, subject, body, ct); }
+        catch (Exception ex) { _log.LogWarning(ex, "notify gallery upload failed"); }
+    }
+
     public async Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default)
     {
         try

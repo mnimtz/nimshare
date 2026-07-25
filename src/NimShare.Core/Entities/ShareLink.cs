@@ -83,6 +83,14 @@ public class ShareLink
     /// </summary>
     public bool AllowUploads { get; set; }
 
+    /// <summary>
+    /// v1.10.167 — Anzeige-Modus des Links. Wenn true, rendert die Landing das
+    /// Grid+Lightbox-Album statt der klassischen Datei-Liste. Unabhängig vom
+    /// Folder.Kind — der Ersteller wählt das per Link, Ordner bleibt neutral.
+    /// Für File-Links wird der Wert ignoriert.
+    /// </summary>
+    public bool DisplayAsGallery { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

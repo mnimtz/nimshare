@@ -16,13 +16,24 @@
         while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
         return $"{v:0.##} {u[i]}";
     }
+    // v1.10.167: Gallery-Modus. Bilder + Videos werden aus der klassischen
+    // Liste in ein Grid+Lightbox gelöst; andere Dateitypen (Docs, ZIPs,
+    // Audio) landen in einer schlanken „weitere Dateien"-Zeile darunter.
+    bool IsMedia(string? ct) => (ct ?? "").StartsWith("image/") || (ct ?? "").StartsWith("video/");
+    bool IsImage(string? ct) => (ct ?? "").StartsWith("image/");
+    var mediaFiles = Model.IsGallery ? Model.Files.Where(f => IsMedia(f.ContentType)).ToList() : new List<NimShare.Api.Controllers.FolderLandingFile>();
+    var otherFiles = Model.IsGallery ? Model.Files.Where(f => !IsMedia(f.ContentType)).ToList() : Model.Files;
+    // Passwort-geschützte Links dürfen aktuell keine Preview-Endpoints nutzen
+    // (ShareController.GalleryMedia forbid'et). Dann zeigen wir Kacheln ohne
+    // Thumbnail, mit Filename + Download-Button — Album-Metaphor bleibt erhalten.
+    var canPreview = !Model.HasPassword;
 }
 @if (!string.IsNullOrEmpty(theme?.HeroUrl))
 {
     <div style="height:180px;background:@accent url('@theme.HeroUrl') center/cover;margin-bottom:-40px"></div>
 }
 <div class="landing-shell">
-    <div class="landing-card" style="max-width:720px;position:relative;border-top:4px solid @accent">
+    <div class="landing-card" style="max-width:@(Model.IsGallery ? "1120px" : "720px");position:relative;border-top:4px solid @accent">
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
@@ -39,18 +50,31 @@
             }
             <small>@T["landing.shared_by"] @Model.OwnerName</small>
         </div>
-        @* v1.10.146/153: Absender-Zertifikat-Badge — teilt Partial mit Landing.cshtml. *@
+        @* v1.10.146/153: Absender-Zertifikat-Badge — teilt Partial mit den Share-Landings. *@
         @if (Model.Signer is not null)
         {
             @await Html.PartialAsync("_LandingSignerBadge",
                 new NimShare.Api.Views.Shared.LandingSignerBadgeVm(Model.Signer, $"/s/{Model.Slug}/signer-cert.cer"))
         }
-        <h1 style="color:@accent">📁 @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
+        <h1 style="color:@accent">@(Model.IsGallery ? "🖼" : "📁") @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
         @if (!string.IsNullOrWhiteSpace(theme?.Subtitle))
         {
             <p class="lede">@theme.Subtitle</p>
         }
-        <p class="landing-meta">@T["landing.folder.lede"] @Model.Files.Count</p>
+        <p class="landing-meta">
+            @if (Model.IsGallery)
+            {
+                @T["landing.gallery.lede"] @mediaFiles.Count
+                @if (Model.AllowUploads)
+                {
+                    <text> · @T["landing.gallery.upload_allowed"]</text>
+                }
+            }
+            else
+            {
+                @T["landing.folder.lede"] @Model.Files.Count
+            }
+        </p>
         @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
         {
             <div style="margin:var(--sp-4) 0;line-height:1.55">
@@ -63,31 +87,160 @@
                 @Html.Raw(Model.MessageHtml)
             </div>
         }
-        <table class="table" style="margin-top:var(--sp-6)">
-            <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
-            <tbody>
-            @foreach (var f in Model.Files)
+
+        @if (Model.IsGallery)
+        {
+            @* ── Album-Grid ────────────────────────────────────────────────── *@
+            <style>
+                .gal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; margin-top:var(--sp-6); }
+                .gal-cell { position:relative; aspect-ratio:1/1; background:#0002; border-radius:8px; overflow:hidden; cursor:pointer; }
+                .gal-cell img, .gal-cell video { width:100%; height:100%; object-fit:cover; display:block; }
+                .gal-cell .gal-fallback { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:12px; text-align:center; font-size:12px; color:#666; }
+                .gal-cell .gal-fallback .em { font-size:44px; margin-bottom:8px; }
+                .gal-cell .gal-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.15); }
+                .gal-cell .gal-play svg { width:56px; height:56px; opacity:.9; }
+                .gal-cell .gal-name { position:absolute; left:0; right:0; bottom:0; padding:6px 8px; background:linear-gradient(180deg,transparent,rgba(0,0,0,.72)); color:#fff; font-size:12px; line-height:1.25; }
+                .gal-cell .gal-name b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                .gal-cell .gal-size { opacity:.85; font-weight:400; }
+                .gal-empty { padding:var(--sp-6); text-align:center; color:#888; border:1px dashed #ccc; border-radius:12px; margin-top:var(--sp-6); }
+                .gal-lightbox { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; display:none; align-items:center; justify-content:center; }
+                .gal-lightbox.open { display:flex; }
+                .gal-lightbox .gal-lb-media { max-width:96vw; max-height:88vh; object-fit:contain; }
+                .gal-lightbox .gal-lb-close { position:absolute; top:12px; right:16px; background:transparent; color:#fff; border:1px solid #fff5; border-radius:20px; padding:6px 14px; cursor:pointer; font-size:14px; }
+                .gal-lightbox .gal-lb-nav { position:absolute; top:50%; transform:translateY(-50%); background:transparent; color:#fff; border:1px solid #fff3; border-radius:50%; width:48px; height:48px; cursor:pointer; font-size:24px; opacity:.6; }
+                .gal-lightbox .gal-lb-nav:hover { opacity:1; }
+                .gal-lightbox .gal-lb-prev { left:16px; }
+                .gal-lightbox .gal-lb-next { right:16px; }
+                .gal-lightbox .gal-lb-info { position:absolute; bottom:16px; left:16px; right:16px; color:#eee; text-align:center; font-size:13px; }
+                .gal-lightbox .gal-lb-info a { color:#fff; text-decoration:underline; margin-left:12px; }
+                .gal-upload { border:2px dashed @accent; border-radius:12px; padding:24px; text-align:center; margin-top:var(--sp-6); background:@(accent + "0d"); }
+                .gal-upload.drag { background:@(accent + "22"); }
+                .gal-upload input[type=file] { display:none; }
+                .gal-upload label.pick { display:inline-block; background:@accent; color:#fff; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600; }
+                .gal-upload .gal-hint { color:#666; font-size:13px; margin-top:8px; }
+                .gal-progress { margin-top:var(--sp-4); }
+                .gal-progress-row { display:flex; align-items:center; gap:10px; margin:4px 0; font-size:13px; }
+                .gal-progress-row .pbar { flex:1; height:6px; background:#0001; border-radius:3px; overflow:hidden; }
+                .gal-progress-row .pbar-fill { height:100%; background:@accent; transition:width .1s linear; }
+                .gal-progress-row.err .pbar-fill { background:#dc3545; }
+                .gal-progress-row .pname { flex:0 0 40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                .gal-progress-row .pstatus { flex:0 0 auto; color:#666; min-width:60px; text-align:right; }
+                @@media (max-width:520px) {
+                    .gal-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+                }
+            </style>
+            @if (mediaFiles.Count == 0 && !Model.AllowUploads)
             {
-                <tr>
-                    <td>@f.Name</td>
-                    <td class="muted">@Bytes(f.SizeBytes)</td>
-                    <td>
-                        <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
-                            @if (Model.HasPassword)
-                            {
-                                <input type="hidden" name="password" id="pw-@f.Id" required/>
-                                <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                            }
-                            else
-                            {
-                                <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                            }
-                        </form>
-                    </td>
-                </tr>
+                <div class="gal-empty">@T["landing.gallery.empty"]</div>
             }
-            </tbody>
-        </table>
+            else if (mediaFiles.Count > 0)
+            {
+                <div class="gal-grid" id="galGrid">
+                @foreach (var (f, idx) in mediaFiles.Select((f, i) => (f, i)))
+                {
+                    var isImg = IsImage(f.ContentType);
+                    <div class="gal-cell" data-idx="@idx" data-id="@f.Id" data-name="@f.Name" data-size="@Bytes(f.SizeBytes)" data-ct="@f.ContentType" onclick="galOpen(@idx)">
+                        @if (canPreview && isImg)
+                        {
+                            <img loading="lazy" src="/s/@Model.Slug/media/@f.Id" alt="@f.Name" />
+                        }
+                        else if (canPreview)
+                        {
+                            @* Videos: kein Auto-Load des Videos in der Zelle — nur Poster/Placeholder mit Play-Overlay, damit 200 Video-Kacheln nicht 200 Range-Requests feuern. *@
+                            <div class="gal-fallback"><div class="em">🎬</div><div>@f.Name</div></div>
+                            <div class="gal-play">
+                                <svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="gal-fallback"><div class="em">@(isImg ? "🖼" : "🎬")</div><div>@f.Name</div></div>
+                        }
+                        <div class="gal-name"><b>@f.Name</b><span class="gal-size">@Bytes(f.SizeBytes)</span></div>
+                    </div>
+                }
+                </div>
+            }
+
+            @if (Model.AllowUploads)
+            {
+                <div class="gal-upload" id="galUploadDrop">
+                    <label for="galUploadPick" class="pick">📸 @T["landing.gallery.upload.button"]</label>
+                    <input type="file" id="galUploadPick" accept="image/*,video/*" multiple />
+                    <div class="gal-hint">@T["landing.gallery.upload.hint"]</div>
+                    <div class="gal-progress" id="galUploadProgress"></div>
+                </div>
+            }
+
+            @if (otherFiles.Count > 0)
+            {
+                <details style="margin-top:var(--sp-6)">
+                    <summary style="cursor:pointer;color:@accent;font-weight:600">@T["landing.gallery.other_files"] (@otherFiles.Count)</summary>
+                    <table class="table" style="margin-top:var(--sp-3)">
+                        <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var f in otherFiles)
+                        {
+                            <tr>
+                                <td>@f.Name</td>
+                                <td class="muted">@Bytes(f.SizeBytes)</td>
+                                <td>
+                                    <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
+                                        @if (Model.HasPassword)
+                                        {
+                                            <input type="hidden" name="password" id="pw-@f.Id" required/>
+                                            <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                        }
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </details>
+            }
+
+            @* Lightbox-Overlay — im DOM einmalig, JS steuert Content. *@
+            <div class="gal-lightbox" id="galLB" onclick="if(event.target===this)galClose()">
+                <button class="gal-lb-close" onclick="galClose()">✕ @T["landing.gallery.lb.close"]</button>
+                <button class="gal-lb-nav gal-lb-prev" onclick="event.stopPropagation();galNav(-1)">‹</button>
+                <button class="gal-lb-nav gal-lb-next" onclick="event.stopPropagation();galNav(1)">›</button>
+                <div id="galLBSlot" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"></div>
+                <div class="gal-lb-info" id="galLBInfo"></div>
+            </div>
+        }
+        else
+        {
+            <table class="table" style="margin-top:var(--sp-6)">
+                <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var f in Model.Files)
+                {
+                    <tr>
+                        <td>@f.Name</td>
+                        <td class="muted">@Bytes(f.SizeBytes)</td>
+                        <td>
+                            <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
+                                @if (Model.HasPassword)
+                                {
+                                    <input type="hidden" name="password" id="pw-@f.Id" required/>
+                                    <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                }
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
         <p class="landing-meta" style="margin-top:var(--sp-6)">
             @if (!string.IsNullOrWhiteSpace(theme?.FooterText))
             {
@@ -101,3 +254,147 @@
     </div>
 </div>
 @await Html.PartialAsync("_TimezoneBeacon", Model.Slug)
+
+@if (Model.IsGallery)
+{
+<script>
+// v1.10.167 — Album-Lightbox + Upload-Widget.
+// Alles selbstständig, kein CDN. Keyboard-Navigation, Touch-Swipe wäre
+// nice-to-have aber später — Marcus wollte erstmal "hübsch für viele Medien".
+(function() {
+    const slug = @Html.Raw(Json.Serialize(Model.Slug));
+    const canPreview = @(canPreview ? "true" : "false");
+    const T_download = @Html.Raw(Json.Serialize(T["landing.download.button"].Value));
+    const T_open_full = @Html.Raw(Json.Serialize(T["landing.gallery.lb.open_original"].Value));
+    const T_pick_again = @Html.Raw(Json.Serialize(T["landing.gallery.upload.button"].Value));
+    const T_upl_done = @Html.Raw(Json.Serialize(T["landing.gallery.upload.done"].Value));
+    const T_upl_reload = @Html.Raw(Json.Serialize(T["landing.gallery.upload.reload"].Value));
+    let lbIdx = -1;
+    const cells = Array.from(document.querySelectorAll('#galGrid .gal-cell'));
+    window.galOpen = function(i) {
+        if (!canPreview) return; // Passwort-Link: keine Preview
+        lbIdx = i;
+        galRender();
+        document.getElementById('galLB').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+    window.galClose = function() {
+        document.getElementById('galLB').classList.remove('open');
+        document.body.style.overflow = '';
+        document.getElementById('galLBSlot').innerHTML = '';
+        lbIdx = -1;
+    };
+    window.galNav = function(delta) {
+        if (cells.length === 0) return;
+        lbIdx = (lbIdx + delta + cells.length) % cells.length;
+        galRender();
+    };
+    function galRender() {
+        const c = cells[lbIdx]; if (!c) return;
+        const id = c.dataset.id, name = c.dataset.name, size = c.dataset.size, ct = c.dataset.ct;
+        const slot = document.getElementById('galLBSlot');
+        slot.innerHTML = '';
+        const url = '/s/' + slug + '/media/' + id;
+        let el;
+        if ((ct || '').startsWith('image/')) {
+            el = document.createElement('img');
+            el.className = 'gal-lb-media';
+            el.src = url;
+            el.alt = name;
+        } else {
+            el = document.createElement('video');
+            el.className = 'gal-lb-media';
+            el.controls = true;
+            el.autoplay = true;
+            el.playsInline = true;
+            el.src = url;
+        }
+        slot.appendChild(el);
+        document.getElementById('galLBInfo').innerHTML =
+            '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
+            ' <a href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
+    }
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+    document.addEventListener('keydown', e => {
+        if (!document.getElementById('galLB').classList.contains('open')) return;
+        if (e.key === 'Escape') galClose();
+        else if (e.key === 'ArrowRight') galNav(1);
+        else if (e.key === 'ArrowLeft') galNav(-1);
+    });
+
+    // ── Upload-Widget ─────────────────────────────────────────────────
+    const drop = document.getElementById('galUploadDrop');
+    const pick = document.getElementById('galUploadPick');
+    const prog = document.getElementById('galUploadProgress');
+    if (drop && pick && prog) {
+        pick.addEventListener('change', () => handleFiles(pick.files));
+        ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
+        ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+        drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
+    }
+    async function handleFiles(files) {
+        if (!files || files.length === 0) return;
+        let uploaded = 0, failed = 0;
+        const rows = [];
+        for (const file of files) {
+            const row = document.createElement('div');
+            row.className = 'gal-progress-row';
+            row.innerHTML = '<div class="pname" title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + '</div>'
+                + '<div class="pbar"><div class="pbar-fill" style="width:0%"></div></div>'
+                + '<div class="pstatus">0%</div>';
+            prog.appendChild(row);
+            rows.push({row, file});
+        }
+        for (const {row, file} of rows) {
+            const fill = row.querySelector('.pbar-fill');
+            const st = row.querySelector('.pstatus');
+            try {
+                const initR = await fetch('/s/' + slug + '/gallery-upload/init', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name: file.name, sizeBytes: file.size, contentType: file.type || 'application/octet-stream' })
+                });
+                if (!initR.ok) {
+                    let msg = 'HTTP ' + initR.status;
+                    try { const p = await initR.json(); msg = p.title || p.detail || msg; } catch {}
+                    row.classList.add('err'); fill.style.width = '100%'; st.textContent = '✕ ' + msg;
+                    failed++; continue;
+                }
+                const { fileId, uploadUrl } = await initR.json();
+                await xhrPut(uploadUrl, file, file.type || 'application/octet-stream', pct => {
+                    fill.style.width = pct + '%';
+                    st.textContent = Math.round(pct) + '%';
+                });
+                const cR = await fetch('/s/' + slug + '/gallery-upload/' + fileId + '/complete', { method: 'POST' });
+                if (!cR.ok) {
+                    let msg = 'HTTP ' + cR.status;
+                    try { const p = await cR.json(); msg = p.title || p.detail || msg; } catch {}
+                    row.classList.add('err'); st.textContent = '✕ ' + msg; failed++; continue;
+                }
+                fill.style.width = '100%'; st.textContent = '✓'; uploaded++;
+            } catch (e) {
+                row.classList.add('err'); st.textContent = '✕ ' + (e && e.message || e); failed++;
+            }
+        }
+        if (uploaded > 0) {
+            const done = document.createElement('div');
+            done.style.cssText = 'margin-top:12px;padding:10px;background:#0d61;border-radius:8px;color:#fff;text-align:center';
+            done.innerHTML = '✓ ' + T_upl_done.replace('{0}', uploaded)
+                + ' <a href="" style="color:#fff;text-decoration:underline;margin-left:8px" onclick="location.reload();return false">' + escapeHtml(T_upl_reload) + '</a>';
+            prog.appendChild(done);
+        }
+    }
+    function xhrPut(url, blob, contentType, onProgress) {
+        return new Promise((resolve, reject) => {
+            const x = new XMLHttpRequest();
+            x.open('PUT', url);
+            x.setRequestHeader('Content-Type', contentType);
+            x.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+            x.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total * 100); };
+            x.onload = () => (x.status >= 200 && x.status < 300) ? resolve(x) : reject(new Error('HTTP ' + x.status));
+            x.onerror = () => reject(new Error('CORS/Netzwerk'));
+            x.send(blob);
+        });
+    }
+})();
+</script>
+}

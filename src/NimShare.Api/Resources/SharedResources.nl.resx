@@ -1446,4 +1446,39 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.cert.download_signer" xml:space="preserve"><value>Certificaat van ondertekenaar downloaden</value></data>
   <data name="share.cert.tofu_hint" xml:space="preserve"><value>Vergelijk de vingerafdruk hierboven met wat de afzender je apart heeft doorgegeven.</value></data>
   <data name="share.cert.external_hint" xml:space="preserve"><value>Uitgegeven door een externe certificaatautoriteit.</value></data>
+
+  <!-- v1.10.167 gallery folder-kind + AI-consent toggle -->
+  <data name="actions.mark_as_gallery"><value>Markeren als foto/video-album</value></data>
+  <data name="actions.unmark_gallery"><value>Terugzetten naar normale map</value></data>
+  <data name="landing.gallery.lede"><value>Foto's/video's:</value></data>
+  <data name="landing.gallery.upload_allowed"><value>Uploaden toegestaan</value></data>
+  <data name="landing.gallery.empty"><value>Nog geen media in dit album.</value></data>
+  <data name="landing.gallery.upload.button"><value>Foto's / video's toevoegen</value></data>
+  <data name="landing.gallery.upload.hint"><value>Kies of sleep ze hierheen. Max. 100 MB per bestand.</value></data>
+  <data name="landing.gallery.upload.done"><value>{0} geüpload.</value></data>
+  <data name="landing.gallery.upload.reload"><value>Album opnieuw laden</value></data>
+  <data name="landing.gallery.other_files"><value>Overige bestanden</value></data>
+  <data name="landing.gallery.lb.close"><value>Sluiten</value></data>
+  <data name="landing.gallery.lb.open_original"><value>Origineel openen</value></data>
+  <data name="share.gallery.allow_uploads_label"><value>Ontvangers mogen uploaden</value></data>
+  <data name="share.gallery.display_label"><value>Weergeven als foto/video-album</value></data>
+  <data name="share.gallery.display_hint"><value>Ontvangers zien een mooie foto/video-weergave met thumbnails, lightbox en volledig scherm.</value></data>
+  <data name="dashboard.ai_consent.title"><value>AI-verwerking</value></data>
+  <data name="dashboard.ai_consent.hint" xml:space="preserve"><value>Chat, zoeken en AI-begroeting sturen jouw vraag en korte tekstfragmenten van je bestanden naar de AI-provider die op deze instantie is ingesteld. Er wordt niets verzonden tot je toestemming geeft.</value></data>
+  <data name="dashboard.ai_consent.allow"><value>AI toestaan</value></data>
+  <data name="dashboard.ai_consent.later"><value>Later</value></data>
+  <data name="share.gallery.allow_uploads_hint"><value>Ideaal voor bruiloft- of eventalbums — iedereen met de link kan foto's of video's toevoegen.</value></data>
+  <data name="gallery.upload.too_large"><value>Bestand te groot (max. 100 MB per bestand).</value></data>
+  <data name="gallery.upload.only_media"><value>Alleen afbeeldingen of video's toegestaan.</value></data>
+  <data name="email.gallery_upload.subject"><value>Nieuwe albumfoto: {0}</value></data>
+  <data name="email.gallery_upload.body" xml:space="preserve"><value>Hallo {0},&#10;&#10;Een bezoeker heeft zojuist een bestand naar je album geüpload:&#10;&#10;- Bestand: {1}&#10;- Albumlink: /s/{2}&#10;- Tijd (UTC): {3}&#10;&#10;— NimShare</value></data>
+  <data name="profile.ai.title"><value>AI-gebruik</value></data>
+  <data name="profile.ai.lede"><value>Bepaal hier of je verzoeken naar een externe AI-aanbieder gestuurd mogen worden. Zonder toestemming zijn chat, zoeken en de AI-begroeting uitgeschakeld.</value></data>
+  <data name="profile.ai.provider_label"><value>Huidige aanbieder van deze instantie</value></data>
+  <data name="profile.ai.provider_loading"><value>Provider-info wordt geladen…</value></data>
+  <data name="profile.ai.provider_disabled"><value>Geen — AI is momenteel uitgeschakeld op deze instantie.</value></data>
+  <data name="profile.ai.toggle_label"><value>AI-verwerking toestaan</value></data>
+  <data name="profile.ai.toggle_hint"><value>Je verzoeken en relevante tekstfragmenten uit je bestanden worden naar de bovengenoemde aanbieder gestuurd. Wachtwoorden, certificaten en andere bestanden worden NIET verstuurd.</value></data>
+  <data name="profile.ai.revoke_hint"><value>Je kunt je toestemming hier op elk moment intrekken.</value></data>
+  <data name="profile.ai.privacy_link"><value>Privacybeleid</value></data>
 </root>

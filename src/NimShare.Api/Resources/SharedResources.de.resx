@@ -1451,4 +1451,39 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.cert.download_signer" xml:space="preserve"><value>Signaturzertifikat herunterladen</value></data>
   <data name="share.cert.tofu_hint" xml:space="preserve"><value>Vergleiche den Fingerabdruck oben mit dem, was dir der Absender separat mitgeteilt hat.</value></data>
   <data name="share.cert.external_hint" xml:space="preserve"><value>Ausgestellt von einer externen Zertifizierungsstelle.</value></data>
+
+  <!-- v1.10.167 gallery folder-kind + AI-consent toggle -->
+  <data name="actions.mark_as_gallery"><value>Als Foto/Video-Album markieren</value></data>
+  <data name="actions.unmark_gallery"><value>Album zurücksetzen (normaler Ordner)</value></data>
+  <data name="landing.gallery.lede"><value>Fotos/Videos:</value></data>
+  <data name="landing.gallery.upload_allowed"><value>Hochladen erlaubt</value></data>
+  <data name="landing.gallery.empty"><value>Noch keine Medien im Album.</value></data>
+  <data name="landing.gallery.upload.button"><value>Bilder / Videos hinzufügen</value></data>
+  <data name="landing.gallery.upload.hint"><value>Auswählen oder per Drag &amp; Drop hierher ziehen. Max. 100 MB pro Datei.</value></data>
+  <data name="landing.gallery.upload.done"><value>{0} hochgeladen.</value></data>
+  <data name="landing.gallery.upload.reload"><value>Album neu laden</value></data>
+  <data name="landing.gallery.other_files"><value>Weitere Dateien</value></data>
+  <data name="landing.gallery.lb.close"><value>Schließen</value></data>
+  <data name="landing.gallery.lb.open_original"><value>Original öffnen</value></data>
+  <data name="share.gallery.allow_uploads_label"><value>Empfänger dürfen hochladen</value></data>
+  <data name="share.gallery.display_label"><value>Als Foto/Video-Album anzeigen</value></data>
+  <data name="share.gallery.display_hint"><value>Empfänger sehen eine schöne Foto/Video-Ansicht mit Vorschauen, Lightbox und Vollbild.</value></data>
+  <data name="dashboard.ai_consent.title"><value>KI-Verarbeitung</value></data>
+  <data name="dashboard.ai_consent.hint" xml:space="preserve"><value>Chat, Suche und die KI-Begrüßung schicken deine Anfrage und kurze Text-Ausschnitte deiner Dateien an den auf dieser Instanz konfigurierten KI-Anbieter. Es wird nichts gesendet, solange du es nicht erlaubst.</value></data>
+  <data name="dashboard.ai_consent.allow"><value>KI erlauben</value></data>
+  <data name="dashboard.ai_consent.later"><value>Später</value></data>
+  <data name="share.gallery.allow_uploads_hint"><value>Ideal für Hochzeits- oder Event-Alben — jeder mit dem Link kann Bilder oder Videos direkt hinzufügen.</value></data>
+  <data name="gallery.upload.too_large"><value>Datei zu groß (max. 100 MB pro Datei).</value></data>
+  <data name="gallery.upload.only_media"><value>Nur Bilder oder Videos erlaubt.</value></data>
+  <data name="email.gallery_upload.subject"><value>Neues Album-Foto: {0}</value></data>
+  <data name="email.gallery_upload.body" xml:space="preserve"><value>Hallo {0},&#10;&#10;ein Besucher hat gerade eine Datei in dein Album hochgeladen:&#10;&#10;- Datei: {1}&#10;- Album-Link: /s/{2}&#10;- Zeit (UTC): {3}&#10;&#10;— NimShare</value></data>
+  <data name="profile.ai.title"><value>KI-Nutzung</value></data>
+  <data name="profile.ai.lede"><value>Steuere hier, ob deine Anfragen an einen externen KI-Anbieter gesendet werden dürfen. Ohne Zustimmung sind Chat, Suche und KI-Begrüßung deaktiviert.</value></data>
+  <data name="profile.ai.provider_label"><value>Aktueller Anbieter dieser Instanz</value></data>
+  <data name="profile.ai.provider_loading"><value>Anbieter-Info wird geladen…</value></data>
+  <data name="profile.ai.provider_disabled"><value>Keiner — KI ist auf dieser Instanz aktuell deaktiviert.</value></data>
+  <data name="profile.ai.toggle_label"><value>KI-Verarbeitung erlauben</value></data>
+  <data name="profile.ai.toggle_hint"><value>Deine Anfragen und relevante Text-Ausschnitte deiner Dateien gehen an den oben genannten Anbieter. Passwörter, Zertifikate und andere Dateien werden NICHT gesendet.</value></data>
+  <data name="profile.ai.revoke_hint"><value>Du kannst deine Zustimmung jederzeit hier widerrufen.</value></data>
+  <data name="profile.ai.privacy_link"><value>Datenschutzerklärung</value></data>
 </root>

@@ -31,10 +31,18 @@ namespace NimShare.Api.Migrations
                 type: "INTEGER",
                 nullable: false,
                 defaultValue: false);
+
+            mb.AddColumn<bool>(
+                name: "DisplayAsGallery",
+                table: "ShareLinks",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: false);
         }
 
         protected override void Down(MigrationBuilder mb)
         {
+            mb.DropColumn(name: "DisplayAsGallery", table: "ShareLinks");
             mb.DropColumn(name: "AllowUploads", table: "ShareLinks");
             mb.DropColumn(name: "Kind", table: "Folders");
         }

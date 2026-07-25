@@ -110,6 +110,26 @@
             <select id="shareCert"><option value="">@T["share.cert.picker_none"]</option></select>
             <div class="helper">@T["share.cert.picker_hint"]</div>
         </div>
+        @* v1.10.167: Zwei Optionen für Ordner-Links: (1) „Als Foto/Video-Album
+           anzeigen" — Landing rendert Grid+Lightbox statt Datei-Liste.
+           (2) Sub-Toggle „Upload erlauben" — nur sichtbar wenn Option 1 aktiv
+           ODER der Zielordner selbst Kind=Gallery ist. Server enforced beides. *@
+        <div class="field" id="shareGalleryWrap" style="display:none;margin-top:10px;padding:12px 14px;background:rgba(0,40,84,0.05);border-radius:8px">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer">
+                <input type="checkbox" id="shareDisplayAsGallery" style="margin-top:4px" onchange="onShareDisplayGalleryChange()"/>
+                <span>
+                    <div style="font-weight:600">🖼 @T["share.gallery.display_label"]</div>
+                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.display_hint"]</div>
+                </span>
+            </label>
+            <label id="shareAllowUploadsRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:26px;border-left:2px solid rgba(0,40,84,0.15)">
+                <input type="checkbox" id="shareAllowUploads" style="margin-top:4px"/>
+                <span>
+                    <div style="font-weight:600">↑ @T["share.gallery.allow_uploads_label"]</div>
+                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.allow_uploads_hint"]</div>
+                </span>
+            </label>
+        </div>
         <div id="shareResult" style="display:none">
             <div class="modal-result">
                 <input id="shareUrl" readonly/>
@@ -352,6 +372,31 @@ function openShareFolderModal(folderId) {
     resetShareModal();
     openModal('modalShare');
     ensureCertsLoaded();
+    // v1.10.167: Album-Optionen bei jedem Ordner-Link sichtbar. Der Toggle
+    // „Als Album anzeigen" ist per-Link und braucht kein Kind=Gallery am
+    // Ordner. Bei Gallery-Ordnern wird die Option vorausgewählt, weil der
+    // Ordner damit ohnehin als Album gemeint ist.
+    const wrap = document.getElementById('shareGalleryWrap');
+    const cbDisp = document.getElementById('shareDisplayAsGallery');
+    const cbAllow = document.getElementById('shareAllowUploads');
+    if (cbAllow) cbAllow.checked = false;
+    if (cbDisp && wrap) {
+        const row = document.querySelector(`tr.ctx[data-id="${folderId}"]`);
+        const isGallery = row && row.dataset.folderKind === 'Gallery';
+        cbDisp.checked = !!isGallery;
+        wrap.style.display = '';
+        onShareDisplayGalleryChange();
+    }
+}
+// v1.10.167: Sub-Toggle „Upload erlauben" nur zeigen wenn Album-Modus an ist.
+function onShareDisplayGalleryChange() {
+    const on = document.getElementById('shareDisplayAsGallery')?.checked;
+    const row = document.getElementById('shareAllowUploadsRow');
+    if (row) row.style.display = on ? 'flex' : 'none';
+    if (!on) {
+        const cb = document.getElementById('shareAllowUploads');
+        if (cb) cb.checked = false;
+    }
 }
 function resetShareModal() {
     ['shareSlug','sharePw','shareMax','shareExp','shareMsg'].forEach(id => document.getElementById(id).value = '');
@@ -403,6 +448,9 @@ async function createShareLink() {
         message: document.getElementById('shareMsg').value || null,
         notifyOnAccess: document.getElementById('shareNotify').checked,
         signingCertificateId: document.getElementById('shareCert').value || null,
+        // v1.10.167: Album-Anzeige + Upload — Server enforced für File-Links = false.
+        displayAsGallery: !!document.getElementById('shareDisplayAsGallery')?.checked,
+        allowUploads: !!document.getElementById('shareAllowUploads')?.checked,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

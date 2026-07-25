@@ -43,9 +43,13 @@ public class LinksController : ControllerBase
         bool NotifyOnAccess,
         // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
         Guid? SigningCertificateId = null,
-        // v1.10.166: Wenn true UND Folder.Kind==Gallery, dürfen Empfänger direkt
-        // ins Album hochladen. Auf File-Links und Regular-Ordnern wird das
-        // Flag serverseitig ignoriert (in der Create-Logik gefiltert).
+        // v1.10.167: Landing als Foto/Video-Album rendern (Grid + Lightbox)
+        // statt klassischer Datei-Liste. Nur für Folder-Links; auf File-Links
+        // wird der Wert serverseitig auf false erzwungen.
+        bool DisplayAsGallery = false,
+        // v1.10.167: Wenn true UND (DisplayAsGallery ODER Folder.Kind==Gallery),
+        // dürfen Empfänger direkt ins Album hochladen. Sonst wird das Flag
+        // serverseitig ignoriert (Landing zeigt kein Upload-Widget).
         bool AllowUploads = false);
 
     public record LinkDto(
@@ -59,9 +63,10 @@ public class LinksController : ControllerBase
         string? TargetKind, string? TargetName,
         // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
         SignerInfo? Signer = null,
-        // v1.10.166: Gallery-Ordner + AllowUploads-Flag für Landing-Steuerung
-        // + für die Anzeige in der Links-Liste („Album mit Upload-Option").
+        // v1.10.167: Anzeige-Modus + Upload-Option des Links (nicht Ordner).
+        // FolderIsGallery = Convenience-Info: Ordner ist Kind=Gallery (Default).
         bool FolderIsGallery = false,
+        bool DisplayAsGallery = false,
         bool AllowUploads = false);
 
     public record SignerInfo(
@@ -139,11 +144,15 @@ public class LinksController : ControllerBase
             if (owned) certId = cid;
         }
 
-        // v1.10.166: AllowUploads gilt nur auf Folder-Links mit Kind=Gallery.
-        // Auf File-Links oder Regular-Ordnern serverseitig hart auf false
-        // zwingen — sonst könnte ein manipulierter Client den Upload-Widget
-        // auf beliebigen Freigaben aktivieren.
-        var allowUploads = req.AllowUploads && folder is not null && folder.Kind == FolderKind.Gallery;
+        // v1.10.167: DisplayAsGallery ist ein Per-Link-Anzeige-Modus (nicht Ordner-
+        // attribut). Nur für Folder-Links erlaubt. Auf File-Links wird das Flag
+        // ignoriert, weil ein einzelnes File kein Album ist.
+        var displayAsGallery = req.DisplayAsGallery && folder is not null;
+        // AllowUploads gilt wenn der Link im Gallery-Modus rendert (per Link-
+        // Setting ODER Folder.Kind==Gallery als Default). Auf File-Links und
+        // reinen Nicht-Gallery-Ordner-Links serverseitig hart auf false.
+        var isGalleryLink = displayAsGallery || (folder is not null && folder.Kind == FolderKind.Gallery);
+        var allowUploads = req.AllowUploads && folder is not null && isGalleryLink;
 
         var link = new ShareLink
         {
@@ -158,6 +167,7 @@ public class LinksController : ControllerBase
             NotifyOnAccess = req.NotifyOnAccess,
             SigningCertificateId = certId,
             AllowUploads = allowUploads,
+            DisplayAsGallery = displayAsGallery,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -439,7 +449,10 @@ public class LinksController : ControllerBase
               || l.IsPublic,
         TargetKind: l.File != null ? "file" : (l.Folder != null ? "folder" : null),
         TargetName: l.File?.Name ?? l.Folder?.Name,
-        Signer: BuildSignerInfo(l.SigningCertificate));
+        Signer: BuildSignerInfo(l.SigningCertificate),
+        FolderIsGallery: l.Folder != null && l.Folder.Kind == FolderKind.Gallery,
+        DisplayAsGallery: l.DisplayAsGallery,
+        AllowUploads: l.AllowUploads);
 
     // v1.10.146: Signer-Info fürs Landing-Badge; nur bei vorhandenem Zertifikat.
     internal static SignerInfo? BuildSignerInfo(SigningCertificate? c)

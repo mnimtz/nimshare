@@ -986,7 +986,16 @@ static async Task EnsureGalleryColumnsAsync(NimShareDbContext db, bool isSqlServ
                 allowExists = true;
                 Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SqlServer).");
             }
-            if (kindExists && allowExists)
+            var dispExists = await ColHasSqlServerAsync(cn, "ShareLinks", "DisplayAsGallery");
+            if (!dispExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE [ShareLinks] ADD [DisplayAsGallery] bit NOT NULL DEFAULT (0)";
+                await alter.ExecuteNonQueryAsync();
+                dispExists = true;
+                Console.Error.WriteLine("[STARTUP] Added ShareLinks.DisplayAsGallery (SqlServer).");
+            }
+            if (kindExists && allowExists && dispExists)
             {
                 using var stamp = cn.CreateCommand();
                 stamp.CommandText =
@@ -1020,7 +1029,16 @@ static async Task EnsureGalleryColumnsAsync(NimShareDbContext db, bool isSqlServ
                 allowExists = true;
                 Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SQLite).");
             }
-            if (kindExists && allowExists)
+            var dispExists = await ColHasSqliteAsync(cn, "ShareLinks", "DisplayAsGallery");
+            if (!dispExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"DisplayAsGallery\" INTEGER NOT NULL DEFAULT 0";
+                await alter.ExecuteNonQueryAsync();
+                dispExists = true;
+                Console.Error.WriteLine("[STARTUP] Added ShareLinks.DisplayAsGallery (SQLite).");
+            }
+            if (kindExists && allowExists && dispExists)
             {
                 using var stamp = cn.CreateCommand();
                 stamp.CommandText =

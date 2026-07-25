@@ -486,6 +486,20 @@ final class NimShareAPI: ObservableObject {
         return try decode(SetFolderPrivacyResponse.self, data).isPrivate
     }
 
+    // MARK: - v1.10.167 Gallery-Ordner-Typ
+    /// Regular = klassischer Datei-Browser · Gallery = Foto/Video-Album mit
+    /// optimierter Landing (Grid + Lightbox) und optionalem Upload-Widget.
+    enum FolderKind: String, Codable { case regular = "Regular", gallery = "Gallery" }
+    struct SetFolderKindBody: Encodable { let kind: String }
+    struct SetFolderKindResponse: Decodable { let id: UUID; let kind: String }
+    func setFolderKind(id: UUID, kind: FolderKind) async throws -> FolderKind {
+        let body = try Self.jsonEncoder.encode(SetFolderKindBody(kind: kind.rawValue))
+        let req = request("PATCH", "api/v1/folders/\(id)/kind", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        let parsed = try decode(SetFolderKindResponse.self, data)
+        return FolderKind(rawValue: parsed.kind) ?? .regular
+    }
+
     func sharedWithMe() async throws -> [SharedWithMeItemDto] {
         let req = request("GET", "api/v1/direct-shares/shared-with-me")
         let (data, _) = try await perform(req)
@@ -505,16 +519,24 @@ final class NimShareAPI: ObservableObject {
         let notifyOnAccess: Bool
         // v1.10.146: optionales Absender-Zertifikat.
         let signingCertificateId: UUID?
+        // v1.10.167: Landing als Foto/Video-Album rendern (Grid + Lightbox).
+        let displayAsGallery: Bool?
+        // v1.10.167: „Upload erlauben" — nur wirksam wenn displayAsGallery
+        // ODER Folder.Kind==Gallery. Server enforced.
+        let allowUploads: Bool?
     }
     /// Create a share link with default options (no password, no expiry, no
     /// download limit). Returns the freshly created ShareLinkDto — caller
     /// pastes/shows the .url. v1.10.146: optional signing certificate.
     func createShareLink(fileId: UUID? = nil, folderId: UUID? = nil,
-                         signingCertificateId: UUID? = nil) async throws -> ShareLinkDto {
+                         signingCertificateId: UUID? = nil,
+                         displayAsGallery: Bool? = nil,
+                         allowUploads: Bool? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: nil, password: nil,
             maxDownloads: nil, expiresAt: nil, message: nil, notifyOnAccess: false,
-            signingCertificateId: signingCertificateId))
+            signingCertificateId: signingCertificateId,
+            displayAsGallery: displayAsGallery, allowUploads: allowUploads))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)
@@ -944,11 +966,13 @@ final class NimShareAPI: ObservableObject {
                              slug: String? = nil, password: String? = nil,
                              maxDownloads: Int? = nil, expiresAt: Date? = nil,
                              message: String? = nil, notifyOnAccess: Bool = false,
-                             signingCertificateId: UUID? = nil) async throws -> ShareLinkDto {
+                             signingCertificateId: UUID? = nil,
+                             allowUploads: Bool? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
-            notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId))
+            notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId,
+            allowUploads: allowUploads))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)

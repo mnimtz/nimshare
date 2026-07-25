@@ -28,6 +28,11 @@ public interface INotificationService
 
     /// <summary>Sends a plain-text share link email from the current user to an arbitrary recipient.</summary>
     Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default);
+
+    /// <summary>v1.10.167 — Notification an den Owner wenn ein Besucher über
+    /// einen Album-Link mit AllowUploads=true eine Datei hochgeladen hat.
+    /// Best-effort; wenn NotifyOnAccess des Links false ist, no-op.</summary>
+    Task NotifyGalleryUploadAsync(ShareLink link, StorageFile file, CancellationToken ct = default);
 }
 
 public class SmtpNotificationService : INotificationService
@@ -57,6 +62,20 @@ public class SmtpNotificationService : INotificationService
             link.Slug,
             link.DownloadCount + 1,
             ipHash.Length >= 12 ? ipHash[..12] : ipHash,
+            DateTimeOffset.UtcNow.ToString("u")].Value;
+        return SendAsync(link.Owner.Email, subject, body, ct);
+    }
+
+    public Task NotifyGalleryUploadAsync(ShareLink link, StorageFile file, CancellationToken ct = default)
+    {
+        if (!_options.Enabled || !link.NotifyOnAccess) return Task.CompletedTask;
+        using var _ = WithCulture(link.Owner.PreferredCulture);
+        var t = _localizerFactory.Create(typeof(SharedResources));
+        var subject = t["email.gallery_upload.subject", file.Name].Value;
+        var body = t["email.gallery_upload.body",
+            link.Owner.DisplayName,
+            file.Name,
+            link.Slug,
             DateTimeOffset.UtcNow.ToString("u")].Value;
         return SendAsync(link.Owner.Email, subject, body, ct);
     }

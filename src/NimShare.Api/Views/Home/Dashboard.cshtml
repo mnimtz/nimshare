@@ -13,6 +13,65 @@
     }
 }
 <div class="workspace-inner">
+    @* v1.10.167: KI-Consent-Banner — prominent oben, verschwindet dauerhaft
+       sobald der User „Erlauben" klickt (Server persistiert AiConsentedAt).
+       „Später" blendet nur lokal aus (LocalStorage). Nur sichtbar bei aktiver
+       KI-Instanz (Provider != Disabled) UND noch nicht consented. *@
+    <div id="dashAiConsentBanner" class="card" style="display:none;margin-bottom:var(--sp-4);border-left:4px solid var(--tw-accent, #ffc600);background:linear-gradient(135deg, rgba(255,198,0,0.10), rgba(0,40,84,0.05));padding:var(--sp-4) var(--sp-5)">
+        <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div style="font-size:2rem;line-height:1">✨</div>
+            <div style="flex:1;min-width:240px">
+                <div style="font-weight:700;font-size:1.05rem;color:var(--tw-primary)">@T["dashboard.ai_consent.title"]</div>
+                <div class="muted" id="dashAiConsentProvider" style="font-size:.85rem;margin-top:2px"></div>
+                <div style="margin-top:8px;line-height:1.45">@T["dashboard.ai_consent.hint"]</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="dashAiConsentLater()">@T["dashboard.ai_consent.later"]</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="dashAiConsentAllow(this)">✓ @T["dashboard.ai_consent.allow"]</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (async function() {
+        try {
+            if (localStorage.getItem('ai-consent-banner-dismissed') === '1') return;
+            const [pInfo, pCons] = await Promise.allSettled([
+                fetch('/api/v1/ai/provider-info', {credentials:'same-origin'}).then(r => r.ok ? r.json() : null),
+                fetch('/api/v1/me/ai-consent',    {credentials:'same-origin'}).then(r => r.ok ? r.json() : null),
+            ]);
+            const info = pInfo.status==='fulfilled' ? pInfo.value : null;
+            const cons = pCons.status==='fulfilled' ? pCons.value : null;
+            if (!info || !info.enabled) return;      // Instanz ohne KI: kein Banner
+            if (cons && cons.consented) return;      // Schon zugestimmt: dauerhaft weg
+            const el = document.getElementById('dashAiConsentBanner');
+            if (!el) return;
+            const p = document.getElementById('dashAiConsentProvider');
+            if (p) {
+                const model = info.model ? ' · ' + info.model : '';
+                const host = info.endpointHint ? ' · ' + info.endpointHint : '';
+                p.textContent = info.provider + model + host;
+            }
+            el.style.display = '';
+        } catch {}
+    })();
+    async function dashAiConsentAllow(btn) {
+        btn.disabled = true; btn.textContent = '…';
+        try {
+            const r = await fetch('/api/v1/me/ai-consent', {
+                method:'PUT', credentials:'same-origin',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ consented: true })
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            document.getElementById('dashAiConsentBanner').style.display = 'none';
+            // Trigger evtl. Greeting-Reload — der Banner ist dauerhaft weg.
+        } catch (e) { btn.disabled = false; btn.textContent = '✓'; }
+    }
+    function dashAiConsentLater() {
+        localStorage.setItem('ai-consent-banner-dismissed', '1');
+        document.getElementById('dashAiConsentBanner').style.display = 'none';
+    }
+    </script>
     @* v1.10.138: EINE Begrüssung. Der Header grüsst (Anrede + Name); die KI
        liefert nur die Nachricht darunter (ohne eigene Anrede → keine doppelte
        Begrüssung mehr). Bis der AI-Call zurück ist, steht der statische,

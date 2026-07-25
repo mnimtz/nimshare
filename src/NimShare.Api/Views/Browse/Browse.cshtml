@@ -182,13 +182,18 @@
                 <tbody>
                     @foreach (var sub in subs)
                     {
-                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-emoji="@(sub.Emoji ?? "")" data-color="@(sub.Color ?? "")" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" data-scope="@sub.Scope.ToString().ToLowerInvariant()" data-is-private="@(sub.IsPrivate ? "1" : "0")" data-mine="@(me != null && sub.CreatedByUserId == me.Id ? "1" : "0")" ondblclick="location.href='@FolderUrl(sub)'">
+                        <tr class="ctx fm-row fm-row-folder" data-kind="folder" data-id="@sub.Id" data-name="@sub.Name" data-emoji="@(sub.Emoji ?? "")" data-color="@(sub.Color ?? "")" data-size="-1" data-date="@sub.CreatedAt.ToUnixTimeSeconds()" data-scope="@sub.Scope.ToString().ToLowerInvariant()" data-is-private="@(sub.IsPrivate ? "1" : "0")" data-folder-kind="@sub.Kind.ToString()" data-mine="@(me != null && sub.CreatedByUserId == me.Id ? "1" : "0")" ondblclick="location.href='@FolderUrl(sub)'">
                             <td class="col-check"></td>
                             <td class="col-name">
                                 <a class="fm-name" href="@FolderUrl(sub)">
                                     @if (!string.IsNullOrEmpty(sub.Emoji))
                                     {
                                         <span class="fm-icon fm-icon-folder" style="background:transparent;font-size:1.6rem">@sub.Emoji</span>
+                                    }
+                                    else if (sub.Kind == NimShare.Core.Entities.FolderKind.Gallery)
+                                    {
+                                        @* v1.10.167: Album-Ordner-Icon — visueller Hinweis dass die Landing im Gallery-Modus rendert. *@
+                                        <span class="fm-icon fm-icon-folder" style="@(string.IsNullOrEmpty(sub.Color) ? "" : $"background:#{sub.Color}")">🖼</span>
                                     }
                                     else
                                     {
@@ -328,6 +333,10 @@
     @* v1.10.104: Berechtigungen (Windows-ACL-Style) — nur im Public-Scope für
        Ordner-Owner/Admin sichtbar. Wird per JS ein-/ausgeblendet. *@
     <button data-act="permissions" style="display:none">🔒 @T["actions.permissions"]</button>
+    @* v1.10.167: Ordner-Typ „Foto/Video-Album" umschalten. Nur für eigene
+       Ordner (CanManage). Toggle: Regular ↔ Gallery. *@
+    <button data-act="toGallery" style="display:none">🖼 @T["actions.mark_as_gallery"]</button>
+    <button data-act="toRegular" style="display:none">📁 @T["actions.unmark_gallery"]</button>
     <button data-act="sign" style="display:none">✍ @T["nav.signatures"]</button>
     <button data-act="uploadReq" style="display:none">📥 @T["actions.request_upload"]</button>
     <button data-act="downloadZip" style="display:none">⬇ @T["actions.download_zip"]</button>
@@ -749,7 +758,9 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         ctxTarget = { kind: tr.dataset.kind, id: tr.dataset.id, name: tr.dataset.name,
                       mine: tr.dataset.mine === '1', pinned: tr.dataset.pinned === '1',
                       folderScope: tr.dataset.scope || '',
-                      isPrivate: tr.dataset.isPrivate === '1' };
+                      isPrivate: tr.dataset.isPrivate === '1',
+                      // v1.10.167: Folder.Kind für den Gallery-Toggle im Menü.
+                      folderKind: tr.dataset.folderKind || 'Regular' };
         const showFor = (id, cond) => ctxMenu.querySelector(`[data-act="${id}"]`).style.display = cond ? '' : 'none';
         const isSignable = ctxTarget.kind === 'file' && (tr.dataset.contentType || '').toLowerCase() === 'application/pdf';
         // "Pin" (=Kopieren-Verweis nach Personal): nur Files, die nicht mir gehören
@@ -787,6 +798,13 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         // beschränkt; jetzt entscheidet der Klick-Handler welches Modal
         // passt und der Server validiert die eigentliche Berechtigung.
         showFor('permissions', true);
+        // v1.10.167: Album-Toggle nur für Ordner die dem User gehören / verwaltbar
+        // sind, und nicht am Scope-Root (Roots sind Regular per definitionem).
+        // Nur eine Richtung sichtbar: derzeit-Gallery → „Als normalen Ordner",
+        // derzeit-Regular → „Als Album markieren".
+        const isGal = ctxTarget.folderKind === 'Gallery';
+        showFor('toGallery',   ctxTarget.kind === 'folder' && CAN_MANAGE && !isGal);
+        showFor('toRegular',   ctxTarget.kind === 'folder' && CAN_MANAGE && isGal);
         showFor('favorite',    true);
         // Delete is destructive — it drops the underlying blob. On pinned
         // "shortcut" rows we hide it (Unpin above is the correct action);
@@ -886,8 +904,27 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             if (ctxTarget.kind === 'file') deleteFile(ctxTarget.id);
             else nimDeleteFolder(ctxTarget.id, ctxTarget.name, RETURN_URL);
         }
+        // v1.10.167: Ordner-Typ umschalten Gallery ↔ Regular.
+        if ((act === 'toGallery' || act === 'toRegular') && ctxTarget.kind === 'folder') {
+            setFolderKind(ctxTarget.id, act === 'toGallery' ? 'Gallery' : 'Regular');
+        }
     });
 });
+
+// v1.10.167: PATCH Folder.Kind (Regular ↔ Gallery). Bei Erfolg Reload,
+// damit Icon + Kontextmenü-State auf frischen Server-Werten stehen.
+async function setFolderKind(folderId, kind) {
+    const r = await fetch('/api/v1/folders/' + folderId + '/kind', {
+        method: 'PATCH', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ kind })
+    });
+    if (r.ok) location.reload();
+    else {
+        let msg = 'HTTP ' + r.status;
+        try { const p = await r.json(); msg = p.title || p.detail || msg; } catch {}
+        nimAlert('Fehler: ' + msg, { kind: 'error' });
+    }
+}
 
 // ── v1.10.67: Ordner-Browser für Move + Copy ──────────────────
 // Marcus's Feedback zu v1.10.66: das lange fixe Dropdown "nicht wirklich

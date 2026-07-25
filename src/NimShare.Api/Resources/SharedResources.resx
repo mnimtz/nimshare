@@ -1449,4 +1449,39 @@ Thanks for using NimShare.</value></data>
   <data name="share.cert.download_signer" xml:space="preserve"><value>Download signer certificate</value></data>
   <data name="share.cert.tofu_hint" xml:space="preserve"><value>Compare the fingerprint above with what the sender told you separately.</value></data>
   <data name="share.cert.external_hint" xml:space="preserve"><value>Issued by an external certificate authority.</value></data>
+
+  <!-- v1.10.167 gallery folder-kind + AI-consent toggle -->
+  <data name="actions.mark_as_gallery"><value>Mark as Photo/Video album</value></data>
+  <data name="actions.unmark_gallery"><value>Reset album (regular folder)</value></data>
+  <data name="landing.gallery.lede"><value>Photos/videos:</value></data>
+  <data name="landing.gallery.upload_allowed"><value>Uploads allowed</value></data>
+  <data name="landing.gallery.empty"><value>No media in this album yet.</value></data>
+  <data name="landing.gallery.upload.button"><value>Add photos / videos</value></data>
+  <data name="landing.gallery.upload.hint"><value>Pick or drag &amp; drop here. Max 100 MB per file.</value></data>
+  <data name="landing.gallery.upload.done"><value>{0} uploaded.</value></data>
+  <data name="landing.gallery.upload.reload"><value>Reload album</value></data>
+  <data name="landing.gallery.other_files"><value>Other files</value></data>
+  <data name="landing.gallery.lb.close"><value>Close</value></data>
+  <data name="landing.gallery.lb.open_original"><value>Open original</value></data>
+  <data name="share.gallery.allow_uploads_label"><value>Recipients may upload</value></data>
+  <data name="share.gallery.display_label"><value>Show as photo/video album</value></data>
+  <data name="share.gallery.display_hint"><value>Recipients see a rich photo/video view with thumbnails, lightbox and fullscreen.</value></data>
+  <data name="dashboard.ai_consent.title"><value>AI processing</value></data>
+  <data name="dashboard.ai_consent.hint" xml:space="preserve"><value>Chat, Search and the AI greeting send your queries and short text excerpts of your files to the AI provider configured on this instance. Nothing is sent until you allow it.</value></data>
+  <data name="dashboard.ai_consent.allow"><value>Allow AI</value></data>
+  <data name="dashboard.ai_consent.later"><value>Later</value></data>
+  <data name="share.gallery.allow_uploads_hint"><value>Ideal for wedding or event albums — anyone with the link can add photos or videos.</value></data>
+  <data name="gallery.upload.too_large"><value>File too large (max 100 MB per file).</value></data>
+  <data name="gallery.upload.only_media"><value>Only images or videos allowed.</value></data>
+  <data name="email.gallery_upload.subject"><value>New album photo: {0}</value></data>
+  <data name="email.gallery_upload.body" xml:space="preserve"><value>Hello {0},&#10;&#10;A visitor just uploaded a file to your album:&#10;&#10;- File: {1}&#10;- Album link: /s/{2}&#10;- Time (UTC): {3}&#10;&#10;— NimShare</value></data>
+  <data name="profile.ai.title"><value>AI processing</value></data>
+  <data name="profile.ai.lede"><value>Control here whether your queries may be sent to an external AI provider. Without consent, chat, search, and the AI welcome message are disabled.</value></data>
+  <data name="profile.ai.provider_label"><value>Current provider on this instance</value></data>
+  <data name="profile.ai.provider_loading"><value>Loading provider info…</value></data>
+  <data name="profile.ai.provider_disabled"><value>None — AI is currently disabled on this instance.</value></data>
+  <data name="profile.ai.toggle_label"><value>Allow AI processing</value></data>
+  <data name="profile.ai.toggle_hint"><value>Your queries and relevant text excerpts of your files are sent to the provider above. Passwords, certificates, and other files are NOT sent.</value></data>
+  <data name="profile.ai.revoke_hint"><value>You can revoke your consent here at any time.</value></data>
+  <data name="profile.ai.privacy_link"><value>Privacy policy</value></data>
 </root>

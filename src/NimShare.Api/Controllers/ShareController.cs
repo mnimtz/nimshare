@@ -95,7 +95,13 @@ public class ShareController : Controller
                 link.PasswordHash is not null, link.Owner.DisplayName,
                 files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
                 ResolveOwnerAvatar(link.Owner), folderTheme,
-                BuildLandingSigner(link.SigningCertificate)));
+                BuildLandingSigner(link.SigningCertificate),
+                // v1.10.167: Landing rendert Gallery, wenn der LINK das explizit
+                // setzt (Ersteller-Wahl beim Freigeben) ODER der Ordner Kind=
+                // Gallery ist. AllowUploads greift nur im Gallery-Modus.
+                IsGallery: link.DisplayAsGallery || folder.Kind == FolderKind.Gallery,
+                AllowUploads: link.AllowUploads && (link.DisplayAsGallery || folder.Kind == FolderKind.Gallery),
+                FolderId: folder.Id));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -394,6 +400,114 @@ public class ShareController : Controller
         var pipeline = new MarkdownPipelineBuilder().DisableHtml().UseSoftlineBreakAsHardlineBreak().Build();
         return Markdown.ToHtml(md, pipeline);
     }
+
+    // ── v1.10.167: Gallery-Landing-Endpoints ────────────────────────────
+    // Preview-Redirect für einzelne Fotos/Videos aus dem Album. Analog zum
+    // File-Landing-Preview, aber mit expliziter fileId + Folder-Match, damit
+    // niemand einen fremden File-Guid über einen Album-Link durchreichen kann.
+    [HttpGet("{slug}/media/{fileId:guid}")]
+    public async Task<IActionResult> GalleryMedia(string slug, Guid fileId,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null) return NotFound();
+        if (link.PasswordHash is not null) return Forbid();
+        var now = DateTimeOffset.UtcNow;
+        if (!link.IsActive(now)) return NotFound();
+        var file = await db.Files.SingleOrDefaultAsync(
+            f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null) return NotFound();
+        var sas = _blobs.CreateInlineSas(file.BlobPath, file.ContentType ?? "application/octet-stream");
+        return Redirect(sas.ToString());
+    }
+
+    // Gallery-Upload — nur für Album-Links mit AllowUploads=true. Legt einen
+    // StorageFile-Pending an, gibt eine SAS-UploadUrl zurück, und ein Complete-
+    // Endpoint stampt danach den Blob als Ready. Kein Auth nötig (öffentlicher
+    // Album-Upload), aber hart gegen Missbrauch gehärtet:
+    //   * Content-Type-Whitelist (image/*, video/*) — kein PDF, keine .exe
+    //   * SizeBytes ≤ 100 MB pro File (Hochzeits-Foto-Ceiling)
+    //   * Password-gate wird respektiert (analog zu Download)
+    //   * Blob-Pfad enthält guest-Prefix, damit Owner erkennt was Gäste hochgeladen haben
+    public record GalleryUploadInitReq(string Name, long SizeBytes, string ContentType);
+    public record GalleryUploadInitResp(Guid FileId, string UploadUrl, DateTimeOffset ExpiresAt);
+
+    [HttpPost("{slug}/gallery-upload/init")]
+    public async Task<IActionResult> GalleryUploadInit(string slug, [FromBody] GalleryUploadInitReq req,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest();
+        if (req.SizeBytes <= 0 || req.SizeBytes > 100L * 1024 * 1024)
+            return Problem(statusCode: 413, title: _t["gallery.upload.too_large"].Value);
+        var ct2 = (req.ContentType ?? "").ToLowerInvariant();
+        var isMedia = ct2.StartsWith("image/") || ct2.StartsWith("video/");
+        if (!isMedia) return Problem(statusCode: 415, title: _t["gallery.upload.only_media"].Value);
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
+        // v1.10.167: AllowUploads gilt nur wenn der Link im Gallery-Modus ist —
+        // sonst wäre die Landing eine Datei-Liste ohne Upload-Widget und der
+        // Endpoint offen. Erlaube DisplayAsGallery ODER Folder.Kind==Gallery.
+        if (link.PasswordHash is not null) return Forbid();
+        var now = DateTimeOffset.UtcNow;
+        if (!link.IsActive(now)) return NotFound();
+        var folder = await db.Folders.FindAsync(new object[] { link.FolderId.Value }, ct);
+        if (folder is null) return NotFound();
+        // Gallery-Modus muss AKTIV sein — entweder per-Link oder per-Ordner.
+        if (!link.DisplayAsGallery && folder.Kind != FolderKind.Gallery) return NotFound();
+
+        var file = new StorageFile
+        {
+            OwnerId = link.OwnerId,
+            Scope = folder.Scope,
+            GroupId = folder.OwnerGroupId,
+            FolderId = folder.Id,
+            Name = SanitiseUploadFilename(req.Name),
+            SizeBytes = req.SizeBytes,
+            ContentType = req.ContentType ?? "application/octet-stream",
+            Folder = "",
+            Status = StorageFileStatus.Pending,
+        };
+        file.BlobPath = $"users/{link.OwnerId:N}/gallery-guest/{file.Id:N}/{SanitiseUploadFilename(req.Name)}";
+        db.Files.Add(file);
+        await db.SaveChangesAsync(ct);
+        var ticket = _blobs.CreateUploadTicket(file.BlobPath);
+        return Ok(new GalleryUploadInitResp(file.Id, ticket.UploadUrl.ToString(), ticket.ExpiresAt));
+    }
+
+    [HttpPost("{slug}/gallery-upload/{fileId:guid}/complete")]
+    public async Task<IActionResult> GalleryUploadComplete(string slug, Guid fileId,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
+        // v1.10.167: AllowUploads gilt nur wenn der Link im Gallery-Modus ist —
+        // sonst wäre die Landing eine Datei-Liste ohne Upload-Widget und der
+        // Endpoint offen. Erlaube DisplayAsGallery ODER Folder.Kind==Gallery.
+        if (link.PasswordHash is not null) return Forbid();
+        var file = await db.Files.SingleOrDefaultAsync(
+            f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Pending, ct);
+        if (file is null) return NotFound();
+        var probe = await _blobs.ProbeAsync(file.BlobPath, ct);
+        if (!probe.Exists) return Problem(statusCode: 409, title: "Blob not found");
+        file.SizeBytes = probe.SizeBytes;
+        if (!string.IsNullOrEmpty(probe.ContentType)) file.ContentType = probe.ContentType!;
+        file.Status = StorageFileStatus.Ready;
+        file.ReadyAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        // Owner-Notification: „Jemand hat X ins Album Y gelegt". Nutzt die
+        // bestehende NotifyOnAccess-Schiene (best-effort, kein Retry).
+        await _notify.NotifyGalleryUploadAsync(link, file, ct);
+        return Ok(new { id = file.Id, name = file.Name });
+    }
+
+    private static string SanitiseUploadFilename(string name)
+    {
+        var clean = new string(name.Where(c => c > 31 && c != '\\' && c != '/' && c != ':' && c != '*' && c != '?' && c != '"' && c != '<' && c != '>' && c != '|').ToArray());
+        clean = clean.Trim();
+        if (clean.Length > 200) clean = clean[..200];
+        return string.IsNullOrEmpty(clean) ? $"upload-{Guid.NewGuid():N}" : clean;
+    }
 }
 
 public record FolderLandingViewModel(
@@ -401,7 +515,13 @@ public record FolderLandingViewModel(
     bool HasPassword, string OwnerName,
     List<FolderLandingFile> Files, string? OwnerAvatarUrl, LandingTheme Theme,
     // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
-    LandingSignerInfo? Signer = null);
+    LandingSignerInfo? Signer = null,
+    // v1.10.167: Gallery-Modus + „Upload erlauben"-Flag steuern das Landing-
+    // Rendering. Gallery=true → Grid+Lightbox statt Datei-Liste. AllowUploads
+    // (nur wenn Gallery) → Upload-Widget für Besucher.
+    bool IsGallery = false,
+    bool AllowUploads = false,
+    Guid? FolderId = null);
 public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,

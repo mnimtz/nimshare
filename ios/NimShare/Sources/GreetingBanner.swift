@@ -23,6 +23,17 @@ struct GreetingBanner: View {
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
             .task { await initialLoad() }
+            // v1.10.167: sobald der User Consent ERTEILT (nil/false → true),
+            // die KI-Begrüssung nachladen. Sonst blieb der Fallback-Text für
+            // die gesamte Session stehen, obwohl der Consent längst gegeben war.
+            .onChange(of: auth.aiConsented) { _, new in
+                if new == true {
+                    Task {
+                        message = nil; salutation = nil
+                        await initialLoad()
+                    }
+                }
+            }
     }
 
     @ViewBuilder
@@ -110,9 +121,17 @@ struct GreetingBanner: View {
         // das Consent-Sheet beim ersten aktiv-getriggerten Feature (Chat,
         // Suche).
         if !auth.aiReady {
-            // Generischer Fallback statt AI-generierter Text.
-            salutation = "Hallo"
-            message = ""
+            // v1.10.167: statt karges „Hallo" jetzt die lokalisierte Tageszeit-
+            // Anrede mit Namen + dezenter Consent-Hinweis. Tap auf die Box
+            // öffnet nicht direkt das AI-Consent-Sheet (das würde beim App-
+            // Start übergriffig wirken), sondern der Hinweis führt den User
+            // ins Profil unter „KI-Nutzung". Aktive AI-Features (Chat, Suche)
+            // triggern das Sheet weiterhin bei Bedarf.
+            let f = localFallback()
+            salutation = f.salutation
+            message = auth.aiConsented == false
+                ? "KI-Verarbeitung ist im Profil noch nicht aktiviert."
+                : f.message
             return
         }
         loading = true; defer { loading = false }

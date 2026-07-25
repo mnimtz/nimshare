@@ -98,6 +98,75 @@
     </div>
 </form>
 
+@* v1.10.167: KI-Nutzung-Consent (Apple 5.1.1(i)-analoges Muster im Web).
+   Der Toggle triggert PUT /api/v1/me/ai-consent. Ohne Consent liefert der
+   AiConsentGuard 403 an allen AI-Endpoints (Chat, Suche, KI-Begrüssung,
+   Draft-Email) — hier ist der zentrale An/Aus-Schalter. *@
+<div class="card" style="max-width:640px;margin-top:var(--sp-6)">
+    <h2 class="card-title">@T["profile.ai.title"]</h2>
+    <p class="muted" style="margin-top:0">@T["profile.ai.lede"]</p>
+    <div id="aiProviderBox" class="card" style="background:var(--tw-gray-100);margin:var(--sp-4) 0;padding:var(--sp-3) var(--sp-4)">
+        <div style="font-size:.85rem;color:var(--tw-gray-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">@T["profile.ai.provider_label"]</div>
+        <div id="aiProviderText" class="muted">@T["profile.ai.provider_loading"]</div>
+    </div>
+    <label style="display:flex;gap:12px;align-items:center;cursor:pointer;padding:var(--sp-3);border:1px solid var(--tw-gray-200);border-radius:var(--r)">
+        <input type="checkbox" id="aiConsentToggle" style="width:20px;height:20px;cursor:pointer" onchange="toggleAiConsent(this.checked)"/>
+        <span>
+            <div style="font-weight:600">@T["profile.ai.toggle_label"]</div>
+            <div class="muted" style="font-size:.88rem;margin-top:2px">@T["profile.ai.toggle_hint"]</div>
+        </span>
+        <span id="aiConsentBusy" style="display:none;margin-left:auto;font-size:.85rem;color:var(--tw-gray-600)">…</span>
+    </label>
+    <p class="muted" style="font-size:.85rem;margin-top:var(--sp-3)">@T["profile.ai.revoke_hint"] · <a href="/privacy">@T["profile.ai.privacy_link"]</a></p>
+</div>
+
+<script>
+(async function() {
+    // Anbieter-Info + aktuellen Consent-State parallel holen.
+    const [pInfo, pConsent] = await Promise.allSettled([
+        fetch('/api/v1/ai/provider-info', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/v1/me/ai-consent', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null),
+    ]);
+    const info = pInfo.status === 'fulfilled' ? pInfo.value : null;
+    const consent = pConsent.status === 'fulfilled' ? pConsent.value : null;
+    const providerBox = document.getElementById('aiProviderText');
+    if (info) {
+        if (!info.enabled) {
+            providerBox.textContent = @Html.Raw(Json.Serialize(T["profile.ai.provider_disabled"].Value));
+        } else {
+            const model = info.model ? ' · Modell: ' + info.model : '';
+            const host = info.endpointHint ? ' · Endpoint: ' + info.endpointHint : '';
+            providerBox.textContent = info.provider + model + host;
+        }
+    } else {
+        providerBox.textContent = '—';
+    }
+    if (consent) {
+        document.getElementById('aiConsentToggle').checked = !!consent.consented;
+    }
+})();
+
+async function toggleAiConsent(on) {
+    const busy = document.getElementById('aiConsentBusy');
+    busy.style.display = ''; busy.textContent = '…';
+    try {
+        const r = await fetch('/api/v1/me/ai-consent', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ consented: !!on })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        busy.textContent = on ? '✓' : '✕';
+        setTimeout(() => busy.style.display = 'none', 1500);
+    } catch (e) {
+        busy.textContent = 'Fehler';
+        document.getElementById('aiConsentToggle').checked = !on;   // rollback
+        setTimeout(() => busy.style.display = 'none', 2500);
+    }
+}
+</script>
+
 <!-- Hidden file input driven by clicking the big avatar -->
 <input type="file" id="avatarPick" accept="image/png,image/jpeg,image/webp" style="display:none"/>
 
