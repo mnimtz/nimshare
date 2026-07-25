@@ -383,6 +383,10 @@ builder.Services.AddSingleton<IAiPostProcessor, AiPostProcessor>();
 // Scoped weil er den scoped IBlobStorageService braucht. Concurrency ist
 // intern per statischer SemaphoreSlim(2) geregelt.
 builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
+// v1.10.174: Server-Thumbnails für Album-Landings. HEIC → JPEG via Magick.NET,
+// gecacht im Blob unter `thumbs/{fileId:N}/{size}.jpg`. Concurrency intern
+// per statischer SemaphoreSlim(4).
+builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
 // v1.10.82: App-Store-Blocker — Account-Löschung + UGC-Moderation
 builder.Services.AddScoped<IUserDeletionService, UserDeletionService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();

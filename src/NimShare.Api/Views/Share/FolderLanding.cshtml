@@ -173,11 +173,12 @@
                     <div class="gal-cell" data-idx="@idx" data-id="@f.Id" data-name="@f.Name" data-size="@Bytes(f.SizeBytes)" data-ct="@f.ContentType" onclick="galOpen(@idx)">
                         @if (canPreview && isImg)
                         {
-                            @* v1.10.170: onerror-Handler tauscht kaputte Kachel
-                               gegen den Fallback aus. HEIC in Chrome/Firefox
-                               scheitert hier — echte Thumb-Konversion kommt
-                               über /thumb-Endpoint als eigener Task. *@
-                            <img loading="lazy" src="/s/@Model.Slug/media/@f.Id" alt="@f.Name"
+                            @* v1.10.174: Grid nutzt den Server-Thumbnail-
+                               Endpoint (HEIC → JPEG, resize). Fallback aus
+                               v1.10.170 bleibt für den Fall dass der Endpoint
+                               404 gibt (kaputte Datei, Video, oder Password-
+                               gate). Lightbox lädt weiterhin /media (Full-Res). *@
+                            <img loading="lazy" src="/s/@Model.Slug/thumb/@f.Id?size=400" alt="@f.Name"
                                  onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'gal-fallback',innerHTML:'<div class=&quot;em&quot;>📷</div><div>'+this.alt.replace(/[&lt;&gt;&amp;]/g,'')+'</div><small>@(f.Name.EndsWith(".HEIC", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith(".HEIF", StringComparison.OrdinalIgnoreCase) ? "HEIC — Vollansicht beim Klick" : "Vorschau nicht verfügbar")</small>'}))" />
                         }
                         else if (canPreview)

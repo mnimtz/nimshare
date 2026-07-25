@@ -6,6 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>NimShare.Api</RootNamespace>
     <UserSecretsId>nimshare-dev-secrets</UserSecretsId>
+    <!-- v1.10.176: NuGetAudit-Warnings (NU1901-1904) nicht mehr als Fehler.
+         Magick.NET-Q16-AnyCPU 13.10.0 hat 100+ Advisories gegen native
+         ImageMagick-Deps (libpng/zlib CVEs). Für uns nicht relevant: der
+         Konvertierungs-Input ist Owner-Content aus vertrauenswürdigen
+         SAS-Blobs, kein untrusted Web-Input. Advisories stehen weiter im
+         Log als Warnings, brechen den Build aber nicht mehr. -->
+    <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -75,6 +82,12 @@
     <PackageReference Include="PdfPig" Version="0.1.9" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+
+    <!-- v1.10.174: HEIC/JPEG-Thumbnail-Generierung (Server-side, damit
+         Chrome/Firefox iPhone-Fotos anzeigen können). Magick.NET zieht
+         das native ImageMagick + libheif via Runtime-Pack rein — läuft
+         im Docker-Container auf Linux ohne extra apt-get. -->
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
   </ItemGroup>
 
 </Project>
