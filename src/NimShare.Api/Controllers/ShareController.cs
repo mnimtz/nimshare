@@ -416,6 +416,109 @@ public class ShareController : Controller
         return Markdown.ToHtml(md, pipeline);
     }
 
+    // v1.10.181: „Alle herunterladen" auf der Gallery-Landing — packt sämtliche
+    // Files des freigegebenen Ordners in ein einziges ZIP. Password-Gate wird
+    // wie beim einzelnen Download respektiert; auf Public-Landings ohne Passwort
+    // direkt streamen. Rate-Limit erbt vom Controller (public-share) — der ZIP-
+    // Endpoint ist CPU/Bandbreiten-intensiv, den WOLLEN wir gedrosselt.
+    [HttpPost("{slug}/download-all")]
+    public async Task<IActionResult> DownloadAll(string slug, string? password,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IFolderService folderSvc,
+        [FromServices] ILogger<ShareController> log, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null) return NotFound();
+        if (!link.IsActive(DateTimeOffset.UtcNow))
+            return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        // Password-Gate analog zum Einzel-Download.
+        if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
+        {
+            TempData["PasswordError"] = _t["share.password.error"].Value;
+            return RedirectToAction(nameof(Landing), new { slug });
+        }
+        var folder = await db.Folders.FindAsync(new object[] { link.FolderId.Value }, ct);
+        if (folder is null) return NotFound();
+        var files = await folderSvc.ListFilesAsync(folder, ct);
+        var ready = files.Where(f => f.Status == StorageFileStatus.Ready).ToList();
+        if (ready.Count == 0) return NotFound();
+        // Download-Counter einmal für den Batch — sonst würde ein 44-Foto-Album
+        // die MaxDownloads-Grenze mit einem Klick sprengen.
+        if (!await _access.TryConsumeDownloadAsync(link, ct))
+            return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        var lf = await LandingForensicsAsync(ct);
+        await _access.LogAsync(link, ShareLinkAccessKind.Download, _iphash.Hash(ip), ip,
+            Request.Headers.UserAgent, Request.Headers.Referer,
+            lf.Country, lf.City, lf.Device, timezone: null, ct);
+        await _notify.NotifyDownloadAsync(link, _iphash.Hash(ip), ct);
+
+        var archiveName = SanitiseArchiveName(folder.Name) + ".zip";
+        var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nimshare-zip-{Guid.NewGuid():N}.zip");
+        int written = 0, skipped = 0;
+        try
+        {
+            await using (var fs = new System.IO.FileStream(tmp, System.IO.FileMode.Create,
+                System.IO.FileAccess.ReadWrite, System.IO.FileShare.None, 1 << 16, System.IO.FileOptions.Asynchronous))
+            using (var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create))
+            {
+                var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var f in ready)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var name = UniqueZipEntryName(f.Name, used);
+                    var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                    try
+                    {
+                        await using var es = entry.Open();
+                        await _blobs.DownloadToAsync(f.BlobPath, es, ct);
+                        written++;
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        skipped++;
+                        log.LogWarning(ex, "download-all: skip blob {Blob}: {Msg}", f.BlobPath, ex.Message);
+                    }
+                }
+            }
+            if (written == 0)
+            {
+                try { System.IO.File.Delete(tmp); } catch { }
+                return Problem(statusCode: 502, title: "ZIP fehlgeschlagen");
+            }
+            if (skipped > 0)
+                Response.Headers["X-Zip-Skipped"] = skipped.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var read = new System.IO.FileStream(tmp, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                System.IO.FileShare.Read, 1 << 16, System.IO.FileOptions.Asynchronous | System.IO.FileOptions.DeleteOnClose);
+            return File(read, "application/zip", archiveName);
+        }
+        catch
+        {
+            try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
+            throw;
+        }
+    }
+
+    private static string UniqueZipEntryName(string desired, HashSet<string> used)
+    {
+        var name = desired; int n = 1;
+        while (!used.Add(name))
+        {
+            var ext = System.IO.Path.GetExtension(desired);
+            var stem = System.IO.Path.GetFileNameWithoutExtension(desired);
+            name = $"{stem} ({++n}){ext}";
+        }
+        return name;
+    }
+
+    private static string SanitiseArchiveName(string name)
+    {
+        var clean = new string(name.Where(c => c > 31 && c != '\\' && c != '/' && c != ':' && c != '*' && c != '?' && c != '"' && c != '<' && c != '>' && c != '|').ToArray()).Trim();
+        if (clean.Length > 80) clean = clean[..80];
+        return string.IsNullOrWhiteSpace(clean) ? "nimshare-download" : clean;
+    }
+
     // ── v1.10.167: Gallery-Landing-Endpoints ────────────────────────────
     // Preview-Redirect für einzelne Fotos/Videos aus dem Album. Analog zum
     // File-Landing-Preview, aber mit expliziter fileId + Folder-Match, damit

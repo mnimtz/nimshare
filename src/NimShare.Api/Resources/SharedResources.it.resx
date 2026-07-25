@@ -1459,6 +1459,8 @@ Grazie per usare NimShare.</value></data>
   <data name="landing.gallery.upload.done"><value>{0} caricati.</value></data>
   <data name="landing.gallery.upload.reload"><value>Ricarica album</value></data>
   <data name="landing.gallery.other_files"><value>Altri file</value></data>
+  <data name="landing.gallery.download_all"><value>Scarica tutto come ZIP</value></data>
+  <data name="landing.gallery.download_all_hint"><value>Impacchetta l'intero album in un unico file.</value></data>
   <data name="landing.gallery.lb.close"><value>Chiudi</value></data>
   <data name="landing.gallery.lb.open_original"><value>Apri originale</value></data>
   <data name="landing.gallery.map.title"><value>Dove sono state scattate queste foto</value></data>

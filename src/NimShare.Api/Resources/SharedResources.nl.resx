@@ -1458,6 +1458,8 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="landing.gallery.upload.done"><value>{0} geüpload.</value></data>
   <data name="landing.gallery.upload.reload"><value>Album opnieuw laden</value></data>
   <data name="landing.gallery.other_files"><value>Overige bestanden</value></data>
+  <data name="landing.gallery.download_all"><value>Alles downloaden als ZIP</value></data>
+  <data name="landing.gallery.download_all_hint"><value>Verpakt het hele album in één bestand.</value></data>
   <data name="landing.gallery.lb.close"><value>Sluiten</value></data>
   <data name="landing.gallery.lb.open_original"><value>Origineel openen</value></data>
   <data name="landing.gallery.map.title"><value>Waar deze foto's zijn gemaakt</value></data>

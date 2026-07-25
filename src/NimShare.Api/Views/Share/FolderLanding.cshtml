@@ -342,6 +342,27 @@
                 </tbody>
             </table>
         }
+        @* v1.10.181: „Alle herunterladen" als ZIP am Ende der Landing.
+           Server-Endpoint /s/{slug}/download-all packt alle Ordner-Files in
+           ein ZIP + streamt zurück. Password-Handling analog zum Einzel-
+           Download: Prompt bei HasPassword, sonst direkter POST. *@
+        @if (Model.Files.Any())
+        {
+            <div style="margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--tw-gray-200);text-align:center">
+                <form method="post" asp-controller="Share" asp-action="DownloadAll" asp-route-slug="@Model.Slug" style="display:inline">
+                    @if (Model.HasPassword)
+                    {
+                        <input type="hidden" name="password" id="pwAll" required/>
+                        <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pwAll').value=pw;this.closest('form').submit()}" class="btn btn-primary" style="background:@accent;color:#fff;border-color:@accent">⬇ @T["landing.gallery.download_all"]</button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary" style="background:@accent;color:#fff;border-color:@accent">⬇ @T["landing.gallery.download_all"]</button>
+                    }
+                </form>
+                <div class="muted" style="font-size:.85rem;margin-top:6px">@T["landing.gallery.download_all_hint"]</div>
+            </div>
+        }
         <p class="landing-meta" style="margin-top:var(--sp-6)">
             @if (!string.IsNullOrWhiteSpace(theme?.FooterText))
             {
