@@ -1467,6 +1467,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="landing.gallery.download_all_hint"><value>Emballe tout l'album dans un seul fichier.</value></data>
   <data name="landing.gallery.lb.close"><value>Fermer</value></data>
   <data name="landing.gallery.lb.open_original"><value>Ouvrir l'original</value></data>
+  <data name="landing.gallery.thumb_pending"><value>L'aperçu est en cours de génération…</value></data>
   <data name="landing.gallery.map.title"><value>Où ces photos ont été prises</value></data>
   <data name="landing.gallery.map.count"><value>{0} sur {1} photos localisées</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Les destinataires peuvent envoyer</value></data>

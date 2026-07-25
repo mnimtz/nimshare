@@ -101,26 +101,44 @@ public class ShareController : Controller
                        .ToList()
                 : null;
 
-            // v1.10.186: retroaktives Cache-Warmup für alte Links, die vor
-            // v1.10.181/183 erstellt wurden (kein Pre-Warm bei Link-Create).
-            // Bei jedem Landing-Aufruf im Hintergrund die kompletten Assets
-            // aufbauen; Dedup verhindert Doppel-Läufe wenn 50 Empfänger
-            // gleichzeitig klicken. Nur bei Gallery-Modus (Grid+Lightbox
-            // erwarten Thumbs) und für den ZIP-Download.
-            if (isGalleryView)
+            // v1.10.191: Fertige Thumbs kommen als direkte SAS-URLs ins HTML —
+            // die Kachel lädt ihr JPEG direkt vom Blob-Storage, null MVC-
+            // Requests, null DB-Queries pro Bild. Fehlende Thumbs werden in
+            // die Worker-Queue gelegt (dedup, überlebt Reloads); die Kachel
+            // rendert einen Pending-Platzhalter und JS pollt /thumb-status.
+            var canPreviewLanding = link.PasswordHash is null;
+            var thumbTtl = ThumbSasTtl(link.ExpiresAt);
+            var landingFiles = new List<FolderLandingFile>(files.Count);
+            foreach (var f in files)
             {
-                foreach (var f in files.Where(f => f.Status == StorageFileStatus.Ready
-                    && (f.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
+                string? t400 = null, t1600 = null;
+                var thumbFailed = false;
+                var isImage = (f.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+                if (isGalleryView && canPreviewLanding && isImage && f.Status == StorageFileStatus.Ready)
                 {
-                    _ = thumbs.WarmupAsync(f.Id, f.BlobPath, f.ContentType ?? "", 400, CancellationToken.None);
-                    _ = thumbs.WarmupAsync(f.Id, f.BlobPath, f.ContentType ?? "", 1600, CancellationToken.None);
+                    if (f.ThumbsReadyAt is not null)
+                    {
+                        t400 = thumbs.CreateThumbSas(f.Id, 400, thumbTtl).ToString();
+                        t1600 = thumbs.CreateThumbSas(f.Id, 1600, thumbTtl).ToString();
+                    }
+                    else if (thumbs.IsFailed(f.Id))
+                    {
+                        // Decode endgültig gescheitert (kaputte Datei) —
+                        // Kamera-Fallback statt Ewig-Spinner, kein Re-Enqueue.
+                        thumbFailed = true;
+                    }
+                    else
+                    {
+                        thumbs.Enqueue(f.Id, f.BlobPath, f.ContentType);
+                    }
                 }
+                landingFiles.Add(new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType, t400, t1600, thumbFailed));
             }
             _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
-                files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
+                landingFiles,
                 ResolveOwnerAvatar(link.Owner, isPublicShare: link.IsPublic || (folder.Scope == FileScope.Public)), folderTheme,
                 BuildLandingSigner(link.SigningCertificate),
                 // v1.10.167: Landing rendert Gallery, wenn der LINK das explizit
@@ -179,6 +197,20 @@ public class ShareController : Controller
         => c is null ? null : new LandingSignerInfo(
             c.SubjectCommonName, c.Issuer, c.Thumbprint,
             c.NotBefore, c.NotAfter, c.IsSelfIssued);
+
+    /// <summary>v1.10.191: SAS-Lebensdauer für Landing-Thumbs — 60 min, aber
+    /// nie länger als der Link selbst noch gültig ist. Sonst würden bereits
+    /// ausgegebene Thumb-URLs den Link-Ablauf um bis zu eine Stunde überleben.</summary>
+    private static TimeSpan ThumbSasTtl(DateTimeOffset? linkExpiresAt)
+    {
+        var ttl = TimeSpan.FromMinutes(60);
+        if (linkExpiresAt is DateTimeOffset exp)
+        {
+            var remain = exp - DateTimeOffset.UtcNow;
+            if (remain < ttl) ttl = remain > TimeSpan.FromMinutes(1) ? remain : TimeSpan.FromMinutes(1);
+        }
+        return ttl;
+    }
 
     /// <summary>Returns the owner's avatar URL for public rendering, but only
     /// when they've opted in via profile settings. v1.10.188: scope-sensitiv
@@ -503,7 +535,9 @@ public class ShareController : Controller
                 {
                     ct.ThrowIfCancellationRequested();
                     var name = UniqueZipEntryName(f.Name, used);
-                    var entry = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+                    // v1.10.191: Store statt Optimal-Deflate für Medien (siehe
+                    // AlbumZipCache.PickCompression) — CPU-Entlastung auf B1.
+                    var entry = zip.CreateEntry(name, AlbumZipCache.PickCompression(f.Name));
                     try
                     {
                         await using var es = entry.Open();
@@ -590,8 +624,7 @@ public class ShareController : Controller
     [HttpGet("{slug}/thumb/{fileId:guid}")]
     public async Task<IActionResult> GalleryThumb(string slug, Guid fileId, [FromQuery] int size,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IThumbnailService thumbs,
-        [FromServices] IServiceScopeFactory scopes, CancellationToken ct)
+        [FromServices] IThumbnailService thumbs, CancellationToken ct)
     {
         if (size <= 0) size = 400;
         if (!thumbs.IsAllowedSize(size)) return NotFound();
@@ -603,18 +636,10 @@ public class ShareController : Controller
         var file = await db.Files.SingleOrDefaultAsync(
             f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
         if (file is null) return NotFound();
+        // v1.10.191: GetOrCreateAsync enqueued bei Cache-Miss selbst in die
+        // Worker-Queue und gibt null zurück → 404, Client pollt /thumb-status.
         var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
-        if (url is null)
-        {
-            // v1.10.179+180: Cache-Miss → 404 sofort + Warmup im Hintergrund.
-            // Client zeigt den v1.10.170-Fallback, beim Reload liefert der
-            // Cache-Hit die echte Vorschau. ThumbnailService.WarmupAsync ist
-            // seit v1.10.180 selbst dedup + Task-basiert — hier reicht ein
-            // fire-and-forget-Call ohne Task.Run/Scope, weil der Service
-            // Singleton ist und die Task-Ownership intern läuft.
-            _ = thumbs.WarmupAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, CancellationToken.None);
-            return NotFound();
-        }
+        if (url is null) return NotFound();
         // Der 302 selbst darf nur kurz gecacht werden, weil die SAS-URL nach
         // 10 Minuten abläuft — sonst würden Browser den 302 aus dem Cache auf
         // eine tote SAS auflösen. Die dahinterliegende SAS-Antwort (Azure Blob)
@@ -622,6 +647,44 @@ public class ShareController : Controller
         // Azure per Blob-Metadaten (nicht dieser Response).
         Response.Headers["Cache-Control"] = "private, max-age=300";
         return Redirect(url.ToString());
+    }
+
+    // v1.10.191: Status-Polling für die Album-Landing. Ein einziger Request
+    // liefert alle FERTIGEN Bild-Thumbs (SAS-Paare) + die Zahl der noch
+    // offenen. Das JS pollt alle 4s solange pending > 0 und tauscht die
+    // Pending-Platzhalter gegen die frisch generierten Kacheln — kein
+    // img-src-Retry-Gehämmer mehr (das kostete pro Versuch einen vollen
+    // MVC-Request inkl. Link-Query + Blob-HEAD).
+    [DisableRateLimiting]
+    [HttpGet("{slug}/thumb-status")]
+    public async Task<IActionResult> GalleryThumbStatus(string slug,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null || link.FolderId is null) return NotFound();
+        if (link.PasswordHash is not null) return Forbid();
+        if (!link.IsActive(DateTimeOffset.UtcNow)) return NotFound();
+        var images = await db.Files
+            .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready
+                && f.ContentType != null && f.ContentType.StartsWith("image/"))
+            .Select(f => new { f.Id, f.ThumbsReadyAt })
+            .ToListAsync(ct);
+        var ttl = ThumbSasTtl(link.ExpiresAt);
+        var ready = images.Where(f => f.ThumbsReadyAt != null)
+            .ToDictionary(
+                f => f.Id.ToString("N"),
+                f => new
+                {
+                    t400 = thumbs.CreateThumbSas(f.Id, 400, ttl).ToString(),
+                    t1600 = thumbs.CreateThumbSas(f.Id, 1600, ttl).ToString(),
+                });
+        // v1.10.191: endgültig gescheiterte Decodes rausrechnen + dem Client
+        // melden — der tauscht deren Spinner gegen den Kamera-Fallback und
+        // pollt nicht ewig auf ein Thumb, das nie kommen wird.
+        var failed = images.Where(f => f.ThumbsReadyAt == null && thumbs.IsFailed(f.Id))
+            .Select(f => f.Id.ToString("N")).ToList();
+        return Ok(new { pending = images.Count - ready.Count - failed.Count, ready, failed });
     }
 
     // Gallery-Upload — nur für Album-Links mit AllowUploads=true. Legt einen
@@ -689,9 +752,7 @@ public class ShareController : Controller
     [HttpPost("{slug}/gallery-upload/{fileId:guid}/complete")]
     public async Task<IActionResult> GalleryUploadComplete(string slug, Guid fileId,
         [FromBody] GalleryUploadCompleteReq? req,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IExifGpsReader exif,
-        [FromServices] IServiceScopeFactory scopeFactory, CancellationToken ct)
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
@@ -717,35 +778,29 @@ public class ShareController : Controller
         file.ContentType = probe.ContentType!;
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
-        // v1.10.178: EXIF-GPS für die Album-Landing-Karte. Nur Bilder — Videos
-        // haben zwar auch GPS-Metadaten (mov/mp4 QuickTime), aber der Reader
-        // ist auf Foto-EXIF ausgelegt. Fehler bleiben lautlos: keine Koords,
-        // Foto taucht in der Karte einfach nicht auf.
-        if (probeCt.StartsWith("image/"))
-        {
-            var gps = await exif.TryReadAsync(file.BlobPath, file.ContentType ?? "", ct);
-            if (gps is not null)
-            {
-                file.Latitude = gps.Value.Lat;
-                file.Longitude = gps.Value.Lon;
-            }
-        }
         await db.SaveChangesAsync(ct);
         await _notify.NotifyGalleryUploadAsync(link, file, ct);
-        // v1.10.174: Thumbnail asynchron vorwärmen — Grid-Kachel ist beim
-        // ersten Landing-Reload sofort da, statt zu warten bis der erste
-        // Viewer die Konvertierung triggert. Neuer DI-Scope, weil der
-        // Request-Scope beim Return des Handlers disposed wird
-        // (ThumbnailService + BlobStorageService sind Scoped).
+        // v1.10.191: KEIN synchrones EXIF-Lesen mehr im Complete-Pfad — das
+        // lud pro Foto den kompletten Blob nochmal herunter und machte das
+        // „Finalisieren" bei 65-Foto-Drops quälend langsam. Der Thumb-Worker
+        // extrahiert GPS jetzt im selben Durchgang wie die Thumbnails (der
+        // Blob liegt dort eh schon im Speicher). Ein Enqueue reicht — dedup,
+        // non-blocking, überlebt den Request-Scope (Service ist Singleton).
         {
-            var fid = file.Id; var path = file.BlobPath; var ctype = file.ContentType ?? "";
-            _ = Task.Run(async () =>
-            {
-                using var scope = scopeFactory.CreateScope();
-                var t = scope.ServiceProvider.GetRequiredService<IThumbnailService>();
-                if (!t.IsImage(ctype)) return;
-                await t.WarmupAsync(fid, path, ctype, 400, CancellationToken.None);
-            });
+            var t = HttpContext.RequestServices.GetRequiredService<IThumbnailService>();
+            t.Enqueue(file.Id, file.BlobPath, file.ContentType);
+        }
+        // v1.10.191: Album-ZIP invalidieren — jeder Link auf diesen Ordner hat
+        // jetzt ein veraltetes vorgebautes ZIP (neues Foto fehlt drin). Beim
+        // nächsten „Alle herunterladen" wird lazy neu gebaut.
+        {
+            var zc = HttpContext.RequestServices.GetRequiredService<IAlbumZipCache>();
+            var folderLinkIds = await db.ShareLinks
+                .Where(l => l.FolderId == link.FolderId)
+                .Select(l => l.Id)
+                .ToListAsync(ct);
+            foreach (var lid in folderLinkIds)
+                _ = zc.DeleteAsync(lid, CancellationToken.None);
         }
         return Ok(new { id = file.Id, name = file.Name });
     }
@@ -788,7 +843,14 @@ public record FolderLandingViewModel(
     // keine Karte rendern. Reihenfolge egal, fitBounds baut aus NW+SO die
     // Ansicht auf.
     List<FolderLandingGeoPoint>? GeoPoints = null);
-public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType);
+// v1.10.191: Thumb400/Thumb1600 = direkte SAS-URLs auf den Blob-Cache, wenn
+// die Thumbs fertig sind (ThumbsReadyAt gesetzt). Null = pending (Platz-
+// halter + Polling) oder kein Bild / Passwort-Link.
+public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string ContentType,
+    string? Thumb400 = null, string? Thumb1600 = null,
+    // v1.10.191: true = Decode endgültig gescheitert → View rendert den
+    // Kamera-Fallback statt Pending-Spinner + Polling.
+    bool ThumbFailed = false);
 public record FolderLandingGeoPoint(Guid Id, string Name, double Lat, double Lon);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,

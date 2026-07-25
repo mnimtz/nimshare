@@ -1,70 +1,80 @@
+using System.Threading.Channels;
 using ImageMagick;
+using Microsoft.EntityFrameworkCore;
+using NimShare.Core.Data;
+using NimShare.Core.Entities;
 
 namespace NimShare.Api.Services;
 
 /// <summary>
-/// v1.10.174: Server-seitige Thumbnail-Erzeugung für Album-Landings.
-/// Zweck: HEIC (Chrome/Firefox können's nicht nativ) und übergroße JPEGs
-/// werden zu handlichen JPEG-Kacheln umgerechnet und ins Blob-Storage
-/// gecacht. Bei zweitem Request → SAS-Redirect direkt aus dem Cache,
-/// die App-Instanz sieht das Byte nicht mehr.
+/// v1.10.191 — Gallery-Perf-Redesign. Die alte Architektur (Task.Run-Flut
+/// mit Semaphor + Timeout) hat auf dem 1-vCPU-B1 systematisch Warmups
+/// sterben lassen: 65 Fotos × 2 Größen = 130 Tasks pro Landing-Aufruf,
+/// 2 Slots, 60s-Timeout → nur die ersten paar überlebten, der Rest loggte
+/// und starb. Jeder Reload begann von vorn. Ergebnis: „1 Thumb pro 5 min".
 ///
-/// Design:
-///  - Cache-Pfad: `thumbs/{fileId:N}/{size}.jpg`
-///  - Cache-Key = fileId + size (kein Content-Hash — Files sind immutable)
-///  - Konvertierung nur für image/* (Videos → null, Landing-Fallback greift)
-///  - Concurrency-Bremse: 4 parallele Konvertierungen; ein HEIC-Decode
-///    kann bei 12-MP-iPhone-Foto 400-800 ms brauchen und ein paar hundert
-///    MB RAM belegen — mehr würde einen 1-GB-App-Service ins OOM treiben.
-///  - Erlaubte Größen fest verdrahtet (400, 1600) — sonst könnte jemand
-///    per `?size=99999` DoS-en.
+/// Neu:
+///  - EINE persistente Channel-Queue + BackgroundService-Worker.
+///    Jobs warten beliebig lange, nichts stirbt an Timeouts.
+///  - Ein Job = ein FILE (nicht eine Größe): Blob 1× laden, 1× decodieren,
+///    daraus 1600er UND 400er schreiben. Halbiert Download + Decode.
+///  - GPS-EXIF wird im selben Durchgang aus dem bereits geladenen Stream
+///    extrahiert (vorher: separater Blob-Download pro Foto).
+///  - DB-Flag StorageFile.ThumbsReadyAt nach Erfolg. Die Landing rendert
+///    für geflaggte Files direkte SAS-URLs — null MVC-Requests pro Kachel.
+///  - Worker-Concurrency = 1: HEIC-Decode ist CPU-bound; auf 1 vCPU bringen
+///    2 parallele Decodes keinen Durchsatz, verdoppeln aber RAM-Peak und
+///    verhungern Kestrel. Ein Loop lässt die Landing flüssig.
+///
+/// Cache-Layout unverändert: `thumbs/{fileId:N}/{size}.jpg` — bereits
+/// generierte Alt-Thumbs werden beim Backfill nur „gestempelt", nicht
+/// neu gebaut.
 /// </summary>
 public interface IThumbnailService
 {
-    /// <summary>Ist der Content-Type ein Bild, für das wir Thumbs erzeugen?</summary>
     bool IsImage(string? contentType);
-
-    /// <summary>Gültige Ausgabegrößen (long-edge in Pixel).</summary>
     bool IsAllowedSize(int size);
 
-    /// <summary>
-    /// Liefert eine SAS-URL zum gecachten Thumbnail. Existiert der Cache
-    /// noch nicht, wird das Original heruntergeladen, konvertiert, upge-
-    /// loadet und dann die SAS erzeugt. Null bedeutet: nicht previewbar
-    /// (z.B. Video, kaputte Datei).
-    /// </summary>
+    /// <summary>SAS-URL auf ein Cache-Thumb OHNE Existenz-Check — nur für
+    /// Files verwenden, deren ThumbsReadyAt gesetzt ist (DB ist die Wahrheit).</summary>
+    Uri CreateThumbSas(Guid fileId, int size, TimeSpan? ttl = null);
+
+    /// <summary>Cache-Hit → SAS-Redirect-URL. Miss → Job einreihen + null
+    /// (Aufrufer gibt 404, Client pollt /thumb-status).</summary>
     Task<Uri?> GetOrCreateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
         int size, CancellationToken ct = default);
 
-    /// <summary>
-    /// Fire-and-forget Warm-up nach dem Upload-Complete. Loggt Fehler,
-    /// wirft nichts (der Client wartet nicht drauf).
-    /// </summary>
-    Task WarmupAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
-        int size, CancellationToken ct = default);
+    /// <summary>File in die Thumb-Queue einreihen (dedup, non-blocking).
+    /// No-op für Nicht-Bilder und für als kaputt markierte Files.</summary>
+    void Enqueue(Guid fileId, string blobPath, string? contentType);
+
+    /// <summary>True wenn der Decode für dieses File in dieser Prozess-
+    /// Lebenszeit endgültig gescheitert ist (kaputte Datei, unbekanntes
+    /// Format). Landing rendert dann den Kamera-Fallback statt ewig zu
+    /// pollen; nach einem Deploy/Restart gibt's automatisch einen Retry.</summary>
+    bool IsFailed(Guid fileId);
 }
 
 public class ThumbnailService : IThumbnailService
 {
     private readonly IBlobStorageService _blobs;
     private readonly ILogger<ThumbnailService> _log;
-    private const string CachePrefix = "thumbs/";
-    // v1.10.188: Semaphor auf 2 reduziert. Marcus's App Service ist B1
-    // (1 vCPU, 1.75 GB RAM) — bei 4 parallelen HEIC-Decodes × ~150 MB Peak
-    // + .NET Runtime + SQLite + Kestrel schneidet der Container zu knapp
-    // an OOM. 2 Slots decken auch bei 100-Foto-Alben durch: bei ~3s pro
-    // Konversion × 100/2 = 150 s = 2.5 Min bis alles fertig.
-    private static readonly SemaphoreSlim _slot = new(2, 2);
-    // v1.10.180: Warmup-Deduplication. Client feuert bei 44-Foto-Landing
-    // 44 parallele /thumb-Requests → 44 identische Warmups würden entstehen.
-    // Der ConcurrentDictionary hält den aktuell laufenden Task pro (fileId,
-    // size)-Key und gibt ihn allen Aufrufern zurück. Fertige Warmups fliegen
-    // per ContinueWith(_ => _inflight.TryRemove...) sofort raus.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task> _inflight
-        = new();
+    internal const string CachePrefix = "thumbs/";
+    internal static readonly int[] AllowedSizes = { 400, 1600 };
 
-    // Whitelist der Ausgabegrößen. 400 = Grid-Kachel, 1600 = Lightbox-Retina.
-    private static readonly int[] AllowedSizes = { 400, 1600 };
+    // Queue: unbounded — Jobs sind winzig (3 Felder), und die Dedup-Map
+    // verhindert, dass dieselbe Datei mehrfach ansteht.
+    private readonly Channel<ThumbJob> _queue = Channel.CreateUnbounded<ThumbJob>(
+        new UnboundedChannelOptions { SingleReader = true });
+    // Dedup: FileId ist drin solange der Job ansteht ODER läuft. Der Worker
+    // entfernt nach Abschluss. Erneutes Enqueue derselben Datei ist damit
+    // ein No-op — egal wie oft die Landing neu geladen wird.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, byte> _pending = new();
+    // Decode-Failures (kaputte/unlesbare Dateien). In-memory only — nach
+    // einem Container-Restart wird automatisch neu probiert. Verhindert die
+    // Endlos-Schleife „Landing enqueued → Worker lädt Blob → Decode failt →
+    // nächster Landing-Aufruf enqueued wieder".
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, byte> _failed = new();
 
     public ThumbnailService(IBlobStorageService blobs, ILogger<ThumbnailService> log)
     {
@@ -73,156 +83,257 @@ public class ThumbnailService : IThumbnailService
     }
 
     public bool IsImage(string? contentType)
-    {
-        var ct = (contentType ?? "").ToLowerInvariant();
-        return ct.StartsWith("image/");
-    }
+        => (contentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 
     public bool IsAllowedSize(int size) => AllowedSizes.Contains(size);
 
-    // v1.10.179: Kill-Switch wieder aus. Die tatsächliche Ursache für v1.10.177
-    // war NICHT Magick.NET Native-Lib, sondern SNAT-Port-Exhaustion durch das
-    // als Scoped registrierte BlobStorageService — das ist jetzt Singleton
-    // (Program.cs). Zusätzlich neue Semantik: Cache-Miss → sofort null, kein
-    // inline-Convert mehr. GalleryThumb liefert dann 404 → Client-Fallback
-    // (v1.10.170 Kamera-Placeholder). Warmup läuft im Hintergrund; beim
-    // nächsten Reload greift der Cache-Hit → 302-Redirect ohne CPU.
+    internal static string CachePath(Guid fileId, int size) => $"{CachePrefix}{fileId:N}/{size}.jpg";
+
+    public Uri CreateThumbSas(Guid fileId, int size, TimeSpan? ttl = null)
+        => _blobs.CreateInlineSas(CachePath(fileId, size), "image/jpeg", ttl ?? TimeSpan.FromMinutes(60));
 
     public async Task<Uri?> GetOrCreateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
         int size, CancellationToken ct = default)
     {
-        if (!IsImage(sourceContentType)) return null;
-        if (!IsAllowedSize(size)) return null;
-        if (string.IsNullOrEmpty(sourceBlobPath)) return null;
-
-        var cachePath = $"{CachePrefix}{fileId:N}/{size}.jpg";
-        if (await _blobs.ExistsAsync(cachePath, ct))
-            return _blobs.CreateInlineSas(cachePath, "image/jpeg", TimeSpan.FromMinutes(10));
-
-        // v1.10.179: KEIN inline-Convert mehr im GET-Pfad. Der HTTP-Handler
-        // hat den falschen Ort dafür — 44 Cache-Misses × ~500 ms HEIC-Decode
-        // durch einen 4er-Slot serialisieren die Landing minutenlang. Statt-
-        // dessen: 404 zurückgeben → Client zeigt sofort den v1.10.170-
-        // Fallback → parallel Warmup im Hintergrund → nächster Reload ist
-        // Cache-Hit + instant. Aufrufer (GalleryThumb) darf hier direkt
-        // WarmupAsync fire-and-forgetten.
+        if (!IsImage(sourceContentType) || !IsAllowedSize(size) || string.IsNullOrEmpty(sourceBlobPath))
+            return null;
+        if (await _blobs.ExistsAsync(CachePath(fileId, size), ct))
+            return _blobs.CreateInlineSas(CachePath(fileId, size), "image/jpeg", TimeSpan.FromMinutes(10));
+        Enqueue(fileId, sourceBlobPath, sourceContentType);
         return null;
     }
 
-    /// <summary>
-    /// v1.10.179: Erzeugt den Thumb blockierend (nur im Warmup-Pfad genutzt).
-    /// Nicht direkt vom Request-Handler aufrufen — den Client interessiert
-    /// nach 404 nicht mehr, was hier passiert.
-    /// </summary>
-    private async Task GenerateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
-        int size, CancellationToken ct)
+    public void Enqueue(Guid fileId, string blobPath, string? contentType)
     {
-        if (!IsImage(sourceContentType)) return;
-        if (!IsAllowedSize(size)) return;
-        if (string.IsNullOrEmpty(sourceBlobPath)) return;
-        var cachePath = $"{CachePrefix}{fileId:N}/{size}.jpg";
-        if (await _blobs.ExistsAsync(cachePath, ct)) return;
+        if (!IsImage(contentType) || string.IsNullOrEmpty(blobPath)) return;
+        if (_failed.ContainsKey(fileId)) return;   // endgültig kaputt — kein Retry-Loop
+        if (!_pending.TryAdd(fileId, 0)) return;   // schon in Queue/Arbeit
+        if (!_queue.Writer.TryWrite(new ThumbJob(fileId, blobPath, contentType!)))
+            _pending.TryRemove(fileId, out _);      // unbounded → passiert praktisch nie
+    }
 
-        // v1.10.179: Semaphore-Leak-Fix — nur releasen wenn wir den Slot
-        // tatsächlich bekommen haben. Bei Cancellation wirft WaitAsync ohne
-        // Acquire, der frühere finally-Block hat dann über-relaesed.
-        bool acquired = false;
-        try
+    public bool IsFailed(Guid fileId) => _failed.ContainsKey(fileId);
+
+    // ── Worker-Seite (nur ThumbnailWorker ruft die hier auf) ─────────────
+    internal ChannelReader<ThumbJob> Reader => _queue.Reader;
+    internal void MarkDone(Guid fileId) => _pending.TryRemove(fileId, out _);
+    internal void MarkFailed(Guid fileId) => _failed.TryAdd(fileId, 0);
+    internal int PendingCount => _pending.Count;
+}
+
+public record ThumbJob(Guid FileId, string BlobPath, string ContentType);
+
+/// <summary>
+/// Der eigentliche Thumb-Bauer. Läuft als BackgroundService mit genau
+/// einem Consumer-Loop (CPU-bound auf 1 vCPU — siehe ThumbnailService-Doc).
+/// Beim Start: Backfill-Scan über Ready-Bilder ohne ThumbsReadyAt, die in
+/// einem Gallery-Ordner liegen oder von einem Folder-Link erreichbar sind —
+/// damit überleben angefangene Alben auch einen Container-Restart.
+/// </summary>
+public class ThumbnailWorker : BackgroundService
+{
+    private readonly ThumbnailService _svc;
+    private readonly IBlobStorageService _blobs;
+    private readonly IServiceScopeFactory _scopes;
+    private readonly ILogger<ThumbnailWorker> _log;
+
+    public ThumbnailWorker(ThumbnailService svc, IBlobStorageService blobs,
+        IServiceScopeFactory scopes, ILogger<ThumbnailWorker> log)
+    {
+        _svc = svc;
+        _blobs = blobs;
+        _scopes = scopes;
+        _log = log;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        // Startup kurz abwarten — Migrations laufen vor dem Host-Start,
+        // aber wir wollen dem Kestrel-Warmup nicht in die Quere kommen.
+        try { await Task.Delay(TimeSpan.FromSeconds(10), ct); } catch { return; }
+        await BackfillAsync(ct);
+
+        await foreach (var job in _svc.Reader.ReadAllAsync(ct))
         {
-            // v1.10.189: Slot-Timeout drastisch auf 60s runter. Wenn das
-            // System gesund ist reicht das dicke (Download+Decode+Upload
-            // ~2-5s pro Foto × 2 Slots). Wenn nicht, sehen wir im Log
-            // sofort welcher Task hängt, statt 10min Diagnose-Blackbox.
-            if (!await _slot.WaitAsync(TimeSpan.FromSeconds(60), ct))
-            {
-                _log.LogError("Thumb slot timeout (60s) for {File} size={Size} — vorheriger Slot hängt oder decode ist ekelhaft langsam",
-                    sourceBlobPath, size);
-                return;
-            }
-            acquired = true;
-            if (await _blobs.ExistsAsync(cachePath, ct)) return;
-
-            var swAll = System.Diagnostics.Stopwatch.StartNew();
-
-            using var srcMs = new MemoryStream();
-            var swDl = System.Diagnostics.Stopwatch.StartNew();
-            await _blobs.DownloadToAsync(sourceBlobPath, srcMs, ct);
-            swDl.Stop();
-            srcMs.Position = 0;
-            _log.LogInformation("Thumb DL {File} ct={Ct} size={Bytes}B in {Ms}ms",
-                sourceBlobPath, sourceContentType, srcMs.Length, swDl.ElapsedMilliseconds);
-
-            using var outMs = new MemoryStream();
             try
             {
-                var swDec = System.Diagnostics.Stopwatch.StartNew();
-                using var img = new MagickImage(srcMs);
-                swDec.Stop();
-                _log.LogInformation("Thumb DECODE {File} fmt={Fmt} src={W}x{H} in {Ms}ms",
-                    sourceBlobPath, img.Format, img.Width, img.Height, swDec.ElapsedMilliseconds);
-
-                img.AutoOrient();
-                img.Strip();
-                img.Resize(new MagickGeometry(size, size)
-                {
-                    Greater = true,
-                });
-                img.Quality = 82;
-                img.Format = MagickFormat.Jpeg;
-                img.Write(outMs, MagickFormat.Jpeg);
+                await ProcessAsync(job, ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception ex)
             {
-                // v1.10.189: LogError statt Warning. Warmup ist fire-and-forget
-                // → Warnings landen nur in Debug-Levels und Marcus sieht sie
-                // im Azure Log Stream nicht. HEIC-Decode-Failures sind KEIN
-                // ok-passiert-Zustand, sondern die Ursache für "1 Thumb / 5 min".
-                _log.LogError(ex, "Thumbnail conversion FAILED for {File} (ct={Ct} size={Bytes}B) — Magick.NET libheif fehlt?",
-                    sourceBlobPath, sourceContentType, srcMs.Length);
-                return;
+                _log.LogError(ex, "ThumbWorker: job for {File} failed", job.BlobPath);
             }
-
-            outMs.Position = 0;
-            var swUp = System.Diagnostics.Stopwatch.StartNew();
-            await _blobs.UploadFromStreamAsync(cachePath, outMs, "image/jpeg", ct);
-            swUp.Stop();
-            swAll.Stop();
-            _log.LogInformation("Thumb OK {File} out={Bytes}B UL={UpMs}ms total={AllMs}ms",
-                sourceBlobPath, outMs.Length, swUp.ElapsedMilliseconds, swAll.ElapsedMilliseconds);
-        }
-        finally
-        {
-            if (acquired) _slot.Release();
+            finally
+            {
+                _svc.MarkDone(job.FileId);
+            }
         }
     }
 
-    public Task WarmupAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
-        int size, CancellationToken ct = default)
+    /// <summary>Nach Restart: sichtbare Bilder ohne Thumb-Flag wieder einreihen.
+    /// „Sichtbar" = im Gallery-Ordner oder von einem Folder-ShareLink erfasst.
+    /// Cap 500 — reicht für jedes reale Album, verhindert Massen-Backfill
+    /// über die gesamte Alt-Ablage.</summary>
+    private async Task BackfillAsync(CancellationToken ct)
     {
-        // v1.10.180: Deduplizieren. Bei 44 parallelen /thumb-Requests würden
-        // sonst 44 identische Generate-Läufe starten und alle über den 4-Slot-
-        // Semaphor stauen. Der Client könnte durch schnelles Reloaden das
-        // Vielfache produzieren. GetOrAdd hält den bereits-laufenden Task und
-        // gibt ihn wiederholten Aufrufern zurück.
-        var key = $"{fileId:N}:{size}";
-        return _inflight.GetOrAdd(key, _ =>
+        try
         {
-            var task = Task.Run(async () =>
+            using var scope = _scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+            var candidates = await db.Files
+                .Where(f => f.Status == StorageFileStatus.Ready
+                    && f.ThumbsReadyAt == null
+                    && f.ContentType != null && f.ContentType.StartsWith("image/")
+                    && f.FolderId != null
+                    && (db.Folders.Any(fo => fo.Id == f.FolderId && fo.Kind == FolderKind.Gallery)
+                        || db.ShareLinks.Any(l => l.FolderId == f.FolderId)))
+                .OrderByDescending(f => f.ReadyAt)
+                .Take(500)
+                .Select(f => new { f.Id, f.BlobPath, f.ContentType })
+                .ToListAsync(ct);
+            foreach (var c in candidates)
+                _svc.Enqueue(c.Id, c.BlobPath, c.ContentType);
+            if (candidates.Count > 0)
+                _log.LogInformation("ThumbWorker: backfill queued {N} files", candidates.Count);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "ThumbWorker: backfill scan failed (weiter ohne)");
+        }
+    }
+
+    private async Task ProcessAsync(ThumbJob job, CancellationToken ct)
+    {
+        var swAll = System.Diagnostics.Stopwatch.StartNew();
+        var path1600 = ThumbnailService.CachePath(job.FileId, 1600);
+        var path400 = ThumbnailService.CachePath(job.FileId, 400);
+
+        // Alt-Cache aus der Prä-Redesign-Ära: beide Größen existieren schon →
+        // nur DB-Flag stempeln. Fehlt dem File noch GPS, machen wir trotzdem
+        // den Download für die EXIF-Extraktion (kein Decode nötig) — sonst
+        // blieben Prä-v1.10.178-Fotos für immer ohne Karten-Pin.
+        var has1600 = await _blobs.ExistsAsync(path1600, ct);
+        var has400 = has1600 && await _blobs.ExistsAsync(path400, ct);
+        if (has1600 && has400)
+        {
+            (double, double)? oldGps = null;
+            if (await NeedsGpsAsync(job.FileId, ct))
             {
+                using var gpsMs = new MemoryStream();
                 try
                 {
-                    await GenerateAsync(fileId, sourceBlobPath, sourceContentType, size, CancellationToken.None);
+                    await _blobs.DownloadToAsync(job.BlobPath, gpsMs, ct);
+                    oldGps = TryReadGps(gpsMs);
                 }
-                catch (Exception ex)
-                {
-                    _log.LogWarning(ex, "Thumbnail warmup failed for {File}", sourceBlobPath);
-                }
-                finally
-                {
-                    _inflight.TryRemove(key, out Task? _);
-                }
-            });
-            return task;
-        });
+                catch { /* best effort */ }
+            }
+            await StampAsync(job.FileId, oldGps, ct);
+            _log.LogInformation("Thumb STAMP-ONLY {File} (cache existed)", job.BlobPath);
+            return;
+        }
+
+        using var srcMs = new MemoryStream();
+        var swDl = System.Diagnostics.Stopwatch.StartNew();
+        await _blobs.DownloadToAsync(job.BlobPath, srcMs, ct);
+        swDl.Stop();
+
+        // GPS aus dem bereits geladenen Stream — kein zweiter Download mehr.
+        var gps = TryReadGps(srcMs);
+
+        srcMs.Position = 0;
+        byte[] out1600, out400;
+        var swDec = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            using var img = new MagickImage(srcMs);
+            var fmt = img.Format; var w = img.Width; var h = img.Height;
+            img.AutoOrient();
+            // Thumbnail() = Resize + Strip in einem, mit schnellerem Sampling-
+            // Pfad als der Default-Lanczos von Resize(). Erst 1600 aus dem
+            // Full-Decode, dann 400 aus der 1600er — zweite Skalierung ist
+            // auf dem kleinen Bild fast gratis.
+            img.Thumbnail(new MagickGeometry(1600, 1600) { Greater = true });
+            img.Quality = 82;
+            img.Format = MagickFormat.Jpeg;
+            using (var ms1600 = new MemoryStream())
+            {
+                img.Write(ms1600, MagickFormat.Jpeg);
+                out1600 = ms1600.ToArray();
+            }
+            img.Thumbnail(new MagickGeometry(400, 400) { Greater = true });
+            using (var ms400 = new MemoryStream())
+            {
+                img.Write(ms400, MagickFormat.Jpeg);
+                out400 = ms400.ToArray();
+            }
+            swDec.Stop();
+            _log.LogInformation("Thumb BUILD {File} fmt={Fmt} {W}x{H} src={Src}B dl={DlMs}ms cpu={CpuMs}ms",
+                job.BlobPath, fmt, w, h, srcMs.Length, swDl.ElapsedMilliseconds, swDec.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Thumb DECODE FAILED {File} (ct={Ct} {Bytes}B) — Format kaputt oder libheif fehlt",
+                job.BlobPath, job.ContentType, srcMs.Length);
+            // Als endgültig-kaputt markieren: Landing rendert ab jetzt den
+            // Kamera-Fallback statt Pending-Spinner, und Enqueue ist ein
+            // No-op — sonst würde jeder Landing-Aufruf den Blob erneut
+            // herunterladen und wieder am Decode scheitern. GPS stempeln
+            // wir trotzdem, falls die EXIF-Extraktion was gefunden hat.
+            _svc.MarkFailed(job.FileId);
+            if (gps is not null) await StampAsync(job.FileId, gps, ct, flagThumbs: false);
+            return;
+        }
+
+        using (var up = new MemoryStream(out1600))
+            await _blobs.UploadFromStreamAsync(path1600, up, "image/jpeg", ct);
+        using (var up = new MemoryStream(out400))
+            await _blobs.UploadFromStreamAsync(path400, up, "image/jpeg", ct);
+
+        await StampAsync(job.FileId, gps, ct);
+        swAll.Stop();
+        _log.LogInformation("Thumb OK {File} 1600={A}B 400={B}B total={Ms}ms queue={Q}",
+            job.BlobPath, out1600.Length, out400.Length, swAll.ElapsedMilliseconds, _svc.PendingCount);
+    }
+
+    /// <summary>EXIF-GPS aus einem bereits geladenen Bild-Stream. Wirft nie.</summary>
+    private static (double Lat, double Lon)? TryReadGps(MemoryStream ms)
+    {
+        try
+        {
+            ms.Position = 0;
+            var dirs = MetadataExtractor.ImageMetadataReader.ReadMetadata(ms);
+            var g = dirs.OfType<MetadataExtractor.Formats.Exif.GpsDirectory>().FirstOrDefault();
+            var loc = g?.GetGeoLocation();
+            if (loc is not null && !loc.IsZero
+                && !double.IsNaN(loc.Latitude) && !double.IsNaN(loc.Longitude)
+                && loc.Latitude is >= -90 and <= 90 && loc.Longitude is >= -180 and <= 180)
+                return (loc.Latitude, loc.Longitude);
+        }
+        catch { /* kein GPS ist kein Fehler */ }
+        return null;
+    }
+
+    private async Task<bool> NeedsGpsAsync(Guid fileId, CancellationToken ct)
+    {
+        using var scope = _scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+        return await db.Files.AnyAsync(f => f.Id == fileId && f.Latitude == null, ct);
+    }
+
+    private async Task StampAsync(Guid fileId, (double Lat, double Lon)? gps,
+        CancellationToken ct, bool flagThumbs = true)
+    {
+        using var scope = _scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+        var file = await db.Files.SingleOrDefaultAsync(f => f.Id == fileId, ct);
+        if (file is null) return;
+        if (flagThumbs) file.ThumbsReadyAt = DateTimeOffset.UtcNow;
+        if (gps is not null && file.Latitude is null)
+        {
+            file.Latitude = gps.Value.Lat;
+            file.Longitude = gps.Value.Lon;
+        }
+        await db.SaveChangesAsync(ct);
     }
 }

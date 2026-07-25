@@ -98,6 +98,12 @@ public class FileVersionsController : ControllerBase
         file.VersionNumber = nextNo;
         file.SizeBytes = req.SizeBytes;
         file.ContentType = req.ContentType;
+        // v1.10.191: Bytes am BlobPath werden gleich ersetzt → gecachte Thumbs
+        // zeigen sonst für immer das ALTE Bild (Landing rendert rein DB-
+        // getrieben, der Worker fasst geflaggte Files nie wieder an).
+        file.ThumbsReadyAt = null;
+        try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/400.jpg", ct); } catch { }
+        try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/1600.jpg", ct); } catch { }
         await _db.SaveChangesAsync(ct);
 
         var ticket = _blobs.CreateUploadTicket(file.BlobPath);
@@ -131,6 +137,11 @@ public class FileVersionsController : ControllerBase
         file.SizeBytes = v.SizeBytes;
         file.ContentType = v.ContentType;
         file.VersionNumber = nextNo;
+        // v1.10.191: Bytes wurden ersetzt → Thumb-Cache + Flag invalidieren
+        // (siehe InitNewVersion). Der Worker baut beim nächsten Enqueue neu.
+        file.ThumbsReadyAt = null;
+        try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/400.jpg", ct); } catch { }
+        try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/1600.jpg", ct); } catch { }
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }

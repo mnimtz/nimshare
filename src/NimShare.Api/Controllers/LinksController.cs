@@ -183,8 +183,8 @@ public class LinksController : ControllerBase
         // v1.10.181: Thumbnail-Pre-Warm bei Album-Links. Der Empfänger sieht
         // sofort echte Vorschauen statt Kamera-Fallbacks + Wartezeit — wir
         // wissen JETZT welche Files geshared werden, also fangen wir jetzt
-        // an. WarmupAsync ist dedup-safe (v1.10.180), harmlos wenn dieselbe
-        // Datei mehrfach getriggert wird.
+        // an. Enqueue ist dedup-safe (v1.10.191 Worker-Queue), harmlos wenn
+        // dieselbe Datei mehrfach getriggert wird.
         if (folder is not null && isGalleryLink)
         {
             var thumbs = HttpContext.RequestServices.GetService<IThumbnailService>();
@@ -199,11 +199,9 @@ public class LinksController : ControllerBase
                     .ToListAsync(ct);
                 foreach (var mf in mediaFiles)
                 {
-                    // v1.10.183: Grid-Thumb 400 + Lightbox-Thumb 1600 pre-warmen.
-                    // Sonst zeigt der Lightbox beim ersten Klick nur den Fallback,
-                    // während die 1600er-Version erst nach dem Klick generiert wird.
-                    _ = thumbs.WarmupAsync(mf.Id, mf.BlobPath, mf.ContentType ?? "", 400, CancellationToken.None);
-                    _ = thumbs.WarmupAsync(mf.Id, mf.BlobPath, mf.ContentType ?? "", 1600, CancellationToken.None);
+                    // v1.10.191: ein Enqueue pro FILE — der Worker baut beide
+                    // Größen (400 + 1600) aus einem einzigen Decode-Durchgang.
+                    thumbs.Enqueue(mf.Id, mf.BlobPath, mf.ContentType);
                 }
             }
         }

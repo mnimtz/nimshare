@@ -108,9 +108,14 @@ public class AlbumZipCache : IAlbumZipCache
 
         var files = await db.Files
             .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready)
-            .Select(f => new { f.BlobPath, f.Name })
+            .Select(f => new { f.Id, f.BlobPath, f.Name })
             .ToListAsync(ct);
         if (files.Count == 0) return;
+        // v1.10.191: Snapshot der File-Ids — vor dem Upload prüfen wir, ob
+        // sich der Ordner-Inhalt während des Builds geändert hat (Gast lädt
+        // parallel hoch → Invalidate-Delete könnte VOR unserem Upload laufen
+        // und wir würden ein stales ZIP als frisch zementieren).
+        var snapshotIds = files.Select(f => f.Id).OrderBy(x => x).ToList();
 
         var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nimshare-zipcache-{linkId:N}.zip");
         int written = 0;
@@ -125,7 +130,12 @@ public class AlbumZipCache : IAlbumZipCache
                 {
                     ct.ThrowIfCancellationRequested();
                     var name = UniqueEntryName(f.Name, used);
-                    var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
+                    // v1.10.191: Medien (JPEG/HEIC/MP4…) sind bereits komprimiert —
+                    // Optimal-Deflate darüber verbrennt auf dem 1-vCPU-B1 nur CPU
+                    // (~50s+ pro Album!), die währenddessen dem Thumb-Worker und
+                    // Kestrel fehlt. NoCompression = reines Store, ~100× schneller,
+                    // ZIP wird nur minimal größer.
+                    var entry = zip.CreateEntry(name, PickCompression(f.Name));
                     try
                     {
                         await using var es = entry.Open();
@@ -140,6 +150,19 @@ public class AlbumZipCache : IAlbumZipCache
             }
             if (written == 0) return;
 
+            // v1.10.191: Staleness-Check vor dem Upload — hat sich der Ordner
+            // während des Builds geändert (neuer Gast-Upload, Löschung), das
+            // ZIP verwerfen. Der nächste Warmup baut mit frischem Stand.
+            var nowIds = await db.Files
+                .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready)
+                .Select(f => f.Id).ToListAsync(ct);
+            nowIds.Sort();
+            if (!nowIds.SequenceEqual(snapshotIds))
+            {
+                _log.LogInformation("AlbumZipCache: folder changed during build for link {LinkId} — discarding", linkId);
+                return;
+            }
+
             await using (var read = new System.IO.FileStream(tmp, System.IO.FileMode.Open,
                 System.IO.FileAccess.Read, System.IO.FileShare.None, 1 << 16, System.IO.FileOptions.Asynchronous))
             {
@@ -151,6 +174,17 @@ public class AlbumZipCache : IAlbumZipCache
         {
             try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
         }
+    }
+
+    /// <summary>Schon-komprimierte Formate nur „storen" statt deflaten.</summary>
+    internal static CompressionLevel PickCompression(string fileName)
+    {
+        var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+        return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".heic" or ".heif"
+            or ".mp4" or ".mov" or ".m4v" or ".avi" or ".mkv" or ".webm"
+            or ".mp3" or ".m4a" or ".aac" or ".zip" or ".7z" or ".gz" or ".rar"
+            ? CompressionLevel.NoCompression
+            : CompressionLevel.Fastest;
     }
 
     private static string UniqueEntryName(string desired, HashSet<string> used)

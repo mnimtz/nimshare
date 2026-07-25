@@ -111,6 +111,13 @@ public class StorageFile
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
 
+    // v1.10.191: Zeitpunkt, zu dem BEIDE Thumbnail-Größen (400 + 1600)
+    // fertig im Blob-Cache liegen. Null = noch nicht generiert (oder kein
+    // Bild). Die Album-Landing rendert für geflaggte Files direkte SAS-URLs
+    // ins HTML — null-Files kriegen einen Pending-Platzhalter + JS-Polling.
+    // Der ThumbnailWorker setzt das Flag nach erfolgreichem Build.
+    public DateTimeOffset? ThumbsReadyAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ReadyAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }

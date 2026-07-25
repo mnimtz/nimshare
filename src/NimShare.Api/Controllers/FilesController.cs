@@ -108,7 +108,6 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> Complete(Guid id, [FromServices] IAiPostProcessor ai,
         [FromServices] IWebhookDispatcher hooks,
         [FromServices] IActivityLogger activity,
-        [FromServices] IServiceScopeFactory scopes,
         CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
@@ -124,38 +123,30 @@ public class FilesController : ControllerBase
         file.ReadyAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
 
-        // v1.10.187: EXIF-GPS fire-and-forget statt inline. Der Reader lädt
-        // pro File 3-6 MB Blob-Bytes; bei 65-Bilder-Drag&Drop war das der
-        // sichtbare „finalisieren…"-Hänger (~3s pro File, sequentiell durch
-        // den Client → 3+ Min gesamt). Analog zu AiPostProcessor: eigener
-        // Scope + Background-Task + fehlerlokal. Latitude/Longitude ist nur
-        // Deko für die Album-Karte, kein User-critical.
+        // v1.10.191: EXIF-GPS + Thumbnails laufen jetzt beide im Thumb-Worker
+        // — der lädt den Blob genau EINMAL und macht daraus 400er + 1600er
+        // Thumb plus GPS-Koordinaten. Ersetzt den v1.10.187-Task.Run (eigener
+        // Blob-Download nur für GPS) und macht „Thumbs direkt beim Hochladen"
+        // für alle Bilder wahr, nicht nur für Gallery-Uploads.
         if ((file.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            var fid = file.Id;
-            var path = file.BlobPath;
-            var ctype = file.ContentType ?? "";
-            _ = Task.Run(async () =>
+            var thumbs = HttpContext.RequestServices.GetRequiredService<IThumbnailService>();
+            thumbs.Enqueue(file.Id, file.BlobPath, file.ContentType);
+        }
+        // v1.10.191: Upload in einen bereits per Link geteilten Ordner →
+        // vorgebautes Album-ZIP ist veraltet, invalidieren (lazy rebuild
+        // beim nächsten „Alle herunterladen" bzw. Landing-Warmup).
+        if (file.FolderId is not null)
+        {
+            var linkIds = await _db.ShareLinks
+                .Where(l => l.FolderId == file.FolderId)
+                .Select(l => l.Id).ToListAsync(ct);
+            if (linkIds.Count > 0)
             {
-                try
-                {
-                    using var scope = scopes.CreateScope();
-                    var exif = scope.ServiceProvider.GetRequiredService<IExifGpsReader>();
-                    var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
-                    var gps = await exif.TryReadAsync(path, ctype, CancellationToken.None);
-                    if (gps is not null)
-                    {
-                        var f = await db.Files.SingleOrDefaultAsync(x => x.Id == fid);
-                        if (f is not null)
-                        {
-                            f.Latitude = gps.Value.Lat;
-                            f.Longitude = gps.Value.Lon;
-                            await db.SaveChangesAsync();
-                        }
-                    }
-                }
-                catch { /* GPS-Fehler brechen Upload nicht */ }
-            });
+                var zc = HttpContext.RequestServices.GetRequiredService<IAlbumZipCache>();
+                foreach (var lid in linkIds)
+                    _ = zc.DeleteAsync(lid, CancellationToken.None);
+            }
         }
 
         // Fire-and-forget AI post-processing (tags, risk flag, embedding) when
@@ -424,12 +415,9 @@ public class FilesController : ControllerBase
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
         if (file is null) return NotFound();
         if (!await access.CanReadAsync(user, file, ct)) return Forbid();
+        // v1.10.191: GetOrCreateAsync enqueued bei Cache-Miss selbst.
         var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
-        if (url is null)
-        {
-            _ = thumbs.WarmupAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, CancellationToken.None);
-            return NotFound();
-        }
+        if (url is null) return NotFound();
         Response.Headers["Cache-Control"] = "private, max-age=300";
         return Redirect(url.ToString());
     }

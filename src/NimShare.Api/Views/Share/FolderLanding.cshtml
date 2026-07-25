@@ -201,6 +201,11 @@
                    Dateiname klein. */
                 .gal-cell .gal-fallback { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:12px; text-align:center; font-size:11px; color:#fff; background:linear-gradient(135deg,#8aa1c1,#5a7ba8); }
                 .gal-cell .gal-fallback .em { font-size:48px; margin-bottom:6px; opacity:.92 }
+                /* v1.10.191: Pending-Kachel — Thumb wird gerade im Hintergrund
+                   generiert, JS pollt und tauscht ein. Dezente Puls-Animation. */
+                .gal-cell .gal-pending { background:linear-gradient(135deg,#9aa8bd,#6d84a6); }
+                .gal-spin { animation: galPulse 1.6s ease-in-out infinite; display:inline-block; }
+                @@keyframes galPulse { 0%,100% { opacity:.45; transform:scale(.94);} 50% { opacity:1; transform:scale(1.06);} }
                 .gal-cell .gal-fallback small { opacity:.75; font-size:10px; margin-top:4px; letter-spacing:.03em; text-transform:uppercase; }
                 .gal-cell .gal-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.15); }
                 .gal-cell .gal-play svg { width:56px; height:56px; opacity:.9; }
@@ -253,16 +258,33 @@
                 @foreach (var (f, idx) in mediaFiles.Select((f, i) => (f, i)))
                 {
                     var isImg = IsImage(f.ContentType);
-                    <div class="gal-cell" data-idx="@idx" data-id="@f.Id" data-name="@f.Name" data-size="@Bytes(f.SizeBytes)" data-ct="@f.ContentType" onclick="galOpen(@idx)">
-                        @if (canPreview && isImg)
+                    <div class="gal-cell" data-idx="@idx" data-id="@f.Id" data-name="@f.Name" data-size="@Bytes(f.SizeBytes)" data-ct="@f.ContentType" data-t1600="@(f.Thumb1600 ?? "")" onclick="galOpen(@idx)">
+                        @if (canPreview && isImg && f.Thumb400 is not null)
                         {
-                            @* v1.10.174: Grid nutzt den Server-Thumbnail-
-                               Endpoint (HEIC → JPEG, resize). Fallback aus
-                               v1.10.170 bleibt für den Fall dass der Endpoint
-                               404 gibt (kaputte Datei, Video, oder Password-
-                               gate). Lightbox lädt weiterhin /media (Full-Res). *@
-                            <img loading="lazy" src="/s/@Model.Slug/thumb/@f.Id?size=400" alt="@f.Name"
-                                 onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'gal-fallback',innerHTML:'<div class=&quot;em&quot;>📷</div><div>'+this.alt.replace(/[&lt;&gt;&amp;]/g,'')+'</div><small>@(f.Name.EndsWith(".HEIC", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith(".HEIF", StringComparison.OrdinalIgnoreCase) ? "HEIC — Vollansicht beim Klick" : "Vorschau nicht verfügbar")</small>'}))" />
+                            @* v1.10.191: Thumb fertig → direkte SAS-URL, das JPEG
+                               kommt ohne App-Beteiligung vom Blob-Storage. Fehler-
+                               Kette: SAS abgelaufen → /thumb-Endpoint (302 auf
+                               frische SAS) → Kamera-Fallback-Kachel. *@
+                            <img loading="lazy" src="@f.Thumb400" alt="@f.Name"
+                                 onerror="if(!this.dataset.e){this.dataset.e='1';this.src='/s/@Model.Slug/thumb/@f.Id?size=400'}else{this.replaceWith(Object.assign(document.createElement('div'),{className:'gal-fallback',innerHTML:'<div class=&quot;em&quot;>📷</div><div>'+this.alt.replace(/[&lt;&gt;&amp;]/g,'')+'</div>'}))}" />
+                        }
+                        else if (canPreview && isImg && !f.ThumbFailed)
+                        {
+                            @* v1.10.191: Thumb noch nicht generiert — der Worker
+                               hat den Job schon in der Queue (Landing enqueued).
+                               JS pollt /thumb-status und tauscht die Kachel ein,
+                               sobald sie fertig ist. *@
+                            <div class="gal-fallback gal-pending" data-pending="@f.Id.ToString("N")">
+                                <div class="em gal-spin">⏳</div>
+                                <div>@f.Name</div>
+                                <small>@T["landing.gallery.thumb_pending"]</small>
+                            </div>
+                        }
+                        else if (canPreview && isImg)
+                        {
+                            @* Decode endgültig gescheitert — Kamera-Fallback,
+                               Klick öffnet weiterhin das Original via Lightbox. *@
+                            <div class="gal-fallback"><div class="em">📷</div><div>@f.Name</div></div>
                         }
                         else if (canPreview)
                         {
@@ -407,6 +429,7 @@
     const canPreview = @(canPreview ? "true" : "false");
     const T_download = @Html.Raw(Json.Serialize(T["landing.download.button"].Value));
     const T_open_full = @Html.Raw(Json.Serialize(T["landing.gallery.lb.open_original"].Value));
+    const T_thumb_pending = @Html.Raw(Json.Serialize(T["landing.gallery.thumb_pending"].Value));
     const T_pick_again = @Html.Raw(Json.Serialize(T["landing.gallery.upload.button"].Value));
     const T_upl_done = @Html.Raw(Json.Serialize(T["landing.gallery.upload.done"].Value));
     const T_upl_reload = @Html.Raw(Json.Serialize(T["landing.gallery.upload.reload"].Value));
@@ -435,64 +458,52 @@
         const id = c.dataset.id, name = c.dataset.name, size = c.dataset.size, ct = c.dataset.ct;
         const slot = document.getElementById('galLBSlot');
         slot.innerHTML = '';
-        // v1.10.183: Lightbox nutzt die 1600px-Thumb-Variante — die ist
-        // JPEG-konvertiert und deshalb auch in Chrome/Firefox darstellbar
-        // (HEIC → sonst wäre nur der Platzhalter zu sehen). Für Videos
-        // bleibt es beim /media-SAS-Redirect (Video-Container brauchen
-        // Range-Requests direkt vom Blob).
         const isImg = (ct || '').startsWith('image/');
-        const url = isImg
-            ? '/s/' + slug + '/thumb/' + id + '?size=1600'
-            : '/s/' + slug + '/media/' + id;
-        let el;
+        // v1.10.191: Lightbox nutzt die vorab gerenderte 1600er-SAS aus dem
+        // data-Attribut (kommt fertig aus der DB-geflaggten Landing oder per
+        // Status-Poll). Kein img-src-Retry-Gehämmer mehr — wenn das Thumb
+        // noch nicht fertig ist, zeigen wir den Pending-Spinner und der
+        // Status-Poll ruft galRender() erneut auf, sobald es da ist.
         if (isImg) {
-            el = document.createElement('img');
+            const t1600 = c.dataset.t1600;
+            if (!t1600) {
+                slot.innerHTML = '<div style="color:#fff;text-align:center;padding:48px">'
+                    + '<div class="gal-spin" style="font-size:64px">⏳</div>'
+                    + '<div style="margin-top:14px">' + escapeHtml(name) + '</div>'
+                    + '<small style="opacity:.75">' + escapeHtml(T_thumb_pending) + '</small></div>';
+                document.getElementById('galLBInfo').innerHTML =
+                    '<b>' + escapeHtml(name) + '</b> · <span style="opacity:.8">⏳ ' + escapeHtml(T_thumb_pending) + '</span>';
+                galEnsurePolling();
+                return;
+            }
+            const el = document.createElement('img');
             el.className = 'gal-lb-media';
             el.alt = name;
-            // v1.10.189: Retry statt sofort-Fallback. Der 1600er-Thumb wird oft
-            // erst on-demand generiert (Cache-Miss → Server startet Warmup).
-            // Vorher: sofortiger Fallback auf /media zeigte Chrome/FF bei HEIC
-            // ein broken-Image. Jetzt: Spinner + Polling alle 2s bis zu 30s.
-            // Wenn's dann immer noch nichts gibt → Fallback plus Warnhinweis.
-            let attempt = 0;
-            const maxAttempts = 15; // 15 × 2s = 30s
-            const tryLoad = () => {
-                attempt++;
-                el.src = url + '&_t=' + Date.now(); // cache-buster
-            };
+            // Fallback-Kette: SAS abgelaufen → /thumb-Endpoint (302 auf
+            // frische SAS) → /media-Original (Safari kann HEIC nativ) →
+            // Fallback-Karte (Chrome/FF können HEIC-Original nicht rendern).
             el.onerror = () => {
-                if (attempt < maxAttempts) {
-                    // Spinner + Status im Info-Bereich
-                    document.getElementById('galLBInfo').innerHTML =
-                        '<b>' + escapeHtml(name) + '</b> · ' +
-                        '<span style="opacity:.8">🔄 Vorschau wird generiert… (' + attempt + '/' + maxAttempts + ')</span>';
-                    setTimeout(tryLoad, 2000);
-                } else {
-                    // Aufgeben — Original probieren (Safari zeigt HEIC nativ, Chrome bricht)
+                el.onerror = () => {
                     el.onerror = () => {
-                        // Auch /media failed → Broken-Image durch Fallback-Karte ersetzen
                         const fb = document.createElement('div');
-                        fb.className = 'gal-fallback';
-                        fb.style.background = 'rgba(255,255,255,.05)';
-                        fb.style.color = '#fff';
-                        fb.style.padding = '48px';
-                        fb.innerHTML = '<div class="em" style="font-size:64px">📷</div>' +
-                            '<div style="margin-top:12px">' + escapeHtml(name) + '</div>' +
-                            '<small style="opacity:.7">HEIC — Original per „Öffnen" laden</small>';
+                        fb.style.cssText = 'color:#fff;text-align:center;padding:48px';
+                        fb.innerHTML = '<div class="em" style="font-size:64px">📷</div>'
+                            + '<div style="margin-top:12px">' + escapeHtml(name) + '</div>'
+                            + '<small style="opacity:.7">' + escapeHtml(T_open_full) + ' ↓</small>';
                         el.replaceWith(fb);
                     };
                     el.src = '/s/' + slug + '/media/' + id;
-                }
+                };
+                el.src = '/s/' + slug + '/thumb/' + id + '?size=1600';
             };
-            el.onload = () => {
-                // Info-Text zurück auf normal
-                document.getElementById('galLBInfo').innerHTML =
-                    '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
-                    ' <a href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
-            };
-            tryLoad();
+            el.src = t1600;
+            slot.appendChild(el);
+            document.getElementById('galLBInfo').innerHTML =
+                '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
+                ' <a href="' + t1600 + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
         } else {
-            el = document.createElement('video');
+            const url = '/s/' + slug + '/media/' + id;
+            const el = document.createElement('video');
             el.className = 'gal-lb-media';
             el.controls = true;
             // iOS Safari blockt autoplay ohne muted, auch nach User-Click auf die
@@ -503,13 +514,67 @@
             el.muted = true;
             el.playsInline = true;
             el.src = url;
+            slot.appendChild(el);
+            document.getElementById('galLBInfo').innerHTML =
+                '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
+                ' <a href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
         }
-        slot.appendChild(el);
-        document.getElementById('galLBInfo').innerHTML =
-            '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
-            ' <a href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
     }
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+    // ── v1.10.191: Thumb-Status-Polling ───────────────────────────────
+    // Solange Kacheln pending sind: alle 4s EIN Request auf /thumb-status
+    // (statt N img-Retries). Fertige Thumbs werden live eingetauscht; wenn
+    // die Lightbox gerade das betroffene Bild zeigt, wird sie aktualisiert.
+    let galPollTimer = null;
+    const galPollStart = Date.now();
+    function galApplyReady(ready, failed) {
+        document.querySelectorAll('[data-pending]').forEach(ph => {
+            const key = ph.getAttribute('data-pending');
+            const cell = ph.closest('.gal-cell');
+            if (!cell) return;
+            if (failed && failed.indexOf(key) >= 0) {
+                // Decode endgültig gescheitert → Kamera-Fallback statt Spinner.
+                const fb = document.createElement('div');
+                fb.className = 'gal-fallback';
+                fb.innerHTML = '<div class="em">📷</div><div>' + escapeHtml(cell.dataset.name) + '</div>';
+                ph.replaceWith(fb);
+                return;
+            }
+            const r = ready[key];
+            if (!r) return;
+            cell.dataset.t1600 = r.t1600;
+            const img = document.createElement('img');
+            img.loading = 'lazy';
+            img.alt = cell.dataset.name;
+            img.onerror = () => { img.onerror = null; img.src = '/s/' + slug + '/thumb/' + cell.dataset.id + '?size=400'; };
+            img.src = r.t400;
+            ph.replaceWith(img);
+            if (lbIdx >= 0 && cells[lbIdx] === cell) galRender();
+        });
+    }
+    async function galPollOnce() {
+        try {
+            const r = await fetch('/s/' + slug + '/thumb-status');
+            if (!r.ok) return;
+            const j = await r.json();
+            galApplyReady(j.ready || {}, j.failed || []);
+            if (!document.querySelector('[data-pending]')) galStopPolling();
+        } catch { /* nächster Tick */ }
+    }
+    function galStopPolling() {
+        if (galPollTimer) { clearInterval(galPollTimer); galPollTimer = null; }
+    }
+    function galEnsurePolling() {
+        if (galPollTimer || !canPreview) return;
+        galPollTimer = setInterval(() => {
+            // Sicherheitsdeckel 15min — kaputte Dateien werden nie fertig,
+            // deren Kacheln bleiben beim Platzhalter stehen.
+            if (Date.now() - galPollStart > 15 * 60 * 1000) { galStopPolling(); return; }
+            galPollOnce();
+        }, 4000);
+    }
+    if (canPreview && document.querySelector('[data-pending]')) galEnsurePolling();
     document.addEventListener('keydown', e => {
         if (!document.getElementById('galLB').classList.contains('open')) return;
         if (e.key === 'Escape') galClose();

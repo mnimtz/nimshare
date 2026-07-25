@@ -76,6 +76,10 @@ public class TrashController : Controller
         _db.Files.Remove(file);
         await _db.SaveChangesAsync(ct);
         try { await _blobs.DeleteAsync(path, ct); } catch { /* orphaned bytes, ignore */ }
+        // v1.10.191: Thumb-Cache mitputzen — sonst wächst thumbs/ als Leak,
+        // seit der Worker für JEDES hochgeladene Bild Thumbs baut.
+        try { await _blobs.DeleteAsync($"thumbs/{id:N}/400.jpg", ct); } catch { }
+        try { await _blobs.DeleteAsync($"thumbs/{id:N}/1600.jpg", ct); } catch { }
         TempData["Notice"] = _l["notice.purged_one"].Value;
         return RedirectToAction(nameof(Index));
     }
@@ -105,6 +109,12 @@ public class TrashController : Controller
         foreach (var p in paths)
         {
             try { await _blobs.DeleteAsync(p, ct); } catch { /* ignore */ }
+        }
+        // v1.10.191: Thumb-Caches der gelöschten Files mitputzen.
+        foreach (var fid in ids)
+        {
+            try { await _blobs.DeleteAsync($"thumbs/{fid:N}/400.jpg", ct); } catch { }
+            try { await _blobs.DeleteAsync($"thumbs/{fid:N}/1600.jpg", ct); } catch { }
         }
         TempData["Notice"] = string.Format(_l["notice.purged_many"].Value, files.Count);
         return RedirectToAction(nameof(Index));
@@ -155,6 +165,9 @@ public class TrashController : Controller
         _db.Files.Remove(file);
         await _db.SaveChangesAsync(ct);
         try { await _blobs.DeleteAsync(path, ct); } catch { /* orphaned */ }
+        // v1.10.191: Thumb-Cache mitputzen (analog Web-Purge).
+        try { await _blobs.DeleteAsync($"thumbs/{id:N}/400.jpg", ct); } catch { }
+        try { await _blobs.DeleteAsync($"thumbs/{id:N}/1600.jpg", ct); } catch { }
         return NoContent();
     }
 }

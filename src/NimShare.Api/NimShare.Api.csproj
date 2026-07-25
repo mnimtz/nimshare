@@ -86,8 +86,11 @@
     <!-- v1.10.174: HEIC/JPEG-Thumbnail-Generierung (Server-side, damit
          Chrome/Firefox iPhone-Fotos anzeigen können). Magick.NET zieht
          das native ImageMagick + libheif via Runtime-Pack rein — läuft
-         im Docker-Container auf Linux ohne extra apt-get. -->
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
+         im Docker-Container auf Linux ohne extra apt-get.
+         v1.10.191: Q8 statt Q16 — 8 bit/Kanal reichen für JPEG-Thumbs
+         locker, halbieren aber den Pixel-Buffer (12-MP-Foto: ~48 MB statt
+         ~96 MB) und beschleunigen Decode+Resize auf dem 1-vCPU-B1 spürbar. -->
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="13.10.0" />
 
     <!-- v1.10.178: Pure-managed EXIF-Reader für die Album-Landing-Karte.
          Extrahiert GPS-Koordinaten aus JPEG/HEIC/HEIF ohne native Libs
