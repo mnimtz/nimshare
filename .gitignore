@@ -63,3 +63,4 @@ ios/**/*.xcuserdatad/
 # „view not found". Escape verhindert Character-Class-Interpretation.
 **/*\[conflicted\]*.cshtml
 **/*\[conflicted 2\]*.cshtml
+build/
