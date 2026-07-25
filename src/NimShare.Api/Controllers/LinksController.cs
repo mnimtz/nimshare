@@ -42,7 +42,11 @@ public class LinksController : ControllerBase
         string? Message,
         bool NotifyOnAccess,
         // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
-        Guid? SigningCertificateId = null);
+        Guid? SigningCertificateId = null,
+        // v1.10.166: Wenn true UND Folder.Kind==Gallery, dürfen Empfänger direkt
+        // ins Album hochladen. Auf File-Links und Regular-Ordnern wird das
+        // Flag serverseitig ignoriert (in der Create-Logik gefiltert).
+        bool AllowUploads = false);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -54,7 +58,11 @@ public class LinksController : ControllerBase
         // oder "Ordner: Y" statt bloß Slug. TargetKind = "file"|"folder"|null.
         string? TargetKind, string? TargetName,
         // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
-        SignerInfo? Signer = null);
+        SignerInfo? Signer = null,
+        // v1.10.166: Gallery-Ordner + AllowUploads-Flag für Landing-Steuerung
+        // + für die Anzeige in der Links-Liste („Album mit Upload-Option").
+        bool FolderIsGallery = false,
+        bool AllowUploads = false);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -131,6 +139,12 @@ public class LinksController : ControllerBase
             if (owned) certId = cid;
         }
 
+        // v1.10.166: AllowUploads gilt nur auf Folder-Links mit Kind=Gallery.
+        // Auf File-Links oder Regular-Ordnern serverseitig hart auf false
+        // zwingen — sonst könnte ein manipulierter Client den Upload-Widget
+        // auf beliebigen Freigaben aktivieren.
+        var allowUploads = req.AllowUploads && folder is not null && folder.Kind == FolderKind.Gallery;
+
         var link = new ShareLink
         {
             FileId = file?.Id,
@@ -143,6 +157,7 @@ public class LinksController : ControllerBase
             Message = req.Message,
             NotifyOnAccess = req.NotifyOnAccess,
             SigningCertificateId = certId,
+            AllowUploads = allowUploads,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);

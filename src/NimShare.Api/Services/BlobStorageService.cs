@@ -52,6 +52,51 @@ public class BlobStorageService : IBlobStorageService
         await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: ct);
     }
 
+    /// <summary>
+    /// v1.10.166 — CORS-Rule am Storage-Account setzen, damit Browser-Uploads
+    /// via SAS-PUT von beliebigen HTTPS-Origins funktionieren. Nur einmal beim
+    /// Start ausgeführt (idempotent: wenn eine Regel mit unserer Signatur
+    /// bereits gesetzt ist, no-op). Ohne CORS blockt der Browser den PUT vor
+    /// dem Response („CORS/Netzwerk"-Fehler beim Datei-Upload).
+    ///
+    /// AllowedOrigins="*" ist bewusst — die SAS selbst ist die Auth-Schicht,
+    /// ohne SAS geht kein Blob-Zugriff, egal von welcher Origin. Das erspart
+    /// eine Pflege-Liste pro Custom-Domain.
+    /// </summary>
+    public async Task EnsureCorsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var props = (await _serviceClient.GetPropertiesAsync(ct)).Value;
+            const string signature = "nimshare-v1";
+            var existing = props.Cors ?? new List<BlobCorsRule>();
+            // Idempotenz: unsere eigene Rule anhand des reservierten Marker-
+            // Origins ("https://nimshare.local/{signature}") erkennen. Kein
+            // Umschreiben wenn schon vorhanden — sonst würden benutzerdefinierte
+            // Zusatzregeln bei jedem Start neu gepusht.
+            var marker = $"https://nimshare.local/{signature}";
+            if (existing.Any(r => r.AllowedOrigins?.Contains(marker) == true))
+                return;
+            var rule = new BlobCorsRule
+            {
+                AllowedOrigins = "*," + marker,
+                AllowedMethods = "GET,PUT,POST,HEAD,OPTIONS",
+                AllowedHeaders = "*",
+                ExposedHeaders = "*",
+                MaxAgeInSeconds = 3600,
+            };
+            var next = new List<BlobCorsRule>(existing) { rule };
+            props.Cors = next;
+            await _serviceClient.SetPropertiesAsync(props, ct);
+        }
+        catch (Exception ex)
+        {
+            // Nicht fatal — Uploads scheitern dann weiterhin, aber die App
+            // läuft. Marcus sieht den Grund im Log.
+            Console.Error.WriteLine($"[STARTUP] EnsureCorsAsync failed: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
     public UploadTicket CreateUploadTicket(string blobPath, TimeSpan? ttl = null)
     {
         var container = _serviceClient.GetBlobContainerClient(_options.ContainerName);

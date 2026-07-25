@@ -1,6 +1,17 @@
 namespace NimShare.Core.Entities;
 
 /// <summary>
+/// v1.10.166 — optionaler Ordner-Typ, der die Standard-Datei-Browser-Ansicht
+/// austauscht. Regular = klassische Liste. Gallery = Photo/Video-Album mit
+/// Grid, Lightbox und optionalem „Upload erlauben"-Toggle auf Freigabelinks.
+/// </summary>
+public enum FolderKind
+{
+    Regular = 0,
+    Gallery = 1,
+}
+
+/// <summary>
 /// A folder in the hierarchical file browser. Every file scope (Personal /
 /// Public / each Group) has exactly one root folder (ParentFolderId == null).
 /// Sub-folders live under a parent. Names are unique inside their parent.
@@ -50,6 +61,14 @@ public class Folder
     /// ancestors). Personal + Group scopes ignore this flag.
     /// </summary>
     public bool IsPrivate { get; set; }
+
+    /// <summary>
+    /// v1.10.166 — Ordner-Typ. Regular = klassischer Datei-Browser. Gallery =
+    /// Foto/Video-Album mit Grid-Landing + Lightbox. Freigabelinks können
+    /// zusätzlich AllowUploads=true bekommen, sodass Empfänger direkt Bilder
+    /// hinzufügen können (Event-Album-Use-Case).
+    /// </summary>
+    public FolderKind Kind { get; set; } = FolderKind.Regular;
 
     public ICollection<Folder> Children { get; set; } = new List<Folder>();
     public ICollection<StorageFile> Files { get; set; } = new List<StorageFile>();

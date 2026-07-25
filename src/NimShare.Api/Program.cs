@@ -558,6 +558,13 @@ using (var scope = app.Services.CreateScope())
         Console.Error.WriteLine("[STARTUP] Running EnsureInstanceCasTableAsync…");
         await EnsureInstanceCasTableAsync(db, isSqlServer);
         Console.Error.WriteLine("[STARTUP] EnsureInstanceCasTableAsync done.");
+        // v1.10.166: Rescue für Folders.Kind + ShareLinks.AllowUploads (V189).
+        // Beide sind NOT NULL DEFAULT 0 → EnsureForensicColumnsAsync taugt
+        // dafür nicht (NULL-only), also parallele Standalone-Routine. Analog
+        // zu EnsureFolderIsPrivateColumnAsync — idempotent.
+        Console.Error.WriteLine("[STARTUP] Running EnsureGalleryColumnsAsync…");
+        await EnsureGalleryColumnsAsync(db, isSqlServer);
+        Console.Error.WriteLine("[STARTUP] EnsureGalleryColumnsAsync done.");
     }
     catch (Exception ex)
     {
@@ -654,6 +661,14 @@ _ = Task.Run(async () =>
     catch (Exception ex)
     {
         log.LogWarning(ex, "Could not ensure blob container — is the storage connection configured?");
+    }
+    // v1.10.166: CORS-Rule setzen, falls sie noch nicht existiert. Ohne
+    // CORS blockt der Browser den SAS-PUT und der User sieht nur
+    // „CORS/Netzwerk (PUT geblockt vor Response)". Idempotent.
+    try { await blobs.EnsureCorsAsync(); }
+    catch (Exception ex)
+    {
+        log.LogWarning(ex, "Could not ensure blob CORS — Browser-Uploads koennten scheitern.");
     }
 });
 
@@ -935,6 +950,114 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
     {
         Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync failed: " + ex.Message);
     }
+}
+
+// v1.10.166: Rescue für Folders.Kind + ShareLinks.AllowUploads (V189). Beide
+// NOT NULL DEFAULT 0, deshalb außerhalb von EnsureForensicColumnsAsync (die
+// nur NULL-Spalten anhängt). Idempotent — legt die Spalte an falls sie fehlt,
+// stempelt V189 in __EFMigrationsHistory sobald beide da sind. Analog zu
+// EnsureFolderIsPrivateColumnAsync für den Fall dass MigrateAsync V189 nicht
+// anwendet.
+static async Task EnsureGalleryColumnsAsync(NimShareDbContext db, bool isSqlServer)
+{
+    const string V189 = "20260725100000_V189_FolderGalleryMode";
+    try
+    {
+        var connStr = db.Database.GetConnectionString();
+        if (isSqlServer)
+        {
+            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
+            await cn.OpenAsync();
+            var kindExists = await ColHasSqlServerAsync(cn, "Folders", "Kind");
+            if (!kindExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE [Folders] ADD [Kind] int NOT NULL DEFAULT (0)";
+                await alter.ExecuteNonQueryAsync();
+                kindExists = true;
+                Console.Error.WriteLine("[STARTUP] Added Folders.Kind (SqlServer).");
+            }
+            var allowExists = await ColHasSqlServerAsync(cn, "ShareLinks", "AllowUploads");
+            if (!allowExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE [ShareLinks] ADD [AllowUploads] bit NOT NULL DEFAULT (0)";
+                await alter.ExecuteNonQueryAsync();
+                allowExists = true;
+                Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SqlServer).");
+            }
+            if (kindExists && allowExists)
+            {
+                using var stamp = cn.CreateCommand();
+                stamp.CommandText =
+                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
+                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
+                stamp.Parameters.AddWithValue("@mid", V189);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V189 (SqlServer).");
+            }
+        }
+        else
+        {
+            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+            await cn.OpenAsync();
+            var kindExists = await ColHasSqliteAsync(cn, "Folders", "Kind");
+            if (!kindExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"Kind\" INTEGER NOT NULL DEFAULT 0";
+                await alter.ExecuteNonQueryAsync();
+                kindExists = true;
+                Console.Error.WriteLine("[STARTUP] Added Folders.Kind (SQLite).");
+            }
+            var allowExists = await ColHasSqliteAsync(cn, "ShareLinks", "AllowUploads");
+            if (!allowExists)
+            {
+                using var alter = cn.CreateCommand();
+                alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"AllowUploads\" INTEGER NOT NULL DEFAULT 0";
+                await alter.ExecuteNonQueryAsync();
+                allowExists = true;
+                Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SQLite).");
+            }
+            if (kindExists && allowExists)
+            {
+                using var stamp = cn.CreateCommand();
+                stamp.CommandText =
+                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                    "SELECT $mid, '8.0.10' " +
+                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+                stamp.Parameters.AddWithValue("$mid", V189);
+                var stamped = await stamp.ExecuteNonQueryAsync();
+                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V189 (SQLite).");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] EnsureGalleryColumnsAsync failed: " + ex.Message);
+    }
+}
+
+static async Task<bool> ColHasSqlServerAsync(Microsoft.Data.SqlClient.SqlConnection cn, string table, string col)
+{
+    using var cmd = cn.CreateCommand();
+    cmd.CommandText = $"SELECT COL_LENGTH('{table}', '{col}')";
+    var res = await cmd.ExecuteScalarAsync();
+    return res is not null && res != DBNull.Value;
+}
+
+static async Task<bool> ColHasSqliteAsync(Microsoft.Data.Sqlite.SqliteConnection cn, string table, string col)
+{
+    using var cmd = cn.CreateCommand();
+    cmd.CommandText = $"PRAGMA table_info(\"{table}\")";
+    using var rdr = await cmd.ExecuteReaderAsync();
+    while (await rdr.ReadAsync())
+    {
+        if (string.Equals(rdr.GetString(1), col, StringComparison.OrdinalIgnoreCase)) return true;
+    }
+    return false;
 }
 
 // v1.10.121: Legt die LinkEntries-Tabelle (Linksammlung, Migration V185) an,

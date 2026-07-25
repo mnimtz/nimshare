@@ -8,6 +8,15 @@ public interface IBlobStorageService
     Task EnsureContainerAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// v1.10.166 — Setzt CORS-Regeln am Storage-Account so, dass Browser-
+    /// Uploads via SAS-PUT von beliebigen HTTPS-Origins durchgehen (Custom-
+    /// Domains, mehrere Instanzen). Ohne diese Regel scheitert der Preflight
+    /// und der PUT wird im Browser vor Response geblockt („CORS/Netzwerk").
+    /// Idempotent + best-effort — Fehler werden geloggt, App-Start läuft weiter.
+    /// </summary>
+    Task EnsureCorsAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Returns a write-SAS URL for a specific blob path. TTL is short (default 30 min) to give
     /// the client time to upload chunked but not much longer.
     /// </summary>

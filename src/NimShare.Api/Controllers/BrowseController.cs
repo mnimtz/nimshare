@@ -356,6 +356,28 @@ public class BrowseController : Controller
         return Ok(new { id = folder.Id, isPrivate = folder.IsPrivate });
     }
 
+    // v1.10.166 — Ordner-Typ umschalten (Regular ↔ Gallery). Nur der Owner
+    // (bzw. Admin) darf schalten; Root-Ordner bleiben Regular (Album-Modus
+    // ergibt am Scope-Root keinen Sinn).
+    public record KindReq(string Kind);
+
+    [Authorize(Policy = "ApiUser")]
+    [HttpPatch("/api/v1/folders/{id:guid}/kind")]
+    public async Task<IActionResult> UpdateFolderKind(Guid id, [FromBody] KindReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var folder = await _db.Folders.FindAsync(new object[] { id }, ct);
+        if (folder is null) return NotFound();
+        if (!await _folders.CanManageAsync(folder, me, ct)) return Forbid();
+        if (folder.ParentFolderId is null)
+            return Problem(statusCode: 422, title: "Cannot change the kind of a scope root.");
+        if (!Enum.TryParse<FolderKind>(req.Kind, ignoreCase: true, out var kind))
+            return Problem(statusCode: 422, title: $"Unknown folder kind: {req.Kind}");
+        folder.Kind = kind;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { id = folder.Id, kind = folder.Kind.ToString() });
+    }
+
     /// <summary>
     /// v1.10.104: Kombinierter Read-Endpoint für die Berechtigungen-UI:
     /// aktueller IsPrivate-Zustand + alle Grants (User + Group) auf DIESEN
@@ -451,7 +473,10 @@ public class BrowseController : Controller
             id = folder.Id,
             name = folder.Name,
             scope = folder.Scope.ToString(),
-            subfolders = subs.Select(f => new { id = f.Id, name = f.Name }).ToList(),
+            // v1.10.166: Kind fließt mit, damit Web + iOS die Gallery-Ansicht
+            // wählen können statt der Standard-Listen-Ansicht.
+            kind = folder.Kind.ToString(),
+            subfolders = subs.Select(f => new { id = f.Id, name = f.Name, kind = f.Kind.ToString() }).ToList(),
             files = files.Where(f => f.Status == StorageFileStatus.Ready)
                 .Select(f => new { id = f.Id, name = f.Name, sizeBytes = f.SizeBytes,
                                    contentType = f.ContentType, createdAt = f.CreatedAt }).ToList(),

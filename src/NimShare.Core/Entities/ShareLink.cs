@@ -74,6 +74,15 @@ public class ShareLink
     public Guid? SigningCertificateId { get; set; }
     public SigningCertificate? SigningCertificate { get; set; }
 
+    /// <summary>
+    /// v1.10.166 — nur relevant für Folder-Links auf Ordnern mit Kind=Gallery.
+    /// Wenn true, zeigt die Landing zusätzlich zum Album-Grid einen Upload-
+    /// Widget an, mit dem beliebige Besucher Bilder/Videos direkt in den
+    /// Ordner hinzufügen können (Event-/Hochzeits-Album-Modus). Auf Nicht-
+    /// Gallery-Ordnern und File-Links wird das Flag ignoriert.
+    /// </summary>
+    public bool AllowUploads { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 
