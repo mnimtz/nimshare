@@ -101,11 +101,15 @@ public class ThumbnailService : IThumbnailService
                 // Portrait-Fotos oft als Landscape+Orientation-Flag).
                 img.AutoOrient();
                 img.Strip(); // EXIF/GPS raus — Empfänger soll nicht sehen wo das Foto entstand
-                img.Resize(new MagickGeometry((uint)size, (uint)size)
+                // v1.10.176 build-fix: MagickGeometry(int,int) und Quality(int)
+                // sind die richtigen APIs in Magick.NET 13.x — die uint-Overloads
+                // gibt's erst in 14.x. Sub-Agent hat für 14.x geschrieben, aber
+                // die Package-Version ist 13.10.0.
+                img.Resize(new MagickGeometry(size, size)
                 {
                     Greater = true,   // nur runter, nie hoch skalieren
                 });
-                img.Quality = 82u;
+                img.Quality = 82;
                 img.Format = MagickFormat.Jpeg;
                 img.Write(outMs, MagickFormat.Jpeg);
             }
