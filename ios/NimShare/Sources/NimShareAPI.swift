@@ -46,6 +46,12 @@ final class NimShareAPI: ObservableObject {
         if !query.isEmpty { comp.queryItems = query }
         var req = URLRequest(url: comp.url!)
         req.httpMethod = method
+        // v1.10.172: 20s Request-Timeout. Default ist 60s — bei unerreichbarem
+        // Server steht die UI eine Minute lang auf ProgressView bevor irgendein
+        // Fehler auftaucht. 20s deckt normale Latenz (auch KI-Endpoints, die
+        // 5-15s brauchen können) ohne zu früh abzubrechen. Uploads nutzen einen
+        // separaten Pfad (Blob-PUT) mit eigenem Timeout — hier nicht betroffen.
+        req.timeoutInterval = 20
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         // v1.10.137: Sprache der App (Schnittmenge Gerät ∩ unterstützte
         // Sprachen) explizit mitschicken, damit serverseitige Inhalte wie die

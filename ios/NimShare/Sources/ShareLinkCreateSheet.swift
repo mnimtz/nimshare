@@ -31,6 +31,15 @@ struct ShareLinkCreateSheet: View {
     // v1.10.146: Zertifikat-Picker.
     @State private var certs: [CertDto] = []
     @State private var selectedCertId: UUID? = nil
+    // v1.10.172: Foto/Video-Album-Anzeige + „Upload erlauben" — 1:1-Parität
+    // zum Web-Share-Modal. Nur bei Folder-Targets sichtbar; auf File-Links
+    // würde der Server das Flag ohnehin ignorieren.
+    @State private var displayAsGallery: Bool = false
+    @State private var allowUploads: Bool = false
+
+    private var isFolderTarget: Bool {
+        if case .folder = target { return true } else { return false }
+    }
 
     var body: some View {
         NavigationStack {
@@ -84,6 +93,28 @@ struct ShareLinkCreateSheet: View {
             }
             Section {
                 Toggle("Benachrichtigen wenn Link geöffnet wird", isOn: $notifyOnAccess)
+            }
+            // v1.10.172: Foto/Video-Album-Sektion — nur für Folder-Targets,
+            // Sub-Toggle „Upload erlauben" erst wenn Album-Modus an ist.
+            if isFolderTarget {
+                Section("Foto/Video-Album") {
+                    Toggle(isOn: $displayAsGallery.animation()) {
+                        Label("Als Foto/Video-Album anzeigen", systemImage: "photo.on.rectangle.angled")
+                    }
+                    .onChange(of: displayAsGallery) { _, on in
+                        if !on { allowUploads = false }
+                    }
+                    if displayAsGallery {
+                        Toggle(isOn: $allowUploads) {
+                            Label("Empfänger dürfen hochladen", systemImage: "square.and.arrow.up")
+                        }
+                        Text("Ideal für Hochzeits- oder Event-Alben — jeder mit dem Link kann Fotos/Videos direkt hinzufügen.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Empfänger sehen ein Grid mit Vorschauen und Lightbox statt der klassischen Datei-Liste.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             // v1.10.146: Absender-Zertifikat (nur wenn welche vorhanden).
             if !certs.isEmpty {
@@ -162,7 +193,9 @@ struct ShareLinkCreateSheet: View {
                 expiresAt: useExpiry ? expiryDate : nil,
                 message: message.isEmpty ? nil : message,
                 notifyOnAccess: notifyOnAccess,
-                signingCertificateId: selectedCertId    // v1.10.146
+                signingCertificateId: selectedCertId,    // v1.10.146
+                displayAsGallery: isFolderTarget && displayAsGallery ? true : nil,  // v1.10.172
+                allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil
             )
             result = link
         } catch let ex { error = ex.localizedDescription }

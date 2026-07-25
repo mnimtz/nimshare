@@ -193,6 +193,10 @@ struct GreetingBanner: View {
 final class OneShotLocation: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocationCoordinate2D?, Never>?
+    // v1.10.172: Timeout-Task-Handle, damit ein alter Sleep den neuen Request
+    // nicht vorzeitig auflöst (Race bei zweitem requestOnce nach schnellem
+    // ersten Callback).
+    private var timeoutTask: Task<Void, Never>?
     @Published var last: CLLocationCoordinate2D?
 
     override init() {
@@ -220,9 +224,12 @@ final class OneShotLocation: NSObject, ObservableObject, CLLocationManagerDelega
                 } else {
                     manager.requestLocation()
                 }
-                Task { @MainActor in
+                // v1.10.172: alten Timer verwerfen bevor wir einen neuen starten,
+                // sonst löst der alte den JETZT laufenden Request auf.
+                timeoutTask?.cancel()
+                timeoutTask = Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 8_000_000_000)
-                    finish(last, setLast: false)   // no-op falls schon aufgelöst
+                    if !Task.isCancelled { finish(last, setLast: false) }
                 }
             }
         } onCancel: {
