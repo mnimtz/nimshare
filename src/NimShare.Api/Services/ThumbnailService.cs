@@ -163,7 +163,7 @@ public class ThumbnailService : IThumbnailService
 
                 img.AutoOrient();
                 img.Strip();
-                img.Resize(new MagickGeometry((uint)size, (uint)size)
+                img.Resize(new MagickGeometry(size, size)
                 {
                     Greater = true,
                 });
