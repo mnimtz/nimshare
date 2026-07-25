@@ -199,9 +199,22 @@ public class LinksController : ControllerBase
                     .ToListAsync(ct);
                 foreach (var mf in mediaFiles)
                 {
+                    // v1.10.183: Grid-Thumb 400 + Lightbox-Thumb 1600 pre-warmen.
+                    // Sonst zeigt der Lightbox beim ersten Klick nur den Fallback,
+                    // während die 1600er-Version erst nach dem Klick generiert wird.
                     _ = thumbs.WarmupAsync(mf.Id, mf.BlobPath, mf.ContentType ?? "", 400, CancellationToken.None);
+                    _ = thumbs.WarmupAsync(mf.Id, mf.BlobPath, mf.ContentType ?? "", 1600, CancellationToken.None);
                 }
             }
+        }
+        // v1.10.183: Album-ZIP im Hintergrund vorbauen — auch für Folder-Links
+        // ohne Gallery-Modus, weil der „Alle herunterladen"-Button unabhängig
+        // vom Anzeige-Modus da ist. Bei Link-Delete wird das ZIP mitgeräumt.
+        if (folder is not null)
+        {
+            var zipCache = HttpContext.RequestServices.GetService<IAlbumZipCache>();
+            if (zipCache is not null)
+                _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
         }
 
         var activity = HttpContext.RequestServices.GetService<IActivityLogger>();
@@ -428,8 +441,14 @@ public class LinksController : ControllerBase
             ? await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id, ct)
             : await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
+        var linkId = link.Id;   // vor Remove kopieren, EF nullt evtl. den PK
         _db.ShareLinks.Remove(link);
         await _db.SaveChangesAsync(ct);
+        // v1.10.183: Album-ZIP-Cache mit weggeräumen — sonst würden verwaiste
+        // ZIPs im Blob-Container schwellen.
+        var zipCache = HttpContext.RequestServices.GetService<IAlbumZipCache>();
+        if (zipCache is not null)
+            _ = zipCache.DeleteAsync(linkId, CancellationToken.None);
         return NoContent();
     }
 

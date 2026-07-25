@@ -425,6 +425,7 @@ public class ShareController : Controller
     public async Task<IActionResult> DownloadAll(string slug, string? password,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
         [FromServices] IFolderService folderSvc,
+        [FromServices] IAlbumZipCache zipCache,
         [FromServices] ILogger<ShareController> log, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
@@ -452,6 +453,17 @@ public class ShareController : Controller
             Request.Headers.UserAgent, Request.Headers.Referer,
             lf.Country, lf.City, lf.Device, timezone: null, ct);
         await _notify.NotifyDownloadAsync(link, _iphash.Hash(ip), ct);
+
+        // v1.10.183: Cache-First. Wenn das ZIP schon vorgebaut ist (LinksController.
+        // Create hat ein Warmup gestartet, kann durch sein) → SAS-Redirect,
+        // Client bekommt den Download in Millisekunden statt Minuten. Cache-Miss
+        // (grosses Album noch nicht fertig, oder alter Pre-v1.10.181-Link) →
+        // fällt auf on-the-fly-Build unten zurück und trigger Warmup für nächsten
+        // Aufruf.
+        var cachedZip = await zipCache.GetSasAsync(link.Id, ct);
+        if (cachedZip is not null)
+            return Redirect(cachedZip.ToString());
+        _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
 
         var archiveName = SanitiseArchiveName(folder.Name) + ".zip";
         var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nimshare-zip-{Guid.NewGuid():N}.zip");

@@ -394,6 +394,10 @@ builder.Services.AddScoped<IOfficePreviewService, OfficePreviewService>();
 // gecacht im Blob unter `thumbs/{fileId:N}/{size}.jpg`. Concurrency intern
 // per statischer SemaphoreSlim(4).
 builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
+// v1.10.183: Album-ZIP-Cache. Singleton damit die Dedup-Map über Requests
+// hinweg gilt und der Blob-Client (Singleton) nicht bei jedem Warmup neu
+// aufgebaut wird.
+builder.Services.AddSingleton<IAlbumZipCache, AlbumZipCache>();
 // v1.10.178: EXIF-GPS-Reader für die Album-Landing-Karte.
 builder.Services.AddScoped<IExifGpsReader, ExifGpsReader>();
 // v1.10.82: App-Store-Blocker — Account-Löschung + UGC-Moderation

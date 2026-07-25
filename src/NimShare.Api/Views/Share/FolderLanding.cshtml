@@ -416,13 +416,24 @@
         const id = c.dataset.id, name = c.dataset.name, size = c.dataset.size, ct = c.dataset.ct;
         const slot = document.getElementById('galLBSlot');
         slot.innerHTML = '';
-        const url = '/s/' + slug + '/media/' + id;
+        // v1.10.183: Lightbox nutzt die 1600px-Thumb-Variante — die ist
+        // JPEG-konvertiert und deshalb auch in Chrome/Firefox darstellbar
+        // (HEIC → sonst wäre nur der Platzhalter zu sehen). Für Videos
+        // bleibt es beim /media-SAS-Redirect (Video-Container brauchen
+        // Range-Requests direkt vom Blob).
+        const isImg = (ct || '').startsWith('image/');
+        const url = isImg
+            ? '/s/' + slug + '/thumb/' + id + '?size=1600'
+            : '/s/' + slug + '/media/' + id;
         let el;
-        if ((ct || '').startsWith('image/')) {
+        if (isImg) {
             el = document.createElement('img');
             el.className = 'gal-lb-media';
             el.src = url;
             el.alt = name;
+            // Falls Thumb noch nicht generiert ist → onerror auf /media-
+            // Original fallen. Safari zeigt HEIC dort nativ.
+            el.onerror = () => { el.onerror = null; el.src = '/s/' + slug + '/media/' + id; };
         } else {
             el = document.createElement('video');
             el.className = 'gal-lb-media';
