@@ -94,9 +94,14 @@
             <style>
                 .gal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; margin-top:var(--sp-6); }
                 .gal-cell { position:relative; aspect-ratio:1/1; background:#0002; border-radius:8px; overflow:hidden; cursor:pointer; }
-                .gal-cell img, .gal-cell video { width:100%; height:100%; object-fit:cover; display:block; }
-                .gal-cell .gal-fallback { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:12px; text-align:center; font-size:12px; color:#666; }
-                .gal-cell .gal-fallback .em { font-size:44px; margin-bottom:8px; }
+                .gal-cell img, .gal-cell video { width:100%; height:100%; object-fit:cover; display:block; background:linear-gradient(135deg,#f0f0f0,#d8d8d8); }
+                /* v1.10.170: falls Browser den Content-Type nicht rendert
+                   (HEIC in Chrome/Firefox), zeigt der onerror-Handler diesen
+                   Fallback. Warme Gradient-Kachel + zentriertes Icon +
+                   Dateiname klein. */
+                .gal-cell .gal-fallback { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:12px; text-align:center; font-size:11px; color:#fff; background:linear-gradient(135deg,#8aa1c1,#5a7ba8); }
+                .gal-cell .gal-fallback .em { font-size:48px; margin-bottom:6px; opacity:.92 }
+                .gal-cell .gal-fallback small { opacity:.75; font-size:10px; margin-top:4px; letter-spacing:.03em; text-transform:uppercase; }
                 .gal-cell .gal-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.15); }
                 .gal-cell .gal-play svg { width:56px; height:56px; opacity:.9; }
                 .gal-cell .gal-name { position:absolute; left:0; right:0; bottom:0; padding:6px 8px; background:linear-gradient(180deg,transparent,rgba(0,0,0,.72)); color:#fff; font-size:12px; line-height:1.25; }
@@ -142,7 +147,12 @@
                     <div class="gal-cell" data-idx="@idx" data-id="@f.Id" data-name="@f.Name" data-size="@Bytes(f.SizeBytes)" data-ct="@f.ContentType" onclick="galOpen(@idx)">
                         @if (canPreview && isImg)
                         {
-                            <img loading="lazy" src="/s/@Model.Slug/media/@f.Id" alt="@f.Name" />
+                            @* v1.10.170: onerror-Handler tauscht kaputte Kachel
+                               gegen den Fallback aus. HEIC in Chrome/Firefox
+                               scheitert hier — echte Thumb-Konversion kommt
+                               über /thumb-Endpoint als eigener Task. *@
+                            <img loading="lazy" src="/s/@Model.Slug/media/@f.Id" alt="@f.Name"
+                                 onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'gal-fallback',innerHTML:'<div class=&quot;em&quot;>📷</div><div>'+this.alt.replace(/[&lt;&gt;&amp;]/g,'')+'</div><small>@(f.Name.EndsWith(".HEIC", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith(".HEIF", StringComparison.OrdinalIgnoreCase) ? "HEIC — Vollansicht beim Klick" : "Vorschau nicht verfügbar")</small>'}))" />
                         }
                         else if (canPreview)
                         {
