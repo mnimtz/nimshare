@@ -520,12 +520,32 @@ final class NimShareAPI: ObservableObject {
         // v1.10.146: optionales Absender-Zertifikat.
         let signingCertificateId: UUID?
         // v1.10.167: Landing als Foto/Video-Album rendern (Grid + Lightbox).
-        // Optional-Default via = nil, damit ältere Aufrufer (createShareLinkFull)
-        // nicht bricht und Swift's synthesized init die Args weglassen darf.
-        let displayAsGallery: Bool? = nil
+        let displayAsGallery: Bool?
         // v1.10.167: „Upload erlauben" — nur wirksam wenn displayAsGallery
         // ODER Folder.Kind==Gallery. Server enforced.
-        let allowUploads: Bool? = nil
+        let allowUploads: Bool?
+
+        // v1.10.169: expliziter init mit Defaults. Swift's synthesized
+        // memberwise init verschluckt sich an inline `= nil`-Defaults auf
+        // Optional-Properties in `Encodable`-structs — Xcode meldete „Extra
+        // arguments at positions #10, #11 in call". Der explizite init macht
+        // die Defaultbarkeit unmissverständlich für alle Aufrufer.
+        init(fileId: UUID?, folderId: UUID?, slug: String?, password: String?,
+             maxDownloads: Int?, expiresAt: Date?, message: String?,
+             notifyOnAccess: Bool, signingCertificateId: UUID?,
+             displayAsGallery: Bool? = nil, allowUploads: Bool? = nil) {
+            self.fileId = fileId
+            self.folderId = folderId
+            self.slug = slug
+            self.password = password
+            self.maxDownloads = maxDownloads
+            self.expiresAt = expiresAt
+            self.message = message
+            self.notifyOnAccess = notifyOnAccess
+            self.signingCertificateId = signingCertificateId
+            self.displayAsGallery = displayAsGallery
+            self.allowUploads = allowUploads
+        }
     }
     /// Create a share link with default options (no password, no expiry, no
     /// download limit). Returns the freshly created ShareLinkDto — caller
