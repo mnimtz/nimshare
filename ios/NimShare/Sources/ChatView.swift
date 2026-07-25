@@ -185,8 +185,16 @@ struct ChatView: View {
             let resp = try await api.chatAsk(question: q)
             messages.append(.init(role: .assistant, text: resp.answer, citations: resp.citations))
         } catch let e as ApiError {
-            error = e.localizedDescription
-        } catch let ex { error = ex.localizedDescription }
+            // v1.10.171: Wenn der Server 403 „ai_consent_required" zurück
+            // liefert (z.B. Consent auf anderem Gerät widerrufen), spiegeln
+            // wir das lokal und öffnen das Consent-Sheet statt einer rohen
+            // HTTP-Fehlermeldung.
+            if auth.handleServerErrorForAiConsent(e) { showAiConsent = true }
+            else { error = e.localizedDescription }
+        } catch let ex {
+            if auth.handleServerErrorForAiConsent(ex) { showAiConsent = true }
+            else { error = ex.localizedDescription }
+        }
     }
 }
 

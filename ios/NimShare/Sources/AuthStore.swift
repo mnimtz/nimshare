@@ -31,8 +31,9 @@ final class AuthStore: ObservableObject {
             let dto = try await api.setAiConsent(granted)
             aiConsented = dto.consented
         } catch {
-            // Konservativ: bei Fehler local nicht auf true setzen.
-            aiConsented = false
+            // v1.10.171: Bei Netzwerk-Fehler den zuletzt bekannten Server-Zustand
+            // NICHT überschreiben — sonst würde ein kurzer Netz-Aussetzer den
+            // Consent-Flag lokal auf false flippen und den User re-nag'gen.
         }
     }
 
@@ -40,8 +41,23 @@ final class AuthStore: ObservableObject {
         guard let api else { return }
         async let consent = api.aiConsent()
         async let info = api.aiProviderInfo()
-        aiConsented = (try? await consent.consented) ?? false
-        aiProviderInfo = try? await info
+        // v1.10.171: nur überschreiben wenn wir eine echte Server-Antwort haben.
+        // Bei Netz-Fehler bleibt der letzte bekannte Wert erhalten.
+        if let c = try? await consent { aiConsented = c.consented }
+        if let i = try? await info { aiProviderInfo = i }
+    }
+
+    /// v1.10.171: Server-403 „ai_consent_required" behandeln. AI-Views
+    /// (Chat, Suche, Draft) rufen das im catch-Block, damit ein von einem
+    /// zweiten Gerät widerrufener Consent hier lokal spiegelt und das
+    /// Consent-Sheet automatisch aufgeht statt einer rohen 403-Fehlermeldung.
+    func handleServerErrorForAiConsent(_ error: Error) -> Bool {
+        let s = String(describing: error).lowercased()
+        if s.contains("ai_consent_required") || s.contains("http 403") {
+            aiConsented = false
+            return true
+        }
+        return false
     }
 
     private let defaults = UserDefaults.standard

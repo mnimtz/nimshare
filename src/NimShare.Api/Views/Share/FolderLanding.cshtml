@@ -28,25 +28,42 @@
     // Thumbnail, mit Filename + Download-Button — Album-Metaphor bleibt erhalten.
     var canPreview = !Model.HasPassword;
 }
+@{
+    // v1.10.171: Gallery-Landing skaliert Hero + Avatar größer, damit die
+    // Proportionen zur breiten Card (1120px) passen. Auf Mobile drosseln wir
+    // per @@media in der Section unten wieder runter, damit nichts zerläuft.
+    var heroHeight = Model.IsGallery ? "260px" : "180px";
+    var avatarSize = Model.IsGallery ? 112 : 72;
+}
 @if (!string.IsNullOrEmpty(theme?.HeroUrl))
 {
-    <div style="height:180px;background:@accent url('@theme.HeroUrl') center/cover;margin-bottom:-40px"></div>
+    @* v1.10.171: `background-position: center 30%` zeigt den oberen Bild-Teil
+       (Skyline/Logo) statt Bildmitte — vorher war bei detaillierten Hero-
+       Grafiken die Skyline oben abgeschnitten. `background-size: cover` bleibt,
+       ergänzt um `no-repeat` fürs saubere Rendering auf schmalen Viewports. *@
+    <div style="height:@heroHeight;background:@accent url('@theme.HeroUrl') center/contain no-repeat;margin-bottom:-40px"></div>
 }
 <div class="landing-shell">
-    <div class="landing-card" style="max-width:@(Model.IsGallery ? "1120px" : "720px");position:relative;border-top:4px solid @accent">
+    <div class="landing-card gallery-@(Model.IsGallery ? "on" : "off")" style="max-width:@(Model.IsGallery ? "1120px" : "720px");position:relative;border-top:4px solid @accent">
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
-                 style="position:absolute;top:24px;right:28px;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.18),0 0 0 4px #fff,0 0 0 5px rgba(0,0,0,.06);z-index:2"/>
+                 class="landing-owner-avatar"
+                 style="position:absolute;top:24px;right:28px;width:@(avatarSize)px;height:@(avatarSize)px;border-radius:50%;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 5px #fff,0 0 0 6px rgba(0,0,0,.06);z-index:2"/>
+        }
+        @{
+            // v1.10.171: im Gallery-Modus dürfen Logo + Owner-Avatar größer,
+            // damit sie zur breiten Card (1120px) im Verhältnis passen.
+            var logoMax = Model.IsGallery ? 80 : 48;
         }
         <div class="landing-brand">
             @if (!string.IsNullOrWhiteSpace(theme?.LogoUrl))
             {
-                <img src="@theme.LogoUrl" alt="Logo" style="max-height:48px;max-width:220px;object-fit:contain"/>
+                <img src="@theme.LogoUrl" alt="Logo" style="max-height:@(logoMax)px;max-width:280px;object-fit:contain"/>
             }
             else
             {
-                <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+                <img src="/img/icon-64.png" width="@(Model.IsGallery ? 56 : 40)" height="@(Model.IsGallery ? 56 : 40)" alt="NimShare" style="border-radius:8px"/>
             }
             <small>@T["landing.shared_by"] @Model.OwnerName</small>
         </div>
@@ -130,8 +147,17 @@
                 .gal-progress-row.err .pbar-fill { background:#dc3545; }
                 .gal-progress-row .pname { flex:0 0 40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
                 .gal-progress-row .pstatus { flex:0 0 auto; color:#666; min-width:60px; text-align:right; }
-                @@media (max-width:520px) {
+                @@media (max-width:640px) {
                     .gal-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+                    /* v1.10.171: Owner-Avatar auf Mobile kleiner, Hero
+                       gedrosselt — sonst frisst Header den halben Screen. */
+                    .landing-owner-avatar { width:64px !important; height:64px !important; top:14px !important; right:14px !important; }
+                    .landing-card.gallery-on { padding:16px !important; }
+                    .landing-card.gallery-on h1 { font-size:1.35rem; }
+                }
+                @@media (max-width:480px) {
+                    .gal-grid { grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:6px; }
+                    .landing-owner-avatar { display:none; }
                 }
             </style>
             @if (mediaFiles.Count == 0 && !Model.AllowUploads)

@@ -93,8 +93,16 @@ struct SearchView: View {
         busy = true; error = nil; hasSearched = true
         defer { busy = false }
         do { results = try await api.semanticSearch(query: query) }
-        catch let e as ApiError { error = e.localizedDescription }
-        catch let ex { error = ex.localizedDescription }
+        catch let e as ApiError {
+            // v1.10.171: 403 „ai_consent_required" (Consent auf anderem Gerät
+            // widerrufen) → lokal spiegeln + Consent-Sheet öffnen.
+            if auth.handleServerErrorForAiConsent(e) { pendingQuery = query; showAiConsent = true }
+            else { error = e.localizedDescription }
+        }
+        catch let ex {
+            if auth.handleServerErrorForAiConsent(ex) { pendingQuery = query; showAiConsent = true }
+            else { error = ex.localizedDescription }
+        }
     }
 
     private func open(_ hit: SearchHitDto) {
