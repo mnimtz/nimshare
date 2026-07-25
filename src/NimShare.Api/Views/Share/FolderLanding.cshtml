@@ -305,7 +305,12 @@
             el = document.createElement('video');
             el.className = 'gal-lb-media';
             el.controls = true;
+            // iOS Safari blockt autoplay ohne muted, auch nach User-Click auf die
+            // Zelle. Muted+autoplay ist die einzige Kombi, die überall spielt —
+            // der User kann den Sound danach jederzeit per Player-Controls
+            // wieder anschalten (v1.10.168 post-review).
             el.autoplay = true;
+            el.muted = true;
             el.playsInline = true;
             el.src = url;
         }
@@ -332,8 +337,21 @@
         ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
         drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
     }
+    // v1.10.168 post-review: Passwort-Prompt bevor der Upload startet, falls
+    // der Link password-gated ist. Server verlangt Passwort in init+complete,
+    // wenn keine Session-Gate existiert.
+    let cachedUploadPassword = null;
+    async function ensureUploadPassword() {
+        if (!@(Model.HasPassword ? "true" : "false")) return null;
+        if (cachedUploadPassword) return cachedUploadPassword;
+        const pw = prompt(@Html.Raw(Json.Serialize(T["landing.password.label"].Value)));
+        if (!pw) throw new Error('password-required');
+        cachedUploadPassword = pw;
+        return pw;
+    }
     async function handleFiles(files) {
         if (!files || files.length === 0) return;
+        try { await ensureUploadPassword(); } catch { return; }
         let uploaded = 0, failed = 0;
         const rows = [];
         for (const file of files) {
@@ -351,7 +369,7 @@
             try {
                 const initR = await fetch('/s/' + slug + '/gallery-upload/init', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ name: file.name, sizeBytes: file.size, contentType: file.type || 'application/octet-stream' })
+                    body: JSON.stringify({ name: file.name, sizeBytes: file.size, contentType: file.type || 'application/octet-stream', password: cachedUploadPassword })
                 });
                 if (!initR.ok) {
                     let msg = 'HTTP ' + initR.status;
@@ -364,7 +382,10 @@
                     fill.style.width = pct + '%';
                     st.textContent = Math.round(pct) + '%';
                 });
-                const cR = await fetch('/s/' + slug + '/gallery-upload/' + fileId + '/complete', { method: 'POST' });
+                const cR = await fetch('/s/' + slug + '/gallery-upload/' + fileId + '/complete', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ password: cachedUploadPassword })
+                });
                 if (!cR.ok) {
                     let msg = 'HTTP ' + cR.status;
                     try { const p = await cR.json(); msg = p.title || p.detail || msg; } catch {}

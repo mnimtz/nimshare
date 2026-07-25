@@ -520,10 +520,12 @@ final class NimShareAPI: ObservableObject {
         // v1.10.146: optionales Absender-Zertifikat.
         let signingCertificateId: UUID?
         // v1.10.167: Landing als Foto/Video-Album rendern (Grid + Lightbox).
-        let displayAsGallery: Bool?
+        // Optional-Default via = nil, damit ältere Aufrufer (createShareLinkFull)
+        // nicht bricht und Swift's synthesized init die Args weglassen darf.
+        let displayAsGallery: Bool? = nil
         // v1.10.167: „Upload erlauben" — nur wirksam wenn displayAsGallery
         // ODER Folder.Kind==Gallery. Server enforced.
-        let allowUploads: Bool?
+        let allowUploads: Bool? = nil
     }
     /// Create a share link with default options (no password, no expiry, no
     /// download limit). Returns the freshly created ShareLinkDto — caller
@@ -967,12 +969,13 @@ final class NimShareAPI: ObservableObject {
                              maxDownloads: Int? = nil, expiresAt: Date? = nil,
                              message: String? = nil, notifyOnAccess: Bool = false,
                              signingCertificateId: UUID? = nil,
+                             displayAsGallery: Bool? = nil,
                              allowUploads: Bool? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
             notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId,
-            allowUploads: allowUploads))
+            displayAsGallery: displayAsGallery, allowUploads: allowUploads))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)

@@ -1472,6 +1472,7 @@ Thanks for using NimShare.</value></data>
   <data name="dashboard.ai_consent.later"><value>Later</value></data>
   <data name="share.gallery.allow_uploads_hint"><value>Ideal for wedding or event albums — anyone with the link can add photos or videos.</value></data>
   <data name="gallery.upload.too_large"><value>File too large (max 100 MB per file).</value></data>
+  <data name="gallery.upload.empty"><value>Empty file (0 bytes).</value></data>
   <data name="gallery.upload.only_media"><value>Only images or videos allowed.</value></data>
   <data name="email.gallery_upload.subject"><value>New album photo: {0}</value></data>
   <data name="email.gallery_upload.body" xml:space="preserve"><value>Hello {0},&#10;&#10;A visitor just uploaded a file to your album:&#10;&#10;- File: {1}&#10;- Album link: /s/{2}&#10;- Time (UTC): {3}&#10;&#10;— NimShare</value></data>

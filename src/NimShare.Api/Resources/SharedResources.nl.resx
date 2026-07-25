@@ -1469,6 +1469,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="dashboard.ai_consent.later"><value>Later</value></data>
   <data name="share.gallery.allow_uploads_hint"><value>Ideaal voor bruiloft- of eventalbums — iedereen met de link kan foto's of video's toevoegen.</value></data>
   <data name="gallery.upload.too_large"><value>Bestand te groot (max. 100 MB per bestand).</value></data>
+  <data name="gallery.upload.empty"><value>Leeg bestand (0 bytes).</value></data>
   <data name="gallery.upload.only_media"><value>Alleen afbeeldingen of video's toegestaan.</value></data>
   <data name="email.gallery_upload.subject"><value>Nieuwe albumfoto: {0}</value></data>
   <data name="email.gallery_upload.body" xml:space="preserve"><value>Hallo {0},&#10;&#10;Een bezoeker heeft zojuist een bestand naar je album geüpload:&#10;&#10;- Bestand: {1}&#10;- Albumlink: /s/{2}&#10;- Tijd (UTC): {3}&#10;&#10;— NimShare</value></data>

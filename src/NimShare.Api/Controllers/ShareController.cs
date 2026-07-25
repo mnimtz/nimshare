@@ -429,26 +429,30 @@ public class ShareController : Controller
     //   * SizeBytes ≤ 100 MB pro File (Hochzeits-Foto-Ceiling)
     //   * Password-gate wird respektiert (analog zu Download)
     //   * Blob-Pfad enthält guest-Prefix, damit Owner erkennt was Gäste hochgeladen haben
-    public record GalleryUploadInitReq(string Name, long SizeBytes, string ContentType);
+    // v1.10.167: Password-Gate wird per Body akzeptiert (analog Download-Flow).
+    // Ohne den käme ein 401/Forbid bei jedem Upload zurück, obwohl der Empfänger
+    // das Passwort kennt — Marcus's Bug #3 aus der v1.10.167-Review.
+    public record GalleryUploadInitReq(string Name, long SizeBytes, string ContentType, string? Password);
     public record GalleryUploadInitResp(Guid FileId, string UploadUrl, DateTimeOffset ExpiresAt);
 
+    [EnableRateLimiting("public-share")]
     [HttpPost("{slug}/gallery-upload/init")]
     public async Task<IActionResult> GalleryUploadInit(string slug, [FromBody] GalleryUploadInitReq req,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
         [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest();
-        if (req.SizeBytes <= 0 || req.SizeBytes > 100L * 1024 * 1024)
+        if (req.SizeBytes <= 0)
+            return Problem(statusCode: 400, title: _t["gallery.upload.empty"].Value);
+        if (req.SizeBytes > 100L * 1024 * 1024)
             return Problem(statusCode: 413, title: _t["gallery.upload.too_large"].Value);
         var ct2 = (req.ContentType ?? "").ToLowerInvariant();
         var isMedia = ct2.StartsWith("image/") || ct2.StartsWith("video/");
         if (!isMedia) return Problem(statusCode: 415, title: _t["gallery.upload.only_media"].Value);
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
-        // v1.10.167: AllowUploads gilt nur wenn der Link im Gallery-Modus ist —
-        // sonst wäre die Landing eine Datei-Liste ohne Upload-Widget und der
-        // Endpoint offen. Erlaube DisplayAsGallery ODER Folder.Kind==Gallery.
-        if (link.PasswordHash is not null) return Forbid();
+        // Passwort-geschützte Album-Links: entweder Body-Passwort oder Session-Gate.
+        if (link.PasswordHash is not null && !UploadPasswordOk(link, req.Password)) return Forbid();
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var folder = await db.Folders.FindAsync(new object[] { link.FolderId.Value }, ct);
@@ -456,57 +460,82 @@ public class ShareController : Controller
         // Gallery-Modus muss AKTIV sein — entweder per-Link oder per-Ordner.
         if (!link.DisplayAsGallery && folder.Kind != FolderKind.Gallery) return NotFound();
 
+        var safeName = SanitiseUploadFilename(req.Name);
         var file = new StorageFile
         {
             OwnerId = link.OwnerId,
             Scope = folder.Scope,
             GroupId = folder.OwnerGroupId,
             FolderId = folder.Id,
-            Name = SanitiseUploadFilename(req.Name),
+            Name = safeName,
             SizeBytes = req.SizeBytes,
             ContentType = req.ContentType ?? "application/octet-stream",
             Folder = "",
             Status = StorageFileStatus.Pending,
         };
-        file.BlobPath = $"users/{link.OwnerId:N}/gallery-guest/{file.Id:N}/{SanitiseUploadFilename(req.Name)}";
+        file.BlobPath = $"users/{link.OwnerId:N}/gallery-guest/{file.Id:N}/{safeName}";
         db.Files.Add(file);
         await db.SaveChangesAsync(ct);
         var ticket = _blobs.CreateUploadTicket(file.BlobPath);
         return Ok(new GalleryUploadInitResp(file.Id, ticket.UploadUrl.ToString(), ticket.ExpiresAt));
     }
 
+    public record GalleryUploadCompleteReq(string? Password);
+
+    [EnableRateLimiting("public-share")]
     [HttpPost("{slug}/gallery-upload/{fileId:guid}/complete")]
     public async Task<IActionResult> GalleryUploadComplete(string slug, Guid fileId,
+        [FromBody] GalleryUploadCompleteReq? req,
         [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
-        // v1.10.167: AllowUploads gilt nur wenn der Link im Gallery-Modus ist —
-        // sonst wäre die Landing eine Datei-Liste ohne Upload-Widget und der
-        // Endpoint offen. Erlaube DisplayAsGallery ODER Folder.Kind==Gallery.
-        if (link.PasswordHash is not null) return Forbid();
+        if (link.PasswordHash is not null && !UploadPasswordOk(link, req?.Password)) return Forbid();
         var file = await db.Files.SingleOrDefaultAsync(
             f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Pending, ct);
         if (file is null) return NotFound();
         var probe = await _blobs.ProbeAsync(file.BlobPath, ct);
         if (!probe.Exists) return Problem(statusCode: 409, title: "Blob not found");
+        // v1.10.167 (post-review): der Client bestimmt den PUT-Content-Type frei,
+        // die Init-MIME-Whitelist ist damit umgehbar. Nach dem Complete den
+        // Probe-Type gegen die Whitelist prüfen und den Blob im Zweifel löschen.
+        var probeCt = (probe.ContentType ?? "").ToLowerInvariant();
+        var probeIsMedia = probeCt.StartsWith("image/") || probeCt.StartsWith("video/");
+        if (!probeIsMedia)
+        {
+            try { await _blobs.DeleteAsync(file.BlobPath, ct); } catch { /* best-effort */ }
+            db.Files.Remove(file);
+            await db.SaveChangesAsync(ct);
+            return Problem(statusCode: 415, title: _t["gallery.upload.only_media"].Value);
+        }
         file.SizeBytes = probe.SizeBytes;
-        if (!string.IsNullOrEmpty(probe.ContentType)) file.ContentType = probe.ContentType!;
+        file.ContentType = probe.ContentType!;
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        // Owner-Notification: „Jemand hat X ins Album Y gelegt". Nutzt die
-        // bestehende NotifyOnAccess-Schiene (best-effort, kein Retry).
         await _notify.NotifyGalleryUploadAsync(link, file, ct);
         return Ok(new { id = file.Id, name = file.Name });
+    }
+
+    // Password-Check für Album-Uploads. Entweder Session-Gate (analog Download)
+    // oder Body-Passwort direkt matched.
+    private bool UploadPasswordOk(ShareLink link, string? bodyPassword)
+    {
+        if (link.PasswordHash is null) return true;
+        if (HttpContext.Session.GetString($"gate.{link.Slug}") == "ok") return true;
+        if (!string.IsNullOrEmpty(bodyPassword) && _hasher.Verify(bodyPassword, link.PasswordHash)) return true;
+        return false;
     }
 
     private static string SanitiseUploadFilename(string name)
     {
         var clean = new string(name.Where(c => c > 31 && c != '\\' && c != '/' && c != ':' && c != '*' && c != '?' && c != '"' && c != '<' && c != '>' && c != '|').ToArray());
-        clean = clean.Trim();
+        clean = clean.Trim().TrimStart('.');
         if (clean.Length > 200) clean = clean[..200];
-        return string.IsNullOrEmpty(clean) ? $"upload-{Guid.NewGuid():N}" : clean;
+        // v1.10.167 (post-review): reine „..."-/„.."-/".."-Namen sind nach Trim
+        // + TrimStart('.') leer; Fallback greift. Sonst wäre der Blob-Pfad
+        // .../{fileId}/... (kein Traversal in Azure, aber verwirrend im UI).
+        return string.IsNullOrWhiteSpace(clean) ? $"upload-{Guid.NewGuid():N}" : clean;
     }
 }
 
