@@ -179,6 +179,31 @@ public class LinksController : ControllerBase
         HttpContext.RequestServices.GetService<IWebhookDispatcher>()?
             .QueueEvent(user.Id, WebhookEvent.LinkCreated,
                 new { linkId = link.Id, slug = link.Slug, fileId = link.FileId, folderId = link.FolderId });
+
+        // v1.10.181: Thumbnail-Pre-Warm bei Album-Links. Der Empfänger sieht
+        // sofort echte Vorschauen statt Kamera-Fallbacks + Wartezeit — wir
+        // wissen JETZT welche Files geshared werden, also fangen wir jetzt
+        // an. WarmupAsync ist dedup-safe (v1.10.180), harmlos wenn dieselbe
+        // Datei mehrfach getriggert wird.
+        if (folder is not null && isGalleryLink)
+        {
+            var thumbs = HttpContext.RequestServices.GetService<IThumbnailService>();
+            if (thumbs is not null)
+            {
+                var mediaFiles = await _db.Files
+                    .Where(f => f.FolderId == folder.Id
+                        && f.Status == StorageFileStatus.Ready
+                        && f.ContentType != null
+                        && f.ContentType.StartsWith("image/"))
+                    .Select(f => new { f.Id, f.BlobPath, f.ContentType })
+                    .ToListAsync(ct);
+                foreach (var mf in mediaFiles)
+                {
+                    _ = thumbs.WarmupAsync(mf.Id, mf.BlobPath, mf.ContentType ?? "", 400, CancellationToken.None);
+                }
+            }
+        }
+
         var activity = HttpContext.RequestServices.GetService<IActivityLogger>();
         if (activity is not null)
         {

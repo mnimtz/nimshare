@@ -196,7 +196,7 @@ public class ThumbnailService : IThumbnailService
                 }
                 finally
                 {
-                    _inflight.TryRemove(key, out _);
+                    _inflight.TryRemove(key, out Task? _);
                 }
             });
             return task;
