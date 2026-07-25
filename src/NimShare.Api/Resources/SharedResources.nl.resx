@@ -762,6 +762,10 @@ Open de link:
   <data name="profile.public_appearance"><value>Publiek uiterlijk</value></data>
   <data name="profile.show_avatar_on_landings"><value>Mijn avatar tonen op publieke deelpagina's</value></data>
   <data name="profile.show_avatar_on_landings.hint"><value>Indien ingeschakeld verschijnt je profielfoto rechtsboven op elke /s/...-downloadpagina die van jou is. Standaard uit.</value></data>
+  <data name="profile.show_avatar_on_landings.public"><value>Mijn avatar tonen op openbare deel-pagina's</value></data>
+  <data name="profile.show_avatar_on_landings.public.hint"><value>Voor bestanden of mappen die als „Openbaar" zijn gemarkeerd — bezoekers van /s/...-links zien je profielfoto rechtsboven.</value></data>
+  <data name="profile.show_avatar_on_landings.personal"><value>Mijn avatar tonen op mijn persoonlijke deel-pagina's</value></data>
+  <data name="profile.show_avatar_on_landings.personal.hint"><value>Voor links die je maakt vanuit je „Persoonlijk"-bibliotheek — ontvangers zien je profielfoto op de downloadpagina. Standaard uit voor een neutrale uitstraling.</value></data>
   <data name="wiki.editor.tab_edit"><value>Bewerken</value></data>
   <data name="wiki.editor.tab_split"><value>Split</value></data>
   <data name="wiki.editor.tab_preview"><value>Voorbeeld</value></data>

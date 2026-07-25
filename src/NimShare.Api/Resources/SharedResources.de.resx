@@ -770,6 +770,10 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="profile.public_appearance"><value>Öffentliches Erscheinungsbild</value></data>
   <data name="profile.show_avatar_on_landings"><value>Meinen Avatar auf öffentlichen Freigabe-Seiten anzeigen</value></data>
   <data name="profile.show_avatar_on_landings.hint"><value>Wenn aktiviert, erscheint dein Profilbild oben rechts auf jeder /s/...-Download-Seite, die dir gehört. Standard aus — Freigaben wirken damit unpersönlich / rein branded.</value></data>
+  <data name="profile.show_avatar_on_landings.public"><value>Avatar auf öffentlichen Freigabe-Seiten anzeigen</value></data>
+  <data name="profile.show_avatar_on_landings.public.hint"><value>Für Dateien oder Ordner, die als „Öffentlich" markiert sind — Besucher der /s/...-Links sehen dein Profilbild oben rechts.</value></data>
+  <data name="profile.show_avatar_on_landings.personal"><value>Avatar auf meinen persönlichen Freigabe-Seiten anzeigen</value></data>
+  <data name="profile.show_avatar_on_landings.personal.hint"><value>Für Links, die du aus deiner „Persönlich"-Ablage erstellst — Empfänger sehen dein Profilbild auf der Download-Seite. Standard aus, damit private Freigaben rein branded wirken.</value></data>
   <data name="wiki.editor.tab_edit"><value>Bearbeiten</value></data>
   <data name="wiki.editor.tab_split"><value>Split</value></data>
   <data name="wiki.editor.tab_preview"><value>Vorschau</value></data>

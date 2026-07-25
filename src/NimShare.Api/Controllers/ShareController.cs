@@ -121,7 +121,7 @@ public class ShareController : Controller
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
                 files.Select(f => new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType)).ToList(),
-                ResolveOwnerAvatar(link.Owner), folderTheme,
+                ResolveOwnerAvatar(link.Owner, isPublicShare: link.IsPublic || (folder.Scope == FileScope.Public)), folderTheme,
                 BuildLandingSigner(link.SigningCertificate),
                 // v1.10.167: Landing rendert Gallery, wenn der LINK das explizit
                 // setzt (Ersteller-Wahl beim Freigeben) ODER der Ordner Kind=
@@ -181,11 +181,16 @@ public class ShareController : Controller
             c.NotBefore, c.NotAfter, c.IsSelfIssued);
 
     /// <summary>Returns the owner's avatar URL for public rendering, but only
-    /// when they've opted in via profile settings. Prefers the uploaded blob
-    /// (served through /avatars/{userId}) over any external AvatarUrl.</summary>
-    private static string? ResolveOwnerAvatar(NimShare.Core.Entities.User owner)
+    /// when they've opted in via profile settings. v1.10.188: scope-sensitiv
+    /// — Public/IsPublic-Links checken ShowAvatarOnPublicShares, alles
+    /// andere (Personal/Group + private User-Links) ShowAvatarOnPersonalShares.
+    /// Prefers the uploaded blob (served through /avatars/{userId}) over any
+    /// external AvatarUrl.</summary>
+    private static string? ResolveOwnerAvatar(NimShare.Core.Entities.User owner, bool isPublicShare = false)
     {
-        if (owner is null || !owner.ShowAvatarOnLandings) return null;
+        if (owner is null) return null;
+        var allowed = isPublicShare ? owner.ShowAvatarOnPublicShares : owner.ShowAvatarOnPersonalShares;
+        if (!allowed) return null;
         if (!string.IsNullOrEmpty(owner.AvatarBlobPath)) return $"/avatars/{owner.Id:N}";
         return string.IsNullOrEmpty(owner.AvatarUrl) ? null : owner.AvatarUrl;
     }

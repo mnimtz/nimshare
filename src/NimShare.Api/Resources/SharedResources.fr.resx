@@ -763,6 +763,10 @@ Ouvrez le lien :
   <data name="profile.public_appearance"><value>Apparence publique</value></data>
   <data name="profile.show_avatar_on_landings"><value>Afficher mon avatar sur les pages de partage publiques</value></data>
   <data name="profile.show_avatar_on_landings.hint"><value>Si activé, votre photo de profil apparaît en haut à droite de chaque page /s/... vous appartenant. Désactivé par défaut.</value></data>
+  <data name="profile.show_avatar_on_landings.public"><value>Afficher mon avatar sur les pages de partage publiques</value></data>
+  <data name="profile.show_avatar_on_landings.public.hint"><value>Pour les fichiers ou dossiers marqués « Public » — les visiteurs des liens /s/... voient votre photo de profil en haut à droite.</value></data>
+  <data name="profile.show_avatar_on_landings.personal"><value>Afficher mon avatar sur mes pages de partage personnelles</value></data>
+  <data name="profile.show_avatar_on_landings.personal.hint"><value>Pour les liens que vous créez depuis votre bibliothèque « Personnel » — les destinataires voient votre photo sur la page de téléchargement. Désactivé par défaut pour un rendu neutre.</value></data>
   <data name="wiki.editor.tab_edit"><value>Éditer</value></data>
   <data name="wiki.editor.tab_split"><value>Split</value></data>
   <data name="wiki.editor.tab_preview"><value>Aperçu</value></data>

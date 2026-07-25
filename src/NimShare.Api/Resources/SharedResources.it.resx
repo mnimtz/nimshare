@@ -763,6 +763,10 @@ Apri il link:
   <data name="profile.public_appearance"><value>Aspetto pubblico</value></data>
   <data name="profile.show_avatar_on_landings"><value>Mostra il mio avatar nelle pagine di condivisione pubbliche</value></data>
   <data name="profile.show_avatar_on_landings.hint"><value>Se attivo, la tua foto profilo appare in alto a destra su ogni pagina /s/... di tua proprietà. Disattivato per default.</value></data>
+  <data name="profile.show_avatar_on_landings.public"><value>Mostra il mio avatar sulle pagine di condivisione pubbliche</value></data>
+  <data name="profile.show_avatar_on_landings.public.hint"><value>Per file o cartelle contrassegnati come „Pubblico" — i visitatori dei link /s/... vedono la tua foto profilo in alto a destra.</value></data>
+  <data name="profile.show_avatar_on_landings.personal"><value>Mostra il mio avatar sulle pagine di condivisione personali</value></data>
+  <data name="profile.show_avatar_on_landings.personal.hint"><value>Per i link creati dalla tua libreria „Personale" — i destinatari vedono la tua foto sulla pagina di download. Disattivato per default per un aspetto neutro.</value></data>
   <data name="wiki.editor.tab_edit"><value>Modifica</value></data>
   <data name="wiki.editor.tab_split"><value>Split</value></data>
   <data name="wiki.editor.tab_preview"><value>Anteprima</value></data>

@@ -25,7 +25,13 @@ public class ProfileController : Controller
 
     public record ProfileFormModel(string DisplayName,
         string? CurrentPassword, string? NewPassword, string? NewPasswordConfirm,
-        bool ShowAvatarOnLandings = false);
+        // v1.10.178 legacy — bleibt aus Backwards-Compat; die neuen
+        // Public/Personal-Toggles unten überschreiben ihn effektiv beim Save.
+        bool ShowAvatarOnLandings = false,
+        // v1.10.188: getrennter Toggle für öffentliche vs persönliche
+        // Freigaben (siehe Migration V190_AvatarLandingSplit).
+        bool ShowAvatarOnPublicShares = false,
+        bool ShowAvatarOnPersonalShares = false);
 
     [HttpGet("/settings/profile")]
     public async Task<IActionResult> Index(CancellationToken ct)
@@ -41,9 +47,13 @@ public class ProfileController : Controller
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (!string.IsNullOrWhiteSpace(form.DisplayName))
             me.DisplayName = form.DisplayName.Trim();
-        // Landing-Avatar opt-in — always overwritten (checkbox POSTs "on" or
-        // is absent; the bool binds true/false accordingly).
-        me.ShowAvatarOnLandings = form.ShowAvatarOnLandings;
+        // v1.10.188: die zwei feiner-granulierten Toggles sind ab jetzt
+        // die Quelle der Wahrheit. Der Legacy-Toggle wird aus Konsistenz-
+        // gründen auf true gesetzt sobald mindestens einer der beiden neuen
+        // an ist — falls jemand irgendwo im Code noch die alte Property liest.
+        me.ShowAvatarOnPublicShares = form.ShowAvatarOnPublicShares;
+        me.ShowAvatarOnPersonalShares = form.ShowAvatarOnPersonalShares;
+        me.ShowAvatarOnLandings = form.ShowAvatarOnPublicShares || form.ShowAvatarOnPersonalShares;
 
         // v1.10.154: Optionaler Passwort-Wechsel nur dann prüfen, wenn ein
         // NEUES Passwort gesetzt werden soll. Vorher triggerte der Zweig auch

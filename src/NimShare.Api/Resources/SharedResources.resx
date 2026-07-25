@@ -764,6 +764,10 @@ Open the link:
   <data name="profile.public_appearance"><value>Public appearance</value></data>
   <data name="profile.show_avatar_on_landings"><value>Show my avatar on public share landings</value></data>
   <data name="profile.show_avatar_on_landings.hint"><value>When enabled, your profile picture appears in the top-right corner of every /s/... download page you own. Off by default so shares look impersonal / branded only.</value></data>
+  <data name="profile.show_avatar_on_landings.public"><value>Show my avatar on public share landings</value></data>
+  <data name="profile.show_avatar_on_landings.public.hint"><value>For files or folders marked Public — visitors of /s/... links will see your profile picture in the top-right corner.</value></data>
+  <data name="profile.show_avatar_on_landings.personal"><value>Show my avatar on my personal share landings</value></data>
+  <data name="profile.show_avatar_on_landings.personal.hint"><value>For links you create from your Personal library — recipients see your profile picture on the download page. Off by default so personal shares look branded.</value></data>
   <data name="wiki.editor.tab_edit"><value>Edit</value></data>
   <data name="wiki.editor.tab_split"><value>Split</value></data>
   <data name="wiki.editor.tab_preview"><value>Preview</value></data>

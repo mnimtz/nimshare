@@ -83,12 +83,25 @@
     </div>
 
     <h2 class="card-title" style="margin-top:var(--sp-8)">@T["profile.public_appearance"]</h2>
+    <p class="muted" style="margin-top:0;font-size:.9rem">@T["profile.show_avatar_on_landings.hint"]</p>
+    @* v1.10.188: getrennte Toggles für öffentliche vs persönliche Freigaben.
+       Legacy „ShowAvatarOnLandings" wird beim Save vom Server aus den zwei
+       neuen Feldern abgeleitet. *@
     <div class="field">
-        <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer">
-            <input type="checkbox" name="ShowAvatarOnLandings" value="true" @(Model.ShowAvatarOnLandings ? "checked" : "") style="margin-top:4px"/>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;padding:8px 10px;border:1px solid var(--tw-gray-200);border-radius:8px">
+            <input type="checkbox" name="ShowAvatarOnPublicShares" value="true" @(Model.ShowAvatarOnPublicShares ? "checked" : "") style="margin-top:4px"/>
             <span>
-                <div style="font-weight:600">@T["profile.show_avatar_on_landings"]</div>
-                <div class="muted" style="font-size:.88rem;margin-top:2px">@T["profile.show_avatar_on_landings.hint"]</div>
+                <div style="font-weight:600">🌍 @T["profile.show_avatar_on_landings.public"]</div>
+                <div class="muted" style="font-size:.85rem;margin-top:2px">@T["profile.show_avatar_on_landings.public.hint"]</div>
+            </span>
+        </label>
+    </div>
+    <div class="field" style="margin-top:var(--sp-3)">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;padding:8px 10px;border:1px solid var(--tw-gray-200);border-radius:8px">
+            <input type="checkbox" name="ShowAvatarOnPersonalShares" value="true" @(Model.ShowAvatarOnPersonalShares ? "checked" : "") style="margin-top:4px"/>
+            <span>
+                <div style="font-weight:600">🔒 @T["profile.show_avatar_on_landings.personal"]</div>
+                <div class="muted" style="font-size:.85rem;margin-top:2px">@T["profile.show_avatar_on_landings.personal.hint"]</div>
             </span>
         </label>
     </div>

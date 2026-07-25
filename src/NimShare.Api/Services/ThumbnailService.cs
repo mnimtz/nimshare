@@ -49,9 +49,12 @@ public class ThumbnailService : IThumbnailService
     private readonly IBlobStorageService _blobs;
     private readonly ILogger<ThumbnailService> _log;
     private const string CachePrefix = "thumbs/";
-    // 4 gleichzeitige HEIC-Decodes sind auf einem 2-GB-Container okay —
-    // ein 12-MP-Foto braucht ca. 150 MB Peak, in Summe also ~600 MB.
-    private static readonly SemaphoreSlim _slot = new(4, 4);
+    // v1.10.188: Semaphor auf 2 reduziert. Marcus's App Service ist B1
+    // (1 vCPU, 1.75 GB RAM) — bei 4 parallelen HEIC-Decodes × ~150 MB Peak
+    // + .NET Runtime + SQLite + Kestrel schneidet der Container zu knapp
+    // an OOM. 2 Slots decken auch bei 100-Foto-Alben durch: bei ~3s pro
+    // Konversion × 100/2 = 150 s = 2.5 Min bis alles fertig.
+    private static readonly SemaphoreSlim _slot = new(2, 2);
     // v1.10.180: Warmup-Deduplication. Client feuert bei 44-Foto-Landing
     // 44 parallele /thumb-Requests → 44 identische Warmups würden entstehen.
     // Der ConcurrentDictionary hält den aktuell laufenden Task pro (fileId,
