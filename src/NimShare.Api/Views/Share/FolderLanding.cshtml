@@ -448,11 +448,49 @@
         if (isImg) {
             el = document.createElement('img');
             el.className = 'gal-lb-media';
-            el.src = url;
             el.alt = name;
-            // Falls Thumb noch nicht generiert ist → onerror auf /media-
-            // Original fallen. Safari zeigt HEIC dort nativ.
-            el.onerror = () => { el.onerror = null; el.src = '/s/' + slug + '/media/' + id; };
+            // v1.10.189: Retry statt sofort-Fallback. Der 1600er-Thumb wird oft
+            // erst on-demand generiert (Cache-Miss → Server startet Warmup).
+            // Vorher: sofortiger Fallback auf /media zeigte Chrome/FF bei HEIC
+            // ein broken-Image. Jetzt: Spinner + Polling alle 2s bis zu 30s.
+            // Wenn's dann immer noch nichts gibt → Fallback plus Warnhinweis.
+            let attempt = 0;
+            const maxAttempts = 15; // 15 × 2s = 30s
+            const tryLoad = () => {
+                attempt++;
+                el.src = url + '&_t=' + Date.now(); // cache-buster
+            };
+            el.onerror = () => {
+                if (attempt < maxAttempts) {
+                    // Spinner + Status im Info-Bereich
+                    document.getElementById('galLBInfo').innerHTML =
+                        '<b>' + escapeHtml(name) + '</b> · ' +
+                        '<span style="opacity:.8">🔄 Vorschau wird generiert… (' + attempt + '/' + maxAttempts + ')</span>';
+                    setTimeout(tryLoad, 2000);
+                } else {
+                    // Aufgeben — Original probieren (Safari zeigt HEIC nativ, Chrome bricht)
+                    el.onerror = () => {
+                        // Auch /media failed → Broken-Image durch Fallback-Karte ersetzen
+                        const fb = document.createElement('div');
+                        fb.className = 'gal-fallback';
+                        fb.style.background = 'rgba(255,255,255,.05)';
+                        fb.style.color = '#fff';
+                        fb.style.padding = '48px';
+                        fb.innerHTML = '<div class="em" style="font-size:64px">📷</div>' +
+                            '<div style="margin-top:12px">' + escapeHtml(name) + '</div>' +
+                            '<small style="opacity:.7">HEIC — Original per „Öffnen" laden</small>';
+                        el.replaceWith(fb);
+                    };
+                    el.src = '/s/' + slug + '/media/' + id;
+                }
+            };
+            el.onload = () => {
+                // Info-Text zurück auf normal
+                document.getElementById('galLBInfo').innerHTML =
+                    '<b>' + escapeHtml(name) + '</b> · ' + escapeHtml(size) +
+                    ' <a href="' + url + '" target="_blank" rel="noopener">' + escapeHtml(T_open_full) + '</a>';
+            };
+            tryLoad();
         } else {
             el = document.createElement('video');
             el.className = 'gal-lb-media';

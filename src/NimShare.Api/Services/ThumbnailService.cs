@@ -129,30 +129,41 @@ public class ThumbnailService : IThumbnailService
         bool acquired = false;
         try
         {
-            // v1.10.180: Slot-Timeout auf 10min. Bei 44 Warmups × ~3s pro Foto
-            // dauert der letzte Slot bis zu 33s auf sein. Vorher waren 30s zu
-            // knapp — die letzten Warmups gaben auf und die Kacheln blieben
-            // beim Fallback. 10min ist grosszügig, Cancellation greift trotzdem
-            // wenn der Prozess runter geht.
-            if (!await _slot.WaitAsync(TimeSpan.FromMinutes(10), ct))
+            // v1.10.189: Slot-Timeout drastisch auf 60s runter. Wenn das
+            // System gesund ist reicht das dicke (Download+Decode+Upload
+            // ~2-5s pro Foto × 2 Slots). Wenn nicht, sehen wir im Log
+            // sofort welcher Task hängt, statt 10min Diagnose-Blackbox.
+            if (!await _slot.WaitAsync(TimeSpan.FromSeconds(60), ct))
             {
-                _log.LogWarning("Thumb slot timeout for {File}", sourceBlobPath);
+                _log.LogError("Thumb slot timeout (60s) for {File} size={Size} — vorheriger Slot hängt oder decode ist ekelhaft langsam",
+                    sourceBlobPath, size);
                 return;
             }
             acquired = true;
             if (await _blobs.ExistsAsync(cachePath, ct)) return;
 
+            var swAll = System.Diagnostics.Stopwatch.StartNew();
+
             using var srcMs = new MemoryStream();
+            var swDl = System.Diagnostics.Stopwatch.StartNew();
             await _blobs.DownloadToAsync(sourceBlobPath, srcMs, ct);
+            swDl.Stop();
             srcMs.Position = 0;
+            _log.LogInformation("Thumb DL {File} ct={Ct} size={Bytes}B in {Ms}ms",
+                sourceBlobPath, sourceContentType, srcMs.Length, swDl.ElapsedMilliseconds);
 
             using var outMs = new MemoryStream();
             try
             {
+                var swDec = System.Diagnostics.Stopwatch.StartNew();
                 using var img = new MagickImage(srcMs);
+                swDec.Stop();
+                _log.LogInformation("Thumb DECODE {File} fmt={Fmt} src={W}x{H} in {Ms}ms",
+                    sourceBlobPath, img.Format, img.Width, img.Height, swDec.ElapsedMilliseconds);
+
                 img.AutoOrient();
                 img.Strip();
-                img.Resize(new MagickGeometry(size, size)
+                img.Resize(new MagickGeometry((uint)size, (uint)size)
                 {
                     Greater = true,
                 });
@@ -162,13 +173,22 @@ public class ThumbnailService : IThumbnailService
             }
             catch (Exception ex)
             {
-                _log.LogWarning(ex, "Thumbnail conversion failed for {File} (ct={Ct})",
-                    sourceBlobPath, sourceContentType);
+                // v1.10.189: LogError statt Warning. Warmup ist fire-and-forget
+                // → Warnings landen nur in Debug-Levels und Marcus sieht sie
+                // im Azure Log Stream nicht. HEIC-Decode-Failures sind KEIN
+                // ok-passiert-Zustand, sondern die Ursache für "1 Thumb / 5 min".
+                _log.LogError(ex, "Thumbnail conversion FAILED for {File} (ct={Ct} size={Bytes}B) — Magick.NET libheif fehlt?",
+                    sourceBlobPath, sourceContentType, srcMs.Length);
                 return;
             }
 
             outMs.Position = 0;
+            var swUp = System.Diagnostics.Stopwatch.StartNew();
             await _blobs.UploadFromStreamAsync(cachePath, outMs, "image/jpeg", ct);
+            swUp.Stop();
+            swAll.Stop();
+            _log.LogInformation("Thumb OK {File} out={Bytes}B UL={UpMs}ms total={AllMs}ms",
+                sourceBlobPath, outMs.Length, swUp.ElapsedMilliseconds, swAll.ElapsedMilliseconds);
         }
         finally
         {
