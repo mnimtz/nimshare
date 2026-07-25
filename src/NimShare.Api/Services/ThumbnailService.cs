@@ -70,9 +70,17 @@ public class ThumbnailService : IThumbnailService
 
     public bool IsAllowedSize(int size) => AllowedSizes.Contains(size);
 
+    // v1.10.178 Kill-Switch. Magick.NET-Native-Lib hängt on-load im Linux-
+    // Container (App Service, publish/AnyCPU + fehlendes Runtime-Pack). Statt
+    // wie in v1.10.177 den Thread-Pool zuzumachen, geben wir hier sofort null
+    // zurück → Endpoint 404 → Client-Fallback (v1.10.170 Kamera-Placeholder)
+    // greift ohne Verzögerung. Feature bleibt bis der Native-Lib-Fix da ist.
+    private static readonly bool _disabled = true;
+
     public async Task<Uri?> GetOrCreateAsync(Guid fileId, string sourceBlobPath, string sourceContentType,
         int size, CancellationToken ct = default)
     {
+        if (_disabled) return null;
         if (!IsImage(sourceContentType)) return null;
         if (!IsAllowedSize(size)) return null;
         if (string.IsNullOrEmpty(sourceBlobPath)) return null;
@@ -81,7 +89,15 @@ public class ThumbnailService : IThumbnailService
         if (await _blobs.ExistsAsync(cachePath, ct))
             return _blobs.CreateInlineSas(cachePath, "image/jpeg", TimeSpan.FromMinutes(10));
 
-        await _slot.WaitAsync(ct);
+        // Slot mit knappem Timeout — kein zweiter Endpunkt darf hängen wenn
+        // eine Konvertierung stecken bleibt (Native-Lib-Hang o.ä.). 30s ist
+        // grosszügig für iPhone-HEIC-Decodes, kurz genug um Thread-Pool-
+        // Suffocation zu vermeiden.
+        if (!await _slot.WaitAsync(TimeSpan.FromSeconds(30), ct))
+        {
+            _log.LogWarning("Thumb slot timeout for {File}", sourceBlobPath);
+            return null;
+        }
         try
         {
             // Doppelt geprüft: zwischen erstem Check und Slot-Acquire könnte
@@ -97,23 +113,17 @@ public class ThumbnailService : IThumbnailService
             try
             {
                 using var img = new MagickImage(srcMs);
-                // AutoOrient respektiert EXIF-Rotation (iPhones speichern
-                // Portrait-Fotos oft als Landscape+Orientation-Flag).
                 img.AutoOrient();
-                img.Strip(); // EXIF/GPS raus — Empfänger soll nicht sehen wo das Foto entstand
-                // v1.10.176 build-fix: MagickGeometry(int,int) und Quality(int)
-                // sind die richtigen APIs in Magick.NET 13.x — die uint-Overloads
-                // gibt's erst in 14.x. Sub-Agent hat für 14.x geschrieben, aber
-                // die Package-Version ist 13.10.0.
+                img.Strip();
                 img.Resize(new MagickGeometry(size, size)
                 {
-                    Greater = true,   // nur runter, nie hoch skalieren
+                    Greater = true,
                 });
                 img.Quality = 82;
                 img.Format = MagickFormat.Jpeg;
                 img.Write(outMs, MagickFormat.Jpeg);
             }
-            catch (MagickException ex)
+            catch (Exception ex)
             {
                 _log.LogWarning(ex, "Thumbnail conversion failed for {File} (ct={Ct})",
                     sourceBlobPath, sourceContentType);

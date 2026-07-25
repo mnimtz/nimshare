@@ -34,11 +34,23 @@ public class User
     public string? AvatarBlobPath { get; set; }
 
     /// <summary>
-    /// If true, the user's avatar is rendered top-right on every public share
-    /// landing (/s/{slug}) they own. Off by default — most users share
-    /// impersonally under the Tungsten mark. Opt-in from the profile page.
+    /// Legacy (v1.10.7): globaler Toggle. Bleibt für Backwards-Compat in der
+    /// DB; die Landing-Anzeige liest ab v1.10.178 die zwei feiner granulierten
+    /// Flags unten. Migration V190 kopiert diesen Wert in beide neuen Felder.
     /// </summary>
     public bool ShowAvatarOnLandings { get; set; }
+
+    /// <summary>
+    /// v1.10.178 — Avatar auf ÖFFENTLICHEN Landings (Public-Scope-Dateien
+    /// bzw. IsPublic-Links, Admin-kuratierte Downloads). Off by default.
+    /// </summary>
+    public bool ShowAvatarOnPublicShares { get; set; }
+
+    /// <summary>
+    /// v1.10.178 — Avatar auf PERSÖNLICHEN Landings (private Freigaben aus
+    /// Personal-/Group-Scope, User-erstellte Links). Off by default.
+    /// </summary>
+    public bool ShowAvatarOnPersonalShares { get; set; }
 
     public UserRole Role { get; set; } = UserRole.User;
 
