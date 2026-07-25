@@ -139,9 +139,10 @@ struct AiConsentSheet: View {
 
     private func providerDisplayName(_ raw: String) -> String {
         switch raw {
-        case "OpenAI": return "OpenAI"
+        case "OpenAi": return "OpenAI"
         case "Anthropic": return "Anthropic"
-        case "AzureOpenAI": return "Azure OpenAI (deine Region)"
+        case "AzureOpenAi": return "Azure OpenAI (deine Region)"
+        case "Gemini": return "Google Gemini"
         case "Disabled": return "keiner — KI ist auf dieser Instanz nicht aktiviert"
         default: return raw
         }

@@ -30,12 +30,12 @@ public class AiConsentApiController : ControllerBase
     /// Preview. Damit der Consent-Dialog exakt sagen kann, wer die Daten
     /// bekommt.</summary>
     public record AiProviderInfo(
-        string Provider,          // "OpenAI" | "Anthropic" | "AzureOpenAI" | "Disabled"
+        string Provider,          // "OpenAi" | "Anthropic" | "AzureOpenAi" | "Gemini" | "Disabled"
         string? Model,            // z.B. "gpt-4o"
         string? EndpointHint,     // z.B. "api.openai.com" (Host only, für Region-Info)
         bool ChatWithFilesEnabled,
         bool AutoSummaryEnabled,
-        bool VisionEnabled,
+        bool SmartTagsEnabled,
         bool OcrEnabled,
         bool Enabled);            // false = Instanz sendet aktuell nichts an AI
 
@@ -52,9 +52,10 @@ public class AiConsentApiController : ControllerBase
         {
             host = s.Provider switch
             {
-                AiProvider.OpenAI => "api.openai.com",
+                AiProvider.OpenAi => "api.openai.com",
                 AiProvider.Anthropic => "api.anthropic.com",
-                AiProvider.AzureOpenAI => "*.openai.azure.com",
+                AiProvider.AzureOpenAi => "*.openai.azure.com",
+                AiProvider.Gemini => "generativelanguage.googleapis.com",
                 _ => "",
             };
         }
@@ -64,7 +65,7 @@ public class AiConsentApiController : ControllerBase
             EndpointHint: string.IsNullOrEmpty(host) ? null : host,
             ChatWithFilesEnabled: s.EnableChatWithFiles,
             AutoSummaryEnabled: s.EnableAutoSummary,
-            VisionEnabled: s.EnableVision,
+            SmartTagsEnabled: s.EnableSmartTags,
             OcrEnabled: s.EnableOcr,
             Enabled: s.Provider != AiProvider.Disabled));
     }

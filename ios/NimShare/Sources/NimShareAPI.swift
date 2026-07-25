@@ -352,7 +352,7 @@ final class NimShareAPI: ObservableObject {
         let endpointHint: String?
         let chatWithFilesEnabled: Bool
         let autoSummaryEnabled: Bool
-        let visionEnabled: Bool
+        let smartTagsEnabled: Bool
         let ocrEnabled: Bool
         let enabled: Bool
     }
