@@ -70,6 +70,11 @@ else
                     {
                         <span class="chip chip-warn" title="@T["links.public.hint"]">🌐 @T["links.public.badge"]</span>
                     }
+                    @* v1.11.2 — Marcus: Reihenfolge der Aktionen soll über alle
+                       Sektionen (Privat/Gruppen/Öffentlich/Subdomains) gleich
+                       sein: Öffnen, Auswertung, Kopieren, ...Sektionsspezifisches,
+                       Widerrufen, Löschen. *@
+                    <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
                     <button class="btn btn-ghost btn-sm" data-email="@l.Id">@T["links.action.email"]</button>
@@ -138,8 +143,8 @@ else
                 <td>@l.DownloadCount @(l.MaxDownloads is int m4 ? $" / {m4}" : "")</td>
                 <td><span class="chip @sdState.Item1">@sdState.Item2</span></td>
                 <td>
-                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <a class="btn btn-secondary btn-sm" href="@sdUrl" target="_blank">↗ @T["links.action.open"]</a>
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
                     @if (!l.IsRevoked)
                     {
@@ -199,6 +204,7 @@ else
                 <td>@l.DownloadCount @(l.MaxDownloads is int m3 ? $" / {m3}" : "")</td>
                 <td><span class="chip @gstate.Item1">@gstate.Item2</span></td>
                 <td>
+                    <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
                     @if (!l.IsRevoked)
@@ -258,12 +264,15 @@ else
                 <td><span class="chip @pstate.Item1">@pstate.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
-                    <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
                     @* v1.10.97: Admin-Moderation für öffentliche Links. Marcus's
                        Report: „als Admin auch öffentlich links löschen dürfen". *@
                     @if (isAdmin)
                     {
                         <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
+                    }
+                    <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
+                    @if (isAdmin)
+                    {
                         @if (!l.IsRevoked)
                         {
                             <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
