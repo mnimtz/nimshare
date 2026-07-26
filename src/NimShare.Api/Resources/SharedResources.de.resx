@@ -1476,6 +1476,10 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="browse.view.list"><value>Liste</value></data>
   <data name="browse.view.grid"><value>Kacheln</value></data>
   <data name="browse.view.preview"><value>Vorschau</value></data>
+  <data name="share.direct.pick_user"><value>Bitte einen Benutzer aus den Vorschlägen wählen.</value></data>
+  <data name="err.request_failed"><value>Anfrage fehlgeschlagen</value></data>
+  <data name="share.gallery.gps_map_label"><value>Aufnahmeort-Karte anzeigen</value></data>
+  <data name="share.gallery.gps_map_hint"><value>Empfänger sehen eine Karte mit den Aufnahmeorten der Fotos mit GPS-Daten. Für privatsphäre-sensible Alben abschaltbar.</value></data>
   <data name="landing.gallery.map.title"><value>Wo diese Fotos aufgenommen wurden</value></data>
   <data name="landing.gallery.map.count"><value>{0} von {1} Fotos verortet</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Empfänger dürfen hochladen</value></data>

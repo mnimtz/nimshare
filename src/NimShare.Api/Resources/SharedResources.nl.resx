@@ -1471,6 +1471,10 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="browse.view.list"><value>Lijst</value></data>
   <data name="browse.view.grid"><value>Tegels</value></data>
   <data name="browse.view.preview"><value>Voorbeeld</value></data>
+  <data name="share.direct.pick_user"><value>Kies een gebruiker uit de suggesties.</value></data>
+  <data name="err.request_failed"><value>Verzoek mislukt</value></data>
+  <data name="share.gallery.gps_map_label"><value>Kaart met opnamelocaties tonen</value></data>
+  <data name="share.gallery.gps_map_hint"><value>Ontvangers zien een kaart met de opnamelocaties van foto's met GPS-gegevens. Uitschakelbaar voor privacygevoelige albums.</value></data>
   <data name="landing.gallery.map.title"><value>Waar deze foto's zijn gemaakt</value></data>
   <data name="landing.gallery.map.count"><value>{0} van {1} foto's gelokaliseerd</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Ontvangers mogen uploaden</value></data>

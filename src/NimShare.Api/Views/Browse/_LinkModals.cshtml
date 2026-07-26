@@ -129,6 +129,16 @@
                     <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.allow_uploads_hint"]</div>
                 </span>
             </label>
+            @* v1.10.196: GPS-Karte pro Link an/aus. Default an — die Landing
+               zeigt die Aufnahmeort-Karte nur, wenn Fotos GPS-EXIF haben UND
+               dieser Toggle aktiv ist. *@
+            <label id="shareGpsMapRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:26px;border-left:2px solid rgba(0,40,84,0.15)">
+                <input type="checkbox" id="shareShowGpsMap" checked style="margin-top:4px"/>
+                <span>
+                    <div style="font-weight:600">📍 @T["share.gallery.gps_map_label"]</div>
+                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.gps_map_hint"]</div>
+                </span>
+            </label>
         </div>
         <div id="shareResult" style="display:none">
             <div class="modal-result">
@@ -380,6 +390,8 @@ function openShareFolderModal(folderId) {
     const cbDisp = document.getElementById('shareDisplayAsGallery');
     const cbAllow = document.getElementById('shareAllowUploads');
     if (cbAllow) cbAllow.checked = false;
+    const cbGps = document.getElementById('shareShowGpsMap');
+    if (cbGps) cbGps.checked = true;   // v1.10.196: Default an
     if (cbDisp && wrap) {
         const row = document.querySelector(`tr.ctx[data-id="${folderId}"]`);
         const isGallery = row && row.dataset.folderKind === 'Gallery';
@@ -393,6 +405,9 @@ function onShareDisplayGalleryChange() {
     const on = document.getElementById('shareDisplayAsGallery')?.checked;
     const row = document.getElementById('shareAllowUploadsRow');
     if (row) row.style.display = on ? 'flex' : 'none';
+    // v1.10.196: GPS-Karten-Toggle hängt am Album-Modus (Karte gibt's nur dort).
+    const gpsRow = document.getElementById('shareGpsMapRow');
+    if (gpsRow) gpsRow.style.display = on ? 'flex' : 'none';
     if (!on) {
         const cb = document.getElementById('shareAllowUploads');
         if (cb) cb.checked = false;
@@ -451,6 +466,8 @@ async function createShareLink() {
         // v1.10.167: Album-Anzeige + Upload — Server enforced für File-Links = false.
         displayAsGallery: !!document.getElementById('shareDisplayAsGallery')?.checked,
         allowUploads: !!document.getElementById('shareAllowUploads')?.checked,
+        // v1.10.196: GPS-Karten-Toggle (Default an; nur im Album-Modus relevant).
+        showGpsMap: document.getElementById('shareShowGpsMap') ? document.getElementById('shareShowGpsMap').checked : true,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

@@ -53,6 +53,13 @@ public interface IThumbnailService
     /// Format). Landing rendert dann den Kamera-Fallback statt ewig zu
     /// pollen; nach einem Deploy/Restart gibt's automatisch einen Retry.</summary>
     bool IsFailed(Guid fileId);
+
+    /// <summary>v1.10.196: GPS-Nachzieh für Files, deren Thumbs schon fertig
+    /// sind (ThumbsReadyAt gesetzt), die aber keine Koordinaten haben — z.B.
+    /// weil sie hochgeladen wurden, als der EXIF-Pfad noch lückenhaft war.
+    /// Max. 1 Versuch pro File und Prozess-Lebenszeit (Fotos ohne GPS-EXIF
+    /// würden sonst bei jedem Landing-Aufruf neu heruntergeladen).</summary>
+    void EnqueueGpsBackfill(Guid fileId, string blobPath, string? contentType);
 }
 
 public class ThumbnailService : IThumbnailService
@@ -113,6 +120,18 @@ public class ThumbnailService : IThumbnailService
     }
 
     public bool IsFailed(Guid fileId) => _failed.ContainsKey(fileId);
+
+    // v1.10.196: einmal-pro-Prozess-Gate für den GPS-Nachzieh.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, byte> _gpsChecked = new();
+
+    public void EnqueueGpsBackfill(Guid fileId, string blobPath, string? contentType)
+    {
+        if (!IsImage(contentType) || string.IsNullOrEmpty(blobPath)) return;
+        if (!_gpsChecked.TryAdd(fileId, 0)) return;   // schon versucht
+        // Normale Queue nutzen — der Worker landet im STAMP-ONLY-Pfad
+        // (Thumbs existieren) und macht dort nur den GPS-Download.
+        Enqueue(fileId, blobPath, contentType);
+    }
 
     // ── Worker-Seite (nur ThumbnailWorker ruft die hier auf) ─────────────
     internal ChannelReader<ThumbJob> Reader => _queue.Reader;

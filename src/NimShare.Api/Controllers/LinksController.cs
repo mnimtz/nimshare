@@ -50,7 +50,9 @@ public class LinksController : ControllerBase
         // v1.10.167: Wenn true UND (DisplayAsGallery ODER Folder.Kind==Gallery),
         // dürfen Empfänger direkt ins Album hochladen. Sonst wird das Flag
         // serverseitig ignoriert (Landing zeigt kein Upload-Widget).
-        bool AllowUploads = false);
+        bool AllowUploads = false,
+        // v1.10.196: Aufnahmeort-Karte auf der Album-Landing (nur Gallery-Modus).
+        bool ShowGpsMap = true);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -67,7 +69,9 @@ public class LinksController : ControllerBase
         // FolderIsGallery = Convenience-Info: Ordner ist Kind=Gallery (Default).
         bool FolderIsGallery = false,
         bool DisplayAsGallery = false,
-        bool AllowUploads = false);
+        bool AllowUploads = false,
+        // v1.10.196: GPS-Karten-Toggle des Links.
+        bool ShowGpsMap = true);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -168,6 +172,8 @@ public class LinksController : ControllerBase
             SigningCertificateId = certId,
             AllowUploads = allowUploads,
             DisplayAsGallery = displayAsGallery,
+            // v1.10.196: GPS-Karte pro Link abschaltbar (nur Gallery relevant).
+            ShowGpsMap = req.ShowGpsMap,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -494,7 +500,8 @@ public class LinksController : ControllerBase
         Signer: BuildSignerInfo(l.SigningCertificate),
         FolderIsGallery: l.Folder != null && l.Folder.Kind == FolderKind.Gallery,
         DisplayAsGallery: l.DisplayAsGallery,
-        AllowUploads: l.AllowUploads);
+        AllowUploads: l.AllowUploads,
+        ShowGpsMap: l.ShowGpsMap);
 
     // v1.10.146: Signer-Info fürs Landing-Badge; nur bei vorhandenem Zertifikat.
     internal static SignerInfo? BuildSignerInfo(SigningCertificate? c)

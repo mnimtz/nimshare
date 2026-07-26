@@ -95,7 +95,9 @@ public class ShareController : Controller
             // v1.10.178: Aufnahmeorte für die Album-Landing-Karte. Nur Fotos
             // mit EXIF-GPS werden aufgenommen; leere Liste = keine Karte.
             var isGalleryView = link.DisplayAsGallery || folder.Kind == FolderKind.Gallery;
-            var geo = isGalleryView
+            // v1.10.196: Karte nur wenn der Link-Ersteller sie nicht abgeschaltet
+            // hat (ShowGpsMap, Default an — Alt-Links verhalten sich wie bisher).
+            var geo = isGalleryView && link.ShowGpsMap
                 ? files.Where(f => f.Latitude.HasValue && f.Longitude.HasValue)
                        .Select(f => new FolderLandingGeoPoint(f.Id, f.Name, f.Latitude!.Value, f.Longitude!.Value))
                        .ToList()
@@ -120,6 +122,11 @@ public class ShareController : Controller
                     {
                         t400 = thumbs.CreateThumbSas(f.Id, 400, thumbTtl).ToString();
                         t1600 = thumbs.CreateThumbSas(f.Id, 1600, thumbTtl).ToString();
+                        // v1.10.196: GPS fehlt (z.B. Upload aus einer Ära mit
+                        // lückenhaftem EXIF-Pfad) → einmalig nachziehen, damit
+                        // die Karte wieder Punkte bekommt.
+                        if (f.Latitude is null)
+                            thumbs.EnqueueGpsBackfill(f.Id, f.BlobPath, f.ContentType);
                     }
                     else if (thumbs.IsFailed(f.Id))
                     {

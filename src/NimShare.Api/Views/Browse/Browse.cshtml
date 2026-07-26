@@ -1659,12 +1659,17 @@ document.getElementById('dsPicker').addEventListener('input', async (e) => {
     const items = await r.json();
     const dl = document.getElementById('dsUserList');
     dl.innerHTML = '';
-    dsUserCache.clear();
+    // v1.10.196: Cache NICHT mehr clearen. iOS Safari feuert bei der
+    // datalist-Auswahl ein input-Event mit dem VOLLEN Wert („Name <mail>")
+    // → die Suche danach findet nichts → clear() warf die bereits
+    // gemappte User-Id weg → „Pick a user…" obwohl korrekt ausgewählt.
+    // Der Cache akkumuliert jetzt einfach (Session-klein, kein Leak-Risiko).
     items.forEach(u => {
         const o = document.createElement('option');
         o.value = u.displayName + ' <' + u.email + '>';
         dl.appendChild(o);
         dsUserCache.set(o.value, u.id);
+        dsUserCache.set((u.email || '').toLowerCase(), u.id);
     });
 });
 async function ds_loadGroups() {
@@ -1689,9 +1694,27 @@ async function ds_add() {
     if (dsCurrent.kind === 'file') body.fileId = dsCurrent.id;
     else body.folderId = dsCurrent.id;
     if (kind === 'user') {
-        const val = document.getElementById('dsPicker').value;
-        const uid = dsUserCache.get(val);
-        if (!uid) { nimAlert('Pick a user from the suggestions.'); return; }
+        const val = document.getElementById('dsPicker').value.trim();
+        let uid = dsUserCache.get(val);
+        // v1.10.196: Fallback-Resolver — E-Mail aus „Name <mail>" (oder pur)
+        // extrahieren und serverseitig auflösen. Deckt den Fall ab, dass der
+        // Cache den zusammengesetzten Wert (noch) nicht kennt.
+        if (!uid) {
+            const m = val.match(/<([^>]+)>/);
+            const email = (m ? m[1] : val).toLowerCase();
+            uid = dsUserCache.get(email);
+            if (!uid && email.includes('@@')) {
+                try {
+                    const rr = await fetch('/api/v1/direct-shares/users?q=' + encodeURIComponent(email), { credentials: 'same-origin' });
+                    if (rr.ok) {
+                        const hits = await rr.json();
+                        const hit = hits.find(u => (u.email || '').toLowerCase() === email) || (hits.length === 1 ? hits[0] : null);
+                        if (hit) uid = hit.id;
+                    }
+                } catch {}
+            }
+        }
+        if (!uid) { nimAlert(@Json.Serialize(T["share.direct.pick_user"].Value)); return; }
         body.userId = uid;
     } else {
         body.groupId = document.getElementById('dsGroupSel').value;
@@ -1700,7 +1723,7 @@ async function ds_add() {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
+    if (!r.ok) { nimAlert(@Json.Serialize(T["err.request_failed"].Value) + ' (' + r.status + ')', { kind: 'error' }); return; }
     // v1.10.144: Hinweis, wenn der öffentliche Ordner beim Freigeben
     // automatisch auf privat gestellt wurde.
     try { const dd = await r.json(); if (dd && dd.autoPrivatized && window.nimToast) nimToast(@Json.Serialize(T["permissions.auto_private"].Value), { kind: 'info' }); } catch {}

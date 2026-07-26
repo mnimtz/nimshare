@@ -91,6 +91,13 @@ public class ShareLink
     /// </summary>
     public bool DisplayAsGallery { get; set; }
 
+    /// <summary>
+    /// v1.10.196 — Aufnahmeort-Karte auf der Album-Landing. Nur relevant im
+    /// Gallery-Modus; default true (bisheriges Verhalten). Der Ersteller kann
+    /// die Karte pro Link abschalten (Privatsphäre: GPS-Daten der Fotos).
+    /// </summary>
+    public bool ShowGpsMap { get; set; } = true;
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

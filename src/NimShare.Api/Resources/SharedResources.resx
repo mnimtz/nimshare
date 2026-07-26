@@ -1474,6 +1474,10 @@ Thanks for using NimShare.</value></data>
   <data name="browse.view.list"><value>List</value></data>
   <data name="browse.view.grid"><value>Tiles</value></data>
   <data name="browse.view.preview"><value>Preview</value></data>
+  <data name="share.direct.pick_user"><value>Please pick a user from the suggestions.</value></data>
+  <data name="err.request_failed"><value>Request failed</value></data>
+  <data name="share.gallery.gps_map_label"><value>Show photo location map</value></data>
+  <data name="share.gallery.gps_map_hint"><value>Recipients see a map with the capture locations of photos that carry GPS data. Disable for privacy-sensitive albums.</value></data>
   <data name="landing.gallery.map.title"><value>Where these photos were taken</value></data>
   <data name="landing.gallery.map.count"><value>{0} of {1} photos located</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Recipients may upload</value></data>

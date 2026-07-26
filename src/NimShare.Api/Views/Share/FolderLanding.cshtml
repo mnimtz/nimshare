@@ -254,6 +254,31 @@
             }
             else if (mediaFiles.Count > 0)
             {
+                @* v1.10.196: Ansichts-Umschalter für Empfänger — Kacheln
+                   (Default) / Groß / Liste. Persistiert in localStorage. *@
+                <style>
+                    .gal-viewswitch { display:flex; gap:4px; justify-content:flex-end; margin-top:var(--sp-5); }
+                    .gal-viewswitch button { border:1px solid #0002; background:#fff; border-radius:6px; padding:4px 11px; cursor:pointer; font-size:14px; }
+                    .gal-viewswitch button.active { background:@accent; color:#fff; border-color:@accent; }
+                    .gal-grid.mode-large { grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+                    .gal-grid.mode-list { display:flex; flex-direction:column; gap:6px; }
+                    .gal-grid.mode-list .gal-cell { aspect-ratio:auto; display:flex; align-items:center; height:60px; }
+                    .gal-grid.mode-list .gal-cell img { width:60px; height:60px; flex:0 0 60px; }
+                    .gal-grid.mode-list .gal-cell .gal-fallback,
+                    .gal-grid.mode-list .gal-cell .gal-pending { width:60px; height:60px; flex:0 0 60px; padding:4px; }
+                    .gal-grid.mode-list .gal-cell .gal-fallback .em { font-size:22px; margin-bottom:0; }
+                    .gal-grid.mode-list .gal-cell .gal-fallback div:not(.em),
+                    .gal-grid.mode-list .gal-cell .gal-fallback small { display:none; }
+                    .gal-grid.mode-list .gal-play { display:none; }
+                    .gal-grid.mode-list .gal-cell .gal-name { position:static; background:none; color:#222; flex:1; padding:0 12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+                    .gal-grid.mode-list .gal-cell .gal-name b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                    .gal-grid.mode-list .gal-cell .gal-size { color:#777; flex:0 0 auto; }
+                </style>
+                <div class="gal-viewswitch" role="group" aria-label="@T["browse.view.label"]">
+                    <button type="button" id="galVmGrid" title="@T["browse.view.grid"]" onclick="galSetView('grid')">▦</button>
+                    <button type="button" id="galVmLarge" title="@T["browse.view.preview"]" onclick="galSetView('large')">🖼</button>
+                    <button type="button" id="galVmList" title="@T["browse.view.list"]" onclick="galSetView('list')">☰</button>
+                </div>
                 <div class="gal-grid" id="galGrid">
                 @foreach (var (f, idx) in mediaFiles.Select((f, i) => (f, i)))
                 {
@@ -575,6 +600,24 @@
         }, 4000);
     }
     if (canPreview && document.querySelector('[data-pending]')) galEnsurePolling();
+
+    // ── v1.10.196: Empfänger-Ansichtsumschalter (Kacheln/Groß/Liste) ──
+    window.galSetView = function(m) {
+        if (!['grid','large','list'].includes(m)) m = 'grid';
+        const g = document.getElementById('galGrid');
+        if (g) g.classList.remove('mode-large', 'mode-list');
+        if (g && m !== 'grid') g.classList.add('mode-' + m);
+        [['galVmGrid','grid'],['galVmLarge','large'],['galVmList','list']].forEach(([id, k]) => {
+            const b = document.getElementById(id);
+            if (b) b.classList.toggle('active', k === m);
+        });
+        try { localStorage.setItem('nim.landing.viewMode', m); } catch {}
+    };
+    (function() {
+        let m = 'grid';
+        try { m = localStorage.getItem('nim.landing.viewMode') || 'grid'; } catch {}
+        if (document.getElementById('galGrid')) galSetView(m);
+    })();
     document.addEventListener('keydown', e => {
         if (!document.getElementById('galLB').classList.contains('open')) return;
         if (e.key === 'Escape') galClose();

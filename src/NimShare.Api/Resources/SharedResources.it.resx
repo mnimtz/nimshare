@@ -1472,6 +1472,10 @@ Grazie per usare NimShare.</value></data>
   <data name="browse.view.list"><value>Elenco</value></data>
   <data name="browse.view.grid"><value>Riquadri</value></data>
   <data name="browse.view.preview"><value>Anteprima</value></data>
+  <data name="share.direct.pick_user"><value>Scegli un utente dai suggerimenti.</value></data>
+  <data name="err.request_failed"><value>Richiesta non riuscita</value></data>
+  <data name="share.gallery.gps_map_label"><value>Mostra mappa dei luoghi di scatto</value></data>
+  <data name="share.gallery.gps_map_hint"><value>I destinatari vedono una mappa con i luoghi di scatto delle foto con dati GPS. Disattivabile per album sensibili.</value></data>
   <data name="landing.gallery.map.title"><value>Dove sono state scattate queste foto</value></data>
   <data name="landing.gallery.map.count"><value>{0} di {1} foto localizzate</value></data>
   <data name="share.gallery.allow_uploads_label"><value>I destinatari possono caricare</value></data>
