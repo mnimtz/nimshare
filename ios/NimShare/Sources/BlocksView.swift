@@ -54,6 +54,7 @@ struct BlocksView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { rows = try await api.listBlocks() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -62,6 +63,6 @@ struct BlocksView: View {
         do {
             try await api.unblockUser(id)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

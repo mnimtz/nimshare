@@ -362,7 +362,7 @@
 <!-- Right-click context menu -->
 <div class="ctx-menu" id="ctxMenu">
     <button data-act="open" style="display:none">📂 @T["ctx.open"]</button>
-    <button data-act="preview" style="display:none">👁 Preview</button>
+    <button data-act="preview" style="display:none">👁 @T["browse.view.preview"]</button>
     <button data-act="share">🔗 @T["actions.share_link"]</button>
     <button data-act="directShare">🤝 @T["share.direct"]</button>
     @* v1.10.104: Berechtigungen (Windows-ACL-Style) — nur im Public-Scope für
@@ -1236,7 +1236,9 @@ async function openPreview(fileId) {
     if (useOffice && !r.ok) {
         r = await fetch('/api/v1/files/' + fileId + '/preview-url?inline=1', { credentials: 'same-origin' });
     }
-    if (!r.ok) return;
+    // v1.10.197: Fehler nicht mehr stumm schlucken — „klicke Preview,
+    // passiert nichts" ist undebuggbar. Jetzt sichtbare Meldung mit Status.
+    if (!r.ok) { nimAlert(@Json.Serialize(T["err.request_failed"].Value) + ' (' + r.status + ')', { kind: 'error' }); return; }
     const d = await r.json();
     document.getElementById('previewTitle').textContent = d.name;
     const body = document.getElementById('previewBody');
@@ -1371,8 +1373,13 @@ function buildGrid(mode) {
         }
         // Rechtsklick: an die Original-Zeile weiterreichen — deren Handler
         // kennt die komplette Menü-Logik (showFor etc.).
+        // v1.10.197: stopPropagation ist PFLICHT — sonst blubbert das Event
+        // weiter zum .fm-main-Handler (Leere-Fläche-Menü), der das gerade
+        // geöffnete Kontextmenü sofort wieder schließt und „Neuer Ordner"
+        // drüberlegt. Das machte Rechtsklick im Kachel-Modus praktisch tot.
         tile.addEventListener('contextmenu', e => {
             e.preventDefault();
+            e.stopPropagation();
             tr.dispatchEvent(new MouseEvent('contextmenu', { cancelable: true, clientX: e.clientX, clientY: e.clientY }));
         });
         grid.append(tile);

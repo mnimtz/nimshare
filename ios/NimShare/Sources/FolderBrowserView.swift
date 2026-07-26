@@ -497,12 +497,13 @@ struct FolderBrowserView: View {
         } catch let e as ApiError {
             error = e.localizedDescription
             if case .notAuthorized = e { auth.signOut() }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func toggleFav(fileId: UUID? = nil, folderId: UUID? = nil) async {
         guard let api = auth.api else { return }
         do { _ = try await api.toggleFavorite(fileId: fileId, folderId: folderId) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -511,23 +512,26 @@ struct FolderBrowserView: View {
         do {
             try await api.deleteFile(id)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     // v1.10.113: Ordner-Operationen (Web-Parität).
     private func deleteFolder(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.deleteFolder(id: id, force: true); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func performMoveFolder(folderId: UUID, targetId: UUID, targetPath: String) async {
         guard let api = auth.api else { return }
         do { try await api.moveFolder(id: folderId, targetFolderId: targetId); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func performCopyFolder(folderId: UUID, targetId: UUID, targetPath: String) async {
         guard let api = auth.api else { return }
         do { try await api.copyFolder(id: folderId, targetFolderId: targetId); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -539,7 +543,7 @@ struct FolderBrowserView: View {
         do {
             let link = try await api.createShareLink(fileId: fileId, folderId: folderId)
             linkResult = LinkResult(title: "Freigabelink: \(name)", url: link.url)
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func createUploadRequest() async {
@@ -548,7 +552,7 @@ struct FolderBrowserView: View {
         do {
             let r = try await api.createUploadRequest(message: nil)
             linkResult = LinkResult(title: "Upload-Anforderung", url: r.url)
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     /// v1.10.72: Fixierte Bottom-Bar mit Bulk-Actions — sichtbar wenn
@@ -586,7 +590,7 @@ struct FolderBrowserView: View {
             selection.removeAll()
             editMode = .inactive
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func bulkDownloadZip() async {
@@ -600,7 +604,7 @@ struct FolderBrowserView: View {
             selection.removeAll()
             editMode = .inactive
             await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func bulkMoveOrCopy(_ op: BulkOp, targetId: UUID) async {
@@ -630,7 +634,7 @@ struct FolderBrowserView: View {
         do {
             try await api.moveFile(id: fileId, targetFolderId: targetId)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
     private func performCopy(fileId: UUID, targetId: UUID, targetPath: String) async {
         guard let api = auth.api else { return }
@@ -641,7 +645,7 @@ struct FolderBrowserView: View {
             // Kopie nur nach manuellem Refresh. Bei Kopie in denselben
             // Ordner (Duplikat) blieb es scheinbar wirkungslos.
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
     private func performRename() async {
         guard let api = auth.api, let r = renaming else { return }
@@ -653,7 +657,7 @@ struct FolderBrowserView: View {
             if r.kind == "folder" { try await api.renameFolder(id: r.id, newName: newName) }
             else { try await api.renameFile(id: r.id, newName: newName) }
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
     private func performCreateFolder() async {
         guard let api = auth.api, let parent = newFolderParent else { return }
@@ -664,7 +668,7 @@ struct FolderBrowserView: View {
         do {
             _ = try await api.createFolder(parentId: parent, name: name)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     // Datei-Download via preview-url (Content-Disposition=attachment) →
@@ -681,7 +685,7 @@ struct FolderBrowserView: View {
             let dest = TmpFile.destinationURL(for: f.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
             await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }
 

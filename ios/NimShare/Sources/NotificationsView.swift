@@ -66,18 +66,21 @@ struct NotificationsView: View {
         loading = true; error = nil
         defer { loading = false }
         do { items = try await api.listNotifications() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
     private func markRead(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.markNotificationRead(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
     private func markAllRead() async {
         guard let api = auth.api else { return }
         do { try await api.markAllNotificationsRead(); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

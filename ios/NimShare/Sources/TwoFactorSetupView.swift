@@ -117,6 +117,7 @@ struct TwoFactorSetupView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { status = try await api.totpStatus() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -124,6 +125,7 @@ struct TwoFactorSetupView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { setup = try await api.totpInit() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 

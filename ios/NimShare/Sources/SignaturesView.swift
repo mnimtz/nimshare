@@ -106,6 +106,7 @@ struct SignaturesView: View {
         loading = true; error = nil
         defer { loading = false }
         do { items = try await api.listMySignatureRequests() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }
@@ -220,7 +221,7 @@ struct NewSignatureRequestSheet: View {
                 contentType: "application/pdf", createdAt: Date(), ownerName: nil,
                 aiTags: nil, aiRiskFlag: nil))
             pickedFileId = fid
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     @State private var showPicker = false
@@ -402,7 +403,7 @@ struct NewSignatureRequestSheet: View {
                 contactSuggestions = contacts
             }
             step = 2
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func addParticipant() async {
@@ -417,7 +418,7 @@ struct NewSignatureRequestSheet: View {
             }
             participants.append(Participant(email: newEmail, name: newName, role: newRole, serverId: pid))
             newEmail = ""; newName = ""
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func send() async {
@@ -426,6 +427,6 @@ struct NewSignatureRequestSheet: View {
         do {
             _ = try await api.sendSignatureRequest(rid)
             onDone()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

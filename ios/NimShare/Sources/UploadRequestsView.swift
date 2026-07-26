@@ -124,6 +124,7 @@ struct UploadRequestsView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { items = try await api.listUploadRequests() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func deleteItem(_ id: UUID) async {
@@ -131,6 +132,6 @@ struct UploadRequestsView: View {
         do {
             try await api.deleteUploadRequest(id)
             items.removeAll { $0.id == id }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

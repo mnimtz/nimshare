@@ -128,6 +128,7 @@ struct SharedFolderView: View {
         guard let api = auth.api else { return }
         loading = true; error = nil; defer { loading = false }
         do { payload = try await api.browseFolder(folderId) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

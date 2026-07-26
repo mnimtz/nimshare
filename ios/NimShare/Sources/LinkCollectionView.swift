@@ -106,6 +106,7 @@ struct LinkCollectionView: View {
     private func delete(_ l: NimShareAPI.LinkEntryDto) async {
         guard let api = auth.api else { return }
         do { try await api.deleteLink(id: l.id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }
@@ -210,6 +211,7 @@ struct LinkCollectionEditSheet: View {
             dismiss()
         }
         catch let e as ApiError { error = e.localizedDescription }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

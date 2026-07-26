@@ -78,6 +78,7 @@ struct FavoritesView: View {
         loading = true; error = nil
         defer { loading = false }
         do { items = try await api.listFavorites() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -88,6 +89,6 @@ struct FavoritesView: View {
                 fileId: fav.kind == "file" ? fav.targetId : nil,
                 folderId: fav.kind == "folder" ? fav.targetId : nil)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

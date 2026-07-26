@@ -195,6 +195,7 @@ struct SignatureDetailView: View {
         loading = true; error = nil
         defer { loading = false }
         do { detail = try await api.signatureRequestDetail(requestId) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 

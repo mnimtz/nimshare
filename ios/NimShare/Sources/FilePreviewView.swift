@@ -98,11 +98,13 @@ struct FilePreviewView: View {
     private func acquireLock() async {
         guard let api = auth.api else { return }
         do { try await api.fileLockAcquire(file.id); await loadLock() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func releaseLock() async {
         guard let api = auth.api else { return }
         do { try await api.fileLockRelease(file.id); await loadLock() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -126,6 +128,7 @@ struct FilePreviewView: View {
             try FileManager.default.moveItem(at: tmp, to: dest)
             localURL = dest
         } catch let e as ApiError { error = e.localizedDescription }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 

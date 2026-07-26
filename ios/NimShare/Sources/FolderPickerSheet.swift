@@ -141,6 +141,6 @@ struct FolderPickerSheet: View {
             for n in nodes where n.parentId == nil || !ids.contains(n.parentId!) {
                 expanded.insert(n.id)
             }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

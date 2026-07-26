@@ -80,6 +80,7 @@ struct SharedWithMeView: View {
         loading = true; error = nil
         defer { loading = false }
         do { items = try await api.sharedWithMe() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

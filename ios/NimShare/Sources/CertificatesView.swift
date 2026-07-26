@@ -94,16 +94,19 @@ struct CertificatesView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { items = try await api.listCertificates() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func setDefault(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.setDefaultCertificate(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func delete(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.deleteCertificate(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }
@@ -178,6 +181,6 @@ struct GenerateCertSheet: View {
             )
             onSaved()
             dismiss()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

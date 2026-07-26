@@ -30,6 +30,8 @@ struct DirectShareSheet: View {
     @State private var shares: [DirectShareDto] = []
     @State private var loading = false
     @State private var error: String?
+    // v1.10.197: kurzes Erfolgs-Feedback nach dem Hinzufügen.
+    @State private var justGranted = false
 
     enum PickerKind: CaseIterable, Identifiable {
         case user, group
@@ -65,9 +67,11 @@ struct DirectShareSheet: View {
                             .textInputAutocapitalization(.never)
                             .onChange(of: userQuery) { _, new in
                                 searchTask?.cancel()
-                                if selectedUser?.displayName != new {
-                                    selectedUser = nil
-                                }
+                                // v1.10.197: Nach dem Antippen eines Vorschlags
+                                // NICHT erneut suchen — sonst poppt die Liste
+                                // nach 250ms wieder auf und wirkt „nicht gewählt".
+                                if selectedUser?.displayName == new { return }
+                                selectedUser = nil
                                 searchTask = Task { await searchUsers(new) }
                             }
                         if !userMatches.isEmpty {
@@ -133,10 +137,18 @@ struct DirectShareSheet: View {
                     }
                 }
 
-                if let e = error {
-                    Text(e).foregroundStyle(Theme.warnRed).font(.footnote)
+                if justGranted {
+                    Section {
+                        Label("Freigabe hinzugefügt", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
                 }
             }
+            // v1.10.197: Fehler als Alert statt leicht übersehbarer Fußnote —
+            // Marcus: „weiß nicht, ob es wirklich freigegeben wurde".
+            .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+                Button("OK", role: .cancel) { error = nil }
+            } message: { Text(error ?? "") }
             .navigationTitle("Freigeben an…")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -186,11 +198,28 @@ struct DirectShareSheet: View {
             case .file(let id): shares = try await api.directShares(forFile: id)
             case .folder(let id): shares = try await api.directShares(forFolder: id)
             }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     private func grant() async {
         guard let api = auth.api else { return }
+        // v1.10.197: Auto-Resolve — wenn kein Vorschlag angetippt wurde,
+        // aber die Eingabe exakt einen Treffer hat (Name oder E-Mail),
+        // den nehmen. Vorher blieb „Hinzufügen" wirkungslos-wirkend.
+        if kind == .user && selectedUser == nil {
+            let q = userQuery.trimmingCharacters(in: .whitespaces)
+            if let exact = userMatches.first(where: { $0.displayName == q || $0.email.lowercased() == q.lowercased() }) {
+                selectedUser = exact
+            } else if q.count >= 2, let hits = try? await api.searchShareableUsers(q) {
+                if let exact = hits.first(where: { $0.displayName == q || $0.email.lowercased() == q.lowercased() }) ?? (hits.count == 1 ? hits[0] : nil) {
+                    selectedUser = exact
+                }
+            }
+            if selectedUser == nil {
+                error = NSLocalizedString("Bitte einen Nutzer aus den Vorschlägen wählen.", comment: "")
+                return
+            }
+        }
         loading = true; error = nil
         defer { loading = false }
         do {
@@ -208,14 +237,18 @@ struct DirectShareSheet: View {
                     groupId: kind == .group ? selectedGroup?.id : nil,
                     permission: permission)
             }
-            userQuery = ""; selectedUser = nil
+            userQuery = ""; selectedUser = nil; userMatches = []
+            justGranted = true
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             await loadShares()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Task-Cancel — kein Fehler */ }
+        catch let ex { error = ex.localizedDescription }
     }
 
     private func revoke(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.revokeDirectShare(id); await loadShares() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

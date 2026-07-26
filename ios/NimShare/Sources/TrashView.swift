@@ -63,6 +63,7 @@ struct TrashView: View {
         loading = true; error = nil
         defer { loading = false }
         do { items = try await api.listTrash() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -70,6 +71,7 @@ struct TrashView: View {
         guard let api = auth.api else { return }
         busy = true; defer { busy = false }
         do { try await api.restoreFromTrash(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -77,6 +79,7 @@ struct TrashView: View {
         guard let api = auth.api else { return }
         busy = true; defer { busy = false }
         do { try await api.purgeFromTrash(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }

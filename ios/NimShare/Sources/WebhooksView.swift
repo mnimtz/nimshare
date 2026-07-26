@@ -66,11 +66,13 @@ struct WebhooksView: View {
         guard let api = auth.api else { return }
         loading = true; error = nil; defer { loading = false }
         do { hooks = try await api.listWebhooks() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func remove(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.deleteWebhook(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }
@@ -128,6 +130,6 @@ private struct CreateWebhookSheet: View {
                 events: events.isEmpty ? nil : events)
             onCreated()
             dismiss()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

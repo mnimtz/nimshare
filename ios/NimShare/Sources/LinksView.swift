@@ -91,6 +91,7 @@ struct LinksView: View {
     private func delete(_ link: ShareLinkDto) async {
         guard let api = auth.api else { return }
         do { try await api.deleteShareLink(id: link.id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -179,6 +180,6 @@ struct LinksView: View {
         catch let e as ApiError {
             error = e.localizedDescription
             if case .notAuthorized = e { auth.signOut() }
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

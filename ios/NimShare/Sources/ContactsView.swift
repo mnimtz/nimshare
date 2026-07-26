@@ -88,7 +88,7 @@ struct ContactsView: View {
             try await api.blockUser(userId, reason: nil)
             // Directory-Liste neu laden → blockierter User verschwindet.
             await loadDirRaw()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     @ViewBuilder
@@ -220,6 +220,7 @@ struct ContactsView: View {
     private func loadMyRaw() async -> Void {
         guard let api = auth.api else { return }
         do { myContacts = try await api.listContacts(query: nil) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func loadDirRaw() async -> Void {
@@ -241,7 +242,7 @@ struct ContactsView: View {
         do {
             try await api.deleteContact(id)
             await loadMy()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 
     /// v1.10.74: Directory-User als eigenen persönlichen Kontakt speichern.
@@ -251,7 +252,7 @@ struct ContactsView: View {
             _ = try await api.createContact(email: u.email, name: u.name)
             mode = .mine
             await loadMy()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }
 
@@ -337,6 +338,6 @@ struct AddContactSheet: View {
             }
             onSaved()
             dismiss()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

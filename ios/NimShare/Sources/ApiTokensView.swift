@@ -108,11 +108,13 @@ struct ApiTokensView: View {
         guard let api = auth.api else { return }
         loading = true; error = nil; defer { loading = false }
         do { tokens = try await api.listApiTokens() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
     private func revoke(_ id: UUID) async {
         guard let api = auth.api else { return }
         do { try await api.revokeApiToken(id); await load() }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 }
@@ -178,6 +180,6 @@ private struct CreateApiTokenSheet: View {
                 expiresAt: hasExpiry ? expiresAt : nil)
             onCreated(c)
             dismiss()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

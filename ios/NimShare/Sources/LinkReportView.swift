@@ -188,6 +188,7 @@ struct LinkReportView: View {
         guard let api = auth.api else { return }
         loading = true; error = nil; defer { loading = false }
         do { report = try await api.linkReport(id: linkId) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 

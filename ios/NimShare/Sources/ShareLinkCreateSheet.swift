@@ -198,7 +198,7 @@ struct ShareLinkCreateSheet: View {
                 allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil
             )
             result = link
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }
 
@@ -335,6 +335,6 @@ struct UploadRequestCreateSheet: View {
                 notifyOnUpload: notifyOnUpload,
                 signingCertificateId: selectedCertId    // v1.10.146
             )
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }

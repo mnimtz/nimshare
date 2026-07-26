@@ -81,6 +81,7 @@ struct FileVersionsView: View {
         guard let api = auth.api else { return }
         loading = true; defer { loading = false }
         do { items = try await api.listFileVersions(fileId) }
+        catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }
 
@@ -90,6 +91,6 @@ struct FileVersionsView: View {
         do {
             try await api.restoreFileVersion(fileId: fileId, versionId: versionId)
             await load()
-        } catch let ex { error = ex.localizedDescription }
+        } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
 }
