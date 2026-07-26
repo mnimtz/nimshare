@@ -138,6 +138,7 @@ else
                 <td>@l.DownloadCount @(l.MaxDownloads is int m4 ? $" / {m4}" : "")</td>
                 <td><span class="chip @sdState.Item1">@sdState.Item2</span></td>
                 <td>
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <a class="btn btn-secondary btn-sm" href="@sdUrl" target="_blank">↗ @T["links.action.open"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
                     @if (!l.IsRevoked)
