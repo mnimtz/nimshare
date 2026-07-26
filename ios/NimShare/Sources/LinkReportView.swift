@@ -146,7 +146,12 @@ struct LinkReportView: View {
     @ViewBuilder
     private func eventsCard(_ r: NimShareAPI.LinkReportResponse) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Zugriffs-Log · \(r.recentEvents.count) von \(r.totalEventCount)").font(.headline)
+            // Bug-Fix v1.11.5: recentEvents kann bis zu 200 Einträge halten,
+            // angezeigt werden aber (siehe .prefix(60) unten) höchstens 60 —
+            // die Kopfzeile zeigte also z.B. "200 von 530" obwohl nur 60
+            // Zeilen sichtbar sind. Jetzt zeigt sie die tatsächlich
+            // gerenderte Anzahl.
+            Text("Zugriffs-Log · \(min(r.recentEvents.count, 60)) von \(r.totalEventCount)").font(.headline)
             if r.recentEvents.isEmpty {
                 Text("Noch keine Zugriffe.").font(.caption).foregroundStyle(.secondary)
             } else {

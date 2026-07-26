@@ -247,44 +247,44 @@
 
   <data name="browse.root.title"><value>Stockage</value></data>
   <data name="browse.root.lede"><value>Pick a space to work in.</value></data>
-  <data name="browse.tile.personal"><value>My files</value></data>
-  <data name="browse.tile.personal.lede"><value>Files only you can see.</value></data>
+  <data name="browse.tile.personal"><value>Mes fichiers</value></data>
+  <data name="browse.tile.personal.lede"><value>Fichiers que vous seul pouvez voir.</value></data>
   <data name="browse.tile.public"><value>Public</value></data>
   <data name="browse.tile.public.lede"><value>Shared with everyone signed in.</value></data>
-  <data name="browse.tile.groups"><value>Groups</value></data>
-  <data name="browse.tile.groups.lede"><value>Files shared inside each of your teams.</value></data>
+  <data name="browse.tile.groups"><value>Groupes</value></data>
+  <data name="browse.tile.groups.lede"><value>Fichiers partagés au sein de chacune de vos équipes.</value></data>
   <data name="browse.tile.groups.empty"><value>You aren't a member of any group yet.</value></data>
 
   <data name="browse.new_folder"><value>Nouveau dossier</value></data>
   <data name="browse.new_subfolder"><value>Nouveau sous-dossier…</value></data>
   <data name="browse.new_folder.created"><value>Dossier « {name} » créé</value></data>
-  <data name="browse.upload"><value>Upload</value></data>
-  <data name="browse.share_this"><value>Share this folder</value></data>
-  <data name="browse.request_upload"><value>Request upload here</value></data>
-  <data name="browse.folder_name"><value>Folder name</value></data>
+  <data name="browse.upload"><value>Envoyer</value></data>
+  <data name="browse.share_this"><value>Partager ce dossier</value></data>
+  <data name="browse.request_upload"><value>Demander un envoi ici</value></data>
+  <data name="browse.folder_name"><value>Nom du dossier</value></data>
 
   <data name="actions.share_link"><value>Créer un lien de partage</value></data>
   <data name="actions.download"><value>Télécharger</value></data>
   <data name="actions.download_zip"><value>Télécharger en ZIP</value></data>
   <data name="folder.zip.preparing"><value>Préparation du ZIP…</value></data>
-  <data name="actions.request_upload"><value>Request upload</value></data>
-  <data name="actions.rename"><value>Rename</value></data>
-  <data name="actions.delete"><value>Delete</value></data>
-  <data name="actions.confirm_delete"><value>Delete this item?</value></data>
+  <data name="actions.request_upload"><value>Demander un envoi</value></data>
+  <data name="actions.rename"><value>Renommer</value></data>
+  <data name="actions.delete"><value>Supprimer</value></data>
+  <data name="actions.confirm_delete"><value>Supprimer cet élément ?</value></data>
 
-  <data name="modal.cancel"><value>Cancel</value></data>
-  <data name="modal.close"><value>Close</value></data>
-  <data name="modal.create"><value>Create</value></data>
-  <data name="modal.save"><value>Save</value></data>
-  <data name="modal.create_link"><value>Create link</value></data>
-  <data name="modal.share.title"><value>Share link options</value></data>
-  <data name="modal.share.for_file"><value>Recipient will be able to download this file.</value></data>
-  <data name="modal.share.for_folder"><value>Recipient will see all files in this folder.</value></data>
-  <data name="modal.upload_request.title"><value>Upload request link</value></data>
+  <data name="modal.cancel"><value>Annuler</value></data>
+  <data name="modal.close"><value>Fermer</value></data>
+  <data name="modal.create"><value>Créer</value></data>
+  <data name="modal.save"><value>Enregistrer</value></data>
+  <data name="modal.create_link"><value>Créer le lien</value></data>
+  <data name="modal.share.title"><value>Options du lien de partage</value></data>
+  <data name="modal.share.for_file"><value>Le destinataire pourra télécharger ce fichier.</value></data>
+  <data name="modal.share.for_folder"><value>Le destinataire verra tous les fichiers de ce dossier.</value></data>
+  <data name="modal.upload_request.title"><value>Lien de demande d'envoi</value></data>
   <data name="modal.upload_request.lede"><value>Send someone a link to upload directly into this folder.</value></data>
-  <data name="modal.upload_request.max_uploads"><value>Max uploads</value></data>
+  <data name="modal.upload_request.max_uploads"><value>Envois maximum</value></data>
 
-  <data name="users.action.manage"><value>Manage</value></data>
+  <data name="users.action.manage"><value>Gérer</value></data>
   <data name="links.folder_target"><value>(partage de dossier)</value></data>
   <data name="links.for_file"><value>Fichier</value></data>
   <data name="links.for_folder"><value>Dossier</value></data>
@@ -319,23 +319,23 @@
   <data name="landing_admin.footer.label"><value>Pied de page</value></data>
   <data name="landing_admin.footer.placeholder"><value>Mentions légales, contact, confidentialité…</value></data>
   <data name="landing_admin.accent.label"><value>Couleur d'accent</value></data>
-  <data name="landing_admin.section.branding"><value>Branding</value></data>
+  <data name="landing_admin.section.branding"><value>Image de marque</value></data>
   <data name="landing_admin.hero.label"><value>Image d'en-tête</value></data>
   <data name="landing_admin.logo.label"><value>Logo (facultatif)</value></data>
   <data name="common.preview"><value>Aperçu</value></data>
-  <data name="bulk.move"><value>Move</value></data>
-  <data name="bulk.delete"><value>Delete</value></data>
-  <data name="bulk.clear"><value>Clear</value></data>
-  <data name="bulk.confirm.delete"><value>Delete {n} files? This cannot be undone.</value></data>
-  <data name="browse.drop_hint"><value>Drop files here to upload</value></data>
-  <data name="browse.folder_type"><value>Folder</value></data>
-  <data name="actions.move"><value>Move</value></data>
-  <data name="move.title"><value>Move file(s)</value></data>
-  <data name="move.target"><value>Destination folder</value></data>
-  <data name="move.helper"><value>Only folders you have write access to are listed.</value></data>
-  <data name="move.hint.single"><value>Choose where to move this file.</value></data>
-  <data name="move.hint.multi"><value>Choose where to move {n} files.</value></data>
-  <data name="move.button"><value>Move</value></data>
+  <data name="bulk.move"><value>Déplacer</value></data>
+  <data name="bulk.delete"><value>Supprimer</value></data>
+  <data name="bulk.clear"><value>Effacer</value></data>
+  <data name="bulk.confirm.delete"><value>Supprimer {n} fichiers ? Cette action est irréversible.</value></data>
+  <data name="browse.drop_hint"><value>Déposez des fichiers ici pour les envoyer</value></data>
+  <data name="browse.folder_type"><value>Dossier</value></data>
+  <data name="actions.move"><value>Déplacer</value></data>
+  <data name="move.title"><value>Déplacer le(s) fichier(s)</value></data>
+  <data name="move.target"><value>Dossier de destination</value></data>
+  <data name="move.helper"><value>Seuls les dossiers pour lesquels vous avez un accès en écriture sont listés.</value></data>
+  <data name="move.hint.single"><value>Choisissez où déplacer ce fichier.</value></data>
+  <data name="move.hint.multi"><value>Choisissez où déplacer {n} fichiers.</value></data>
+  <data name="move.button"><value>Déplacer</value></data>
   <data name="pin.copy_to_personal"><value>Copier vers mon Personnel</value></data>
   <data name="pin.unpin"><value>Retirer de Personnel</value></data>
   <data name="pin.badge"><value>Épinglé</value></data>
@@ -343,78 +343,78 @@
   <data name="pin.copied_ok"><value>Ajouté à votre bibliothèque Personnel comme raccourci.</value></data>
   <data name="pin.copy_conflict"><value>Déjà dans votre bibliothèque Personnel.</value></data>
   <data name="pin.unpin_confirm"><value>Retirer ce raccourci de votre Personnel ?</value></data>
-  <data name="nav.ai_gateway"><value>AI gateway</value></data>
-  <data name="ai.title"><value>AI gateway</value></data>
-  <data name="ai.lede"><value>Configure your AI provider once, then enable individual features. Keys are encrypted at rest.</value></data>
-  <data name="ai.provider_section"><value>Provider</value></data>
-  <data name="ai.provider"><value>Provider</value></data>
-  <data name="ai.provider.disabled"><value>Disabled</value></data>
-  <data name="ai.model"><value>Model</value></data>
-  <data name="ai.model_helper"><value>Leave blank for the recommended default of your provider.</value></data>
-  <data name="ai.endpoint"><value>Azure endpoint</value></data>
-  <data name="ai.api_key"><value>API key</value></data>
-  <data name="ai.api_key_helper"><value>Leave blank to keep the current key. Stored encrypted.</value></data>
-  <data name="ai.features"><value>Features</value></data>
-  <data name="ai.features_lede"><value>Turn individual capabilities on or off. Each call uses your configured provider.</value></data>
-  <data name="ai.status.preview"><value>Preview</value></data>
-  <data name="ai.status.ready"><value>Ready</value></data>
-  <data name="ai.save"><value>Save</value></data>
+  <data name="nav.ai_gateway"><value>Passerelle IA</value></data>
+  <data name="ai.title"><value>Passerelle IA</value></data>
+  <data name="ai.lede"><value>Configurez votre fournisseur d'IA une fois, puis activez les fonctionnalités individuellement. Les clés sont chiffrées au repos.</value></data>
+  <data name="ai.provider_section"><value>Fournisseur</value></data>
+  <data name="ai.provider"><value>Fournisseur</value></data>
+  <data name="ai.provider.disabled"><value>Désactivé</value></data>
+  <data name="ai.model"><value>Modèle</value></data>
+  <data name="ai.model_helper"><value>Laissez vide pour la valeur par défaut recommandée de votre fournisseur.</value></data>
+  <data name="ai.endpoint"><value>Point de terminaison Azure</value></data>
+  <data name="ai.api_key"><value>Clé API</value></data>
+  <data name="ai.api_key_helper"><value>Laissez vide pour conserver la clé actuelle. Stockée chiffrée.</value></data>
+  <data name="ai.features"><value>Fonctionnalités</value></data>
+  <data name="ai.features_lede"><value>Activez ou désactivez chaque fonctionnalité individuellement. Chaque appel utilise votre fournisseur configuré.</value></data>
+  <data name="ai.status.preview"><value>Aperçu</value></data>
+  <data name="ai.status.ready"><value>Prêt</value></data>
+  <data name="ai.save"><value>Enregistrer</value></data>
   <data name="ai.reindex.title"><value>Ré-indexer les fichiers existants</value></data>
   <data name="ai.reindex.lede"><value>Seuls les fichiers téléchargés APRÈS l'activation obtiennent un embedding. Exécutez ceci une fois après avoir activé un fournisseur pour indexer votre bibliothèque existante — jusqu'à 500 fichiers par clic.</value></data>
   <data name="ai.reindex.button"><value>Ré-indexer mes fichiers</value></data>
   <data name="ai.reindex.running"><value>Mise en file d'attente…</value></data>
   <data name="ai.reindex.done"><value>{0} fichiers mis en file d'attente. Les embeddings apparaîtront dans les prochaines minutes.</value></data>
-  <data name="ai.feat.auto_summary"><value>Auto-summary on share landing</value></data>
-  <data name="ai.feat.auto_summary.desc"><value>Recipients can generate a 2-3 sentence summary before downloading.</value></data>
-  <data name="ai.feat.smart_tags"><value>Smart tags</value></data>
-  <data name="ai.feat.smart_tags.desc"><value>Auto-classify uploads with 2-5 keywords for filtering.</value></data>
-  <data name="ai.feat.semantic_search"><value>Semantic search</value></data>
-  <data name="ai.feat.semantic_search.desc"><value>Find files by meaning, not just filename.</value></data>
-  <data name="ai.feat.guided_upload"><value>Guided upload requests</value></data>
-  <data name="ai.feat.guided_upload.desc"><value>Personalise upload-request emails per recipient.</value></data>
-  <data name="ai.feat.risk_detect"><value>Content risk detection</value></data>
-  <data name="ai.feat.risk_detect.desc"><value>Scan public uploads for PII, credit cards, secrets.</value></data>
-  <data name="ai.feat.email_drafts"><value>AI-drafted share emails</value></data>
-  <data name="ai.feat.email_drafts.desc"><value>Draft-with-AI button in the send-by-email dialog.</value></data>
-  <data name="ai.feat.chat"><value>Chat with your files</value></data>
-  <data name="ai.feat.chat.desc"><value>RAG-based chat over your own files.</value></data>
-  <data name="ai.feat.ocr"><value>OCR for scans</value></data>
-  <data name="ai.feat.ocr.desc"><value>Extract text from image-only PDFs.</value></data>
-  <data name="landing.ai_summary"><value>AI summary</value></data>
-  <data name="landing.ai_summary.loading"><value>Generating summary...</value></data>
-  <data name="landing.ai_summary.disabled"><value>AI summary is disabled by the administrator.</value></data>
-  <data name="landing.ai_summary.unsupported"><value>This file type isn't supported for AI summaries yet.</value></data>
-  <data name="landing.ai_summary.error"><value>Couldn't generate a summary. Try again later.</value></data>
-  <data name="landing.folder.lede"><value>Files in this folder:</value></data>
+  <data name="ai.feat.auto_summary"><value>Résumé automatique sur la page de partage</value></data>
+  <data name="ai.feat.auto_summary.desc"><value>Les destinataires peuvent générer un résumé de 2 à 3 phrases avant de télécharger.</value></data>
+  <data name="ai.feat.smart_tags"><value>Étiquettes intelligentes</value></data>
+  <data name="ai.feat.smart_tags.desc"><value>Classe automatiquement les envois avec 2 à 5 mots-clés pour le filtrage.</value></data>
+  <data name="ai.feat.semantic_search"><value>Recherche sémantique</value></data>
+  <data name="ai.feat.semantic_search.desc"><value>Trouvez des fichiers par leur sens, pas seulement par leur nom.</value></data>
+  <data name="ai.feat.guided_upload"><value>Demandes d'envoi guidées</value></data>
+  <data name="ai.feat.guided_upload.desc"><value>Personnalise les e-mails de demande d'envoi pour chaque destinataire.</value></data>
+  <data name="ai.feat.risk_detect"><value>Détection de contenu à risque</value></data>
+  <data name="ai.feat.risk_detect.desc"><value>Analyse les envois publics à la recherche de données personnelles, de numéros de carte bancaire et de secrets.</value></data>
+  <data name="ai.feat.email_drafts"><value>E-mails de partage rédigés par l'IA</value></data>
+  <data name="ai.feat.email_drafts.desc"><value>Bouton « Rédiger avec l'IA » dans la boîte de dialogue d'envoi par e-mail.</value></data>
+  <data name="ai.feat.chat"><value>Chat avec vos fichiers</value></data>
+  <data name="ai.feat.chat.desc"><value>Chat basé sur le RAG portant sur vos propres fichiers.</value></data>
+  <data name="ai.feat.ocr"><value>OCR pour les numérisations</value></data>
+  <data name="ai.feat.ocr.desc"><value>Extrait le texte des PDF composés uniquement d'images.</value></data>
+  <data name="landing.ai_summary"><value>Résumé IA</value></data>
+  <data name="landing.ai_summary.loading"><value>Génération du résumé…</value></data>
+  <data name="landing.ai_summary.disabled"><value>Le résumé IA est désactivé par l'administrateur.</value></data>
+  <data name="landing.ai_summary.unsupported"><value>Ce type de fichier n'est pas encore pris en charge pour les résumés IA.</value></data>
+  <data name="landing.ai_summary.error"><value>Impossible de générer un résumé. Réessayez plus tard.</value></data>
+  <data name="landing.folder.lede"><value>Fichiers de ce dossier :</value></data>
   <data name="browse.libraries.mine"><value>Mes bibliothèques</value></data>
   <data name="browse.libraries.shared"><value>Espace public</value></data>
   <data name="browse.libraries.groups"><value>Bibliothèques de groupe</value></data>
   <data name="ctx.open"><value>Ouvrir</value></data>
-  <data name="nav.chat"><value>Chat with files</value></data>
-  <data name="chat.title"><value>Chat with your files</value></data>
-  <data name="chat.lede"><value>Ask questions about the files in a scope. Uses semantic search + your configured AI provider.</value></data>
-  <data name="chat.disabled"><value>Chat with files is currently disabled by the administrator (enable it under Settings > AI gateway).</value></data>
-  <data name="chat.scope"><value>Search inside</value></data>
-  <data name="chat.placeholder"><value>What are you looking for?</value></data>
-  <data name="chat.ask"><value>Ask</value></data>
-  <data name="chat.thinking"><value>Thinking...</value></data>
-  <data name="chat.error"><value>Something went wrong. Try again.</value></data>
-  <data name="chat.no_context"><value>I could not find matching files. Try different words.</value></data>
-  <data name="chat.sources"><value>Sources:</value></data>
-  <data name="chat.note"><value>Answers are grounded only in files you can access. No content leaves without your click.</value></data>
-  <data name="browse.search.placeholder"><value>Search across your files by meaning...</value></data>
-  <data name="browse.search.button"><value>Search</value></data>
-  <data name="browse.search.loading"><value>Searching...</value></data>
-  <data name="browse.search.disabled"><value>Semantic search is disabled by the administrator.</value></data>
-  <data name="browse.search.error"><value>Search failed. Try again.</value></data>
-  <data name="browse.search.no_hits"><value>No matching files found in this scope.</value></data>
-  <data name="preview.unsupported"><value>Inline preview is not supported for this file type yet.</value></data>
-  <data name="preview.download"><value>Open in a new tab</value></data>
-  <data name="links.email.send"><value>Send</value></data>
-  <data name="links.email.draft_ai"><value>Draft with AI</value></data>
-  <data name="links.email.drafting"><value>Drafting...</value></data>
-  <data name="links.email.ai_disabled"><value>AI-drafted emails are disabled by the administrator.</value></data>
-  <data name="links.email.placeholder"><value>Add a short note or click 'Draft with AI' to auto-generate one.</value></data>
+  <data name="nav.chat"><value>Chat avec les fichiers</value></data>
+  <data name="chat.title"><value>Chat avec vos fichiers</value></data>
+  <data name="chat.lede"><value>Posez des questions sur les fichiers d'un périmètre donné. Utilise la recherche sémantique et votre fournisseur d'IA configuré.</value></data>
+  <data name="chat.disabled"><value>Le chat avec les fichiers est actuellement désactivé par l'administrateur (activez-le dans Paramètres &gt; Passerelle IA).</value></data>
+  <data name="chat.scope"><value>Rechercher dans</value></data>
+  <data name="chat.placeholder"><value>Que recherchez-vous ?</value></data>
+  <data name="chat.ask"><value>Demander</value></data>
+  <data name="chat.thinking"><value>Réflexion…</value></data>
+  <data name="chat.error"><value>Une erreur s'est produite. Réessayez.</value></data>
+  <data name="chat.no_context"><value>Je n'ai trouvé aucun fichier correspondant. Essayez d'autres mots.</value></data>
+  <data name="chat.sources"><value>Sources :</value></data>
+  <data name="chat.note"><value>Les réponses s'appuient uniquement sur les fichiers auxquels vous avez accès. Aucun contenu ne sort sans votre clic.</value></data>
+  <data name="browse.search.placeholder"><value>Recherchez dans vos fichiers par sens…</value></data>
+  <data name="browse.search.button"><value>Rechercher</value></data>
+  <data name="browse.search.loading"><value>Recherche en cours…</value></data>
+  <data name="browse.search.disabled"><value>La recherche sémantique est désactivée par l'administrateur.</value></data>
+  <data name="browse.search.error"><value>La recherche a échoué. Réessayez.</value></data>
+  <data name="browse.search.no_hits"><value>Aucun fichier correspondant trouvé dans ce périmètre.</value></data>
+  <data name="preview.unsupported"><value>L'aperçu intégré n'est pas encore pris en charge pour ce type de fichier.</value></data>
+  <data name="preview.download"><value>Ouvrir dans un nouvel onglet</value></data>
+  <data name="links.email.send"><value>Envoyer</value></data>
+  <data name="links.email.draft_ai"><value>Rédiger avec l'IA</value></data>
+  <data name="links.email.drafting"><value>Rédaction…</value></data>
+  <data name="links.email.ai_disabled"><value>Les e-mails rédigés par l'IA sont désactivés par l'administrateur.</value></data>
+  <data name="links.email.placeholder"><value>Ajoutez une courte note ou cliquez sur « Rédiger avec l'IA » pour en générer une automatiquement.</value></data>
   <data name="browse.tree.folders"><value>Dossiers</value></data>
   <data name="browse.libraries.title"><value>Bibliothèques</value></data>
   <data name="nav.menu"><value>Menu</value></data>
@@ -458,9 +458,9 @@
   <data name="shared.lede"><value>Fichiers et dossiers que d'autres ont partagés avec vous.</value></data>
   <data name="shared.by"><value>Partagé par</value></data>
   <data name="shared.since"><value>Depuis</value></data>
-  <data name="notice.ai_saved"><value>AI gateway saved.</value></data>
-  <data name="notice.email_saved"><value>Email gateway saved.</value></data>
-  <data name="notice.email_test_queued"><value>Test email queued.</value></data>
+  <data name="notice.ai_saved"><value>Passerelle IA enregistrée.</value></data>
+  <data name="notice.email_saved"><value>Passerelle e-mail enregistrée.</value></data>
+  <data name="notice.email_test_queued"><value>E-mail de test mis en file d'attente.</value></data>
   <data name="notice.password_updated"><value>Mot de passe mis à jour.</value></data>
   <data name="err.bad_credentials"><value>E-mail ou mot de passe incorrect.</value></data>
   <data name="err.2fa_code_wrong"><value>Le code est incorrect.</value></data>
@@ -532,55 +532,55 @@ Ouvrez le lien :
   <data name="sig.declined.notif.title"><value>{0} a refusé la signature : {1}</value></data>
   <data name="sig.completed.notif.title"><value>Demande de signature « {0} » terminée</value></data>
   <data name="sig.completed.notif.body"><value>Le PDF signé est dans votre bibliothèque.</value></data>
-  <data name="notice.profile_saved"><value>Profile saved.</value></data>
-  <data name="notice.avatar_updated"><value>Avatar updated.</value></data>
-  <data name="notice.avatar_removed"><value>Avatar removed.</value></data>
-  <data name="notice.user_created"><value>User created.</value></data>
-  <data name="notice.user_updated"><value>User updated.</value></data>
-  <data name="notice.user_deleted"><value>User deleted.</value></data>
-  <data name="notice.quota_updated"><value>Quota updated.</value></data>
-  <data name="notice.groups_updated"><value>Groups updated.</value></data>
-  <data name="notice.file_restored"><value>Restored "{0}".</value></data>
-  <data name="notice.purged_one"><value>Permanently deleted.</value></data>
-  <data name="notice.purged_many"><value>{0} permanently deleted.</value></data>
+  <data name="notice.profile_saved"><value>Profil enregistré.</value></data>
+  <data name="notice.avatar_updated"><value>Avatar mis à jour.</value></data>
+  <data name="notice.avatar_removed"><value>Avatar supprimé.</value></data>
+  <data name="notice.user_created"><value>Utilisateur créé.</value></data>
+  <data name="notice.user_updated"><value>Utilisateur mis à jour.</value></data>
+  <data name="notice.user_deleted"><value>Utilisateur supprimé.</value></data>
+  <data name="notice.quota_updated"><value>Quota mis à jour.</value></data>
+  <data name="notice.groups_updated"><value>Groupes mis à jour.</value></data>
+  <data name="notice.file_restored"><value>« {0} » restauré.</value></data>
+  <data name="notice.purged_one"><value>Supprimé définitivement.</value></data>
+  <data name="notice.purged_many"><value>{0} supprimés définitivement.</value></data>
   <data name="notice.invite_sent"><value>Invitation envoyée à {0}.</value></data>
-  <data name="notice.password_reset_sent"><value>Password reset link sent to {0}.</value></data>
-  <data name="notice.group_created"><value>Group created.</value></data>
-  <data name="notice.group_updated"><value>Group updated.</value></data>
-  <data name="notice.group_deleted"><value>Group deleted.</value></data>
-  <data name="notice.member_added"><value>Member added.</value></data>
-  <data name="notice.member_removed"><value>Member removed.</value></data>
-  <data name="notice.member_role_updated"><value>Role updated.</value></data>
-  <data name="err.invalid_email"><value>Invalid email address.</value></data>
-  <data name="err.user_exists"><value>A user with that email already exists.</value></data>
-  <data name="err.cannot_disable_self"><value>You cannot disable yourself.</value></data>
-  <data name="err.cannot_delete_self"><value>You cannot delete yourself.</value></data>
-  <data name="err.last_admin"><value>Cannot remove or demote the last active admin.</value></data>
-  <data name="err.last_manager"><value>Cannot remove or demote the last manager.</value></data>
-  <data name="err.group_name_required"><value>Group name is required.</value></data>
-  <data name="err.quota_range"><value>Quota must be between 1 GB and 10 TB.</value></data>
-  <data name="err.entra_only"><value>This account uses Entra sign-in; there is no local password to change.</value></data>
-  <data name="err.wrong_password"><value>Current password is wrong.</value></data>
-  <data name="err.password_mismatch"><value>New passwords do not match.</value></data>
-  <data name="err.password_too_short"><value>New password must be at least 8 characters.</value></data>
-  <data name="err.no_image"><value>No image received.</value></data>
-  <data name="err.image_too_large"><value>Image is too large (max 3 MiB after cropping).</value></data>
-  <data name="err.upload_failed"><value>Upload failed. Try again.</value></data>
+  <data name="notice.password_reset_sent"><value>Lien de réinitialisation du mot de passe envoyé à {0}.</value></data>
+  <data name="notice.group_created"><value>Groupe créé.</value></data>
+  <data name="notice.group_updated"><value>Groupe mis à jour.</value></data>
+  <data name="notice.group_deleted"><value>Groupe supprimé.</value></data>
+  <data name="notice.member_added"><value>Membre ajouté.</value></data>
+  <data name="notice.member_removed"><value>Membre retiré.</value></data>
+  <data name="notice.member_role_updated"><value>Rôle mis à jour.</value></data>
+  <data name="err.invalid_email"><value>Adresse e-mail invalide.</value></data>
+  <data name="err.user_exists"><value>Un utilisateur avec cet e-mail existe déjà.</value></data>
+  <data name="err.cannot_disable_self"><value>Vous ne pouvez pas vous désactiver vous-même.</value></data>
+  <data name="err.cannot_delete_self"><value>Vous ne pouvez pas vous supprimer vous-même.</value></data>
+  <data name="err.last_admin"><value>Impossible de retirer ou de rétrograder le dernier administrateur actif.</value></data>
+  <data name="err.last_manager"><value>Impossible de retirer ou de rétrograder le dernier gestionnaire.</value></data>
+  <data name="err.group_name_required"><value>Le nom du groupe est requis.</value></data>
+  <data name="err.quota_range"><value>Le quota doit être compris entre 1 Go et 10 To.</value></data>
+  <data name="err.entra_only"><value>Ce compte utilise la connexion Entra ; il n'y a pas de mot de passe local à modifier.</value></data>
+  <data name="err.wrong_password"><value>Le mot de passe actuel est incorrect.</value></data>
+  <data name="err.password_mismatch"><value>Les nouveaux mots de passe ne correspondent pas.</value></data>
+  <data name="err.password_too_short"><value>Le nouveau mot de passe doit contenir au moins 8 caractères.</value></data>
+  <data name="err.no_image"><value>Aucune image reçue.</value></data>
+  <data name="err.image_too_large"><value>L'image est trop volumineuse (3 Mio max. après recadrage).</value></data>
+  <data name="err.upload_failed"><value>Échec de l'envoi. Réessayez.</value></data>
   <data name="users.edit"><value>Modifier l'utilisateur</value></data>
-  <data name="users.reset_password"><value>Reset password</value></data>
-  <data name="users.reset_password.helper"><value>Sends an email with a new password to the user.</value></data>
-  <data name="users.new_password"><value>New password</value></data>
-  <data name="users.set_password"><value>Set password</value></data>
-  <data name="users.tab.basics"><value>Basics</value></data>
-  <data name="users.tab.groups"><value>Groups</value></data>
-  <data name="users.tab.security"><value>Security</value></data>
-  <data name="users.no_groups"><value>No groups assigned.</value></data>
-  <data name="groups.rename"><value>Rename</value></data>
-  <data name="groups.promote"><value>Promote to manager</value></data>
-  <data name="groups.demote"><value>Demote to member</value></data>
-  <data name="groups.remove_member"><value>Remove</value></data>
-  <data name="actions.save"><value>Save</value></data>
-  <data name="actions.cancel"><value>Cancel</value></data>
+  <data name="users.reset_password"><value>Réinitialiser le mot de passe</value></data>
+  <data name="users.reset_password.helper"><value>Envoie un e-mail avec un nouveau mot de passe à l'utilisateur.</value></data>
+  <data name="users.new_password"><value>Nouveau mot de passe</value></data>
+  <data name="users.set_password"><value>Définir le mot de passe</value></data>
+  <data name="users.tab.basics"><value>Général</value></data>
+  <data name="users.tab.groups"><value>Groupes</value></data>
+  <data name="users.tab.security"><value>Sécurité</value></data>
+  <data name="users.no_groups"><value>Aucun groupe attribué.</value></data>
+  <data name="groups.rename"><value>Renommer</value></data>
+  <data name="groups.promote"><value>Promouvoir gestionnaire</value></data>
+  <data name="groups.demote"><value>Rétrograder membre</value></data>
+  <data name="groups.remove_member"><value>Retirer</value></data>
+  <data name="actions.save"><value>Enregistrer</value></data>
+  <data name="actions.cancel"><value>Annuler</value></data>
   <data name="actions.back"><value>Retour</value></data>
   <data name="links.action.report"><value>Rapport</value></data>
   <data name="landing.preview_after_password"><value>Aperçu disponible après le mot de passe.</value></data>
@@ -634,7 +634,7 @@ Ouvrez le lien :
   <data name="office.enable"><value>Activer l'intégration OnlyOffice</value></data>
   <data name="office.doc_server_url"><value>URL du Document Server</value></data>
   <data name="office.doc_server_url_hint"><value>URL de base du serveur OnlyOffice/Collabora, sans chemin.</value></data>
-  <data name="office.jwt_secret"><value>JWT Shared Secret</value></data>
+  <data name="office.jwt_secret"><value>Secret partagé JWT</value></data>
   <data name="office.jwt_secret_hint"><value>Doit être identique des deux côtés. Stocké chiffré.</value></data>
   <data name="office.jwt_placeholder_set"><value>•••••••• (laisser vide pour conserver l'actuel)</value></data>
   <data name="office.jwt_placeholder_new"><value>clé secrète pour la signature JWT</value></data>
@@ -769,7 +769,7 @@ Ouvrez le lien :
   <data name="profile.show_avatar_on_landings.personal"><value>Afficher mon avatar sur mes pages de partage personnelles</value></data>
   <data name="profile.show_avatar_on_landings.personal.hint"><value>Pour les liens que vous créez depuis votre bibliothèque « Personnel » — les destinataires voient votre photo sur la page de téléchargement. Désactivé par défaut pour un rendu neutre.</value></data>
   <data name="wiki.editor.tab_edit"><value>Éditer</value></data>
-  <data name="wiki.editor.tab_split"><value>Split</value></data>
+  <data name="wiki.editor.tab_split"><value>Divisé</value></data>
   <data name="wiki.editor.tab_preview"><value>Aperçu</value></data>
   <data name="wiki.editor.tt_bold"><value>Gras</value></data>
   <data name="wiki.editor.tt_italic"><value>Italique</value></data>
@@ -808,7 +808,7 @@ Vous pouvez consulter la demande et l'audit complet dans NimShare.
   <data name="dbset.title"><value>Base de données</value></data>
   <data name="dbset.lede"><value>Où NimShare stocke ses métadonnées. Sqlite par défaut, Azure SQL recommandé au-delà d'un seul App Service.</value></data>
   <data name="dbset.status.title"><value>Backend actuel</value></data>
-  <data name="dbset.status.provider"><value>Provider</value></data>
+  <data name="dbset.status.provider"><value>Fournisseur</value></data>
   <data name="dbset.status.override"><value>depuis fichier de config</value></data>
   <data name="dbset.status.conn"><value>Connexion</value></data>
   <data name="dbset.status.users"><value>Utilisateurs</value></data>
@@ -1035,7 +1035,7 @@ Ouvrez ce lien pour signer :
   <data name="email_tpl.set_default"><value>Définir par défaut</value></data>
   <data name="email_tpl.name_ph"><value>Contrat formel</value></data>
   <data name="email_tpl.editor_title"><value>Nouveau modèle</value></data>
-  <data name="email_tpl.placeholders_label"><value>Placeholders</value></data>
+  <data name="email_tpl.placeholders_label"><value>Variables</value></data>
   <data name="email_tpl.ai_draft"><value>Rédiger avec l'IA</value></data>
   <data name="email_tpl.ai_hint"><value>Décrivez le ton — l'IA rédige l'objet et le corps avec les placeholders.</value></data>
   <data name="email_tpl.ai_prompt"><value>À quoi sert ce modèle ?</value></data>
@@ -1293,86 +1293,86 @@ Merci d'utiliser NimShare.</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Note</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Ce journal est généré en direct depuis la base. Pour un enregistrement immuable, archivez séparément l'export JSON.</value></data>
-  <data name="nav.privacy" xml:space="preserve"><value>Privacy</value></data>
-  <data name="nav.support" xml:space="preserve"><value>Support</value></data>
-  <data name="nav.imprint" xml:space="preserve"><value>Legal notice</value></data>
-  <data name="privacy.title" xml:space="preserve"><value>Privacy Policy</value></data>
-  <data name="privacy.last_updated" xml:space="preserve"><value>Last updated</value></data>
-  <data name="privacy.intro.title" xml:space="preserve"><value>Who we are</value></data>
-  <data name="privacy.intro.body" xml:space="preserve"><value>NimShare is a self-hosted file-sharing and signature platform. This policy describes how the operator of this instance processes your data. Because NimShare is self-hosted, the controller is the organization or person running this specific instance — not the software's author.</value></data>
-  <data name="privacy.controller.title" xml:space="preserve"><value>Data controller</value></data>
-  <data name="privacy.controller.body" xml:space="preserve"><value>The data controller for this instance is listed in the &lt;a href='/imprint'&gt;legal notice&lt;/a&gt;.</value></data>
-  <data name="privacy.data.title" xml:space="preserve"><value>What data we process</value></data>
-  <data name="privacy.data.intro" xml:space="preserve"><value>Depending on your usage, we process:</value></data>
-  <data name="privacy.data.account" xml:space="preserve"><value>Account data</value></data>
-  <data name="privacy.data.account_desc" xml:space="preserve"><value>Email, display name, password hash (never plain text), role, preferred language, optional 2FA TOTP seed.</value></data>
-  <data name="privacy.data.files" xml:space="preserve"><value>File contents</value></data>
-  <data name="privacy.data.files_desc" xml:space="preserve"><value>All files and folders you upload, plus metadata (name, size, content type, modified time, folder structure, versions, direct shares).</value></data>
-  <data name="privacy.data.usage" xml:space="preserve"><value>Usage data</value></data>
-  <data name="privacy.data.usage_desc" xml:space="preserve"><value>Public share-link accesses are logged with a hashed IP, country/city (if GeoIP is configured), user agent, referrer and timestamp — for abuse prevention and forensics.</value></data>
-  <data name="privacy.data.signatures" xml:space="preserve"><value>Signature workflows</value></data>
-  <data name="privacy.data.signatures_desc" xml:space="preserve"><value>Every signature workflow stores a full audit trail: who signed what and when, IP address (clear-text + hash), user agent, country/city, device type, timezone, drawn signature. Legal basis: Art. 6(1)(f) GDPR.</value></data>
-  <data name="privacy.data.contacts" xml:space="preserve"><value>Address book</value></data>
-  <data name="privacy.data.contacts_desc" xml:space="preserve"><value>Manually created contacts plus visibility of other NimShare users in your instance's internal directory.</value></data>
-  <data name="privacy.data.moderation" xml:space="preserve"><value>Moderation data</value></data>
-  <data name="privacy.data.moderation_desc" xml:space="preserve"><value>When you block a user or report content, we store the relationship or report for administrator review.</value></data>
-  <data name="privacy.purposes.title" xml:space="preserve"><value>Purposes of processing</value></data>
-  <data name="privacy.purposes.body" xml:space="preserve"><value>Exclusively to provide file-sharing, signature and collaboration functionality, to prevent abuse and to comply with legal obligations. No advertising, no sale, no profile building.</value></data>
-  <data name="privacy.tracking.title" xml:space="preserve"><value>Tracking</value></data>
-  <data name="privacy.tracking.no_tracking" xml:space="preserve"><value>No tracking. No analytics. No advertising.</value></data>
-  <data name="privacy.tracking.body" xml:space="preserve"><value>NimShare contains no trackers, no advertising SDKs, no third-party analytics. The iOS app declares NSPrivacyTracking=false in the App Store manifest.</value></data>
-  <data name="privacy.thirdparty.title" xml:space="preserve"><value>Recipients and processors</value></data>
-  <data name="privacy.thirdparty.body" xml:space="preserve"><value>Depending on your instance's configuration, the following providers may be involved:</value></data>
-  <data name="privacy.thirdparty.hoster" xml:space="preserve"><value>Hosting provider</value></data>
-  <data name="privacy.thirdparty.hoster_desc" xml:space="preserve"><value>The server running this instance (typically Microsoft Azure). Files are stored in an Azure Blob Storage container, the database in Azure SQL or as a SQLite file on an encrypted volume.</value></data>
-  <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>Email delivery</value></data>
-  <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>The SMTP server configured by the instance, or Resend/SendGrid, used to send signature invitations, password resets and notifications.</value></data>
-  <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI provider (optional)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>If AI features are enabled by the administrator, document contents are sent to the configured provider (OpenAI, Anthropic, Azure OpenAI) — only for the specific request, never for training.</value></data>
-  <data name="privacy.retention.title" xml:space="preserve"><value>Retention</value></data>
-  <data name="privacy.retention.body" xml:space="preserve"><value>Files remain until you delete them manually or delete your account. Signature audits are retained for 10 years for evidentiary reasons. Public link access logs are anonymized after 12 months.</value></data>
-  <data name="privacy.rights.title" xml:space="preserve"><value>Your rights</value></data>
-  <data name="privacy.rights.body" xml:space="preserve"><value>You have the following rights:</value></data>
-  <data name="privacy.rights.access" xml:space="preserve"><value>Access to the processed data (Art. 15)</value></data>
-  <data name="privacy.rights.rectify" xml:space="preserve"><value>Rectification of inaccurate data (Art. 16)</value></data>
-  <data name="privacy.rights.delete" xml:space="preserve"><value>Deletion of your account + data IN-APP via 'Profile → Delete Account' (Art. 17)</value></data>
-  <data name="privacy.rights.export" xml:space="preserve"><value>Data export in machine-readable format (Art. 20)</value></data>
-  <data name="privacy.rights.restrict" xml:space="preserve"><value>Restriction of processing (Art. 18)</value></data>
-  <data name="privacy.rights.object" xml:space="preserve"><value>Objection (Art. 21)</value></data>
-  <data name="privacy.rights.complaint" xml:space="preserve"><value>Complaint to a data protection authority</value></data>
-  <data name="privacy.rights.how" xml:space="preserve"><value>To exercise these rights, contact the controller listed in the &lt;a href='/imprint'&gt;legal notice&lt;/a&gt;. You can additionally delete your account directly in the app under 'Profile → Delete Account'.</value></data>
-  <data name="privacy.security.title" xml:space="preserve"><value>Security</value></data>
-  <data name="privacy.security.body" xml:space="preserve"><value>Passwords are hashed with BCrypt (salt + cost 11). All connections use HTTPS/TLS. iOS stores the JWT token in the system keychain with kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly. Signature certificates are AES-encrypted at rest.</value></data>
-  <data name="privacy.minors.title" xml:space="preserve"><value>Minors</value></data>
-  <data name="privacy.minors.body" xml:space="preserve"><value>NimShare is intended for users aged 16 and older. We do not knowingly collect data from younger persons.</value></data>
-  <data name="privacy.changes.title" xml:space="preserve"><value>Changes to this policy</value></data>
-  <data name="privacy.changes.body" xml:space="preserve"><value>We update this policy when functionality or legal requirements change. The date above shows the most recent version.</value></data>
-  <data name="support.title" xml:space="preserve"><value>Support &amp; Help</value></data>
-  <data name="support.intro" xml:space="preserve"><value>Welcome to NimShare support. Common questions below; for anything else use the contact options.</value></data>
+  <data name="nav.privacy" xml:space="preserve"><value>Confidentialité</value></data>
+  <data name="nav.support" xml:space="preserve"><value>Assistance</value></data>
+  <data name="nav.imprint" xml:space="preserve"><value>Mentions légales</value></data>
+  <data name="privacy.title" xml:space="preserve"><value>Politique de confidentialité</value></data>
+  <data name="privacy.last_updated" xml:space="preserve"><value>Dernière mise à jour</value></data>
+  <data name="privacy.intro.title" xml:space="preserve"><value>Qui sommes-nous</value></data>
+  <data name="privacy.intro.body" xml:space="preserve"><value>NimShare est une plateforme de partage de fichiers et de signature auto-hébergée. Cette politique décrit comment l'exploitant de cette instance traite vos données. NimShare étant auto-hébergé, le responsable du traitement est l'organisation ou la personne qui exploite cette instance spécifique — et non l'auteur du logiciel.</value></data>
+  <data name="privacy.controller.title" xml:space="preserve"><value>Responsable du traitement</value></data>
+  <data name="privacy.controller.body" xml:space="preserve"><value>Le responsable du traitement de cette instance est indiqué dans les &lt;a href='/imprint'&gt;mentions légales&lt;/a&gt;.</value></data>
+  <data name="privacy.data.title" xml:space="preserve"><value>Quelles données nous traitons</value></data>
+  <data name="privacy.data.intro" xml:space="preserve"><value>Selon votre utilisation, nous traitons :</value></data>
+  <data name="privacy.data.account" xml:space="preserve"><value>Données de compte</value></data>
+  <data name="privacy.data.account_desc" xml:space="preserve"><value>E-mail, nom affiché, hachage du mot de passe (jamais en clair), rôle, langue préférée, graine TOTP 2FA facultative.</value></data>
+  <data name="privacy.data.files" xml:space="preserve"><value>Contenu des fichiers</value></data>
+  <data name="privacy.data.files_desc" xml:space="preserve"><value>Tous les fichiers et dossiers que vous envoyez, ainsi que leurs métadonnées (nom, taille, type de contenu, date de modification, structure des dossiers, versions, partages directs).</value></data>
+  <data name="privacy.data.usage" xml:space="preserve"><value>Données d'utilisation</value></data>
+  <data name="privacy.data.usage_desc" xml:space="preserve"><value>Les accès aux liens de partage publics sont journalisés avec une IP hachée, le pays/la ville (si GeoIP est configuré), l'agent utilisateur, le référent et l'horodatage — à des fins de prévention des abus et d'analyse forensique.</value></data>
+  <data name="privacy.data.signatures" xml:space="preserve"><value>Processus de signature</value></data>
+  <data name="privacy.data.signatures_desc" xml:space="preserve"><value>Chaque processus de signature conserve une piste d'audit complète : qui a signé quoi et quand, adresse IP (en clair + hachée), agent utilisateur, pays/ville, type d'appareil, fuseau horaire, signature manuscrite. Base légale : art. 6, § 1, f) du RGPD.</value></data>
+  <data name="privacy.data.contacts" xml:space="preserve"><value>Carnet d'adresses</value></data>
+  <data name="privacy.data.contacts_desc" xml:space="preserve"><value>Les contacts créés manuellement, ainsi que la visibilité des autres utilisateurs NimShare dans l'annuaire interne de votre instance.</value></data>
+  <data name="privacy.data.moderation" xml:space="preserve"><value>Données de modération</value></data>
+  <data name="privacy.data.moderation_desc" xml:space="preserve"><value>Lorsque vous bloquez un utilisateur ou signalez un contenu, nous conservons cette relation ou ce signalement pour examen par l'administrateur.</value></data>
+  <data name="privacy.purposes.title" xml:space="preserve"><value>Finalités du traitement</value></data>
+  <data name="privacy.purposes.body" xml:space="preserve"><value>Exclusivement pour fournir les fonctionnalités de partage de fichiers, de signature et de collaboration, pour prévenir les abus et pour respecter les obligations légales. Aucune publicité, aucune vente, aucun profilage.</value></data>
+  <data name="privacy.tracking.title" xml:space="preserve"><value>Suivi</value></data>
+  <data name="privacy.tracking.no_tracking" xml:space="preserve"><value>Aucun suivi. Aucune analyse. Aucune publicité.</value></data>
+  <data name="privacy.tracking.body" xml:space="preserve"><value>NimShare ne contient aucun traceur, aucun SDK publicitaire, aucune analyse tierce. L'application iOS déclare NSPrivacyTracking=false dans le manifeste App Store.</value></data>
+  <data name="privacy.thirdparty.title" xml:space="preserve"><value>Destinataires et sous-traitants</value></data>
+  <data name="privacy.thirdparty.body" xml:space="preserve"><value>Selon la configuration de votre instance, les fournisseurs suivants peuvent être impliqués :</value></data>
+  <data name="privacy.thirdparty.hoster" xml:space="preserve"><value>Hébergeur</value></data>
+  <data name="privacy.thirdparty.hoster_desc" xml:space="preserve"><value>Le serveur exécutant cette instance (généralement Microsoft Azure). Les fichiers sont stockés dans un conteneur Azure Blob Storage, la base de données dans Azure SQL ou sous forme de fichier SQLite sur un volume chiffré.</value></data>
+  <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>Envoi d'e-mails</value></data>
+  <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Le serveur SMTP configuré par l'instance, ou Resend/SendGrid, utilisé pour envoyer les invitations de signature, les réinitialisations de mot de passe et les notifications.</value></data>
+  <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Fournisseur d'IA (facultatif)</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Si les fonctionnalités d'IA sont activées par l'administrateur, le contenu des documents est envoyé au fournisseur configuré (OpenAI, Anthropic, Azure OpenAI) — uniquement pour la requête concernée, jamais pour l'entraînement de modèles.</value></data>
+  <data name="privacy.retention.title" xml:space="preserve"><value>Conservation</value></data>
+  <data name="privacy.retention.body" xml:space="preserve"><value>Les fichiers sont conservés jusqu'à ce que vous les supprimiez manuellement ou que vous supprimiez votre compte. Les journaux d'audit de signature sont conservés pendant 10 ans à des fins probatoires. Les journaux d'accès aux liens publics sont anonymisés après 12 mois.</value></data>
+  <data name="privacy.rights.title" xml:space="preserve"><value>Vos droits</value></data>
+  <data name="privacy.rights.body" xml:space="preserve"><value>Vous disposez des droits suivants :</value></data>
+  <data name="privacy.rights.access" xml:space="preserve"><value>Accès aux données traitées (art. 15)</value></data>
+  <data name="privacy.rights.rectify" xml:space="preserve"><value>Rectification des données inexactes (art. 16)</value></data>
+  <data name="privacy.rights.delete" xml:space="preserve"><value>Suppression de votre compte et de vos données DANS L'APPLICATION via « Profil → Supprimer le compte » (art. 17)</value></data>
+  <data name="privacy.rights.export" xml:space="preserve"><value>Export des données dans un format exploitable par machine (art. 20)</value></data>
+  <data name="privacy.rights.restrict" xml:space="preserve"><value>Limitation du traitement (art. 18)</value></data>
+  <data name="privacy.rights.object" xml:space="preserve"><value>Opposition (art. 21)</value></data>
+  <data name="privacy.rights.complaint" xml:space="preserve"><value>Réclamation auprès d'une autorité de protection des données</value></data>
+  <data name="privacy.rights.how" xml:space="preserve"><value>Pour exercer ces droits, contactez le responsable du traitement indiqué dans les &lt;a href='/imprint'&gt;mentions légales&lt;/a&gt;. Vous pouvez également supprimer votre compte directement dans l'application sous « Profil → Supprimer le compte ».</value></data>
+  <data name="privacy.security.title" xml:space="preserve"><value>Sécurité</value></data>
+  <data name="privacy.security.body" xml:space="preserve"><value>Les mots de passe sont hachés avec BCrypt (sel + coût 11). Toutes les connexions utilisent HTTPS/TLS. iOS stocke le jeton JWT dans le trousseau système avec kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly. Les certificats de signature sont chiffrés en AES au repos.</value></data>
+  <data name="privacy.minors.title" xml:space="preserve"><value>Mineurs</value></data>
+  <data name="privacy.minors.body" xml:space="preserve"><value>NimShare est destiné aux utilisateurs âgés de 16 ans et plus. Nous ne collectons pas sciemment de données auprès de personnes plus jeunes.</value></data>
+  <data name="privacy.changes.title" xml:space="preserve"><value>Modifications de cette politique</value></data>
+  <data name="privacy.changes.body" xml:space="preserve"><value>Nous mettons à jour cette politique lorsque les fonctionnalités ou les exigences légales évoluent. La date ci-dessus indique la version la plus récente.</value></data>
+  <data name="support.title" xml:space="preserve"><value>Assistance et aide</value></data>
+  <data name="support.intro" xml:space="preserve"><value>Bienvenue dans l'assistance NimShare. Vous trouverez ci-dessous les questions courantes ; pour toute autre demande, utilisez les options de contact.</value></data>
   <data name="support.contact.title" xml:space="preserve"><value>Contact</value></data>
-  <data name="support.contact.body" xml:space="preserve"><value>For support requests about &lt;em&gt;this&lt;/em&gt; instance, contact the operator (see &lt;a href='/imprint'&gt;legal notice&lt;/a&gt;). For bugs or feature requests about the open-source software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
-  <data name="support.faq.title" xml:space="preserve"><value>Frequently asked questions</value></data>
-  <data name="support.faq.reset_password.q" xml:space="preserve"><value>I forgot my password.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Click 'Forgot password' on the login page. You will receive a reset link by email. If your server has no email gateway configured, contact the administrator of your instance.</value></data>
-  <data name="support.faq.delete_account.q" xml:space="preserve"><value>How do I delete my account?</value></data>
-  <data name="support.faq.delete_account.a" xml:space="preserve"><value>In the app under 'Profile → Delete Account'. All your files, contacts, API tokens and signature workflows are irreversibly deleted. Signature audits are retained for legal reasons.</value></data>
-  <data name="support.faq.2fa.q" xml:space="preserve"><value>How do I enable two-factor authentication?</value></data>
-  <data name="support.faq.2fa.a" xml:space="preserve"><value>Under 'Profile → Two-Factor Authentication', scan the QR code with your authenticator app (Google Authenticator, 1Password, etc.) and confirm with the 6-digit code.</value></data>
-  <data name="support.faq.share_link.q" xml:space="preserve"><value>How do I share a file via a link?</value></data>
-  <data name="support.faq.share_link.a" xml:space="preserve"><value>Right-click on the file → 'Share…'. You can set a password, expiry date, maximum download count and recipient allow-list. Videos and audio play directly in the recipient's browser.</value></data>
-  <data name="support.faq.report_block.q" xml:space="preserve"><value>How do I report or block another user?</value></data>
-  <data name="support.faq.report_block.a" xml:space="preserve"><value>In the iOS app: long-press (context menu) on the user in the address book → 'Report' or 'Block'. Blocked users no longer see you in the directory and cannot directly share anything with you. Reports go to the admin moderation queue.</value></data>
-  <data name="support.faq.signature.q" xml:space="preserve"><value>How secure are signatures?</value></data>
-  <data name="support.faq.signature.a" xml:space="preserve"><value>Every signature workflow is fully logged (IP address, timestamp, device type, timezone). If a certificate is stored, the final PDF also carries a PAdES-B cryptographic signature (SHA-256, PKCS#7) that Adobe Reader verifies natively. The audit report is available as a PDF attachment and JSON export.</value></data>
-  <data name="imprint.title" xml:space="preserve"><value>Legal notice</value></data>
-  <data name="imprint.operator" xml:space="preserve"><value>Operator of this instance</value></data>
+  <data name="support.contact.body" xml:space="preserve"><value>Pour toute demande d'assistance concernant &lt;em&gt;cette&lt;/em&gt; instance, contactez l'exploitant (voir les &lt;a href='/imprint'&gt;mentions légales&lt;/a&gt;). Pour signaler un bug ou demander une fonctionnalité concernant le logiciel open source : &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
+  <data name="support.faq.title" xml:space="preserve"><value>Questions fréquentes</value></data>
+  <data name="support.faq.reset_password.q" xml:space="preserve"><value>J'ai oublié mon mot de passe.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Cliquez sur « Mot de passe oublié » sur la page de connexion. Vous recevrez un lien de réinitialisation par e-mail. Si votre serveur n'a pas de passerelle e-mail configurée, contactez l'administrateur de votre instance.</value></data>
+  <data name="support.faq.delete_account.q" xml:space="preserve"><value>Comment supprimer mon compte ?</value></data>
+  <data name="support.faq.delete_account.a" xml:space="preserve"><value>Dans l'application, sous « Profil → Supprimer le compte ». Tous vos fichiers, contacts, jetons API et processus de signature sont supprimés de manière irréversible. Les journaux d'audit de signature sont conservés pour des raisons légales.</value></data>
+  <data name="support.faq.2fa.q" xml:space="preserve"><value>Comment activer l'authentification à deux facteurs ?</value></data>
+  <data name="support.faq.2fa.a" xml:space="preserve"><value>Sous « Profil → Authentification à deux facteurs », scannez le code QR avec votre application d'authentification (Google Authenticator, 1Password, etc.) et confirmez avec le code à 6 chiffres.</value></data>
+  <data name="support.faq.share_link.q" xml:space="preserve"><value>Comment partager un fichier via un lien ?</value></data>
+  <data name="support.faq.share_link.a" xml:space="preserve"><value>Clic droit sur le fichier → « Partager… ». Vous pouvez définir un mot de passe, une date d'expiration, un nombre maximal de téléchargements et une liste de destinataires autorisés. Les vidéos et les fichiers audio se lisent directement dans le navigateur du destinataire.</value></data>
+  <data name="support.faq.report_block.q" xml:space="preserve"><value>Comment signaler ou bloquer un autre utilisateur ?</value></data>
+  <data name="support.faq.report_block.a" xml:space="preserve"><value>Dans l'application iOS : appui long (menu contextuel) sur l'utilisateur dans le carnet d'adresses → « Signaler » ou « Bloquer ». Les utilisateurs bloqués ne vous voient plus dans l'annuaire et ne peuvent plus rien partager directement avec vous. Les signalements sont envoyés à la file de modération de l'administrateur.</value></data>
+  <data name="support.faq.signature.q" xml:space="preserve"><value>Quel est le niveau de sécurité des signatures ?</value></data>
+  <data name="support.faq.signature.a" xml:space="preserve"><value>Chaque processus de signature est intégralement journalisé (adresse IP, horodatage, type d'appareil, fuseau horaire). Si un certificat est stocké, le PDF final porte également une signature cryptographique PAdES-B (SHA-256, PKCS#7) qu'Adobe Reader vérifie nativement. Le rapport d'audit est disponible en pièce jointe PDF et en export JSON.</value></data>
+  <data name="imprint.title" xml:space="preserve"><value>Mentions légales</value></data>
+  <data name="imprint.operator" xml:space="preserve"><value>Exploitant de cette instance</value></data>
   <data name="imprint.operator_body" xml:space="preserve"><value>Marcus Nimtz&lt;br&gt;(Personne privée, sans usage commercial)&lt;br&gt;Allemagne</value></data>
   <data name="imprint.contact.title" xml:space="preserve"><value>Contact</value></data>
   <data name="imprint.contact.body" xml:space="preserve"><value>&lt;em&gt;(Please fill in an email address and optionally a phone number)&lt;/em&gt;</value></data>
-  <data name="imprint.tech.title" xml:space="preserve"><value>Technical operation</value></data>
-  <data name="imprint.tech.body" xml:space="preserve"><value>NimShare is open-source software (github.com/mnimtz/nimshare). This instance is operated independently by the entity named above; the software's developers have no access to the data processed here.</value></data>
-  <data name="imprint.disclaimer.title" xml:space="preserve"><value>External link disclaimer</value></data>
-  <data name="imprint.disclaimer.body" xml:space="preserve"><value>Despite careful review, we assume no liability for the contents of external links. Only the operators of the linked pages are responsible for their content.</value></data>
+  <data name="imprint.tech.title" xml:space="preserve"><value>Exploitation technique</value></data>
+  <data name="imprint.tech.body" xml:space="preserve"><value>NimShare est un logiciel open source (github.com/mnimtz/nimshare). Cette instance est exploitée de manière indépendante par l'entité mentionnée ci-dessus ; les développeurs du logiciel n'ont aucun accès aux données traitées ici.</value></data>
+  <data name="imprint.disclaimer.title" xml:space="preserve"><value>Avertissement sur les liens externes</value></data>
+  <data name="imprint.disclaimer.body" xml:space="preserve"><value>Malgré un contrôle attentif, nous déclinons toute responsabilité quant au contenu des liens externes. Seuls les exploitants des pages liées sont responsables de leur contenu.</value></data>
   <data name="nav.moderation" xml:space="preserve"><value>Modération</value></data>
   <data name="actions.permissions" xml:space="preserve"><value>Autorisations</value></data>
   <data name="permissions.title" xml:space="preserve"><value>Autorisations</value></data>

@@ -303,6 +303,13 @@ struct FolderBrowserView: View {
                             }
                         }
                         .contextMenu { folderMenu(f) }
+                        // v1.11.5: Ohne dies wird die Row im EditMode (Auswahl-Modus)
+                        // von List(selection:) als selektierbar behandelt — der
+                        // NavigationLink navigiert dann NICHT mehr, sondern der Tap
+                        // fügt die Folder-ID stattdessen ins File-only selection-Set
+                        // ein. Bulk-Ops (Delete/Zip/Move/Copy) erwarten aber nur
+                        // File-IDs und würden mit einer Folder-ID fehlschlagen.
+                        .selectionDisabled()
                     }
                 }
             }

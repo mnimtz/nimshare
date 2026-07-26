@@ -245,11 +245,11 @@
   <data name="nav.storage"><value>Opslag</value></data>
 
   <data name="browse.root.title"><value>Opslag</value></data>
-  <data name="browse.root.lede"><value>Pick a space to work in.</value></data>
+  <data name="browse.root.lede"><value>Kies een ruimte om in te werken. Je eigen bestanden blijven privé; de openbare ruimte is gedeeld; elke groep heeft zijn eigen pool.</value></data>
   <data name="browse.tile.personal"><value>Mijn bestanden</value></data>
   <data name="browse.tile.personal.lede"><value>Alleen zichtbaar voor jou.</value></data>
   <data name="browse.tile.public"><value>Openbaar</value></data>
-  <data name="browse.tile.public.lede"><value>Shared with everyone signed in.</value></data>
+  <data name="browse.tile.public.lede"><value>Gedeeld met iedereen die is aangemeld op deze NimShare.</value></data>
   <data name="browse.tile.groups"><value>Groepen</value></data>
   <data name="browse.tile.groups.lede"><value>Bestanden die binnen elk van je teams worden gedeeld.</value></data>
   <data name="browse.tile.groups.empty"><value>Je bent nog in geen enkele groep. Vraag een beheerder om je uit te nodigen.</value></data>
@@ -280,7 +280,7 @@
   <data name="modal.share.for_file"><value>De ontvanger kan dit bestand downloaden.</value></data>
   <data name="modal.share.for_folder"><value>De ontvanger ziet alle bestanden in deze map.</value></data>
   <data name="modal.upload_request.title"><value>Upload-aanvraaglink</value></data>
-  <data name="modal.upload_request.lede"><value>Send someone a link to upload directly into this folder.</value></data>
+  <data name="modal.upload_request.lede"><value>De ontvanger kan via deze link bestanden rechtstreeks naar deze map uploaden.</value></data>
   <data name="modal.upload_request.max_uploads"><value>Max. uploads</value></data>
 
   <data name="users.action.manage"><value>Beheren</value></data>

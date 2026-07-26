@@ -13,6 +13,9 @@ struct ReportSheet: View {
     let subjectOwnerUserId: UUID?
     let subjectOwnerName: String?
 
+    /// .NET's Guid.Empty — the backend's "no owner" sentinel value.
+    private static let emptyUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
     @EnvironmentObject var auth: AuthStore
     @Environment(\.dismiss) private var dismiss
 
@@ -39,7 +42,12 @@ struct ReportSheet: View {
                     TextField("Weitere Angaben — was ist passiert?", text: $note, axis: .vertical)
                         .lineLimit(3...6)
                 }
-                if let ownerId = subjectOwnerUserId, ownerId != UUID() {
+                // Bug-Fix v1.11.5: `UUID()` erzeugt bei jedem Aufruf eine NEUE
+                // zufällige UUID — der Vergleich `ownerId != UUID()` war damit
+                // praktisch immer wahr und filterte die vom .NET-Backend als
+                // "kein Owner" gesendete Guid.Empty (00000000-...-0000) nie
+                // heraus. Fix: gegen die tatsächliche Null-UUID vergleichen.
+                if let ownerId = subjectOwnerUserId, ownerId != Self.emptyUUID {
                     Section {
                         Toggle(isOn: $alsoBlock) {
                             VStack(alignment: .leading, spacing: 2) {

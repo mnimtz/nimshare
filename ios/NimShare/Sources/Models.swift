@@ -441,8 +441,8 @@ enum ApiError: LocalizedError {
             switch code {
             case 401, 403: return NSLocalizedString("Zugriff verweigert.", comment: "")
             case 404: return NSLocalizedString("Nicht gefunden.", comment: "")
-            case 500...599: return NSLocalizedString("Server-Fehler (\(code)). Bitte erneut versuchen.", comment: "")
-            default: return NSLocalizedString("Server nicht erreichbar (\(code)).", comment: "")
+            case 500...599: return String(format: NSLocalizedString("Server-Fehler (%@). Bitte erneut versuchen.", comment: ""), String(code))
+            default: return String(format: NSLocalizedString("Server nicht erreichbar (%@).", comment: ""), String(code))
             }
         }
         // JSON/Plaintext-Bodies: Länge begrenzen (kein 5-KB-Trümmerfeld in

@@ -83,6 +83,13 @@ struct PermissionsSheet: View {
                             .autocorrectionDisabled()
                             .onChange(of: userQuery) { _, newValue in
                                 searchTask?.cancel()
+                                // Wie in DirectShareSheet: nach Auswahl eines Vorschlags nicht
+                                // erneut suchen, aber bei jeder ANDEREN Änderung die vorherige
+                                // Auswahl verwerfen — sonst könnte eine veraltete selectedUser
+                                // (z.B. nach Tippfehler-Korrektur ohne neue Auswahl) Zugriff auf
+                                // die falsche Person gewähren.
+                                if selectedUser?.displayName == newValue { return }
+                                selectedUser = nil
                                 searchTask = Task { await searchUsers(newValue) }
                             }
                         if !userMatches.isEmpty {

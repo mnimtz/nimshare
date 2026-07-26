@@ -324,17 +324,17 @@
   <data name="landing_admin.logo.label"><value>Logo (optional)</value></data>
   <data name="common.preview"><value>Vorschau</value></data>
   <data name="bulk.move"><value>Verschieben</value></data>
-  <data name="bulk.delete"><value>Loeschen</value></data>
+  <data name="bulk.delete"><value>Löschen</value></data>
   <data name="bulk.clear"><value>Auswahl aufheben</value></data>
-  <data name="bulk.confirm.delete"><value>{n} Dateien loeschen? Kann nicht rueckgaengig gemacht werden.</value></data>
+  <data name="bulk.confirm.delete"><value>{n} Dateien löschen? Kann nicht rückgängig gemacht werden.</value></data>
   <data name="browse.drop_hint"><value>Dateien hier ablegen zum Hochladen</value></data>
   <data name="browse.folder_type"><value>Ordner</value></data>
   <data name="actions.move"><value>Verschieben</value></data>
   <data name="move.title"><value>Datei(en) verschieben</value></data>
   <data name="move.target"><value>Zielordner</value></data>
   <data name="move.helper"><value>Nur Ordner mit Schreibrechten werden angezeigt.</value></data>
-  <data name="move.hint.single"><value>Ziel fuer die Datei waehlen.</value></data>
-  <data name="move.hint.multi"><value>Ziel fuer {n} Dateien waehlen.</value></data>
+  <data name="move.hint.single"><value>Ziel für die Datei wählen.</value></data>
+  <data name="move.hint.multi"><value>Ziel für {n} Dateien wählen.</value></data>
   <data name="move.button"><value>Verschieben</value></data>
   <data name="pin.copy_to_personal"><value>Nach Personal kopieren</value></data>
   <data name="pin.unpin"><value>Aus Personal entfernen</value></data>
@@ -350,14 +350,14 @@
   <data name="ai.provider"><value>Anbieter</value></data>
   <data name="ai.provider.disabled"><value>Deaktiviert</value></data>
   <data name="ai.model"><value>Modell</value></data>
-  <data name="ai.model_helper"><value>Leer lassen fuer das Standard-Modell des Anbieters.</value></data>
+  <data name="ai.model_helper"><value>Leer lassen für das Standard-Modell des Anbieters.</value></data>
   <data name="ai.endpoint"><value>Azure-Endpoint</value></data>
-  <data name="ai.api_key"><value>API-Schluessel</value></data>
-  <data name="ai.api_key_helper"><value>Leer lassen, um den aktuellen Wert zu behalten. Verschluesselt gespeichert.</value></data>
+  <data name="ai.api_key"><value>API-Schlüssel</value></data>
+  <data name="ai.api_key_helper"><value>Leer lassen, um den aktuellen Wert zu behalten. Verschlüsselt gespeichert.</value></data>
   <data name="ai.features"><value>Funktionen</value></data>
-  <data name="ai.features_lede"><value>Einzelne Faehigkeiten aktivieren oder deaktivieren.</value></data>
+  <data name="ai.features_lede"><value>Einzelne Fähigkeiten aktivieren oder deaktivieren.</value></data>
   <data name="ai.status.preview"><value>Vorschau</value></data>
-  <data name="ai.status.ready"><value>Verfuegbar</value></data>
+  <data name="ai.status.ready"><value>Verfügbar</value></data>
   <data name="ai.save"><value>Speichern</value></data>
   <data name="ai.reindex.title"><value>Bestehende Dateien neu indexieren</value></data>
   <data name="ai.reindex.lede"><value>Nur Dateien, die NACH Aktivierung von semantischer Suche / Smart Tags hochgeladen wurden, haben ein Embedding. Nach dem Aktivieren einmal ausführen, um die Bibliothek nachzuindizieren — bis zu 500 Dateien pro Klick.</value></data>
@@ -366,25 +366,25 @@
   <data name="ai.reindex.done"><value>{0} Dateien in die Indexierungs-Queue eingereiht. Embeddings sind in den nächsten Minuten verfügbar.</value></data>
   <data name="ai.reindex.err_disabled"><value>KI-Provider ist deaktiviert. Bitte zuerst einen Provider aktivieren, dann neu indexieren.</value></data>
   <data name="ai.feat.auto_summary"><value>Auto-Zusammenfassung auf Freigabe-Landing</value></data>
-  <data name="ai.feat.auto_summary.desc"><value>Empfaenger koennen vor dem Download eine 2-3 Satz-Zusammenfassung generieren.</value></data>
+  <data name="ai.feat.auto_summary.desc"><value>Empfänger können vor dem Download eine 2-3 Satz-Zusammenfassung generieren.</value></data>
   <data name="ai.feat.smart_tags"><value>Intelligente Tags</value></data>
   <data name="ai.feat.smart_tags.desc"><value>Automatische Klassifizierung mit 2-5 Stichworten.</value></data>
   <data name="ai.feat.semantic_search"><value>Semantische Suche</value></data>
   <data name="ai.feat.semantic_search.desc"><value>Dateien nach Bedeutung finden, nicht nur nach Namen.</value></data>
-  <data name="ai.feat.guided_upload"><value>Gefuehrte Upload-Anfragen</value></data>
-  <data name="ai.feat.guided_upload.desc"><value>Upload-Anfrage-E-Mails pro Empfaenger personalisieren.</value></data>
+  <data name="ai.feat.guided_upload"><value>Geführte Upload-Anfragen</value></data>
+  <data name="ai.feat.guided_upload.desc"><value>Upload-Anfrage-E-Mails pro Empfänger personalisieren.</value></data>
   <data name="ai.feat.risk_detect"><value>Inhalts-Risiko-Erkennung</value></data>
-  <data name="ai.feat.risk_detect.desc"><value>Uploads im oeffentlichen Bereich auf sensible Daten pruefen.</value></data>
+  <data name="ai.feat.risk_detect.desc"><value>Uploads im öffentlichen Bereich auf sensible Daten prüfen.</value></data>
   <data name="ai.feat.email_drafts"><value>KI-generierte Freigabe-E-Mails</value></data>
   <data name="ai.feat.email_drafts.desc"><value>Draft-Button im Per-E-Mail-Dialog.</value></data>
   <data name="ai.feat.chat"><value>Chat mit deinen Dateien</value></data>
-  <data name="ai.feat.chat.desc"><value>RAG-basierter Chat ueber deine eigenen Dateien.</value></data>
+  <data name="ai.feat.chat.desc"><value>RAG-basierter Chat über deine eigenen Dateien.</value></data>
   <data name="ai.feat.ocr"><value>OCR fuer Scans</value></data>
   <data name="ai.feat.ocr.desc"><value>Text aus reinen Bild-PDFs extrahieren.</value></data>
   <data name="landing.ai_summary"><value>KI-Zusammenfassung</value></data>
   <data name="landing.ai_summary.loading"><value>Erzeuge Zusammenfassung...</value></data>
   <data name="landing.ai_summary.disabled"><value>KI-Zusammenfassung wurde vom Administrator deaktiviert.</value></data>
-  <data name="landing.ai_summary.unsupported"><value>Dieser Dateityp wird fuer KI-Zusammenfassungen noch nicht unterstuetzt.</value></data>
+  <data name="landing.ai_summary.unsupported"><value>Dieser Dateityp wird für KI-Zusammenfassungen noch nicht unterstützt.</value></data>
   <data name="landing.ai_summary.error"><value>Konnte keine Zusammenfassung erstellen.</value></data>
   <data name="landing.folder.lede"><value>Dateien in diesem Ordner:</value></data>
   <data name="browse.libraries.mine"><value>Meine Bibliotheken</value></data>
@@ -402,15 +402,15 @@
   <data name="chat.error"><value>Etwas ging schief. Versuche es erneut.</value></data>
   <data name="chat.no_context"><value>Keine passenden Dateien gefunden. Andere Suchbegriffe versuchen.</value></data>
   <data name="chat.sources"><value>Quellen:</value></data>
-  <data name="chat.note"><value>Antworten basieren nur auf Dateien mit Leserecht. Ohne Klick verlaesst nichts das System.</value></data>
+  <data name="chat.note"><value>Antworten basieren nur auf Dateien mit Leserecht. Ohne Klick verlässt nichts das System.</value></data>
   <data name="browse.search.placeholder"><value>Semantisch nach Dateien suchen...</value></data>
   <data name="browse.search.button"><value>Suchen</value></data>
   <data name="browse.search.loading"><value>Suche...</value></data>
   <data name="browse.search.disabled"><value>Semantische Suche ist deaktiviert.</value></data>
   <data name="browse.search.error"><value>Suche fehlgeschlagen.</value></data>
   <data name="browse.search.no_hits"><value>Keine Treffer in diesem Bereich.</value></data>
-  <data name="preview.unsupported"><value>Vorschau fuer diesen Dateityp noch nicht unterstuetzt.</value></data>
-  <data name="preview.download"><value>In neuem Tab oeffnen</value></data>
+  <data name="preview.unsupported"><value>Vorschau für diesen Dateityp noch nicht unterstützt.</value></data>
+  <data name="preview.download"><value>In neuem Tab öffnen</value></data>
   <data name="links.email.send"><value>Senden</value></data>
   <data name="links.email.draft_ai"><value>Mit KI entwerfen</value></data>
   <data name="links.email.drafting"><value>Entwerfe...</value></data>
@@ -541,7 +541,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.user_deleted"><value>Benutzer gelöscht.</value></data>
   <data name="notice.quota_updated"><value>Kontingent aktualisiert.</value></data>
   <data name="notice.groups_updated"><value>Gruppen aktualisiert.</value></data>
-  <data name="notice.file_restored"><value>„{0}</value></data>
+  <data name="notice.file_restored"><value>„{0}" wiederhergestellt.</value></data>
   <data name="notice.purged_one"><value>Endgültig gelöscht.</value></data>
   <data name="notice.purged_many"><value>{0} endgültig gelöscht.</value></data>
   <data name="notice.invite_sent"><value>Einladung an {0} versendet.</value></data>
@@ -1366,18 +1366,18 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="support.title" xml:space="preserve"><value>Support &amp; Hilfe</value></data>
   <data name="support.intro" xml:space="preserve"><value>Willkommen im NimShare-Support. Antworten auf häufige Fragen unten, für alles andere die Kontakt-Optionen.</value></data>
   <data name="support.contact.title" xml:space="preserve"><value>Kontakt</value></data>
-  <data name="support.contact.body" xml:space="preserve"><value>Für Support-Anfragen zu &lt;em&gt;dieser&lt;/em&gt; Instanz wende dich an die Betreiberin (siehe &lt;a href='/imprint'&gt;Impressum&lt;/a&gt;). Für Bugs oder Feature-Requests an der Open-Source-Software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
+  <data name="support.contact.body" xml:space="preserve"><value>Für Support-Anfragen zu &lt;em&gt;dieser&lt;/em&gt; Instanz wenden Sie sich an die Betreiberin (siehe &lt;a href='/imprint'&gt;Impressum&lt;/a&gt;). Für Bugs oder Feature-Requests an der Open-Source-Software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Häufige Fragen</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ich habe mein Passwort vergessen.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klicke auf der Login-Seite auf 'Passwort vergessen'. Du bekommst per E-Mail einen Reset-Link. Falls dein Server keinen E-Mail-Gateway konfiguriert hat, wende dich an den Admin deiner Instanz.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klicken Sie auf der Login-Seite auf 'Passwort vergessen'. Sie erhalten per E-Mail einen Reset-Link. Falls Ihr Server keinen E-Mail-Gateway konfiguriert hat, wenden Sie sich an den Administrator Ihrer Instanz.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Wie lösche ich meinen Account?</value></data>
-  <data name="support.faq.delete_account.a" xml:space="preserve"><value>In der App unter 'Profil → Account löschen'. Alle deine Dateien, Kontakte, API-Tokens und Signatur-Vorgänge werden unwiderruflich gelöscht. Signatur-Audits bleiben aus rechtlichen Gründen erhalten.</value></data>
+  <data name="support.faq.delete_account.a" xml:space="preserve"><value>In der App unter 'Profil → Account löschen'. Alle Ihre Dateien, Kontakte, API-Tokens und Signatur-Vorgänge werden unwiderruflich gelöscht. Signatur-Audits bleiben aus rechtlichen Gründen erhalten.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Wie aktiviere ich Zwei-Faktor-Anmeldung?</value></data>
-  <data name="support.faq.2fa.a" xml:space="preserve"><value>Unter 'Profil → Zwei-Faktor-Anmeldung' scannst du einen QR-Code mit deiner Authenticator-App (Google Authenticator, 1Password, etc.) und bestätigst mit dem 6-stelligen Code.</value></data>
+  <data name="support.faq.2fa.a" xml:space="preserve"><value>Unter 'Profil → Zwei-Faktor-Anmeldung' scannen Sie einen QR-Code mit Ihrer Authenticator-App (Google Authenticator, 1Password, etc.) und bestätigen mit dem 6-stelligen Code.</value></data>
   <data name="support.faq.share_link.q" xml:space="preserve"><value>Wie teile ich eine Datei per Link?</value></data>
-  <data name="support.faq.share_link.a" xml:space="preserve"><value>Rechtsklick auf die Datei → 'Teilen…'. Du kannst Passwort, Ablaufdatum, maximale Download-Anzahl und Empfänger-Whitelist setzen. Videos und Audios spielen direkt im Browser des Empfängers ab.</value></data>
+  <data name="support.faq.share_link.a" xml:space="preserve"><value>Rechtsklick auf die Datei → 'Teilen…'. Sie können Passwort, Ablaufdatum, maximale Download-Anzahl und Empfänger-Whitelist setzen. Videos und Audios spielen direkt im Browser des Empfängers ab.</value></data>
   <data name="support.faq.report_block.q" xml:space="preserve"><value>Wie melde ich einen anderen Nutzer oder blockiere ihn?</value></data>
-  <data name="support.faq.report_block.a" xml:space="preserve"><value>In der iOS-App: langer Druck (Kontext-Menü) auf den Nutzer im Adressbuch → 'Melden' oder 'Blockieren'. Blockierte Nutzer sehen dich nicht mehr im Directory und können dir nichts mehr direkt teilen. Meldungen landen in der Admin-Moderations-Queue.</value></data>
+  <data name="support.faq.report_block.a" xml:space="preserve"><value>In der iOS-App: langer Druck (Kontext-Menü) auf den Nutzer im Adressbuch → 'Melden' oder 'Blockieren'. Blockierte Nutzer sehen Sie nicht mehr im Directory und können Ihnen nichts mehr direkt teilen. Meldungen landen in der Admin-Moderations-Queue.</value></data>
   <data name="support.faq.signature.q" xml:space="preserve"><value>Wie sicher sind die Signaturen?</value></data>
   <data name="support.faq.signature.a" xml:space="preserve"><value>Jeder Signatur-Vorgang wird lückenlos protokolliert (IP-Adresse, Zeitstempel, Geräte-Typ, Zeitzone). Ist ein Zertifikat hinterlegt, wird das finale PDF zusätzlich mit einer PAdES-B-kryptografischen Signatur versehen (SHA-256, PKCS#7), die Adobe Reader nativ verifiziert (grünes Schlosssymbol). Der Audit-Bericht ist als PDF-Anhang und JSON-Export verfügbar.</value></data>
   <data name="imprint.title" xml:space="preserve"><value>Impressum</value></data>
