@@ -1743,7 +1743,13 @@ async function ds_loadShares() {
         ? '/api/v1/direct-shares/for-file/' + dsCurrent.id
         : '/api/v1/direct-shares/for-folder/' + dsCurrent.id;
     const r = await fetch(url, { credentials: 'same-origin' });
-    if (!r.ok) { document.getElementById('dsList').innerHTML = ''; return; }
+    // v1.10.199: Fehler beim Laden der Grant-Liste NICHT mehr als leere
+    // Liste tarnen — sonst sieht „403/500" aus wie „keine Freigaben".
+    if (!r.ok) {
+        document.getElementById('dsList').innerHTML =
+            '<p class="muted">⚠ ' + @Json.Serialize(T["err.request_failed"].Value) + ' (' + r.status + ')</p>';
+        return;
+    }
     const items = await r.json();
     const out = document.getElementById('dsList');
     if (!items.length) { out.innerHTML = '<p class="muted">' + @Json.Serialize(T["share.none"].Value) + '</p>'; return; }

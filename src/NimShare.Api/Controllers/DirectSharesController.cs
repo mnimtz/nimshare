@@ -123,6 +123,11 @@ public class DirectSharesController : ControllerBase
                 s.TargetGroupId, s.TargetGroup!.Name,
                 s.Permission.ToString(), s.CreatedAt))
             .ToListAsync(ct);
+        // v1.10.199: Diagnose für Marcus's „Grant verschwindet"-Report —
+        // zeigt im Log, wie viele Rows die DB für den Ordner wirklich hat.
+        HttpContext.RequestServices.GetRequiredService<ILogger<DirectSharesController>>()
+            .LogInformation("DirectShares FOR-FOLDER {FolderId}: {Count} rows (caller {User})",
+                folderId, rows.Count, me.Email);
         return Ok(rows);
     }
 
@@ -248,6 +253,10 @@ public class DirectSharesController : ControllerBase
                         href: "/shared-with-me", fileId: req.FileId, ct: ct);
             }
         }
+        // v1.10.199: Diagnose — bestätigt im Log, dass der Grant persistiert ist.
+        HttpContext.RequestServices.GetRequiredService<ILogger<DirectSharesController>>()
+            .LogInformation("DirectShare CREATED {ShareId}: file={FileId} folder={FolderId} → user={UserId} group={GroupId} perm={Perm} by {Email}",
+                share.Id, req.FileId, req.FolderId, req.UserId, req.GroupId, perm, me.Email);
         // autoPrivatized meldet der UI, dass der öffentliche Ordner beim
         // Freigeben automatisch auf privat gestellt wurde (für einen Hinweis).
         return Ok(new { id = share.Id, autoPrivatized });
