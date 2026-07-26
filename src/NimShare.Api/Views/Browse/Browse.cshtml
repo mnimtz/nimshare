@@ -1226,15 +1226,15 @@ const OFFICE_CTS = new Set([
 async function openPreview(fileId) {
     const rowCt = (document.querySelector(`tr.ctx[data-id="${fileId}"]`)?.dataset.contentType || '').toLowerCase();
     const useOffice = OFFICE_CTS.has(rowCt);
-    // v1.10.194: preview-url mit ?inline=1 — die SAS kommt dann ohne
+    // v1.10.194: preview-url mit ?inline=true — die SAS kommt dann ohne
     // Content-Disposition:attachment. Wichtig für PDF im <iframe> (Chrome
     // erzwang sonst einen Download statt Inline-Rendering) und sauber für
     // <video>/<audio>. Der Download-Button nutzt weiter die attachment-SAS.
-    const endpoint = useOffice ? '/office-preview' : '/preview-url?inline=1';
+    const endpoint = useOffice ? '/office-preview' : '/preview-url?inline=true';
     let r = await fetch('/api/v1/files/' + fileId + endpoint, { credentials: 'same-origin' });
     // Office-Endpoint kann bei einem Fehler auf 415/500 gehen — dann normalen Preview versuchen.
     if (useOffice && !r.ok) {
-        r = await fetch('/api/v1/files/' + fileId + '/preview-url?inline=1', { credentials: 'same-origin' });
+        r = await fetch('/api/v1/files/' + fileId + '/preview-url?inline=true', { credentials: 'same-origin' });
     }
     // v1.10.197: Fehler nicht mehr stumm schlucken — „klicke Preview,
     // passiert nichts" ist undebuggbar. Jetzt sichtbare Meldung mit Status.
