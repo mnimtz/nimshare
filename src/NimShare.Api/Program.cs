@@ -404,6 +404,9 @@ builder.Services.AddHostedService<ThumbnailWorker>();
 // hinweg gilt und der Blob-Client (Singleton) nicht bei jedem Warmup neu
 // aufgebaut wird.
 builder.Services.AddSingleton<IAlbumZipCache, AlbumZipCache>();
+// v1.11.0: Subdomain-Sharing — Settings-Cache + Slug-Validierung + CF-Setup.
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ISubdomainShareService, SubdomainShareService>();
 // v1.10.178: EXIF-GPS-Reader für die Album-Landing-Karte.
 builder.Services.AddScoped<IExifGpsReader, ExifGpsReader>();
 // v1.10.82: App-Store-Blocker — Account-Löschung + UGC-Moderation
@@ -739,6 +742,10 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 app.UseRequestLocalization();
+
+// v1.11.0: Subdomain-Sharing — muss VOR UseRouting laufen, weil der Path-
+// Rewrite ({slug}.domain/ → /s/{slug}) sonst nach dem Endpoint-Matching käme.
+app.UseMiddleware<SubdomainShareMiddleware>();
 
 app.UseRouting();
 app.UseRateLimiter();

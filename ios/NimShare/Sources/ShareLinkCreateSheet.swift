@@ -36,6 +36,12 @@ struct ShareLinkCreateSheet: View {
     // würde der Server das Flag ohnehin ignorieren.
     @State private var displayAsGallery: Bool = false
     @State private var allowUploads: Bool = false
+    // v1.11.0: Subdomain-Sharing — Info einmal laden, Sektion nur zeigen
+    // wenn Feature an UND dieser User es nutzen darf.
+    @State private var subInfo: NimShareAPI.SubdomainInfo?
+    @State private var useSubdomain = false
+    @State private var subSlug = ""
+    @State private var subCheck: NimShareAPI.SubdomainCheck?
 
     private var isFolderTarget: Bool {
         if case .folder = target { return true } else { return false }
@@ -48,8 +54,13 @@ struct ShareLinkCreateSheet: View {
             } else {
                 formView
                     .task {
+                        guard let api = auth.api else { return }
+                        // v1.11.0: Subdomain-Feature-Info (einmalig).
+                        if subInfo == nil {
+                            subInfo = try? await api.subdomainInfo()
+                        }
                         // Zertifikate nachladen; Default vorwählen falls vorhanden.
-                        guard certs.isEmpty, let api = auth.api else { return }
+                        guard certs.isEmpty else { return }
                         if let list = try? await api.listCertificates() {
                             certs = list
                             selectedCertId = list.first(where: { $0.isDefault })?.id
@@ -74,6 +85,14 @@ struct ShareLinkCreateSheet: View {
                 TextField("z.B. quartalsreport", text: $slug)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                 Text("Freilassen für automatisch generierten Slug.").font(.caption).foregroundStyle(.secondary)
+            }
+            // v1.11.0: Subdomain-Sharing — nur wenn Server-Feature an
+            // UND dieser User es nutzen darf.
+            if let si = subInfo, si.enabled, si.canUse {
+                SubdomainSection(info: si,
+                                 enabled: $useSubdomain,
+                                 slug: $subSlug,
+                                 check: $subCheck)
             }
             Section("Passwortschutz (optional)") {
                 SecureField("Passwort", text: $password)
@@ -165,6 +184,10 @@ struct ShareLinkCreateSheet: View {
                     }.buttonStyle(.bordered).tint(Theme.tungstenBlue)
                 }
             }
+            // v1.11.0: Subdomain-URL zusätzlich anzeigen, wenn vorhanden.
+            if let sub = r.subdomainUrl, !sub.isEmpty {
+                SubdomainResultRow(url: sub)
+            }
             Spacer()
         }
         .padding()
@@ -195,10 +218,114 @@ struct ShareLinkCreateSheet: View {
                 notifyOnAccess: notifyOnAccess,
                 signingCertificateId: selectedCertId,    // v1.10.146
                 displayAsGallery: isFolderTarget && displayAsGallery ? true : nil,  // v1.10.172
-                allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil
+                allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil,
+                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug)  // v1.11.0
             )
             result = link
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
+    }
+}
+
+// MARK: - v1.11.0 Subdomain-Sharing (geteilt von beiden Sheets)
+
+/// Nur senden wenn der Toggle an ist UND ein Slug eingetippt wurde — sonst
+/// nil, damit ältere Server das Feld gar nicht erst sehen.
+func effectiveSubdomainSlug(useSubdomain: Bool, slug: String) -> String? {
+    guard useSubdomain else { return nil }
+    let t = slug.trimmingCharacters(in: .whitespaces)
+    return t.isEmpty ? nil : t
+}
+
+/// v1.11.0: Form-Sektion „Als Subdomain freigeben" mit Live-Verfügbarkeits-
+/// Check (~400ms Debounce, Task-Cancel-Muster wie die User-Suche im
+/// DirectShareSheet). Grüne Zeile mit voller Host-Vorschau bei verfügbar,
+/// rote Zeile mit Grund (vergeben / reserviert / ungültig) sonst.
+struct SubdomainSection: View {
+    @EnvironmentObject var auth: AuthStore
+    let info: NimShareAPI.SubdomainInfo
+    @Binding var enabled: Bool
+    @Binding var slug: String
+    @Binding var check: NimShareAPI.SubdomainCheck?
+    /// In-flight Check-Task, damit jeder Tastendruck den vorherigen abbricht.
+    @State private var checkTask: Task<Void, Never>?
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $enabled.animation()) {
+                Label("Als Subdomain freigeben", systemImage: "globe")
+            }
+            .onChange(of: enabled) { _, on in
+                if !on { checkTask?.cancel(); check = nil }
+            }
+            if enabled {
+                TextField("z.B. wichtig", text: $slug)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .onChange(of: slug) { _, new in
+                        checkTask?.cancel()
+                        check = nil
+                        let t = new.trimmingCharacters(in: .whitespaces)
+                        guard !t.isEmpty else { return }
+                        checkTask = Task { await runCheck(t) }
+                    }
+                if let c = check {
+                    if c.available {
+                        Text("✓ \(host(c.normalised))")
+                            .font(.caption).foregroundStyle(.green)
+                    } else {
+                        Text("✕ \(reasonText(c.reason))")
+                            .font(.caption).foregroundStyle(Theme.warnRed)
+                    }
+                }
+            }
+        }
+    }
+
+    /// „wichtig" + Basis-Domain → „wichtig.nimshare.com".
+    private func host(_ normalised: String) -> String {
+        guard let base = info.baseDomain, !base.isEmpty else { return normalised }
+        return "\(normalised).\(base)"
+    }
+
+    private func reasonText(_ reason: String?) -> String {
+        switch reason {
+        case "taken": return String(localized: "vergeben")
+        case "reserved": return String(localized: "reserviert")
+        default: return String(localized: "ungültig")
+        }
+    }
+
+    private func runCheck(_ slug: String) async {
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        if Task.isCancelled { return }
+        guard let api = auth.api else { return }
+        do {
+            let r = try await api.subdomainCheck(slug)
+            if !Task.isCancelled { check = r }
+        } catch {
+            // Netzfehler/Cancel → keine Zeile anzeigen statt Fehl-Alarm.
+            if !Task.isCancelled { check = nil }
+        }
+    }
+}
+
+/// v1.11.0: Zusätzliche Subdomain-URL in der Erfolgs-Anzeige, mit Copy-Button.
+struct SubdomainResultRow: View {
+    let url: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text("Subdomain-Link")
+                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                .padding(.top, 4)
+            Text(url).font(.footnote.monospaced()).foregroundStyle(.secondary)
+                .padding(.horizontal, 20).multilineTextAlignment(.center)
+            Button {
+                UIPasteboard.general.string = url
+            } label: {
+                Label("Kopieren", systemImage: "doc.on.doc")
+            }
+            .buttonStyle(.bordered).tint(Theme.tungstenBlue).controlSize(.small)
+        }
     }
 }
 
@@ -226,6 +353,11 @@ struct UploadRequestCreateSheet: View {
     // v1.10.146: Zertifikat-Picker.
     @State private var certs: [CertDto] = []
     @State private var selectedCertId: UUID? = nil
+    // v1.11.0: Subdomain-Sharing (identisches Muster wie ShareLinkCreateSheet).
+    @State private var subInfo: NimShareAPI.SubdomainInfo?
+    @State private var useSubdomain = false
+    @State private var subSlug = ""
+    @State private var subCheck: NimShareAPI.SubdomainCheck?
 
     var body: some View {
         NavigationStack {
@@ -234,7 +366,12 @@ struct UploadRequestCreateSheet: View {
             } else {
                 formView
                     .task {
-                        guard certs.isEmpty, let api = auth.api else { return }
+                        guard let api = auth.api else { return }
+                        // v1.11.0: Subdomain-Feature-Info (einmalig).
+                        if subInfo == nil {
+                            subInfo = try? await api.subdomainInfo()
+                        }
+                        guard certs.isEmpty else { return }
                         if let list = try? await api.listCertificates() {
                             certs = list
                             selectedCertId = list.first(where: { $0.isDefault })?.id
@@ -250,6 +387,14 @@ struct UploadRequestCreateSheet: View {
                 TextField("z.B. jan-invoices", text: $slug)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                 Text("Freilassen für automatisch generierten Slug.").font(.caption).foregroundStyle(.secondary)
+            }
+            // v1.11.0: Subdomain-Sharing — nur wenn Server-Feature an
+            // UND dieser User es nutzen darf.
+            if let si = subInfo, si.enabled, si.canUse {
+                SubdomainSection(info: si,
+                                 enabled: $useSubdomain,
+                                 slug: $subSlug,
+                                 check: $subCheck)
             }
             Section("Passwortschutz (optional)") {
                 SecureField("Passwort", text: $password).textContentType(.newPassword)
@@ -313,6 +458,10 @@ struct UploadRequestCreateSheet: View {
                         .buttonStyle(.bordered).tint(Theme.tungstenBlue)
                 }
             }
+            // v1.11.0: Subdomain-URL zusätzlich anzeigen, wenn vorhanden.
+            if let sub = r.subdomainUrl, !sub.isEmpty {
+                SubdomainResultRow(url: sub)
+            }
             Spacer()
         }
         .padding()
@@ -333,7 +482,8 @@ struct UploadRequestCreateSheet: View {
                 message: message.isEmpty ? nil : message,
                 targetFolder: (targetFolderName?.isEmpty == false) ? targetFolderName! : "Received",
                 notifyOnUpload: notifyOnUpload,
-                signingCertificateId: selectedCertId    // v1.10.146
+                signingCertificateId: selectedCertId,    // v1.10.146
+                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug)  // v1.11.0
             )
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }

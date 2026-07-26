@@ -192,6 +192,10 @@ struct ShareLinkDto: Codable, Identifiable, Hashable {
     // Damit die Row-UI "📄 Datei: report.pdf" statt "🔗 6rxvbse43e" zeigt.
     let targetKind: String?
     let targetName: String?
+    // v1.11.0: Subdomain-Sharing — vollständige URL (https://slug.base.tld)
+    // wenn der Link als Subdomain freigegeben wurde. Optional, damit ältere
+    // Server ohne dieses Feld weiter dekodieren.
+    let subdomainUrl: String?
 }
 
 // MARK: - Contacts (v1.10.71 iOS parity — Adressbuch)

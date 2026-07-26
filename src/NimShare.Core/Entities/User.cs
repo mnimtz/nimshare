@@ -52,6 +52,11 @@ public class User
     /// </summary>
     public bool ShowAvatarOnPersonalShares { get; set; }
 
+    /// <summary>v1.11.0 — darf dieser User Subdomain-Freigaben anlegen
+    /// (wichtig.nimshare.com)? Admin vergibt das Recht pro User in
+    /// /settings/users (Slug-Landgrab-Schutz). Admins dürfen immer.</summary>
+    public bool CanUseSubdomainShares { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     /// <summary>Per-user storage quota in bytes.</summary>

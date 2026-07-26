@@ -1,0 +1,84 @@
+@model NimShare.Api.Controllers.SubdomainSettingsController.SubdomainSettingsVm
+@{ ViewData["Title"] = T["subdomains.title"]; Layout = "_AppShell"; }
+@* v1.11.0 — Admin-Seite für Subdomain-Sharing. Konfiguriert Basis-Domain,
+   Origin-Host und den Cloudflare-Setup-Assistenten (Wildcard-CNAME + asuid-TXT).
+   Muster: EmailGateway/Index.cshtml (Card + Field + TempData-Flash). *@
+<div class="page-header">
+    <div>
+        <h1>🌐 @T["subdomains.title"]</h1>
+        <p class="lede">@T["subdomains.lede"]</p>
+    </div>
+</div>
+
+@if (TempData["Notice"] is string n)
+{
+    <div class="card" style="border-left:3px solid var(--status-ok);background:rgba(0,235,134,.06)">@n</div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+<form method="post" action="/settings/subdomains" class="card" style="max-width:720px">
+    @Html.AntiForgeryToken()
+    <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+            <input type="checkbox" name="Enabled" value="true" checked="@Model.Enabled"/>
+            <span style="font-weight:500">@T["subdomains.enable"]</span>
+        </label>
+    </div>
+    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:240px">
+            <label for="BaseDomain">@T["subdomains.base_domain"]</label>
+            <input type="text" name="BaseDomain" id="BaseDomain" value="@Model.BaseDomain"
+                   placeholder="nimshare.com" autocomplete="off" spellcheck="false"/>
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+            <label for="OriginHost">@T["subdomains.origin_host"]</label>
+            @* Vorbelegung mit dem App-Service-Default-Host, solange noch nichts gespeichert ist. *@
+            <input type="text" name="OriginHost" id="OriginHost"
+                   value="@(string.IsNullOrEmpty(Model.OriginHost) ? Model.SuggestedOriginHost : Model.OriginHost)"
+                   autocomplete="off" spellcheck="false"/>
+            <div class="helper">@T["subdomains.origin_host_hint"]</div>
+        </div>
+    </div>
+    <div class="field">
+        <label for="AzureVerificationId">@T["subdomains.azure_id"]</label>
+        <input type="text" name="AzureVerificationId" id="AzureVerificationId"
+               value="@Model.AzureVerificationId" autocomplete="off" spellcheck="false"/>
+        <div class="helper">@T["subdomains.azure_id_hint"]</div>
+    </div>
+    <div class="field">
+        <label for="CloudflareApiToken">@T["subdomains.cf_token"]</label>
+        @* Write-only: das Token wird nie zurück ins Formular gerendert. *@
+        <input type="password" name="CloudflareApiToken" id="CloudflareApiToken" autocomplete="new-password"
+               placeholder="@(Model.HasCloudflareToken ? T["subdomains.cf_token_keep"].Value : "")"/>
+        <div class="helper">
+            @T["subdomains.cf_token_hint"]
+            @if (Model.HasCloudflareToken)
+            {
+                <br/><span>✓ @T["subdomains.cf_token_keep"]</span>
+            }
+        </div>
+    </div>
+    <div style="margin-top:var(--sp-4)">
+        <button type="submit" class="btn btn-primary">💾 @T["actions.save"]</button>
+    </div>
+</form>
+
+<form method="post" action="/settings/subdomains/setup-dns" class="card" style="max-width:720px">
+    @Html.AntiForgeryToken()
+    <h2 class="card-title">@T["subdomains.setup_dns"]</h2>
+    <p class="muted" style="margin-top:0">@T["subdomains.setup_dns_hint"]</p>
+    <button type="submit" class="btn btn-ghost">⚙ @T["subdomains.setup_dns"]</button>
+</form>
+
+<div class="card" style="max-width:720px">
+    <h2 class="card-title">@T["subdomains.guide.title"]</h2>
+    <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px">
+        <li>@T["subdomains.guide.step1"]</li>
+        <li>@T["subdomains.guide.step2"]</li>
+        <li>@T["subdomains.guide.step3"]</li>
+        <li>@T["subdomains.guide.step4"]</li>
+    </ol>
+</div>

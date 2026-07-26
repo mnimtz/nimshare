@@ -111,6 +111,24 @@
     }
 </div>
 
+@* v1.11.0: Recht „Subdomain-Freigaben erstellen" — eigenständiges Mini-Form,
+   sendet sofort bei Toggle (Muster: andere Sofort-Toggles im Admin-UI).
+   Admins dürfen ohnehin immer Subdomain-Links anlegen (Server enforced das),
+   dieser Schalter ist nur für normale User relevant. *@
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">🌐 @T["subdomains.user_perm.heading"]</h2>
+    <form method="post" action="/settings/users/@Model.Id/set-subdomain-shares"
+          onchange="this.querySelector('[name=allowed]').value = this.querySelector('#subShareCb').checked; this.submit()">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="allowed" value="@(Model.CanUseSubdomainShares ? "true" : "false")"/>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+            <input type="checkbox" id="subShareCb" @(Model.CanUseSubdomainShares ? "checked" : "")/>
+            <span>@T["subdomains.user_perm_label"]</span>
+        </label>
+        <div class="helper" style="margin-top:4px">@T["subdomains.user_perm_hint"]</div>
+    </form>
+</div>
+
 @if (!isEntra)
 {
     <div class="card" style="margin-bottom:16px">

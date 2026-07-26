@@ -52,7 +52,10 @@ public class LinksController : ControllerBase
         // serverseitig ignoriert (Landing zeigt kein Upload-Widget).
         bool AllowUploads = false,
         // v1.10.196: Aufnahmeort-Karte auf der Album-Landing (nur Gallery-Modus).
-        bool ShowGpsMap = true);
+        bool ShowGpsMap = true,
+        // v1.11.0: optionaler Subdomain-Slug (https://{slug}.{BaseDomain}).
+        // Nur wirksam wenn das Feature aktiv ist und der User das Recht hat.
+        string? SubdomainSlug = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -71,7 +74,10 @@ public class LinksController : ControllerBase
         bool DisplayAsGallery = false,
         bool AllowUploads = false,
         // v1.10.196: GPS-Karten-Toggle des Links.
-        bool ShowGpsMap = true);
+        bool ShowGpsMap = true,
+        // v1.11.0: fertige Subdomain-URL (https://{slug}.{BaseDomain}), null
+        // wenn der Link keinen Subdomain-Slug hat oder das Feature aus ist.
+        string? SubdomainUrl = null);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -108,6 +114,38 @@ public class LinksController : ControllerBase
         return Ok(new SlugCheckResponse(false, "taken", normalised, suggestions));
     }
 
+    // ── v1.11.0: Subdomain-Sharing ──────────────────────────────────────
+    // Info fürs Frontend (Web-Modal + iOS-Sheet): Feature an? Basis-Domain?
+    // Darf der aktuelle User? Ein Aufruf beim Öffnen des Dialogs genügt.
+    public record SubdomainInfoResponse(bool Enabled, string? BaseDomain, bool CanUse);
+
+    [HttpGet("subdomain-info")]
+    public async Task<ActionResult<SubdomainInfoResponse>> SubdomainInfo(
+        [FromServices] ISubdomainShareService subSvc, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var s = await subSvc.GetSettingsAsync(ct);
+        var enabled = s is { Enabled: true } && !string.IsNullOrEmpty(s.BaseDomain);
+        return Ok(new SubdomainInfoResponse(
+            enabled,
+            enabled ? s!.BaseDomain : null,
+            enabled && (user.Role == UserRole.Admin || user.CanUseSubdomainShares)));
+    }
+
+    // Live-Check für das Subdomain-Feld (analog slug-check).
+    public record SubdomainCheckResponse(bool Available, string? Reason, string Normalised);
+
+    [HttpGet("subdomain-check")]
+    public async Task<ActionResult<SubdomainCheckResponse>> SubdomainCheck(string slug,
+        [FromServices] ISubdomainShareService subSvc, CancellationToken ct)
+    {
+        var normalised = (slug ?? "").Trim().ToLowerInvariant();
+        if (!subSvc.IsValidSlug(normalised, out var reason))
+            return Ok(new SubdomainCheckResponse(false, reason, normalised));
+        var free = await subSvc.IsSlugAvailableAsync(normalised, ct);
+        return Ok(new SubdomainCheckResponse(free, free ? null : "taken", normalised));
+    }
+
     [HttpPost]
     public async Task<ActionResult<LinkDto>> Create([FromBody] CreateLinkRequest req,
         [FromServices] IFileAccessService access,
@@ -137,6 +175,26 @@ public class LinksController : ControllerBase
         try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
+
+        // v1.11.0: optionaler Subdomain-Slug. Feature muss aktiv sein, der
+        // User braucht das Admin-vergebene Recht (Admins immer), der Slug
+        // muss DNS-safe + nicht reserviert + über beide Link-Typen frei sein.
+        string? subdomainSlug = null;
+        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
+        {
+            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+            var subSettings = await subSvc.GetSettingsAsync(ct);
+            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
+                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
+            if (user.Role != UserRole.Admin && !user.CanUseSubdomainShares)
+                return Problem(statusCode: 403, title: "You are not allowed to create subdomain shares.");
+            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
+            if (!subSvc.IsValidSlug(candidate, out var reason))
+                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, ct))
+                return Problem(statusCode: 409, title: "Subdomain slug taken");
+            subdomainSlug = candidate;
+        }
 
         // v1.10.146: Absender-Zertifikat — nur eigene akzeptieren, sonst leise
         // ignorieren (kein Fehler, damit der Link trotzdem erstellt wird).
@@ -174,6 +232,8 @@ public class LinksController : ControllerBase
             DisplayAsGallery = displayAsGallery,
             // v1.10.196: GPS-Karte pro Link abschaltbar (nur Gallery relevant).
             ShowGpsMap = req.ShowGpsMap,
+            // v1.11.0: Subdomain-Slug (oben validiert, null wenn nicht gewünscht).
+            SubdomainSlug = subdomainSlug,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -229,7 +289,7 @@ public class LinksController : ControllerBase
                 $"Share-Link erstellt: /s/{link.Slug} ({subject})",
                 fileId: link.FileId, folderId: link.FolderId, ct: ct);
         }
-        return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link));
+        return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link, await SubdomainBaseAsync(ct)));
     }
 
     [HttpGet]
@@ -246,7 +306,8 @@ public class LinksController : ControllerBase
             .Where(l => l.OwnerId == user.Id)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
-        return Ok(rows.Select(ToDto));
+        var subBase = await SubdomainBaseAsync(ct);
+        return Ok(rows.Select(l => ToDto(l, subBase)));
     }
 
     [HttpGet("{id:guid}")]
@@ -256,7 +317,7 @@ public class LinksController : ControllerBase
         var link = await _db.ShareLinks
             .Include(l => l.File).Include(l => l.Folder).Include(l => l.SigningCertificate)
             .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
-        return link is null ? NotFound() : Ok(ToDto(link));
+        return link is null ? NotFound() : Ok(ToDto(link, await SubdomainBaseAsync(ct)));
     }
 
     [HttpGet("{id:guid}/stats")]
@@ -433,7 +494,7 @@ public class LinksController : ControllerBase
             link.AllowedEmails = string.IsNullOrWhiteSpace(req.AllowedEmails) ? null : req.AllowedEmails.Trim();
         if (req.RequireEmailVerify is not null) link.RequireEmailVerify = req.RequireEmailVerify.Value;
         await _db.SaveChangesAsync(ct);
-        return Ok(ToDto(link));
+        return Ok(ToDto(link, await SubdomainBaseAsync(ct)));
     }
 
     [HttpDelete("{id:guid}")]
@@ -486,7 +547,7 @@ public class LinksController : ControllerBase
         return Ok(new { sent = true });
     }
 
-    private LinkDto ToDto(ShareLink l) => new(
+    private LinkDto ToDto(ShareLink l, string? subdomainBase = null) => new(
         l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
         l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
         l.PasswordHash != null, l.IsRevoked, l.CreatedAt,
@@ -501,7 +562,18 @@ public class LinksController : ControllerBase
         FolderIsGallery: l.Folder != null && l.Folder.Kind == FolderKind.Gallery,
         DisplayAsGallery: l.DisplayAsGallery,
         AllowUploads: l.AllowUploads,
-        ShowGpsMap: l.ShowGpsMap);
+        ShowGpsMap: l.ShowGpsMap,
+        // v1.11.0: fertige Subdomain-URL, wenn Feature aktiv + Slug gesetzt.
+        SubdomainUrl: l.SubdomainSlug != null && subdomainBase != null
+            ? $"https://{l.SubdomainSlug}.{subdomainBase}" : null);
+
+    /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>
+    private async Task<string?> SubdomainBaseAsync(CancellationToken ct)
+    {
+        var svc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+        var s = await svc.GetSettingsAsync(ct);
+        return s is { Enabled: true } && !string.IsNullOrEmpty(s.BaseDomain) ? s.BaseDomain : null;
+    }
 
     // v1.10.146: Signer-Info fürs Landing-Badge; nur bei vorhandenem Zertifikat.
     internal static SignerInfo? BuildSignerInfo(SigningCertificate? c)

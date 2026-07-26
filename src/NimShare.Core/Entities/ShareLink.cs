@@ -18,6 +18,12 @@ public class ShareLink
     /// <summary>Public slug used in the URL, e.g. "project-x". Globally unique.</summary>
     public string Slug { get; set; } = string.Empty;
 
+    /// <summary>v1.11.0 — optionaler Subdomain-Slug: der Link ist zusätzlich
+    /// als https://{SubdomainSlug}.{BaseDomain} erreichbar. DNS-safe
+    /// ([a-z0-9-], 1-63), unique über ShareLinks UND UploadRequests, gegen
+    /// die Reserved-List geprüft. Null = klassischer /s/-Link only.</summary>
+    public string? SubdomainSlug { get; set; }
+
     /// <summary>bcrypt-hashed password, or null if the link is public.</summary>
     public string? PasswordHash { get; set; }
 

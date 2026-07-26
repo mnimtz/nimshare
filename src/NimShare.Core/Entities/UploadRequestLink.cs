@@ -9,6 +9,10 @@ public class UploadRequestLink
 
     public string Slug { get; set; } = string.Empty;
 
+    /// <summary>v1.11.0 — optionaler Subdomain-Slug (https://{slug}.{BaseDomain}
+    /// → /u/{Slug}). Gleiche Regeln wie ShareLink.SubdomainSlug.</summary>
+    public string? SubdomainSlug { get; set; }
+
     public string? PasswordHash { get; set; }
 
     public DateTimeOffset? ExpiresAt { get; set; }

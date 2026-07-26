@@ -75,6 +75,22 @@
             <div class="helper">@T["upload.slug_helper"]</div>
             <div id="shareSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
         </div>
+        @* v1.11.0: Subdomain-Freigabe — Sektion wird nur eingeblendet, wenn
+           /api/v1/links/subdomain-info enabled && canUse liefert (einmal pro
+           Seite gecacht). Live-Check analog slugLiveCheck, aber gegen
+           subdomain-check und mit voller FQDN-Vorschau. *@
+        <div class="field" id="shareSubdomainWrap" style="display:none">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="checkbox" id="shareSubdomainOn" onchange="onSubdomainToggle('share')"/>
+                <span>🌐 @T["share.subdomain.enable"]</span>
+            </label>
+            <div id="shareSubdomainFieldWrap" style="display:none;margin-top:8px">
+                <label for="shareSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
+                <input type="text" id="shareSubdomainSlug" autocomplete="off" spellcheck="false"
+                       oninput="subdomainLiveCheck('shareSubdomainSlug', 'shareSubdomainStatus')"/>
+                <div id="shareSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+            </div>
+        </div>
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
                 <label>@T["upload.password"]</label>
@@ -145,6 +161,14 @@
                 <input id="shareUrl" readonly/>
                 <button class="btn btn-ghost" onclick="copyShareUrl()">📋</button>
             </div>
+            @* v1.11.0: Zusätzliche Subdomain-URL, wenn der Link eine hat. *@
+            <div id="shareSubdomainResult" style="display:none;margin-top:8px">
+                <label style="font-size:.85rem">🌐 @T["share.subdomain.link_label"]</label>
+                <div class="modal-result">
+                    <input id="shareSubdomainUrl" readonly/>
+                    <button class="btn btn-ghost" onclick="copySubdomainResultUrl('shareSubdomainUrl')">📋</button>
+                </div>
+            </div>
         </div>
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="closeModal('modalShare')">@T["modal.close"]</button>
@@ -163,6 +187,19 @@
             <input type="text" id="urSlug" autocomplete="off" spellcheck="false"
                    oninput="slugLiveCheck('urSlug', 'urSlugStatus')"/>
             <div id="urSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+        </div>
+        @* v1.11.0: Subdomain-Sektion — identisch zum Share-Modal. *@
+        <div class="field" id="urSubdomainWrap" style="display:none">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="checkbox" id="urSubdomainOn" onchange="onSubdomainToggle('ur')"/>
+                <span>🌐 @T["share.subdomain.enable"]</span>
+            </label>
+            <div id="urSubdomainFieldWrap" style="display:none;margin-top:8px">
+                <label for="urSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
+                <input type="text" id="urSubdomainSlug" autocomplete="off" spellcheck="false"
+                       oninput="subdomainLiveCheck('urSubdomainSlug', 'urSubdomainStatus')"/>
+                <div id="urSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+            </div>
         </div>
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
@@ -192,6 +229,14 @@
             <div class="modal-result">
                 <input id="urUrl" readonly/>
                 <button class="btn btn-ghost" onclick="copyUploadReqUrl()">📋</button>
+            </div>
+            @* v1.11.0: Zusätzliche Subdomain-URL, wenn die Anfrage eine hat. *@
+            <div id="urSubdomainResult" style="display:none;margin-top:8px">
+                <label style="font-size:.85rem">🌐 @T["share.subdomain.link_label"]</label>
+                <div class="modal-result">
+                    <input id="urSubdomainUrl" readonly/>
+                    <button class="btn btn-ghost" onclick="copySubdomainResultUrl('urSubdomainUrl')">📋</button>
+                </div>
             </div>
         </div>
         <div class="actions">
@@ -272,6 +317,82 @@ function applySlug(inputId, statusId, s) {
 }
 function escapeHtmlSlug(s) {
     return String(s || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── v1.11.0: Subdomain-Sharing ──────────────────────────────────────
+// Einmal pro Seiten-Load geladen (Feature-Toggle + Basis-Domain ändern
+// sich nicht während der Session) und für beide Modals (Share + Upload-
+// Request) geteilt.
+let _subdomainInfoPromise = null;
+function ensureSubdomainInfoLoaded() {
+    if (!_subdomainInfoPromise) {
+        _subdomainInfoPromise = fetch('/api/v1/links/subdomain-info', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : { enabled: false, canUse: false, baseDomain: null })
+            .catch(() => ({ enabled: false, canUse: false, baseDomain: null }));
+    }
+    return _subdomainInfoPromise;
+}
+// Blendet die Subdomain-Sektion im gegebenen Modal ein/aus (Prefix 'share' oder 'ur').
+async function applySubdomainVisibility(prefix) {
+    const info = await ensureSubdomainInfoLoaded();
+    const wrap = document.getElementById(prefix + 'SubdomainWrap');
+    if (!wrap) return;
+    wrap.style.display = (info.enabled && info.canUse) ? '' : 'none';
+    wrap.dataset.baseDomain = info.baseDomain || '';
+}
+function onSubdomainToggle(prefix) {
+    const on = document.getElementById(prefix + 'SubdomainOn')?.checked;
+    const fieldWrap = document.getElementById(prefix + 'SubdomainFieldWrap');
+    if (fieldWrap) fieldWrap.style.display = on ? '' : 'none';
+    if (!on) {
+        const input = document.getElementById(prefix + 'SubdomainSlug');
+        const status = document.getElementById(prefix + 'SubdomainStatus');
+        if (input) input.value = '';
+        if (status) { status.textContent = ''; status.className = 'slug-status'; }
+    }
+}
+const _subdomainCheckTimers = {};
+function subdomainLiveCheck(inputId, statusId) {
+    if (_subdomainCheckTimers[inputId]) clearTimeout(_subdomainCheckTimers[inputId]);
+    const input = document.getElementById(inputId);
+    const status = document.getElementById(statusId);
+    if (!input || !status) return;
+    const val = input.value.trim().toLowerCase();
+    if (!val) { status.textContent = ''; status.className = 'slug-status'; return; }
+    _subdomainCheckTimers[inputId] = setTimeout(async () => {
+        try {
+            const r = await fetch('/api/v1/links/subdomain-check?slug=' + encodeURIComponent(val),
+                { credentials: 'same-origin' });
+            if (!r.ok) { status.textContent = ''; return; }
+            const d = await r.json();
+            const wrap = input.closest('.field');
+            const baseDomain = wrap ? wrap.dataset.baseDomain : '';
+            status.className = 'slug-status';
+            if (d.available) {
+                status.style.color = 'var(--status-ok, #2a7f2a)';
+                status.textContent = '✓ ' + d.normalised + (baseDomain ? '.' + baseDomain : '');
+            } else {
+                status.style.color = 'var(--status-critical, #c33)';
+                const reasonKey = d.reason === 'taken' ? @Json.Serialize(T["share.subdomain.taken"].Value)
+                    : d.reason === 'reserved' ? @Json.Serialize(T["share.subdomain.reserved"].Value)
+                    : @Json.Serialize(T["share.subdomain.invalid"].Value);
+                status.textContent = '✕ ' + reasonKey;
+            }
+        } catch { status.textContent = ''; }
+    }, 400);
+}
+function copySubdomainResultUrl(inputId) {
+    const el = document.getElementById(inputId);
+    el.select();
+    navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
+}
+// Liest den aktuellen Subdomain-Slug aus dem gegebenen Modal, oder null
+// wenn der Toggle aus / das Feld leer ist (→ Body-Feld bleibt weg).
+function readSubdomainSlug(prefix) {
+    const on = document.getElementById(prefix + 'SubdomainOn')?.checked;
+    if (!on) return null;
+    const val = (document.getElementById(prefix + 'SubdomainSlug')?.value || '').trim();
+    return val || null;
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -375,6 +496,7 @@ function openShareFileModal(fileId) {
     // ensureCertsLoaded() erst beim Klick auf „Link erstellen", d.h. der User
     // sah nur „Kein Zertifikat" auch wenn er längst eines angelegt hatte.
     ensureCertsLoaded();
+    applySubdomainVisibility('share');
 }
 function openShareFolderModal(folderId) {
     currentShareTarget = { type: 'folder', id: folderId };
@@ -382,6 +504,7 @@ function openShareFolderModal(folderId) {
     resetShareModal();
     openModal('modalShare');
     ensureCertsLoaded();
+    applySubdomainVisibility('share');
     // v1.10.167: Album-Optionen bei jedem Ordner-Link sichtbar. Der Toggle
     // „Als Album anzeigen" ist per-Link und braucht kein Kind=Gallery am
     // Ordner. Bei Gallery-Ordnern wird die Option vorausgewählt, weil der
@@ -419,6 +542,13 @@ function resetShareModal() {
     document.getElementById('shareResult').style.display = 'none';
     const st = document.getElementById('shareSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
+    // v1.11.0: Subdomain-Sektion zurücksetzen (Sichtbarkeit selbst regelt
+    // applySubdomainVisibility, hier nur die Werte leeren).
+    const sdOn = document.getElementById('shareSubdomainOn');
+    if (sdOn) sdOn.checked = false;
+    onSubdomainToggle('share');
+    const sdResult = document.getElementById('shareSubdomainResult');
+    if (sdResult) sdResult.style.display = 'none';
 }
 
 function openUploadRequestModal(folderId) {
@@ -427,8 +557,14 @@ function openUploadRequestModal(folderId) {
     const st = document.getElementById('urSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
     document.getElementById('urResult').style.display = 'none';
+    const urSdResult = document.getElementById('urSubdomainResult');
+    if (urSdResult) urSdResult.style.display = 'none';
+    const urSdOn = document.getElementById('urSubdomainOn');
+    if (urSdOn) urSdOn.checked = false;
+    onSubdomainToggle('ur');
     openModal('modalUploadReq');
     ensureCertsLoaded();
+    applySubdomainVisibility('ur');
 }
 
 // v1.10.146: Zertifikat-Dropdowns beim Öffnen der Modals einmalig füllen.
@@ -468,6 +604,8 @@ async function createShareLink() {
         allowUploads: !!document.getElementById('shareAllowUploads')?.checked,
         // v1.10.196: GPS-Karten-Toggle (Default an; nur im Album-Modus relevant).
         showGpsMap: document.getElementById('shareShowGpsMap') ? document.getElementById('shareShowGpsMap').checked : true,
+        // v1.11.0: optionaler Subdomain-Slug (null wenn Toggle aus/leer).
+        subdomainSlug: readSubdomainSlug('share'),
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;
@@ -497,6 +635,16 @@ async function createShareLink() {
     }
     document.getElementById('shareUrl').value = link.url;
     document.getElementById('shareResult').style.display = 'block';
+    // v1.11.0: fertige Subdomain-URL zusätzlich anzeigen, falls vorhanden.
+    const sdResult = document.getElementById('shareSubdomainResult');
+    if (sdResult) {
+        if (link.subdomainUrl) {
+            document.getElementById('shareSubdomainUrl').value = link.subdomainUrl;
+            sdResult.style.display = 'block';
+        } else {
+            sdResult.style.display = 'none';
+        }
+    }
 }
 function copyShareUrl() {
     const el = document.getElementById('shareUrl');
@@ -515,6 +663,8 @@ async function createUploadRequest() {
         targetFolder: 'Received',
         notifyOnUpload: true,
         signingCertificateId: document.getElementById('urCert').value || null,
+        // v1.11.0: optionaler Subdomain-Slug (null wenn Toggle aus/leer).
+        subdomainSlug: readSubdomainSlug('ur'),
     };
     const r = await fetch('/api/v1/upload-requests', {
         method: 'POST',
@@ -526,6 +676,16 @@ async function createUploadRequest() {
     const link = await r.json();
     document.getElementById('urUrl').value = link.url;
     document.getElementById('urResult').style.display = 'block';
+    // v1.11.0: fertige Subdomain-URL zusätzlich anzeigen, falls vorhanden.
+    const urSdResult = document.getElementById('urSubdomainResult');
+    if (urSdResult) {
+        if (link.subdomainUrl) {
+            document.getElementById('urSubdomainUrl').value = link.subdomainUrl;
+            urSdResult.style.display = 'block';
+        } else {
+            urSdResult.style.display = 'none';
+        }
+    }
 }
 function copyUploadReqUrl() {
     const el = document.getElementById('urUrl');

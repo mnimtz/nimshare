@@ -36,7 +36,9 @@ public class UploadRequestsController : ControllerBase
         string? RecurringDaysOfWeek = null,
         int? RecurringWindowDays = null,
         // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
-        Guid? SigningCertificateId = null);
+        Guid? SigningCertificateId = null,
+        // v1.11.0: optionaler Subdomain-Slug (https://{slug}.{BaseDomain} → /u/…).
+        string? SubdomainSlug = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRequest req, CancellationToken ct)
@@ -46,6 +48,27 @@ public class UploadRequestsController : ControllerBase
         try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
+
+        // v1.11.0: Subdomain-Slug — identische Regeln wie bei ShareLinks
+        // (Feature aktiv, User-Recht, DNS-safe, nicht reserviert, frei).
+        string? subdomainSlug = null;
+        string? subdomainBase = null;
+        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
+        {
+            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+            var subSettings = await subSvc.GetSettingsAsync(ct);
+            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
+                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
+            if (user.Role != UserRole.Admin && !user.CanUseSubdomainShares)
+                return Problem(statusCode: 403, title: "You are not allowed to create subdomain shares.");
+            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
+            if (!subSvc.IsValidSlug(candidate, out var reason))
+                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, ct))
+                return Problem(statusCode: 409, title: "Subdomain slug taken");
+            subdomainSlug = candidate;
+            subdomainBase = subSettings.BaseDomain;
+        }
 
         // v1.10.146: Absender-Zertifikat, nur eigene akzeptieren.
         Guid? certId = null;
@@ -69,6 +92,7 @@ public class UploadRequestsController : ControllerBase
             RecurringDaysOfWeek = string.IsNullOrWhiteSpace(req.RecurringDaysOfWeek) ? null : req.RecurringDaysOfWeek!.Trim(),
             RecurringWindowDays = req.RecurringWindowDays is > 0 ? req.RecurringWindowDays.Value : 7,
             SigningCertificateId = certId,
+            SubdomainSlug = subdomainSlug,
         };
         _db.UploadRequests.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -82,6 +106,8 @@ public class UploadRequestsController : ControllerBase
             link.MaxUploads,
             link.TargetFolder,
             HasPassword = link.PasswordHash is not null,
+            // v1.11.0: fertige Subdomain-URL für die Erfolgs-Anzeige.
+            SubdomainUrl = subdomainSlug is not null ? $"https://{subdomainSlug}.{subdomainBase}" : null,
         });
     }
 

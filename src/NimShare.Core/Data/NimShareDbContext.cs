@@ -53,6 +53,8 @@ public class NimShareDbContext : DbContext
     public DbSet<Connector> Connectors => Set<Connector>();
     // v1.10.164: Admin-Config für Konnektor-Provider (OneDrive ClientId/Secret).
     public DbSet<ConnectorProviderSettings> ConnectorProviderSettings => Set<ConnectorProviderSettings>();
+    // v1.11.0: Subdomain-Sharing-Konfiguration (Singleton-Row).
+    public DbSet<SubdomainShareSettings> SubdomainShareSettings => Set<SubdomainShareSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -379,6 +381,28 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.ClientId).HasMaxLength(120).IsRequired();
             e.Property(x => x.Tenant).HasMaxLength(120).IsRequired();
         });
+
+        // v1.11.0: Subdomain-Sharing — Instanz-Settings (Singleton-Row) +
+        // unique Slugs auf beiden Link-Typen. Die Middleware löst den Host
+        // {slug}.{BaseDomain} über genau diese Indizes auf.
+        b.Entity<SubdomainShareSettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.BaseDomain).HasMaxLength(253).IsRequired();
+            e.Property(x => x.OriginHost).HasMaxLength(253).IsRequired();
+            e.Property(x => x.AzureVerificationId).HasMaxLength(128);
+            e.Property(x => x.CloudflareZoneId).HasMaxLength(64);
+        });
+        b.Entity<ShareLink>()
+            .Property(x => x.SubdomainSlug).HasMaxLength(63);
+        b.Entity<ShareLink>()
+            .HasIndex(x => x.SubdomainSlug).IsUnique()
+            .HasFilter("\"SubdomainSlug\" IS NOT NULL");
+        b.Entity<UploadRequestLink>()
+            .Property(x => x.SubdomainSlug).HasMaxLength(63);
+        b.Entity<UploadRequestLink>()
+            .HasIndex(x => x.SubdomainSlug).IsUnique()
+            .HasFilter("\"SubdomainSlug\" IS NOT NULL");
 
         b.Entity<FilePin>(e =>
         {
