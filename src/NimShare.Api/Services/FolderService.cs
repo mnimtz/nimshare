@@ -218,7 +218,13 @@ public class FolderService : IFolderService
                 && (user.Role == UserRole.Admin || await _access.IsGroupMemberAsync(user, g, ct)),
             _ => false,
         };
-        if (!baseGrant) return false;
+        // v1.10.193: DirectShare-Grant (Ordner oder Vorfahr) öffnet Personal-/
+        // Group-Ordner für den Empfänger. Vorher wirkte ein Ordner-Share nur
+        // auf Datei-Ebene — der Empfänger sah unter „Mit mir geteilt" den
+        // Ordner, bekam beim Betreten aber Forbid (Marcus: „nicht ersichtlich
+        // ob es wirklich funktioniert").
+        if (!baseGrant)
+            return await _access.HasFolderDirectShareAsync(user, folder.Id, DirectSharePermission.Read, ct);
         // v1.10.104: Private-Ordner im Public-Scope brauchen zusätzlich
         // einen DirectShare-Grant (oder Ersteller/Admin).
         if (folder.Scope == FileScope.Public
@@ -235,7 +241,10 @@ public class FolderService : IFolderService
             FileScope.Group => folder.OwnerGroupId is Guid g && await _access.IsGroupMemberAsync(user, g, ct),
             _ => false,
         };
-        if (!baseGrant) return false;
+        // v1.10.193: Write-Grant per DirectShare öffnet den Ordner auch zum
+        // Schreiben (Empfänger mit „Schreiben"-Berechtigung darf hochladen).
+        if (!baseGrant)
+            return await _access.HasFolderDirectShareAsync(user, folder.Id, DirectSharePermission.Write, ct);
 
         // v1.10.104: Private-Ordner im Public-Scope: Grant muss existieren
         // (sonst siehst du den Ordner gar nicht → schreiben schon gar nicht).

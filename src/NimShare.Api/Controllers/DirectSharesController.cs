@@ -203,26 +203,48 @@ public class DirectSharesController : ControllerBase
             fileId: req.FileId, folderId: req.FolderId, groupId: req.GroupId, targetUserId: req.UserId, ct: ct);
 
         // Ping the recipient(s) so the tray badge lights up right away.
+        // v1.10.193: Titel in der Sprache des EMPFÄNGERS (PreferredCulture)
+        // statt hardcodiert Deutsch — EFIGS+NL-Regel gilt auch für den Tray.
         var notifier = HttpContext.RequestServices.GetService(typeof(IUserNotifier)) as IUserNotifier;
         if (notifier is not null)
         {
             var itemName = req.FileId is Guid ff
                 ? (await _db.Files.FindAsync(new object[] { ff }, ct))?.Name
                 : (await _db.Folders.FindAsync(new object[] { req.FolderId!.Value }, ct))?.Name;
-            var quoted = "„" + itemName + "“";
-            var title = perm == DirectSharePermission.Write
-                ? $"{me.DisplayName} hat dir Schreibrechte auf {quoted} gegeben"
-                : $"{me.DisplayName} hat {quoted} mit dir geteilt";
+            var locFactory = HttpContext.RequestServices
+                .GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizerFactory>();
+            string TitleFor(string? culture)
+            {
+                var prev = System.Globalization.CultureInfo.CurrentUICulture;
+                try
+                {
+                    System.Globalization.CultureInfo.CurrentUICulture =
+                        System.Globalization.CultureInfo.GetCultureInfo(
+                            string.IsNullOrWhiteSpace(culture) ? "en" : culture);
+                    var t = locFactory.Create(typeof(SharedResources));
+                    return perm == DirectSharePermission.Write
+                        ? t["notify.direct_share.write", me.DisplayName, itemName ?? "?"].Value
+                        : t["notify.direct_share.read", me.DisplayName, itemName ?? "?"].Value;
+                }
+                catch
+                {
+                    return $"{me.DisplayName}: {itemName}";
+                }
+                finally { System.Globalization.CultureInfo.CurrentUICulture = prev; }
+            }
             if (req.UserId is Guid u)
             {
-                await notifier.NotifyAsync(u, NotificationKind.DirectShareGranted, title,
+                var culture = await _db.Users.Where(x => x.Id == u)
+                    .Select(x => x.PreferredCulture).FirstOrDefaultAsync(ct);
+                await notifier.NotifyAsync(u, NotificationKind.DirectShareGranted, TitleFor(culture),
                     href: "/shared-with-me", fileId: req.FileId, ct: ct);
             }
             else if (req.GroupId is Guid g)
             {
-                var memberIds = await _db.GroupMemberships.Where(m => m.GroupId == g && m.UserId != me.Id).Select(m => m.UserId).ToListAsync(ct);
-                foreach (var uid in memberIds)
-                    await notifier.NotifyAsync(uid, NotificationKind.DirectShareGranted, title,
+                var members = await _db.GroupMemberships.Where(m => m.GroupId == g && m.UserId != me.Id)
+                    .Select(m => new { m.UserId, m.User.PreferredCulture }).ToListAsync(ct);
+                foreach (var m in members)
+                    await notifier.NotifyAsync(m.UserId, NotificationKind.DirectShareGranted, TitleFor(m.PreferredCulture),
                         href: "/shared-with-me", fileId: req.FileId, ct: ct);
             }
         }

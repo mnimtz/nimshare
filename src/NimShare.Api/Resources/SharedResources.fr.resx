@@ -1468,6 +1468,8 @@ Merci d'utiliser NimShare.</value></data>
   <data name="landing.gallery.lb.close"><value>Fermer</value></data>
   <data name="landing.gallery.lb.open_original"><value>Ouvrir l'original</value></data>
   <data name="landing.gallery.thumb_pending"><value>L'aperçu est en cours de génération…</value></data>
+  <data name="notify.direct_share.write"><value>{0} vous a donné l'accès en écriture à « {1} »</value></data>
+  <data name="notify.direct_share.read"><value>{0} a partagé « {1} » avec vous</value></data>
   <data name="landing.gallery.map.title"><value>Où ces photos ont été prises</value></data>
   <data name="landing.gallery.map.count"><value>{0} sur {1} photos localisées</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Les destinataires peuvent envoyer</value></data>

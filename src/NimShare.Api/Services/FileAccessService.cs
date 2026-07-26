@@ -59,6 +59,12 @@ public interface IFileAccessService
     /// <summary>True if the file has ANY grant to the given user via direct-share (self or group).</summary>
     Task<bool> HasDirectShareAsync(User user, Guid fileId, DirectSharePermission minLevel, CancellationToken ct = default);
 
+    /// <summary>v1.10.193: True wenn der Ordner (oder ein Vorfahr) einen
+    /// DirectShare-Grant ≥ minLevel für den User (direkt oder via Gruppe) hat.
+    /// Öffnet Personal-/Group-Ordner für Share-Empfänger — vorher wirkten
+    /// Ordner-Grants nur auf Datei-Ebene und der Ordner selbst blieb Forbid.</summary>
+    Task<bool> HasFolderDirectShareAsync(User user, Guid folderId, DirectSharePermission minLevel, CancellationToken ct = default);
+
     Task<DirectSharePermission?> EffectivePermissionOnFileAsync(User user, StorageFile file, CancellationToken ct = default);
     Task<DirectSharePermission?> EffectivePermissionOnFolderAsync(User user, Folder folder, CancellationToken ct = default);
 }
@@ -343,6 +349,27 @@ public class FileAccessService : IFileAccessService
             if (byFolder) return true;
             var parent = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
             folderId = parent;
+        }
+        return false;
+    }
+
+    public async Task<bool> HasFolderDirectShareAsync(User user, Guid folderId, DirectSharePermission minLevel, CancellationToken ct = default)
+    {
+        // Aufwärts durch die Ancestor-Kette — ein Grant auf einem Eltern-
+        // Ordner deckt alle Unterordner ab (analog zur Datei-Vererbung in
+        // HasDirectShareAsync). Zyklen-/Tiefen-Schutz wie dort.
+        Guid? current = folderId;
+        var visited = new HashSet<Guid>();
+        while (current is Guid fid && visited.Add(fid) && visited.Count <= 64)
+        {
+            var hit = await _db.DirectShares
+                .Where(s => s.FolderId == fid
+                    && s.Permission >= minLevel
+                    && (s.TargetUserId == user.Id
+                        || (s.TargetGroupId != null && _db.GroupMemberships.Any(m => m.UserId == user.Id && m.GroupId == s.TargetGroupId))))
+                .AnyAsync(ct);
+            if (hit) return true;
+            current = await _db.Folders.Where(x => x.Id == fid).Select(x => x.ParentFolderId).FirstOrDefaultAsync(ct);
         }
         return false;
     }

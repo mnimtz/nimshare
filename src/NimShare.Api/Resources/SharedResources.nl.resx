@@ -1467,6 +1467,8 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="landing.gallery.lb.close"><value>Sluiten</value></data>
   <data name="landing.gallery.lb.open_original"><value>Origineel openen</value></data>
   <data name="landing.gallery.thumb_pending"><value>Voorbeeld wordt gegenereerd…</value></data>
+  <data name="notify.direct_share.write"><value>{0} heeft je schrijfrechten gegeven voor "{1}"</value></data>
+  <data name="notify.direct_share.read"><value>{0} heeft "{1}" met je gedeeld</value></data>
   <data name="landing.gallery.map.title"><value>Waar deze foto's zijn gemaakt</value></data>
   <data name="landing.gallery.map.count"><value>{0} van {1} foto's gelokaliseerd</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Ontvangers mogen uploaden</value></data>

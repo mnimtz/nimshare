@@ -46,7 +46,10 @@ else
                         }
                         else
                         {
-                            <span>@name</span>
+                            @* v1.10.193: Ordner-Shares sind jetzt betretbar —
+                               FolderService.CanReadAsync akzeptiert DirectShare-
+                               Grants. Vorher totes <span> + serverseitig Forbid. *@
+                            <a href="/browse/folder/@s.FolderId">@name</a>
                         }
                     </span>
                 </td>
