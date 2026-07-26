@@ -12,12 +12,14 @@ public class HomeController : Controller
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly ILocalAuthService _auth;
+    private readonly ISubdomainShareService _subdomains;
 
-    public HomeController(NimShareDbContext db, ICurrentUserService users, ILocalAuthService auth)
+    public HomeController(NimShareDbContext db, ICurrentUserService users, ILocalAuthService auth, ISubdomainShareService subdomains)
     {
         _db = db;
         _users = users;
         _auth = auth;
+        _subdomains = subdomains;
     }
 
     [Route("/")]
@@ -106,6 +108,14 @@ public class HomeController : Controller
         var publicLinks = all
             .Where(l => IsPublicScope(l))
             .ToList();
+
+        // v1.11.0 — Marcus's Wunsch: eigene "Subdomains"-Sektion, quer zu den
+        // obigen (nicht-exklusiven) Scope-Kategorien — zeigt einfach jeden
+        // sichtbaren Link mit gesetztem SubdomainSlug samt fertiger URL.
+        var subdomainLinks = all.Where(l => !string.IsNullOrEmpty(l.SubdomainSlug)).ToList();
+        var sdSettings = await _subdomains.GetSettingsAsync(ct);
+        ViewData["SubdomainLinks"] = subdomainLinks;
+        ViewData["SubdomainBase"] = sdSettings is { Enabled: true } ? sdSettings.BaseDomain : null;
 
         ViewData["PublicLinks"] = publicLinks;
         ViewData["GroupLinks"] = groupLinks;

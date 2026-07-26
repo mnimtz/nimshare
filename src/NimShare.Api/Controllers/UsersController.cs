@@ -127,22 +127,6 @@ public class UsersController : Controller
         return RedirectToAction(nameof(List));
     }
 
-    // v1.11.0: Recht „Subdomain-Freigaben erstellen" pro User (Toggle auf
-    // der User-Edit-Seite). Admins dürfen ohnehin immer.
-    [Authorize(Policy = "WebUser")]
-    [HttpPost("/settings/users/{id:guid}/set-subdomain-shares")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetSubdomainShares(Guid id, bool allowed, CancellationToken ct)
-    {
-        if (!await RequireAdmin(ct)) return Forbid();
-        var u = await _db.Users.FindAsync(new object[] { id }, ct);
-        if (u is null) return NotFound();
-        u.CanUseSubdomainShares = allowed;
-        await _db.SaveChangesAsync(ct);
-        TempData["Notice"] = _l["subdomains.user_perm_saved"].Value;
-        return RedirectToAction(nameof(Edit), new { id });
-    }
-
     // ── Modern Edit page (all fields on one screen) ────────────────────────
     [Authorize(Policy = "WebUser")]
     [HttpGet("/settings/users/{id:guid}")]
@@ -165,7 +149,7 @@ public class UsersController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(Guid id, string displayName, string email, string role,
         long quotaGb, bool isActive, Guid[]? groupIds, string? newPassword,
-        bool publicCanRead, bool publicCanWrite, bool publicCanDelete,
+        bool publicCanRead, bool publicCanWrite, bool publicCanDelete, bool canUseSubdomainShares,
         [FromServices] IPasswordHasher hasher, CancellationToken ct)
     {
         if (!await RequireAdmin(ct)) return Forbid();
@@ -204,6 +188,7 @@ public class UsersController : Controller
         u.PublicCanRead = publicCanRead;
         u.PublicCanWrite = publicCanWrite;
         u.PublicCanDelete = publicCanDelete;
+        u.CanUseSubdomainShares = canUseSubdomainShares;
 
         // Optional password reset by admin (only for local accounts).
         if (!string.IsNullOrEmpty(newPassword))

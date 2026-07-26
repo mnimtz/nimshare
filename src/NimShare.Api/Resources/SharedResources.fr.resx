@@ -586,6 +586,9 @@ Ouvrez le lien :
   <data name="landing.preview_after_password"><value>Aperçu disponible après le mot de passe.</value></data>
   <data name="links.mine.section"><value>Mes liens</value></data>
   <data name="links.public.section"><value>Liens publics</value></data>
+  <data name="links.subdomain.section"><value>Sous-domaines</value></data>
+  <data name="links.subdomain.lede"><value>Liens accessibles via votre propre sous-domaine (nom.votredomaine.com).</value></data>
+  <data name="links.subdomain.url"><value>URL du sous-domaine</value></data>
   <data name="links.public.lede"><value>Liens fournis par l'administrateur. Utilisables et partageables, mais non modifiables.</value></data>
   <data name="links.public.by"><value>Publié par</value></data>
   <data name="links.public.badge"><value>Public</value></data>

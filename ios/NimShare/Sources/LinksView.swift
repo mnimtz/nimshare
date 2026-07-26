@@ -69,12 +69,15 @@ struct LinksView: View {
     // nicht durch eine Button-Kaskade blockiert wird.
     @ViewBuilder
     private func linkRow(_ link: ShareLinkDto) -> some View {
+        // v1.11.0-UX-Fix: Kontext-Menü kopiert/teilt dieselbe primäre URL wie
+        // die Row selbst (Subdomain wenn vorhanden, sonst die klassische).
+        let primaryUrl = (link.subdomainUrl?.isEmpty == false) ? link.subdomainUrl! : link.url
         NavigationLink { LinkReportView(linkId: link.id, slug: link.slug) } label: { row(link) }
             .contextMenu {
-                Button { UIPasteboard.general.string = link.url } label: {
+                Button { UIPasteboard.general.string = primaryUrl } label: {
                     Label("Link kopieren", systemImage: "doc.on.doc")
                 }
-                if let u = URL(string: link.url) {
+                if let u = URL(string: primaryUrl) {
                     ShareLink(item: u) { Label("Teilen", systemImage: "square.and.arrow.up") }
                 }
                 Button(role: .destructive) { pendingDelete = link } label: {
@@ -96,7 +99,13 @@ struct LinksView: View {
     }
 
     private func row(_ link: ShareLinkDto) -> some View {
-        let full = URL(string: link.url)
+        // v1.11.0-UX-Fix: wenn der Link eine Subdomain hat, ist SIE die
+        // primäre/prominente URL (Copy/Teilen wirken darauf) — die klassische
+        // /s/slug-URL wird nur noch als kleiner, dezenter Hinweis gezeigt statt
+        // gleichwertig danebenzustehen ("das wär doppelt" — Marcus).
+        let hasSubdomain = link.subdomainUrl?.isEmpty == false
+        let primaryUrl = hasSubdomain ? link.subdomainUrl! : link.url
+        let full = URL(string: primaryUrl)
         // v1.10.71: target-Info als HEADLINE. Slug + URL zusätzlich klein
         // darunter (wie Web). Chip zeigt State.
         let targetLine: (icon: String, prefix: String, name: String)? = {
@@ -126,17 +135,17 @@ struct LinksView: View {
                 if link.hasPassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary) }
                 if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.warnRed) }
             }
-            Text(link.url).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
-            // v1.11.0: fertige Subdomain-URL zusätzlich anzeigen, wenn der
-            // Link eine hat. Tap kopiert (analog zur Haupt-URL, aber ohne
-            // eigenen Button — dezenter zweiter Link).
-            if let sub = link.subdomainUrl, !sub.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.tungstenBlue)
-                    Text(sub).font(.caption.monospaced()).foregroundStyle(Theme.tungstenBlue).lineLimit(1)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { UIPasteboard.general.string = sub }
+            HStack(spacing: 6) {
+                if hasSubdomain { Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.tungstenBlue) }
+                Text(primaryUrl).font(.caption.monospaced())
+                    .foregroundStyle(hasSubdomain ? Theme.tungstenBlue : Color.secondary).lineLimit(1)
+            }
+            // v1.11.0-UX-Fix: klassische URL nur noch als kleiner, dezenter
+            // Hinweis wenn die Subdomain bereits oben prominent gezeigt wird
+            // (statt beide gleichwertig untereinander — "das wär doppelt").
+            if hasSubdomain {
+                Text("Auch erreichbar über \(link.url)")
+                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
             HStack(spacing: 12) {
                 Text("\(link.downloadCount) Downloads").font(.caption).foregroundStyle(.secondary)
@@ -148,7 +157,7 @@ struct LinksView: View {
             }
             HStack(spacing: 8) {
                 Button {
-                    UIPasteboard.general.string = link.url
+                    UIPasteboard.general.string = primaryUrl
                 } label: {
                     Label("Kopieren", systemImage: "doc.on.doc")
                 }.buttonStyle(.bordered).controlSize(.small)

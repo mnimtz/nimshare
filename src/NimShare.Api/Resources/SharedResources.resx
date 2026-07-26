@@ -587,6 +587,9 @@ Open the link:
   <data name="landing.preview_after_password"><value>Preview available after password.</value></data>
   <data name="links.mine.section"><value>My links</value></data>
   <data name="links.public.section"><value>Public links</value></data>
+  <data name="links.subdomain.section"><value>Subdomains</value></data>
+  <data name="links.subdomain.lede"><value>Links reachable via your own subdomain (yourname.yourdomain.com).</value></data>
+  <data name="links.subdomain.url"><value>Subdomain URL</value></data>
   <data name="links.public.lede"><value>Links provided by the administrator. You can use and share them, but not modify or delete.</value></data>
   <data name="links.public.by"><value>Provided by</value></data>
   <data name="links.public.badge"><value>Public</value></data>

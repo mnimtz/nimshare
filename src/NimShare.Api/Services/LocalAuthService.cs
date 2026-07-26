@@ -53,6 +53,12 @@ public class LocalAuthService : ILocalAuthService
             PasswordHash = _hasher.Hash(password),
             Role = role,
             IsActive = true,
+            // Admins bekommen alle Öffentlicher-Bereich-Rechte + Subdomain-Freigabe
+            // automatisch — der Server erlaubt es ihnen ohnehin überall (siehe
+            // FileAccessService.CanDeleteAsync / SubdomainShareService-Checks),
+            // die Flags sollen das im UI nur konsistent widerspiegeln.
+            PublicCanDelete = role == UserRole.Admin,
+            CanUseSubdomainShares = role == UserRole.Admin,
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);

@@ -586,6 +586,9 @@ Abre el enlace:
   <data name="landing.preview_after_password"><value>Vista previa disponible tras la contraseña.</value></data>
   <data name="links.mine.section"><value>Mis enlaces</value></data>
   <data name="links.public.section"><value>Enlaces públicos</value></data>
+  <data name="links.subdomain.section"><value>Subdominios</value></data>
+  <data name="links.subdomain.lede"><value>Enlaces accesibles a través de tu propio subdominio (nombre.tudominio.com).</value></data>
+  <data name="links.subdomain.url"><value>URL del subdominio</value></data>
   <data name="links.public.lede"><value>Enlaces proporcionados por el administrador. Puedes usarlos y compartirlos, no modificarlos.</value></data>
   <data name="links.public.by"><value>Publicado por</value></data>
   <data name="links.public.badge"><value>Público</value></data>

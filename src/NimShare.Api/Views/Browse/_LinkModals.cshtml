@@ -635,16 +635,7 @@ async function createShareLink() {
     }
     document.getElementById('shareUrl').value = link.url;
     document.getElementById('shareResult').style.display = 'block';
-    // v1.11.0: fertige Subdomain-URL zusätzlich anzeigen, falls vorhanden.
-    const sdResult = document.getElementById('shareSubdomainResult');
-    if (sdResult) {
-        if (link.subdomainUrl) {
-            document.getElementById('shareSubdomainUrl').value = link.subdomainUrl;
-            sdResult.style.display = 'block';
-        } else {
-            sdResult.style.display = 'none';
-        }
-    }
+    applyResultUrls('share', link);
 }
 function copyShareUrl() {
     const el = document.getElementById('shareUrl');
@@ -676,15 +667,24 @@ async function createUploadRequest() {
     const link = await r.json();
     document.getElementById('urUrl').value = link.url;
     document.getElementById('urResult').style.display = 'block';
-    // v1.11.0: fertige Subdomain-URL zusätzlich anzeigen, falls vorhanden.
-    const urSdResult = document.getElementById('urSubdomainResult');
-    if (urSdResult) {
-        if (link.subdomainUrl) {
-            document.getElementById('urSubdomainUrl').value = link.subdomainUrl;
-            urSdResult.style.display = 'block';
-        } else {
-            urSdResult.style.display = 'none';
-        }
+    applyResultUrls('ur', link);
+}
+
+// v1.11.0: Hat der Link/die Anfrage eine Subdomain-URL, ist die klassische
+// /s/-URL redundant (beide führen zum selben Ziel) — Nutzer-Feedback: "das
+// wär doppelt". Also: klassische URL-Zeile ausblenden, Subdomain-URL wird
+// die einzig sichtbare/primäre. Ohne Subdomain bleibt alles wie vorher.
+function applyResultUrls(prefix, link) {
+    const classicRow = document.getElementById(prefix + 'Url').closest('.modal-result');
+    const sdResult = document.getElementById(prefix + 'SubdomainResult');
+    if (!sdResult) return;
+    if (link.subdomainUrl) {
+        document.getElementById(prefix + 'SubdomainUrl').value = link.subdomainUrl;
+        sdResult.style.display = 'block';
+        if (classicRow) classicRow.style.display = 'none';
+    } else {
+        sdResult.style.display = 'none';
+        if (classicRow) classicRow.style.display = '';
     }
 }
 function copyUploadReqUrl() {

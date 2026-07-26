@@ -542,51 +542,54 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.quota_updated"><value>Kontingent aktualisiert.</value></data>
   <data name="notice.groups_updated"><value>Gruppen aktualisiert.</value></data>
   <data name="notice.file_restored"><value>„{0}</value></data>
-  <data name="notice.purged_one"><value>Definitief verwijderd.</value></data>
-  <data name="notice.purged_many"><value>{0} definitief verwijderd.</value></data>
+  <data name="notice.purged_one"><value>Endgültig gelöscht.</value></data>
+  <data name="notice.purged_many"><value>{0} endgültig gelöscht.</value></data>
   <data name="notice.invite_sent"><value>Einladung an {0} versendet.</value></data>
-  <data name="notice.password_reset_sent"><value>Resetlink verzonden naar {0}.</value></data>
-  <data name="notice.group_created"><value>Groep aangemaakt.</value></data>
-  <data name="notice.group_updated"><value>Groep bijgewerkt.</value></data>
-  <data name="notice.group_deleted"><value>Groep verwijderd.</value></data>
-  <data name="notice.member_added"><value>Lid toegevoegd.</value></data>
-  <data name="notice.member_removed"><value>Lid verwijderd.</value></data>
-  <data name="notice.member_role_updated"><value>Rol bijgewerkt.</value></data>
-  <data name="err.invalid_email"><value>Ongeldig e-mailadres.</value></data>
-  <data name="err.user_exists"><value>Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.</value></data>
-  <data name="err.cannot_disable_self"><value>Je kunt jezelf niet deactiveren.</value></data>
+  <data name="notice.password_reset_sent"><value>Reset-Link an {0} gesendet.</value></data>
+  <data name="notice.group_created"><value>Gruppe erstellt.</value></data>
+  <data name="notice.group_updated"><value>Gruppe aktualisiert.</value></data>
+  <data name="notice.group_deleted"><value>Gruppe gelöscht.</value></data>
+  <data name="notice.member_added"><value>Mitglied hinzugefügt.</value></data>
+  <data name="notice.member_removed"><value>Mitglied entfernt.</value></data>
+  <data name="notice.member_role_updated"><value>Rolle aktualisiert.</value></data>
+  <data name="err.invalid_email"><value>Ungültige E-Mail-Adresse.</value></data>
+  <data name="err.user_exists"><value>Es existiert bereits ein Benutzer mit dieser E-Mail-Adresse.</value></data>
+  <data name="err.cannot_disable_self"><value>Du kannst dich nicht selbst deaktivieren.</value></data>
   <data name="err.cannot_delete_self"><value>Du kannst dich nicht selbst löschen.</value></data>
   <data name="err.last_admin"><value>Der letzte aktive Administrator kann nicht entfernt oder herabgestuft werden.</value></data>
   <data name="err.last_manager"><value>Der letzte Manager kann nicht entfernt oder herabgestuft werden.</value></data>
-  <data name="err.group_name_required"><value>Groepsnaam is vereist.</value></data>
-  <data name="err.quota_range"><value>Quotum moet tussen 1 GB en 10 TB liggen.</value></data>
+  <data name="err.group_name_required"><value>Gruppenname ist erforderlich.</value></data>
+  <data name="err.quota_range"><value>Kontingent muss zwischen 1 GB und 10 TB liegen.</value></data>
   <data name="err.entra_only"><value>Dieses Konto nutzt Entra — kein lokales Passwort hinterlegt.</value></data>
   <data name="err.wrong_password"><value>Aktuelles Passwort ist falsch.</value></data>
   <data name="err.password_mismatch"><value>Die neuen Passwörter stimmen nicht überein.</value></data>
   <data name="err.password_too_short"><value>Das neue Passwort muss mindestens 8 Zeichen lang sein.</value></data>
-  <data name="err.no_image"><value>Geen afbeelding ontvangen.</value></data>
-  <data name="err.image_too_large"><value>Afbeelding is te groot (max. 3 MiB na bijsnijden).</value></data>
-  <data name="err.upload_failed"><value>Uploaden mislukt. Probeer opnieuw.</value></data>
-  <data name="users.edit"><value>Nutzer bearbeiten</value></data>
-  <data name="users.reset_password"><value>Wachtwoord resetten</value></data>
+  <data name="err.no_image"><value>Kein Bild empfangen.</value></data>
+  <data name="err.image_too_large"><value>Bild ist zu groß (max. 3 MiB nach Zuschnitt).</value></data>
+  <data name="err.upload_failed"><value>Upload fehlgeschlagen. Bitte erneut versuchen.</value></data>
+  <data name="users.edit"><value>Benutzer bearbeiten</value></data>
+  <data name="users.reset_password"><value>Passwort zurücksetzen</value></data>
   <data name="users.reset_password.helper"><value>Sendet dem Benutzer eine E-Mail mit einem neuen Passwort.</value></data>
   <data name="users.new_password"><value>Neues Passwort</value></data>
-  <data name="users.set_password"><value>Wachtwoord instellen</value></data>
-  <data name="users.tab.basics"><value>Basis</value></data>
-  <data name="users.tab.groups"><value>Groepen</value></data>
-  <data name="users.tab.security"><value>Beveiliging</value></data>
-  <data name="users.no_groups"><value>Geen groepen toegewezen.</value></data>
+  <data name="users.set_password"><value>Passwort festlegen</value></data>
+  <data name="users.tab.basics"><value>Allgemein</value></data>
+  <data name="users.tab.groups"><value>Gruppen</value></data>
+  <data name="users.tab.security"><value>Sicherheit</value></data>
+  <data name="users.no_groups"><value>Keine Gruppen zugewiesen.</value></data>
   <data name="groups.rename"><value>Hernoemen</value></data>
-  <data name="groups.promote"><value>Tot manager maken</value></data>
-  <data name="groups.demote"><value>Tot lid maken</value></data>
-  <data name="groups.remove_member"><value>Verwijderen</value></data>
-  <data name="actions.save"><value>Opslaan</value></data>
-  <data name="actions.cancel"><value>Annuleren</value></data>
+  <data name="groups.promote"><value>Zum Manager machen</value></data>
+  <data name="groups.demote"><value>Zum Mitglied zurückstufen</value></data>
+  <data name="groups.remove_member"><value>Entfernen</value></data>
+  <data name="actions.save"><value>Speichern</value></data>
+  <data name="actions.cancel"><value>Abbrechen</value></data>
   <data name="actions.back"><value>Terug</value></data>
   <data name="links.action.report"><value>Auswertung</value></data>
   <data name="landing.preview_after_password"><value>Vorschau nach Passwort-Eingabe verfügbar.</value></data>
   <data name="links.mine.section"><value>Meine Links</value></data>
   <data name="links.public.section"><value>Öffentliche Links</value></data>
+  <data name="links.subdomain.section"><value>Subdomains</value></data>
+  <data name="links.subdomain.lede"><value>Links, die über eine eigene Subdomain erreichbar sind (name.deinedomain.com).</value></data>
+  <data name="links.subdomain.url"><value>Subdomain-URL</value></data>
   <data name="links.public.lede"><value>Vom Administrator bereitgestellte Links. Du kannst sie nutzen und teilen, aber nicht ändern oder löschen.</value></data>
   <data name="links.public.by"><value>Bereitgestellt von</value></data>
   <data name="links.public.badge"><value>Öffentlich</value></data>
@@ -773,7 +776,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="profile.show_avatar_on_landings.personal"><value>Avatar auf meinen persönlichen Freigabe-Seiten anzeigen</value></data>
   <data name="profile.show_avatar_on_landings.personal.hint"><value>Für Links, die du aus deiner „Persönlich"-Ablage erstellst — Empfänger sehen dein Profilbild auf der Download-Seite. Standard aus, damit private Freigaben rein branded wirken.</value></data>
   <data name="wiki.editor.tab_edit"><value>Bearbeiten</value></data>
-  <data name="wiki.editor.tab_split"><value>Split</value></data>
+  <data name="wiki.editor.tab_split"><value>Geteilt</value></data>
   <data name="wiki.editor.tab_preview"><value>Vorschau</value></data>
   <data name="wiki.editor.tt_bold"><value>Fett</value></data>
   <data name="wiki.editor.tt_italic"><value>Kursiv</value></data>
@@ -890,7 +893,7 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="certs.err.in_use_detail" xml:space="preserve"><value>{0} Link(s) verwenden dieses Zertifikat noch ({1} Freigabe, {2} Upload). Bitte zuerst dort entfernen bzw. neu zuweisen — oder das Zertifikat behalten.</value></data>
 
   <data name="email_tpl.preview.recipient_name"><value>Alice Muster</value></data>
-  <data name="email_tpl.preview.sender_name"><value>Bob Sender</value></data>
+  <data name="email_tpl.preview.sender_name"><value>Bob Absender</value></data>
   <data name="email_tpl.preview.sender_action"><value>unterschreiben</value></data>
   <data name="email_tpl.preview.doc_title"><value>Beispiel-Vertrag</value></data>
   <data name="email_tpl.preview.message"><value>Bitte bis Freitag.</value></data>
@@ -1078,7 +1081,7 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sig.new.new_template_hint"><value>Wiederverwendbares Email-Template direkt hier anlegen. Nutze Platzhalter wie {{doc.title}} — sie werden beim Versand ersetzt.</value></data>
   <data name="templates.name"><value>Name (intern)</value></data>
   <data name="templates.subject"><value>Betreffzeile</value></data>
-  <data name="templates.body"><value>Body</value></data>
+  <data name="templates.body"><value>Text</value></data>
   <data name="templates.placeholder_hint"><value>Verfügbare Platzhalter:</value></data>
   <data name="templates.set_default"><value>Als Standard für diese Sprache setzen</value></data>
   <data name="templates.err_name_subject"><value>Name und Betreffzeile sind erforderlich.</value></data>
@@ -1437,7 +1440,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.cert.details_title" xml:space="preserve"><value>Absender-Zertifikat</value></data>
   <data name="share.cert.subject" xml:space="preserve"><value>Name</value></data>
   <data name="share.cert.issuer" xml:space="preserve"><value>Ausgestellt von</value></data>
-  <data name="share.cert.thumbprint" xml:space="preserve"><value>Fingerprint</value></data>
+  <data name="share.cert.thumbprint" xml:space="preserve"><value>Fingerabdruck</value></data>
   <data name="share.cert.valid_until" xml:space="preserve"><value>Gültig bis</value></data>
   <data name="share.cert.self_issued" xml:space="preserve"><value>Selbst ausgestellt — der Absender ist selbst der Aussteller.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Absender-Zertifikat</value></data>

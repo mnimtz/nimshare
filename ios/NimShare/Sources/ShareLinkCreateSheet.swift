@@ -170,24 +170,12 @@ struct ShareLinkCreateSheet: View {
                 .foregroundStyle(.green)
                 .padding(.top, 24)
             Text("Link erstellt").font(.title2.weight(.bold))
-            Text(r.url).font(.footnote.monospaced()).foregroundStyle(.secondary)
-                .padding(.horizontal, 20).multilineTextAlignment(.center)
-            HStack(spacing: 12) {
-                Button {
-                    UIPasteboard.general.string = r.url
-                } label: {
-                    Label("Kopieren", systemImage: "doc.on.doc")
-                }.buttonStyle(.borderedProminent).tint(Theme.tungstenBlue)
-                if let u = URL(string: r.url) {
-                    ShareLink(item: u) {
-                        Label("Teilen", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(.bordered).tint(Theme.tungstenBlue)
-                }
-            }
-            // v1.11.0: Subdomain-URL zusätzlich anzeigen, wenn vorhanden.
-            if let sub = r.subdomainUrl, !sub.isEmpty {
-                SubdomainResultRow(url: sub)
-            }
+            // v1.11.0-UX-Fix: vorher wurden klassische /s/slug-URL UND
+            // Subdomain-URL gleichwertig nebeneinander gezeigt — Marcus
+            // fand das "doppelt". Jetzt: wenn eine Subdomain existiert,
+            // IST SIE die primäre/prominente URL; die klassische URL wird
+            // nur noch als kleiner, dezenter Hinweis darunter erwähnt.
+            ShareResultUrlBlock(classicUrl: r.url, subdomainUrl: r.subdomainUrl)
             Spacer()
         }
         .padding()
@@ -308,23 +296,41 @@ struct SubdomainSection: View {
     }
 }
 
-/// v1.11.0: Zusätzliche Subdomain-URL in der Erfolgs-Anzeige, mit Copy-Button.
-struct SubdomainResultRow: View {
-    let url: String
+/// v1.11.0-UX-Fix: gemeinsame Ergebnis-URL-Anzeige für Freigabelink UND
+/// Upload-Anforderung. Ersetzt die vorherige Doppel-Anzeige (klassische URL
+/// prominent + Subdomain-URL zusätzlich in einem eigenen Block darunter, was
+/// wie zwei separate Links wirkte). Jetzt: genau EINE prominente URL zum
+/// Kopieren/Teilen — Subdomain wenn vorhanden, sonst die klassische — plus
+/// optional ein kleiner, dezenter Hinweis, dass die klassische URL daneben
+/// ebenfalls weiter funktioniert.
+struct ShareResultUrlBlock: View {
+    let classicUrl: String
+    let subdomainUrl: String?
+
+    private var hasSubdomain: Bool { subdomainUrl?.isEmpty == false }
+    private var primaryUrl: String { hasSubdomain ? subdomainUrl! : classicUrl }
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text("Subdomain-Link")
-                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                .padding(.top, 4)
-            Text(url).font(.footnote.monospaced()).foregroundStyle(.secondary)
+        VStack(spacing: 8) {
+            Text(primaryUrl).font(.footnote.monospaced()).foregroundStyle(.secondary)
                 .padding(.horizontal, 20).multilineTextAlignment(.center)
-            Button {
-                UIPasteboard.general.string = url
-            } label: {
-                Label("Kopieren", systemImage: "doc.on.doc")
+            HStack(spacing: 12) {
+                Button {
+                    UIPasteboard.general.string = primaryUrl
+                } label: {
+                    Label("Kopieren", systemImage: "doc.on.doc")
+                }.buttonStyle(.borderedProminent).tint(Theme.tungstenBlue)
+                if let u = URL(string: primaryUrl) {
+                    ShareLink(item: u) {
+                        Label("Teilen", systemImage: "square.and.arrow.up")
+                    }.buttonStyle(.bordered).tint(Theme.tungstenBlue)
+                }
             }
-            .buttonStyle(.bordered).tint(Theme.tungstenBlue).controlSize(.small)
+            if hasSubdomain {
+                Text("Auch erreichbar über \(classicUrl)")
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .padding(.horizontal, 20).multilineTextAlignment(.center)
+            }
         }
     }
 }
@@ -447,21 +453,9 @@ struct UploadRequestCreateSheet: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 48)).foregroundStyle(.green).padding(.top, 24)
             Text("Anforderung erstellt").font(.title2.weight(.bold))
-            Text(r.url).font(.footnote.monospaced()).foregroundStyle(.secondary)
-                .padding(.horizontal, 20).multilineTextAlignment(.center)
-            HStack(spacing: 12) {
-                Button { UIPasteboard.general.string = r.url } label: {
-                    Label("Kopieren", systemImage: "doc.on.doc")
-                }.buttonStyle(.borderedProminent).tint(Theme.tungstenBlue)
-                if let u = URL(string: r.url) {
-                    ShareLink(item: u) { Label("Teilen", systemImage: "square.and.arrow.up") }
-                        .buttonStyle(.bordered).tint(Theme.tungstenBlue)
-                }
-            }
-            // v1.11.0: Subdomain-URL zusätzlich anzeigen, wenn vorhanden.
-            if let sub = r.subdomainUrl, !sub.isEmpty {
-                SubdomainResultRow(url: sub)
-            }
+            // v1.11.0-UX-Fix: siehe ShareLinkCreateSheet.resultView — Subdomain
+            // wird primär, klassische URL nur noch als dezenter Hinweis.
+            ShareResultUrlBlock(classicUrl: r.url, subdomainUrl: r.subdomainUrl)
             Spacer()
         }
         .padding()
