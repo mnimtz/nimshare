@@ -151,6 +151,13 @@ public class UploadRequestPublicController : Controller
         await _db.SaveChangesAsync(ct);
 
         await _notify.NotifyUploadAsync(link, file.Name, ct);
+        // v1.10.192: Upload-Request-Eingänge durch die AI-Pipeline schicken
+        // (Tags/Risk/Embedding) — analog FilesController.Complete. Thumbs für
+        // Bilder gleich mit (Browser-Preview + evtl. spätere Album-Nutzung).
+        HttpContext.RequestServices.GetRequiredService<IAiPostProcessor>().QueueForFile(file.Id);
+        if ((file.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            HttpContext.RequestServices.GetRequiredService<IThumbnailService>()
+                .Enqueue(file.Id, file.BlobPath, file.ContentType);
         return Ok(new { ok = true });
     }
 

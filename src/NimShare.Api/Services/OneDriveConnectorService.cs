@@ -41,10 +41,13 @@ public class OneDriveConnectorService : IConnectorService
     private readonly IBlobStorageService _blobs;
     private readonly IConfiguration _cfg;
     private readonly ILogger<OneDriveConnectorService> _log;
+    private readonly IAiPostProcessor _ai;
+    private readonly IThumbnailService _thumbs;
 
     public OneDriveConnectorService(NimShareDbContext db, IHttpClientFactory http,
         IDataProtectionProvider dp, IBlobStorageService blobs,
-        IConfiguration cfg, ILogger<OneDriveConnectorService> log)
+        IConfiguration cfg, ILogger<OneDriveConnectorService> log,
+        IAiPostProcessor ai, IThumbnailService thumbs)
     {
         _db = db;
         _http = http;
@@ -52,6 +55,8 @@ public class OneDriveConnectorService : IConnectorService
         _blobs = blobs;
         _cfg = cfg;
         _log = log;
+        _ai = ai;
+        _thumbs = thumbs;
     }
 
     // v1.10.164: Config aus der DB (per Admin-UI eingerichtet), Fallback auf
@@ -319,6 +324,13 @@ public class OneDriveConnectorService : IConnectorService
         file.Status = StorageFileStatus.Ready;
         file.ReadyAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // v1.10.192: Konnektor-Importe durch dieselbe Post-Pipeline wie
+        // reguläre Uploads: AI-Tags/Risk/Embedding (Consent-Gate greift im
+        // Prozessor) + Thumbnails für Bilder.
+        _ai.QueueForFile(file.Id);
+        if ((file.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            _thumbs.Enqueue(file.Id, file.BlobPath, file.ContentType);
     }
 
     private async Task<(Connector cn, string accessToken)> LoadAndRefreshAsync(Guid connectorId, CancellationToken ct)

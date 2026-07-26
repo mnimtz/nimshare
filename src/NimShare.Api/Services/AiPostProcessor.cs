@@ -91,7 +91,11 @@ public class AiPostProcessor : IAiPostProcessor
 
             if (doTags || (doRisk && file.Scope == FileScope.Public))
             {
-                var cls = await provider.ClassifyAsync(file.Name, text);
+                // v1.10.192: Tags in der Sprache des File-Owners (Web-Sprach-
+                // wahl persistiert in User.PreferredCulture). Vorher waren die
+                // Tags immer englisch, egal was der User eingestellt hatte.
+                var tagLang = string.IsNullOrWhiteSpace(owner.PreferredCulture) ? "en" : owner.PreferredCulture;
+                var cls = await provider.ClassifyAsync(file.Name, text, tagLang);
                 if (cls is not null)
                 {
                     if (doTags && cls.Tags.Length > 0)

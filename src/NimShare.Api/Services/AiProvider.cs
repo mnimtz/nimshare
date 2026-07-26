@@ -14,7 +14,10 @@ public record AiClassification(string[] Tags, string? RiskFlag);
 public interface IAiProvider
 {
     Task<string?> SummarizeAsync(string text, string language, CancellationToken ct = default);
-    Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default);
+    // v1.10.192: language = ISO-Code (z.B. "de") — Tags kommen in der Sprache
+    // des File-Owners statt immer englisch (Marcus: „obwohl alles auf deutsch
+    // steht, sind die Tags englisch").
+    Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default);
     Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default);
     /// <summary>Embed short text (name + first 2 KB) to a fixed-length float vector for semantic search. Returns null if the provider doesn't support embeddings.</summary>
     Task<float[]?> EmbedAsync(string text, CancellationToken ct = default);
@@ -31,7 +34,7 @@ public interface IAiProvider
 public class NullAiProvider : IAiProvider
 {
     public Task<string?> SummarizeAsync(string text, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
-    public Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default) => Task.FromResult<AiClassification?>(null);
+    public Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default) => Task.FromResult<AiClassification?>(null);
     public Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null);
     public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
@@ -75,10 +78,10 @@ public class OpenAiProvider : IAiProvider
             temperature: 0.2,
             ct);
 
-    public async Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default)
+    public async Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default)
     {
         var json = await ChatAsync(
-            system: "Return a compact JSON object with two keys: \"tags\" (array of 2-5 short lower-case keywords) and \"risk\" (one of: clean, pii, credit-card, secret, unknown). No markdown, only JSON.",
+            system: $"Return a compact JSON object with two keys: \"tags\" (array of 2-5 short lower-case keywords, written in the language whose ISO code is '{language}') and \"risk\" (one of: clean, pii, credit-card, secret, unknown). No markdown, only JSON.",
             user: $"Filename: {filename}\n\n{(text.Length > 2000 ? text[..2000] : text)}",
             temperature: 0.1,
             ct);
@@ -318,10 +321,10 @@ public class GeminiProvider : IAiProvider
             $"Summarize the following in 2-3 sentences in the language whose ISO code is '{language}'. No preamble.\n\n{(text.Length > 8000 ? text[..8000] : text)}",
             0.2, ct);
 
-    public async Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default)
+    public async Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default)
     {
         var json = await GenerateAsync(
-            $"Return only JSON: {{\"tags\":[…2-5 short keywords…],\"risk\":\"clean|pii|credit-card|secret|unknown\"}}\n\nFilename: {filename}\n\n{(text.Length > 2000 ? text[..2000] : text)}",
+            $"Return only JSON: {{\"tags\":[…2-5 short keywords in the language whose ISO code is '{language}'…],\"risk\":\"clean|pii|credit-card|secret|unknown\"}}\n\nFilename: {filename}\n\n{(text.Length > 2000 ? text[..2000] : text)}",
             0.1, ct);
         if (string.IsNullOrEmpty(json)) return null;
         try
@@ -697,10 +700,10 @@ public class AnthropicProvider : IAiProvider
             $"You are a concise assistant. Write a 2-3 sentence summary in the language whose ISO code is '{language}'. No markdown, no preamble.",
             text.Length > 8000 ? text[..8000] : text, 0.2, ct);
 
-    public async Task<AiClassification?> ClassifyAsync(string filename, string text, CancellationToken ct = default)
+    public async Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default)
     {
         var json = await MessagesAsync(
-            "Return a compact JSON object with two keys: \"tags\" (array of 2-5 short lower-case keywords) and \"risk\" (one of: clean, pii, credit-card, secret, unknown). No markdown, only JSON.",
+            $"Return a compact JSON object with two keys: \"tags\" (array of 2-5 short lower-case keywords, written in the language whose ISO code is '{language}') and \"risk\" (one of: clean, pii, credit-card, secret, unknown). No markdown, only JSON.",
             $"Filename: {filename}\n\n{(text.Length > 2000 ? text[..2000] : text)}", 0.1, ct);
         if (string.IsNullOrEmpty(json)) return null;
         try

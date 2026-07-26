@@ -790,6 +790,11 @@ public class ShareController : Controller
             var t = HttpContext.RequestServices.GetRequiredService<IThumbnailService>();
             t.Enqueue(file.Id, file.BlobPath, file.ContentType);
         }
+        // v1.10.192: Gäste-Uploads laufen jetzt auch durch die AI-Pipeline
+        // (Smart-Tags, Risk, Embedding) — vorher wurden nur reguläre Uploads
+        // via FilesController.Complete getaggt. Consent-Gate greift im
+        // Prozessor (Owner = Link-Ersteller muss AI-Consent haben).
+        HttpContext.RequestServices.GetRequiredService<IAiPostProcessor>().QueueForFile(file.Id);
         // v1.10.191: Album-ZIP invalidieren — jeder Link auf diesen Ordner hat
         // jetzt ein veraltetes vorgebautes ZIP (neues Foto fehlt drin). Beim
         // nächsten „Alle herunterladen" wird lazy neu gebaut.
