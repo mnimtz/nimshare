@@ -25,71 +25,44 @@ struct ChatView: View {
     @FocusState private var inputFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        if messages.isEmpty {
-                            emptyState.padding(.top, 60)
-                        }
-                        ForEach(messages) { m in
-                            bubble(m).id(m.id)
-                        }
-                        if busy {
-                            HStack { ProgressView(); Text("Denke…").font(.footnote).foregroundStyle(.secondary) }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal)
-                        }
+        // v1.10.195: Tastatur-Fix — die Eingabezeile hing als letztes Kind
+        // eines VStack an KEINER Safe-Area; in der Kombination
+        // NavigationStack-in-TabView + .scrollDismissesKeyboard(.interactively)
+        // versagte die automatische Keyboard-Avoidance und das Feld war
+        // unsichtbar hinter der Tastatur. Jetzt: Eingabezeile + Fehler-Banner
+        // als .safeAreaInset(edge: .bottom) an der ScrollView — SwiftUI
+        // schiebt das Inset dann korrekt über die Tastatur.
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    if messages.isEmpty {
+                        emptyState.padding(.top, 60)
                     }
-                    .padding(.vertical)
+                    ForEach(messages) { m in
+                        bubble(m).id(m.id)
+                    }
+                    if busy {
+                        HStack { ProgressView(); Text("Denke…").font(.footnote).foregroundStyle(.secondary) }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                    }
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .onChange(of: messages.count) {
-                    if let last = messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
-                }
-                // Tap anywhere im Scroll-Bereich → Tastatur weg.
-                .simultaneousGesture(TapGesture().onEnded { inputFocused = false })
+                .padding(.vertical)
             }
-
-            if let e = error {
-                // v1.10.97: Server-Text unverändert durchreichen — der ist seit
-                // v1.10.93 rollenabhängig (Admin sieht Reindex-Anleitung, User
-                // sieht „Admin muss indexieren"). Vorher hat iOS die Meldung
-                // mit eigenem, admin-orientiertem Text überschrieben — dadurch
-                // sah jeder User „bitte im Web unter Einstellungen indexieren"
-                // auch als Nicht-Admin, obwohl er dort gar keinen Zugriff hat.
-                let looksLikeNoIndex = e.contains("indexier") || e.contains("indexed") || e.contains("bereit")
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: looksLikeNoIndex ? "info.circle" : "exclamationmark.triangle")
-                        .foregroundStyle(looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed)
-                    Text(e)
-                        .font(.footnote)
-                        .foregroundStyle(.primary)
-                }
-                .padding(10)
-                .background((looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed).opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(.horizontal)
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: messages.count) {
+                scrollToLast(proxy)
             }
-
-            HStack(spacing: 8) {
-                TextField("Frage zu deinen Dateien…", text: $input, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .lineLimit(1...4)
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.cardBackground))
-                    .focused($inputFocused)
-                Button {
-                    Task { await send() }
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .foregroundStyle(.white)
-                        .frame(width: 42, height: 42)
-                        .background(Theme.tungstenBlue)
-                        .clipShape(Circle())
-                }.disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || busy)
+            // v1.10.195: Beim Fokussieren ans Ende scrollen, damit die letzte
+            // Nachricht nicht hinter der aufgehenden Tastatur verschwindet.
+            .onChange(of: inputFocused) {
+                if inputFocused { scrollToLast(proxy) }
             }
-            .padding(.horizontal).padding(.bottom, 8)
+            // Tap anywhere im Scroll-Bereich → Tastatur weg.
+            .simultaneousGesture(TapGesture().onEnded { inputFocused = false })
+            .safeAreaInset(edge: .bottom) {
+                bottomBar
+            }
         }
         .navigationTitle("KI-Chat")
         .toolbar {
@@ -117,6 +90,61 @@ struct ChatView: View {
                 }
             })
         }
+    }
+
+    private func scrollToLast(_ proxy: ScrollViewProxy) {
+        if let last = messages.last {
+            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+        }
+    }
+
+    /// v1.10.195: Fehler-Banner + Eingabezeile — leben jetzt im Bottom-
+    /// Safe-Area-Inset (siehe Kommentar in body). Verhalten unverändert.
+    private var bottomBar: some View {
+        VStack(spacing: 0) {
+            if let e = error {
+                // v1.10.97: Server-Text unverändert durchreichen — der ist seit
+                // v1.10.93 rollenabhängig (Admin sieht Reindex-Anleitung, User
+                // sieht „Admin muss indexieren"). Vorher hat iOS die Meldung
+                // mit eigenem, admin-orientiertem Text überschrieben — dadurch
+                // sah jeder User „bitte im Web unter Einstellungen indexieren"
+                // auch als Nicht-Admin, obwohl er dort gar keinen Zugriff hat.
+                let looksLikeNoIndex = e.contains("indexier") || e.contains("indexed") || e.contains("bereit")
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: looksLikeNoIndex ? "info.circle" : "exclamationmark.triangle")
+                        .foregroundStyle(looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed)
+                    Text(e)
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background((looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed).opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+            }
+            HStack(spacing: 8) {
+                TextField("Frage zu deinen Dateien…", text: $input, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1...4)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.cardBackground))
+                    .focused($inputFocused)
+                Button {
+                    Task { await send() }
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background(Theme.tungstenBlue)
+                        .clipShape(Circle())
+                }.disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || busy)
+            }
+            .padding(.horizontal).padding(.bottom, 8)
+        }
+        .padding(.top, 8)
+        .background(.bar)
     }
 
     private var emptyState: some View {

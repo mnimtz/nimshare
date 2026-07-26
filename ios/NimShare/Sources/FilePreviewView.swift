@@ -1,5 +1,6 @@
 import SwiftUI
 import QuickLook
+import AVKit
 
 struct FilePreviewView: View {
     @EnvironmentObject var auth: AuthStore
@@ -7,6 +8,11 @@ struct FilePreviewView: View {
     let file: FileItem
 
     @State private var localURL: URL?
+    // v1.10.195: Video/Audio wird NICHT mehr komplett heruntergeladen,
+    // sondern direkt von der SAS-URL gestreamt (AVPlayer macht Range-
+    // Requests). Vorher: 500-MB-Video → kompletter Download vor dem
+    // ersten Frame.
+    @State private var player: AVPlayer?
     @State private var busy = true
     @State private var error: String?
     // v1.10.82: App-Store-Blocker Apple 1.2 — Datei-Melden von hier aus.
@@ -18,6 +24,9 @@ struct FilePreviewView: View {
         Group {
             if busy {
                 ProgressView("Lädt…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let player {
+                VideoPlayer(player: player)
+                    .ignoresSafeArea(edges: .bottom)
             } else if let url = localURL {
                 QLQuickLookView(url: url)
                     .ignoresSafeArea(edges: .bottom)
@@ -72,6 +81,7 @@ struct FilePreviewView: View {
             await download()
             await loadLock()
         }
+        .onDisappear { player?.pause() }
         .sheet(isPresented: $showReport) {
             ReportSheet(subjectKind: .file, subjectId: file.id,
                         subjectLabel: file.name,
@@ -103,6 +113,12 @@ struct FilePreviewView: View {
         do {
             let resp = try await api.previewUrl(fileId: file.id)
             guard let url = URL(string: resp.url) else { throw ApiError.network("Bad SAS URL") }
+            // v1.10.195: Video/Audio direkt streamen statt herunterladen.
+            // AVPlayer holt sich die Bytes per Range-Requests von der SAS-URL.
+            if Self.isStreamableMedia(contentType: resp.contentType ?? file.contentType, name: file.name) {
+                player = AVPlayer(url: url)
+                return
+            }
             let (tmp, _) = try await URLSession.shared.download(from: url)
             // v1.10.79: TmpFile-Helper — UUID-Unterordner verhindert
             // Kollision bei gleichnamigen Files aus verschiedenen Ordnern.
@@ -111,6 +127,15 @@ struct FilePreviewView: View {
             localURL = dest
         } catch let e as ApiError { error = e.localizedDescription }
         catch let ex { error = ex.localizedDescription }
+    }
+
+    /// v1.10.195: video/* und audio/* streamen über VideoPlayer; Fallback
+    /// auf Datei-Endung falls der Server nur application/octet-stream kennt.
+    static func isStreamableMedia(contentType: String, name: String) -> Bool {
+        let ct = contentType.lowercased()
+        if ct.hasPrefix("video/") || ct.hasPrefix("audio/") { return true }
+        let ext = (name as NSString).pathExtension.lowercased()
+        return ["mp4", "mov", "m4v"].contains(ext)
     }
 }
 

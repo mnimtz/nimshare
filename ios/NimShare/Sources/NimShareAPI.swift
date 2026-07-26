@@ -307,6 +307,16 @@ final class NimShareAPI: ObservableObject {
         return try decode(BrowseResponse.self, data)
     }
 
+    /// v1.10.195: Authentifizierter Request für das Thumbnail-Endpoint.
+    /// Der Endpoint ist ApiUser-geschützt (Bearer nötig) und antwortet mit
+    /// 302-Redirect auf eine Azure-SAS-URL. Der ThumbLoader führt den
+    /// Request mit einer Session aus, die beim Redirect den Authorization-
+    /// Header strippt (Azure lehnt SAS + fremden Auth-Header sonst ab).
+    func thumbnailRequest(fileId: UUID, size: Int = 400) -> URLRequest {
+        request("GET", "api/v1/files/\(fileId)/thumb",
+                query: [.init(name: "size", value: String(size))])
+    }
+
     func previewUrl(fileId: UUID) async throws -> PreviewUrlResponse {
         let req = request("GET", "api/v1/files/\(fileId)/preview-url")
         let (data, _) = try await perform(req)

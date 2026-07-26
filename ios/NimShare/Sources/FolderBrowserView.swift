@@ -68,6 +68,10 @@ struct FolderBrowserView: View {
     }
     @State private var permissionsTarget: PermissionsTargetRef?
 
+    // v1.10.195: Ansichtsmodus (Liste/Kacheln/Vorschau), app-weit persistiert.
+    @AppStorage("browser.viewMode") private var viewModeRaw: String = BrowserViewMode.list.rawValue
+    private var viewMode: BrowserViewMode { BrowserViewMode(rawValue: viewModeRaw) ?? .list }
+
     // v1.10.151: Track laufender Download-/Zip-Tasks, damit sie beim Verlassen
     // der View abgebrochen werden. Vorher liefen 500-MB-Bulk-Zips im Hintergrund
     // weiter und die Completion feuerte in einen nicht mehr sichtbaren View.
@@ -90,12 +94,22 @@ struct FolderBrowserView: View {
             } else if let e = error, data == nil {
                 errorView(e)
             } else if let d = data {
-                list(d)
+                // v1.10.195: Liste vs. Kachel-Raster je nach Ansichtsmodus.
+                if viewMode == .list {
+                    list(d)
+                } else {
+                    gridView(d)
+                }
             }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // v1.10.195: Ansichts-Umschalter Liste/Kacheln/Vorschau.
+            ToolbarItem(placement: .topBarTrailing) {
+                BrowserViewModeMenu(rawMode: $viewModeRaw)
+                    .disabled(editMode == .active)
+            }
             // v1.10.72: Auswahl-Modus (Bulk-Selection wie im Web).
             ToolbarItem(placement: .topBarTrailing) {
                 if editMode == .active {
@@ -105,12 +119,16 @@ struct FolderBrowserView: View {
                     }
                 } else {
                     Menu {
-                        Button {
-                            editMode = .active
-                        } label: {
-                            Label("Auswahl", systemImage: "checkmark.circle")
+                        // v1.10.195: Multi-Select hängt an der List-Selection
+                        // — im Kachel-Modus daher ausgeblendet.
+                        if viewMode == .list {
+                            Button {
+                                editMode = .active
+                            } label: {
+                                Label("Auswahl", systemImage: "checkmark.circle")
+                            }
+                            Divider()
                         }
-                        Divider()
                         if let cur = data?.currentFolderId {
                             Button {
                                 newFolderParent = cur
@@ -284,58 +302,7 @@ struct FolderBrowserView: View {
                                 Text(f.name)
                             }
                         }
-                        .contextMenu {
-                            Button {
-                                shareItemName = f.name
-                                shareTarget = .folder(f.id)
-                            } label: { Label("Freigabelink erstellen", systemImage: "link.badge.plus") }
-                            // v1.10.105: EIN Berechtigungen-Eintrag pro Scope statt
-                            // zwei. Vorher: für Public wurden „Berechtigungen…"
-                            // (DirectShareSheet) UND „🔒 Windows-Berechtigungen"
-                            // (PermissionsSheet mit Privacy-Toggle) parallel gezeigt
-                            // — beide auf dieselbe Backend-Tabelle. Konsolidiert:
-                            //   • Public → PermissionsSheet (Grants + Privacy-Toggle)
-                            //   • Personal/Group → DirectShareSheet (nur Grants,
-                            //     Privacy-Konzept existiert dort nicht)
-                            Button {
-                                if scope.lowercased() == "public" {
-                                    permissionsTarget = PermissionsTargetRef(id: f.id, name: f.name)
-                                } else {
-                                    directShareName = f.name
-                                    directShareTarget = .folder(f.id)
-                                }
-                            } label: {
-                                Label("Berechtigungen…",
-                                      systemImage: scope.lowercased() == "public"
-                                        ? "lock.shield" : "person.crop.circle.badge.plus")
-                            }
-                            // v1.10.113: Upload anfordern für DIESEN Ordner (Web-Parität).
-                            Button {
-                                uploadReqFolderName = f.name
-                                showUploadRequest = true
-                            } label: { Label("Upload anfordern", systemImage: "tray.and.arrow.down") }
-                            Button {
-                                newFolderParent = f.id
-                                newFolderName = ""
-                            } label: { Label("Neuer Unterordner", systemImage: "folder.badge.plus") }
-                            Button {
-                                renaming = ("folder", f.id, f.name)
-                                renameText = f.name
-                            } label: { Label("Umbenennen", systemImage: "pencil") }
-                            // v1.10.113: Ordner verschieben/kopieren (Backend v1.10.110).
-                            Button {
-                                pickerOp = .moveFolder(folderId: f.id, name: f.name)
-                            } label: { Label("Verschieben nach…", systemImage: "folder") }
-                            Button {
-                                pickerOp = .copyFolder(folderId: f.id, name: f.name)
-                            } label: { Label("Kopieren nach…", systemImage: "doc.on.doc") }
-                            Button { Task { await toggleFav(folderId: f.id) } } label: {
-                                Label("Favorit", systemImage: "star")
-                            }
-                            Button(role: .destructive) { pendingFolderDelete = (f.id, f.name) } label: {
-                                Label("In Papierkorb", systemImage: "trash")
-                            }
-                        }
+                        .contextMenu { folderMenu(f) }
                     }
                 }
             }
@@ -354,36 +321,7 @@ struct FolderBrowserView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .contextMenu {
-                            Button { previewFile = f } label: { Label("Vorschau", systemImage: "eye") }
-                            Button {
-                                track(Task { await downloadFile(f) })
-                            } label: { Label("Herunterladen", systemImage: "arrow.down.circle") }
-                            Button {
-                                shareItemName = f.name
-                                shareTarget = .file(f.id)
-                            } label: { Label("Freigabelink erstellen", systemImage: "link.badge.plus") }
-                            Button {
-                                directShareName = f.name
-                                directShareTarget = .file(f.id)
-                            } label: { Label("Berechtigungen…", systemImage: "person.crop.circle.badge.plus") }
-                            Button {
-                                pickerOp = .move(fileId: f.id, name: f.name)
-                            } label: { Label("Verschieben nach…", systemImage: "folder") }
-                            Button {
-                                pickerOp = .copy(fileId: f.id, name: f.name)
-                            } label: { Label("Kopieren nach…", systemImage: "doc.on.doc") }
-                            Button {
-                                renaming = ("file", f.id, f.name)
-                                renameText = f.name
-                            } label: { Label("Umbenennen", systemImage: "pencil") }
-                            Button { Task { await toggleFav(fileId: f.id) } } label: {
-                                Label("Favorit", systemImage: "star")
-                            }
-                            Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
-                                Label("In Papierkorb", systemImage: "trash")
-                            }
-                        }
+                        .contextMenu { fileMenu(f) }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
                                 Label("Löschen", systemImage: "trash")
@@ -405,6 +343,132 @@ struct FolderBrowserView: View {
                 ContentUnavailableView("Leer", systemImage: "tray", description: Text("Dieser Ordner ist leer."))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    // MARK: - Kontextmenüs (v1.10.195: extrahiert, damit Liste UND
+    // Kachel-Modi exakt dieselben Menüs zeigen)
+
+    // v1.10.105: EIN Berechtigungen-Eintrag pro Scope statt zwei.
+    // Konsolidiert:
+    //   • Public → PermissionsSheet (Grants + Privacy-Toggle) — heißt
+    //     weiterhin „Berechtigungen…"
+    //   • Personal/Group → DirectShareSheet (nur Grants) — v1.10.195
+    //     umbenannt in „Für Benutzer freigeben…" (Marcus fand den
+    //     Direct-Share unter „Berechtigungen…" nicht)
+    @ViewBuilder
+    private func folderMenu(_ f: FolderItem) -> some View {
+        Button {
+            shareItemName = f.name
+            shareTarget = .folder(f.id)
+        } label: { Label("Freigabelink erstellen", systemImage: "link.badge.plus") }
+        if scope.lowercased() == "public" {
+            Button {
+                permissionsTarget = PermissionsTargetRef(id: f.id, name: f.name)
+            } label: { Label("Berechtigungen…", systemImage: "lock.shield") }
+        } else {
+            Button {
+                directShareName = f.name
+                directShareTarget = .folder(f.id)
+            } label: { Label("Für Benutzer freigeben…", systemImage: "person.badge.plus") }
+        }
+        // v1.10.113: Upload anfordern für DIESEN Ordner (Web-Parität).
+        Button {
+            uploadReqFolderName = f.name
+            showUploadRequest = true
+        } label: { Label("Upload anfordern", systemImage: "tray.and.arrow.down") }
+        Button {
+            newFolderParent = f.id
+            newFolderName = ""
+        } label: { Label("Neuer Unterordner", systemImage: "folder.badge.plus") }
+        Button {
+            renaming = ("folder", f.id, f.name)
+            renameText = f.name
+        } label: { Label("Umbenennen", systemImage: "pencil") }
+        // v1.10.113: Ordner verschieben/kopieren (Backend v1.10.110).
+        Button {
+            pickerOp = .moveFolder(folderId: f.id, name: f.name)
+        } label: { Label("Verschieben nach…", systemImage: "folder") }
+        Button {
+            pickerOp = .copyFolder(folderId: f.id, name: f.name)
+        } label: { Label("Kopieren nach…", systemImage: "doc.on.doc") }
+        Button { Task { await toggleFav(folderId: f.id) } } label: {
+            Label("Favorit", systemImage: "star")
+        }
+        Button(role: .destructive) { pendingFolderDelete = (f.id, f.name) } label: {
+            Label("In Papierkorb", systemImage: "trash")
+        }
+    }
+
+    @ViewBuilder
+    private func fileMenu(_ f: FileItem) -> some View {
+        Button { previewFile = f } label: { Label("Vorschau", systemImage: "eye") }
+        Button {
+            track(Task { await downloadFile(f) })
+        } label: { Label("Herunterladen", systemImage: "arrow.down.circle") }
+        Button {
+            shareItemName = f.name
+            shareTarget = .file(f.id)
+        } label: { Label("Freigabelink erstellen", systemImage: "link.badge.plus") }
+        // v1.10.195: hieß „Berechtigungen…" — Direct-Share war so nicht
+        // auffindbar.
+        Button {
+            directShareName = f.name
+            directShareTarget = .file(f.id)
+        } label: { Label("Für Benutzer freigeben…", systemImage: "person.badge.plus") }
+        Button {
+            pickerOp = .move(fileId: f.id, name: f.name)
+        } label: { Label("Verschieben nach…", systemImage: "folder") }
+        Button {
+            pickerOp = .copy(fileId: f.id, name: f.name)
+        } label: { Label("Kopieren nach…", systemImage: "doc.on.doc") }
+        Button {
+            renaming = ("file", f.id, f.name)
+            renameText = f.name
+        } label: { Label("Umbenennen", systemImage: "pencil") }
+        Button { Task { await toggleFav(fileId: f.id) } } label: {
+            Label("Favorit", systemImage: "star")
+        }
+        Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
+            Label("In Papierkorb", systemImage: "trash")
+        }
+    }
+
+    // MARK: - Kachel-Ansichten (v1.10.195)
+
+    private func gridView(_ d: BrowseResponse) -> some View {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 12),
+                            count: viewMode == .grid ? 3 : 2)
+        return ScrollView {
+            if d.subfolders.isEmpty && d.files.isEmpty {
+                ContentUnavailableView("Leer", systemImage: "tray",
+                                       description: Text("Dieser Ordner ist leer."))
+                    .padding(.top, 60)
+            } else {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(d.subfolders) { f in
+                        NavigationLink {
+                            FolderBrowserView(
+                                scope: scope, groupId: groupId,
+                                path: joinPath(path, f.name),
+                                title: f.name
+                            )
+                        } label: {
+                            FolderTileView(name: f.name, mode: viewMode)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { folderMenu(f) }
+                    }
+                    ForEach(d.files) { f in
+                        Button { previewFile = f } label: {
+                            FileTileView(file: f, mode: viewMode)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { fileMenu(f) }
+                    }
+                }
+                .padding(12)
             }
         }
     }
