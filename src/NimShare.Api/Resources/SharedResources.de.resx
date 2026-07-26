@@ -582,7 +582,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="groups.remove_member"><value>Entfernen</value></data>
   <data name="actions.save"><value>Speichern</value></data>
   <data name="actions.cancel"><value>Abbrechen</value></data>
-  <data name="actions.back"><value>Terug</value></data>
+  <data name="actions.back"><value>Zurück</value></data>
   <data name="links.action.report"><value>Auswertung</value></data>
   <data name="landing.preview_after_password"><value>Vorschau nach Passwort-Eingabe verfügbar.</value></data>
   <data name="links.mine.section"><value>Meine Links</value></data>

@@ -581,7 +581,7 @@ Abre el enlace:
   <data name="groups.remove_member"><value>Remove</value></data>
   <data name="actions.save"><value>Save</value></data>
   <data name="actions.cancel"><value>Cancel</value></data>
-  <data name="actions.back"><value>Back</value></data>
+  <data name="actions.back"><value>Atrás</value></data>
   <data name="links.action.report"><value>Análisis</value></data>
   <data name="landing.preview_after_password"><value>Vista previa disponible tras la contraseña.</value></data>
   <data name="links.mine.section"><value>Mis enlaces</value></data>
