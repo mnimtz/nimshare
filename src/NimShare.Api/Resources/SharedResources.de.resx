@@ -576,7 +576,7 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="users.tab.groups"><value>Gruppen</value></data>
   <data name="users.tab.security"><value>Sicherheit</value></data>
   <data name="users.no_groups"><value>Keine Gruppen zugewiesen.</value></data>
-  <data name="groups.rename"><value>Hernoemen</value></data>
+  <data name="groups.rename"><value>Umbenennen</value></data>
   <data name="groups.promote"><value>Zum Manager machen</value></data>
   <data name="groups.demote"><value>Zum Mitglied zurückstufen</value></data>
   <data name="groups.remove_member"><value>Entfernen</value></data>
