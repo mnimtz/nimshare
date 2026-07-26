@@ -390,13 +390,19 @@ public class FilesController : ControllerBase
     /// Objekt, ist aber Token-authentifiziert.
     /// </summary>
     [HttpGet("{id:guid}/preview-url")]
-    public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access, CancellationToken ct)
+    public async Task<IActionResult> PreviewUrl(Guid id, [FromServices] IFileAccessService access,
+        [FromQuery] bool inline, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var file = await _db.Files.SingleOrDefaultAsync(f => f.Id == id, ct);
         if (file is null) return NotFound();
         if (!await access.CanReadAsync(user, file, ct)) return Forbid();
-        var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, TimeSpan.FromMinutes(5));
+        // v1.10.194: ?inline=1 → SAS ohne Content-Disposition:attachment.
+        // Der PDF-<iframe> im Preview-Modal bekam mit attachment einen
+        // Download statt Inline-Rendering; <video>/<audio> ebenso sauberer.
+        var sas = inline
+            ? _blobs.CreateInlineSas(file.BlobPath, file.ContentType ?? "application/octet-stream", TimeSpan.FromMinutes(10))
+            : _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, TimeSpan.FromMinutes(5));
         return Ok(new { url = sas.ToString(), contentType = file.ContentType, name = file.Name });
     }
 

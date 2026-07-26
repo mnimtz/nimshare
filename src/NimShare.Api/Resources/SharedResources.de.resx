@@ -327,8 +327,6 @@
   <data name="bulk.delete"><value>Loeschen</value></data>
   <data name="bulk.clear"><value>Auswahl aufheben</value></data>
   <data name="bulk.confirm.delete"><value>{n} Dateien loeschen? Kann nicht rueckgaengig gemacht werden.</value></data>
-  <data name="browse.view.list"><value>Liste</value></data>
-  <data name="browse.view.grid"><value>Kacheln</value></data>
   <data name="browse.drop_hint"><value>Dateien hier ablegen zum Hochladen</value></data>
   <data name="browse.folder_type"><value>Ordner</value></data>
   <data name="actions.move"><value>Verschieben</value></data>
@@ -1474,6 +1472,10 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="landing.gallery.thumb_pending"><value>Vorschau wird generiert…</value></data>
   <data name="notify.direct_share.write"><value>{0} hat dir Schreibrechte auf „{1}" gegeben</value></data>
   <data name="notify.direct_share.read"><value>{0} hat „{1}" mit dir geteilt</value></data>
+  <data name="browse.view.label"><value>Ansicht</value></data>
+  <data name="browse.view.list"><value>Liste</value></data>
+  <data name="browse.view.grid"><value>Kacheln</value></data>
+  <data name="browse.view.preview"><value>Vorschau</value></data>
   <data name="landing.gallery.map.title"><value>Wo diese Fotos aufgenommen wurden</value></data>
   <data name="landing.gallery.map.count"><value>{0} von {1} Fotos verortet</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Empfänger dürfen hochladen</value></data>

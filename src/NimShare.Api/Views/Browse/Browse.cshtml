@@ -123,6 +123,16 @@
                 <button class="fm-btn fm-tree-toggle" type="button" title="@T["browse.tree.mobile_toggle"]" onclick="openMobileTree()" aria-label="@T["browse.tree.mobile_toggle"]">
                     <span>📁</span>
                 </button>
+                @* v1.10.194: Ansichts-Umschalter — Liste / Kacheln / Vorschau.
+                   Persistiert in localStorage (nim.browse.viewMode), gilt für
+                   alle Bereiche (Personal/Public/Group). Grid + Vorschau werden
+                   client-seitig aus den Tabellen-Zeilen gebaut (eine Daten-
+                   quelle, kein doppeltes Razor-Markup). *@
+                <div class="fm-viewswitch" role="group" aria-label="@T["browse.view.label"]">
+                    <button class="fm-btn" id="vmList" title="@T["browse.view.list"]" onclick="setViewMode('list')">☰</button>
+                    <button class="fm-btn" id="vmGrid" title="@T["browse.view.grid"]" onclick="setViewMode('grid')">▦</button>
+                    <button class="fm-btn" id="vmPreview" title="@T["browse.view.preview"]" onclick="setViewMode('preview')">🖼</button>
+                </div>
                 @if (canWrite)
                 {
                     <button class="fm-btn" title="@T["browse.new_folder"]" onclick="openNewFolderModal()">
@@ -311,6 +321,31 @@
                     }
                 </tbody>
             </table>
+            @* v1.10.194: Kachel-/Vorschau-Container — wird per JS aus den
+               Tabellen-Zeilen gefüllt, wenn viewMode != list. *@
+            <div id="fmGrid" class="fm-gridwrap" style="display:none"></div>
+            <style>
+                .fm-viewswitch { display:inline-flex; gap:2px; }
+                .fm-viewswitch .fm-btn.active { background:var(--tw-primary, #002854); color:#fff; }
+                .fm-gridwrap { display:grid; gap:10px; margin-top:var(--sp-4); }
+                .fm-gridwrap.mode-grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+                .fm-gridwrap.mode-preview { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+                .fm-tile { position:relative; border:1px solid var(--tw-gray-200,#e2e5ea); border-radius:10px; overflow:hidden; cursor:pointer; background:#fff; transition:box-shadow .12s; }
+                .fm-tile:hover { box-shadow:0 4px 14px rgba(0,0,0,.10); }
+                .fm-tile .fm-tile-media { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; background:var(--tw-gray-100,#f4f5f7); font-size:44px; overflow:hidden; }
+                .mode-preview .fm-tile .fm-tile-media { aspect-ratio:4/3; font-size:64px; }
+                .fm-tile .fm-tile-media img { width:100%; height:100%; object-fit:cover; display:block; }
+                .fm-tile .fm-tile-media svg { width:52px; height:52px; }
+                .fm-tile .fm-tile-name { padding:7px 9px; font-size:12.5px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                .mode-preview .fm-tile .fm-tile-name { font-size:13.5px; }
+                .fm-tile .fm-tile-sub { padding:0 9px 7px; font-size:11px; color:#888; }
+                .fm-tile .fm-tile-check { position:absolute; top:6px; left:6px; z-index:2; transform:scale(1.15); }
+                .fm-tile .fm-tile-lock { position:absolute; top:6px; right:6px; z-index:2; font-size:13px; background:#fffc; border-radius:6px; padding:1px 5px; }
+                /* v1.10.194: Video/Audio/Text im Preview-Modal */
+                video.preview-media { width:100%; max-height:70vh; background:#000; border-radius:8px; }
+                audio.preview-media { width:100%; }
+                pre.preview-text { max-height:65vh; overflow:auto; background:var(--tw-gray-100,#f4f5f7); border-radius:8px; padding:12px; font-size:12.5px; white-space:pre-wrap; word-break:break-word; }
+            </style>
         }
     </section>
 </div>
@@ -1191,11 +1226,15 @@ const OFFICE_CTS = new Set([
 async function openPreview(fileId) {
     const rowCt = (document.querySelector(`tr.ctx[data-id="${fileId}"]`)?.dataset.contentType || '').toLowerCase();
     const useOffice = OFFICE_CTS.has(rowCt);
-    const endpoint = useOffice ? '/office-preview' : '/preview-url';
+    // v1.10.194: preview-url mit ?inline=1 — die SAS kommt dann ohne
+    // Content-Disposition:attachment. Wichtig für PDF im <iframe> (Chrome
+    // erzwang sonst einen Download statt Inline-Rendering) und sauber für
+    // <video>/<audio>. Der Download-Button nutzt weiter die attachment-SAS.
+    const endpoint = useOffice ? '/office-preview' : '/preview-url?inline=1';
     let r = await fetch('/api/v1/files/' + fileId + endpoint, { credentials: 'same-origin' });
     // Office-Endpoint kann bei einem Fehler auf 415/500 gehen — dann normalen Preview versuchen.
     if (useOffice && !r.ok) {
-        r = await fetch('/api/v1/files/' + fileId + '/preview-url', { credentials: 'same-origin' });
+        r = await fetch('/api/v1/files/' + fileId + '/preview-url?inline=1', { credentials: 'same-origin' });
     }
     if (!r.ok) return;
     const d = await r.json();
@@ -1214,11 +1253,136 @@ async function openPreview(fileId) {
         }
     } else if (ct === 'application/pdf') {
         body.innerHTML = '<iframe class="preview-frame" src="' + d.url + '"></iframe>';
+    } else if (ct.startsWith('video/')) {
+        // v1.10.194: Videos direkt im Modal abspielen — Azure Blob liefert
+        // Range-Requests, das <video>-Tag streamt/seekt ohne App-Beteiligung.
+        body.innerHTML = '<video class="preview-media" controls autoplay playsinline src="' + d.url + '"></video>';
+    } else if (ct.startsWith('audio/')) {
+        body.innerHTML = '<audio class="preview-media" controls autoplay src="' + d.url + '"></audio>';
+    } else if (ct.startsWith('text/') || ct === 'application/json' || ct === 'application/xml') {
+        // v1.10.194: Text-Vorschau — erste ~200 KB reichen fürs Reinschauen.
+        body.innerHTML = '<pre class="preview-text"></pre>';
+        try {
+            const tr2 = await fetch(d.url);
+            let txt = await tr2.text();
+            if (txt.length > 200000) txt = txt.slice(0, 200000) + '\n…';
+            body.querySelector('pre').textContent = txt;
+        } catch { body.querySelector('pre').textContent = '⚠'; }
     } else {
         body.innerHTML = '<p class="muted">' + @Json.Serialize(T["preview.unsupported"].Value) + '</p><p><a class="btn btn-primary" href="' + d.url + '" target="_blank">' + @Json.Serialize(T["preview.download"].Value) + '</a></p>';
     }
     document.getElementById('modalPreview').classList.add('open');
 }
+
+// ── v1.10.194: Ansichts-Modi Liste / Kacheln / Vorschau ───────────────
+// Grid + Vorschau werden aus den (immer gerenderten) Tabellen-Zeilen
+// gebaut — eine Datenquelle, Kontextmenü + Bulk-Selection bleiben synchron.
+const VIEW_KEY = 'nim.browse.viewMode';
+function setViewMode(m, skipSave) {
+    if (!['list','grid','preview'].includes(m)) m = 'list';
+    const btnIds = { list: 'vmList', grid: 'vmGrid', preview: 'vmPreview' };
+    Object.entries(btnIds).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (b) b.classList.toggle('active', k === m);
+    });
+    if (!skipSave) { try { localStorage.setItem(VIEW_KEY, m); } catch {} }
+    const table = document.querySelector('table.fm-list');
+    const grid = document.getElementById('fmGrid');
+    if (!table || !grid) return; // leerer Ordner
+    if (m === 'list') { table.style.display = ''; grid.style.display = 'none'; return; }
+    table.style.display = 'none';
+    grid.className = 'fm-gridwrap mode-' + m;
+    grid.style.display = 'grid';
+    buildGrid(m);
+}
+function fmTileIconFor(tr) {
+    const svg = tr.querySelector('.fm-fmt svg');
+    return svg ? svg.cloneNode(true) : Object.assign(document.createElement('span'), { textContent: '📄' });
+}
+function fmHumanBytes(b) {
+    const u = ['B','KB','MB','GB','TB']; let i = 0;
+    while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return (i === 0 ? b : b.toFixed(b >= 10 ? 0 : 1)) + ' ' + u[i];
+}
+function buildGrid(mode) {
+    const grid = document.getElementById('fmGrid');
+    grid.innerHTML = '';
+    document.querySelectorAll('tr.ctx').forEach(tr => {
+        const d = tr.dataset;
+        const tile = document.createElement('div');
+        tile.className = 'fm-tile';
+        for (const k in d) tile.dataset[k] = d[k];
+        const media = document.createElement('div');
+        media.className = 'fm-tile-media';
+        const ct = (d.contentType || '').toLowerCase();
+        if (d.kind === 'folder') {
+            media.textContent = d.emoji || (d.folderKind === 'Gallery' ? '🖼' : '📁');
+            if (d.color) media.style.background = '#' + d.color + '22';
+            tile.onclick = () => { const a = tr.querySelector('a.fm-name'); if (a) location.href = a.getAttribute('href'); };
+            if (d.isPrivate === '1') {
+                const lock = document.createElement('span');
+                lock.className = 'fm-tile-lock'; lock.textContent = '🔒';
+                tile.append(lock);
+            }
+        } else {
+            if (ct.startsWith('image/')) {
+                // Echte Thumbnails aus dem Blob-Cache (v1.10.184-Endpoint,
+                // 302 auf SAS). 404 = noch nicht generiert → Format-Icon.
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.alt = d.name;
+                img.onerror = () => { img.remove(); media.append(fmTileIconFor(tr)); };
+                img.src = '/api/v1/files/' + d.id + '/thumb?size=400';
+                media.append(img);
+            } else if (ct.startsWith('video/')) {
+                media.textContent = '🎬';
+            } else if (ct.startsWith('audio/')) {
+                media.textContent = '🎵';
+            } else {
+                media.append(fmTileIconFor(tr));
+            }
+            tile.onclick = () => openPreview(d.id);
+        }
+        const nameEl = document.createElement('div');
+        nameEl.className = 'fm-tile-name';
+        nameEl.textContent = d.name;
+        nameEl.title = d.name;
+        tile.append(media, nameEl);
+        if (mode === 'preview') {
+            const sub = document.createElement('div');
+            sub.className = 'fm-tile-sub';
+            sub.textContent = d.kind === 'folder' ? '' : fmHumanBytes(parseInt(d.size || '0', 10) || 0);
+            tile.append(sub);
+        }
+        // Bulk-Selection: Tile-Checkbox spiegelt die Zeilen-Checkbox.
+        const rowCheck = tr.querySelector('.row-check');
+        if (rowCheck) {
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'fm-tile-check';
+            cb.checked = rowCheck.checked;
+            cb.onclick = (e) => {
+                e.stopPropagation();
+                rowCheck.checked = cb.checked;
+                rowCheck.dispatchEvent(new Event('change', { bubbles: true }));
+                rowCheck.dispatchEvent(new Event('click', { bubbles: true }));
+            };
+            tile.append(cb);
+        }
+        // Rechtsklick: an die Original-Zeile weiterreichen — deren Handler
+        // kennt die komplette Menü-Logik (showFor etc.).
+        tile.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            tr.dispatchEvent(new MouseEvent('contextmenu', { cancelable: true, clientX: e.clientX, clientY: e.clientY }));
+        });
+        grid.append(tile);
+    });
+}
+(function initViewMode() {
+    let m = 'list';
+    try { m = localStorage.getItem(VIEW_KEY) || 'list'; } catch {}
+    setViewMode(m, true);
+})();
 
 // ── Drag-drop + quick upload ──────────────────────────────────
 const dropzone = document.getElementById('dropzone');

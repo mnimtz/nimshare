@@ -326,8 +326,6 @@
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
   <data name="bulk.confirm.delete"><value>Delete {n} files? This cannot be undone.</value></data>
-  <data name="browse.view.list"><value>List</value></data>
-  <data name="browse.view.grid"><value>Grid</value></data>
   <data name="browse.drop_hint"><value>Drop files here to upload</value></data>
   <data name="browse.folder_type"><value>Folder</value></data>
   <data name="actions.move"><value>Move</value></data>
@@ -1469,6 +1467,10 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="landing.gallery.thumb_pending"><value>Voorbeeld wordt gegenereerd…</value></data>
   <data name="notify.direct_share.write"><value>{0} heeft je schrijfrechten gegeven voor "{1}"</value></data>
   <data name="notify.direct_share.read"><value>{0} heeft "{1}" met je gedeeld</value></data>
+  <data name="browse.view.label"><value>Weergave</value></data>
+  <data name="browse.view.list"><value>Lijst</value></data>
+  <data name="browse.view.grid"><value>Tegels</value></data>
+  <data name="browse.view.preview"><value>Voorbeeld</value></data>
   <data name="landing.gallery.map.title"><value>Waar deze foto's zijn gemaakt</value></data>
   <data name="landing.gallery.map.count"><value>{0} van {1} foto's gelokaliseerd</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Ontvangers mogen uploaden</value></data>

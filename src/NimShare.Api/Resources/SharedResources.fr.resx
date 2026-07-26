@@ -327,8 +327,6 @@
   <data name="bulk.delete"><value>Delete</value></data>
   <data name="bulk.clear"><value>Clear</value></data>
   <data name="bulk.confirm.delete"><value>Delete {n} files? This cannot be undone.</value></data>
-  <data name="browse.view.list"><value>List</value></data>
-  <data name="browse.view.grid"><value>Grid</value></data>
   <data name="browse.drop_hint"><value>Drop files here to upload</value></data>
   <data name="browse.folder_type"><value>Folder</value></data>
   <data name="actions.move"><value>Move</value></data>
@@ -1470,6 +1468,10 @@ Merci d'utiliser NimShare.</value></data>
   <data name="landing.gallery.thumb_pending"><value>L'aperçu est en cours de génération…</value></data>
   <data name="notify.direct_share.write"><value>{0} vous a donné l'accès en écriture à « {1} »</value></data>
   <data name="notify.direct_share.read"><value>{0} a partagé « {1} » avec vous</value></data>
+  <data name="browse.view.label"><value>Affichage</value></data>
+  <data name="browse.view.list"><value>Liste</value></data>
+  <data name="browse.view.grid"><value>Vignettes</value></data>
+  <data name="browse.view.preview"><value>Aperçu</value></data>
   <data name="landing.gallery.map.title"><value>Où ces photos ont été prises</value></data>
   <data name="landing.gallery.map.count"><value>{0} sur {1} photos localisées</value></data>
   <data name="share.gallery.allow_uploads_label"><value>Les destinataires peuvent envoyer</value></data>
