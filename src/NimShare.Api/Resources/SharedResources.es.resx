@@ -387,6 +387,17 @@
   <data name="landing.ai_summary.disabled"><value>El resumen con IA está desactivado por el administrador.</value></data>
   <data name="landing.ai_summary.unsupported"><value>Este tipo de archivo aún no admite resúmenes con IA.</value></data>
   <data name="landing.ai_summary.error"><value>No se ha podido generar el resumen. Inténtalo de nuevo más tarde.</value></data>
+  <data name="landing.serial.title"><value>Número de serie</value></data>
+  <data name="landing.serial.reveal_button"><value>Mostrar número de serie</value></data>
+  <data name="landing.serial.copy"><value>Copiar</value></data>
+  <data name="landing.serial.copied"><value>¡Copiado!</value></data>
+  <data name="landing.serial.email_button"><value>Enviármelo por correo</value></data>
+  <data name="landing.serial.email_placeholder"><value>Tu dirección de correo electrónico</value></data>
+  <data name="landing.serial.email_send"><value>Enviar</value></data>
+  <data name="landing.serial.email_sent"><value>¡Enviado! Revisa tu bandeja de entrada.</value></data>
+  <data name="landing.serial.email_invalid"><value>Introduce una dirección de correo válida.</value></data>
+  <data name="landing.serial.error"><value>Algo salió mal. Inténtalo de nuevo.</value></data>
+  <data name="landing.serial.error_password"><value>Introduce primero la contraseña arriba.</value></data>
   <data name="landing.folder.lede"><value>Archivos en esta carpeta:</value></data>
   <data name="browse.libraries.mine"><value>Mis bibliotecas</value></data>
   <data name="browse.libraries.shared"><value>Área pública</value></data>

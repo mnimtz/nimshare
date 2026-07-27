@@ -386,6 +386,17 @@
   <data name="landing.ai_summary.disabled"><value>AI-samenvatting is uitgeschakeld door de beheerder.</value></data>
   <data name="landing.ai_summary.unsupported"><value>Dit bestandstype wordt nog niet ondersteund voor AI-samenvattingen.</value></data>
   <data name="landing.ai_summary.error"><value>Kon geen samenvatting genereren. Probeer het later opnieuw.</value></data>
+  <data name="landing.serial.title"><value>Serienummer</value></data>
+  <data name="landing.serial.reveal_button"><value>Serienummer tonen</value></data>
+  <data name="landing.serial.copy"><value>Kopiëren</value></data>
+  <data name="landing.serial.copied"><value>Gekopieerd!</value></data>
+  <data name="landing.serial.email_button"><value>Mail naar mij</value></data>
+  <data name="landing.serial.email_placeholder"><value>Jouw e-mailadres</value></data>
+  <data name="landing.serial.email_send"><value>Versturen</value></data>
+  <data name="landing.serial.email_sent"><value>Verstuurd! Controleer je inbox.</value></data>
+  <data name="landing.serial.email_invalid"><value>Voer een geldig e-mailadres in.</value></data>
+  <data name="landing.serial.error"><value>Er is iets misgegaan. Probeer het opnieuw.</value></data>
+  <data name="landing.serial.error_password"><value>Voer eerst hierboven het wachtwoord in.</value></data>
   <data name="landing.folder.lede"><value>Bestanden in deze map:</value></data>
   <data name="browse.libraries.mine"><value>Mijn bibliotheken</value></data>
   <data name="browse.libraries.shared"><value>Openbare ruimte</value></data>

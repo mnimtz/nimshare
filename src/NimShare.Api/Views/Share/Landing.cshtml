@@ -121,6 +121,92 @@
             <div class="muted" style="margin-top:var(--sp-3);font-size:.85rem">🔒 @T["landing.preview_after_password"]</div>
         }
 
+        @if (Model.HasSerialNumber)
+        {
+            <div class="card" id="serialCard" style="margin-top:var(--sp-4);background:var(--tw-gray-100)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap">
+                    <strong>🔑 @T["landing.serial.title"]</strong>
+                    <div style="display:flex;gap:var(--sp-2)">
+                        <button type="button" class="btn btn-ghost btn-sm" id="serialRevealBtn" onclick="serialReveal()">@T["landing.serial.reveal_button"]</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="serialEmailToggleBtn" onclick="serialToggleEmail()">@T["landing.serial.email_button"]</button>
+                    </div>
+                </div>
+                <div id="serialValueOut" style="display:none;margin-top:var(--sp-3)">
+                    <span id="serialValueText" class="mono" style="letter-spacing:.08em;font-size:1.05rem;font-weight:600;user-select:all"></span>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="serialCopy()" style="margin-left:var(--sp-2)" id="serialCopyBtn">@T["landing.serial.copy"]</button>
+                </div>
+                <div id="serialErrorOut" class="helper" style="display:none;margin-top:var(--sp-3);color:var(--status-critical)"></div>
+                <div id="serialEmailForm" style="display:none;margin-top:var(--sp-3)">
+                    <div class="field" style="max-width:340px">
+                        <label for="serialEmailInput">@T["landing.serial.email_placeholder"]</label>
+                        <input type="email" id="serialEmailInput" placeholder="name@example.com"/>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" style="background:@accent;color:#fff" onclick="serialSendEmail()" id="serialEmailSendBtn">@T["landing.serial.email_send"]</button>
+                    <div id="serialEmailStatus" class="helper" style="margin-top:var(--sp-2)"></div>
+                </div>
+            </div>
+            <script>
+            function serialPassword() {
+                const el = document.getElementById('password');
+                return el ? el.value : null;
+            }
+            async function serialParseError(r) {
+                if (r.status === 403) return @Json.Serialize(T["landing.serial.error_password"].Value);
+                return @Json.Serialize(T["landing.serial.error"].Value);
+            }
+            async function serialReveal() {
+                const btn = document.getElementById('serialRevealBtn');
+                const err = document.getElementById('serialErrorOut');
+                err.style.display = 'none';
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/api/v1/links/public/@Model.Slug/serial/reveal', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ password: serialPassword() })
+                    });
+                    if (!r.ok) { err.textContent = await serialParseError(r); err.style.display = 'block'; btn.disabled = false; return; }
+                    const d = await r.json();
+                    document.getElementById('serialValueText').textContent = d.serialNumber;
+                    document.getElementById('serialValueOut').style.display = 'block';
+                    btn.style.display = 'none';
+                } catch { err.textContent = @Json.Serialize(T["landing.serial.error"].Value); err.style.display = 'block'; btn.disabled = false; }
+            }
+            async function serialCopy() {
+                const text = document.getElementById('serialValueText').textContent;
+                try { await navigator.clipboard.writeText(text); } catch {}
+                const btn = document.getElementById('serialCopyBtn');
+                const original = btn.textContent;
+                btn.textContent = @Json.Serialize(T["landing.serial.copied"].Value);
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            }
+            function serialToggleEmail() {
+                const f = document.getElementById('serialEmailForm');
+                f.style.display = f.style.display === 'none' ? 'block' : 'none';
+            }
+            async function serialSendEmail() {
+                const err = document.getElementById('serialErrorOut');
+                const status = document.getElementById('serialEmailStatus');
+                const btn = document.getElementById('serialEmailSendBtn');
+                const email = document.getElementById('serialEmailInput').value.trim();
+                err.style.display = 'none';
+                status.textContent = '';
+                if (!email || !email.includes('@@')) { status.textContent = @Json.Serialize(T["landing.serial.email_invalid"].Value); return; }
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/api/v1/links/public/@Model.Slug/serial/email', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ toEmail: email, password: serialPassword() })
+                    });
+                    if (!r.ok) { err.textContent = await serialParseError(r); err.style.display = 'block'; btn.disabled = false; return; }
+                    status.textContent = @Json.Serialize(T["landing.serial.email_sent"].Value);
+                    btn.disabled = false;
+                } catch { err.textContent = @Json.Serialize(T["landing.serial.error"].Value); err.style.display = 'block'; btn.disabled = false; }
+            }
+            </script>
+        }
+
         <div id="aiSummaryBlock" style="margin-top:var(--sp-4)">
             <button type="button" class="btn btn-ghost btn-sm" id="aiSummaryBtn" onclick="loadAiSummary()">✨ @T["landing.ai_summary"]</button>
             <div id="aiSummaryOut" class="muted" style="margin-top:var(--sp-3);font-style:italic;line-height:1.5"></div>

@@ -387,6 +387,17 @@
   <data name="landing.ai_summary.disabled"><value>Il riepilogo IA è disattivato dall'amministratore.</value></data>
   <data name="landing.ai_summary.unsupported"><value>Questo tipo di file non è ancora supportato per i riepiloghi IA.</value></data>
   <data name="landing.ai_summary.error"><value>Impossibile generare un riepilogo. Riprova più tardi.</value></data>
+  <data name="landing.serial.title"><value>Numero di serie</value></data>
+  <data name="landing.serial.reveal_button"><value>Mostra numero di serie</value></data>
+  <data name="landing.serial.copy"><value>Copia</value></data>
+  <data name="landing.serial.copied"><value>Copiato!</value></data>
+  <data name="landing.serial.email_button"><value>Inviami via e-mail</value></data>
+  <data name="landing.serial.email_placeholder"><value>Il tuo indirizzo e-mail</value></data>
+  <data name="landing.serial.email_send"><value>Invia</value></data>
+  <data name="landing.serial.email_sent"><value>Inviato! Controlla la tua casella di posta.</value></data>
+  <data name="landing.serial.email_invalid"><value>Inserisci un indirizzo e-mail valido.</value></data>
+  <data name="landing.serial.error"><value>Qualcosa è andato storto. Riprova.</value></data>
+  <data name="landing.serial.error_password"><value>Inserisci prima la password sopra.</value></data>
   <data name="landing.folder.lede"><value>File in questa cartella:</value></data>
   <data name="browse.libraries.mine"><value>Le mie librerie</value></data>
   <data name="browse.libraries.shared"><value>Area pubblica</value></data>

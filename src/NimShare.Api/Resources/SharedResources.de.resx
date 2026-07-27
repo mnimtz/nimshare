@@ -388,6 +388,17 @@
   <data name="landing.ai_summary.disabled"><value>KI-Zusammenfassung wurde vom Administrator deaktiviert.</value></data>
   <data name="landing.ai_summary.unsupported"><value>Dieser Dateityp wird für KI-Zusammenfassungen noch nicht unterstützt.</value></data>
   <data name="landing.ai_summary.error"><value>Konnte keine Zusammenfassung erstellen.</value></data>
+  <data name="landing.serial.title"><value>Seriennummer</value></data>
+  <data name="landing.serial.reveal_button"><value>Seriennummer anzeigen</value></data>
+  <data name="landing.serial.copy"><value>Kopieren</value></data>
+  <data name="landing.serial.copied"><value>Kopiert!</value></data>
+  <data name="landing.serial.email_button"><value>Per E-Mail zusenden</value></data>
+  <data name="landing.serial.email_placeholder"><value>Deine E-Mail-Adresse</value></data>
+  <data name="landing.serial.email_send"><value>Senden</value></data>
+  <data name="landing.serial.email_sent"><value>Gesendet! Bitte Posteingang prüfen.</value></data>
+  <data name="landing.serial.email_invalid"><value>Bitte eine gültige E-Mail-Adresse eingeben.</value></data>
+  <data name="landing.serial.error"><value>Etwas ist schiefgelaufen. Bitte erneut versuchen.</value></data>
+  <data name="landing.serial.error_password"><value>Bitte zuerst oben das Passwort eingeben.</value></data>
   <data name="landing.folder.lede"><value>Dateien in diesem Ordner:</value></data>
   <data name="browse.libraries.mine"><value>Meine Bibliotheken</value></data>
   <data name="browse.libraries.shared"><value>Öffentlicher Bereich</value></data>

@@ -387,6 +387,17 @@
   <data name="landing.ai_summary.disabled"><value>Le résumé IA est désactivé par l'administrateur.</value></data>
   <data name="landing.ai_summary.unsupported"><value>Ce type de fichier n'est pas encore pris en charge pour les résumés IA.</value></data>
   <data name="landing.ai_summary.error"><value>Impossible de générer un résumé. Réessayez plus tard.</value></data>
+  <data name="landing.serial.title"><value>Numéro de série</value></data>
+  <data name="landing.serial.reveal_button"><value>Afficher le numéro de série</value></data>
+  <data name="landing.serial.copy"><value>Copier</value></data>
+  <data name="landing.serial.copied"><value>Copié !</value></data>
+  <data name="landing.serial.email_button"><value>M'envoyer par e-mail</value></data>
+  <data name="landing.serial.email_placeholder"><value>Votre adresse e-mail</value></data>
+  <data name="landing.serial.email_send"><value>Envoyer</value></data>
+  <data name="landing.serial.email_sent"><value>Envoyé ! Vérifiez votre boîte de réception.</value></data>
+  <data name="landing.serial.email_invalid"><value>Veuillez saisir une adresse e-mail valide.</value></data>
+  <data name="landing.serial.error"><value>Une erreur s'est produite. Veuillez réessayer.</value></data>
+  <data name="landing.serial.error_password"><value>Veuillez d'abord saisir le mot de passe ci-dessus.</value></data>
   <data name="landing.folder.lede"><value>Fichiers de ce dossier :</value></data>
   <data name="browse.libraries.mine"><value>Mes bibliothèques</value></data>
   <data name="browse.libraries.shared"><value>Espace public</value></data>

@@ -572,6 +572,86 @@ public class LinksController : ControllerBase
         return NoContent();
     }
 
+    // ── v1.11.18: Öffentliche Seriennummer-Endpoints ────────────────────
+    // Anonym erreichbar (Landing-Seite ruft sie per fetch auf, kein Login).
+    // Zugriff wird trotzdem geprüft: Passwort (falls gesetzt) + AllowedEmails-
+    // Session-Gate (falls gesetzt) — exakt dieselben Regeln wie der Download
+    // selbst, damit die Seriennummer nicht mehr preisgibt als die Datei.
+    private bool SerialAccessOk(ShareLink link, string? password)
+    {
+        if (!string.IsNullOrWhiteSpace(link.AllowedEmails)
+            && HttpContext.Session.GetString($"gate.{link.Slug}") != "ok")
+            return false;
+        if (link.PasswordHash is null) return true;
+        if (HttpContext.Session.GetString($"gate.{link.Slug}") == "ok") return true;
+        return !string.IsNullOrEmpty(password) && _hasher.Verify(password, link.PasswordHash);
+    }
+
+    public record SerialRevealRequest(string? Password);
+    public record SerialRevealResponse(string SerialNumber);
+
+    [AllowAnonymous]
+    [HttpPost("public/{slug}/serial/reveal")]
+    public async Task<IActionResult> RevealSerial(string slug, [FromBody] SerialRevealRequest req,
+        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash, CancellationToken ct)
+    {
+        var link = await access.FindActiveAsync(slug, ct);
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
+            return NotFound();
+        if (!SerialAccessOk(link, req.Password))
+            return Problem(statusCode: 403, title: "Access denied");
+
+        string plain;
+        try { plain = _serialProtector.Unprotect(link.SerialNumberEncrypted); }
+        catch (System.Security.Cryptography.CryptographicException)
+        { return Problem(statusCode: 500, title: "Serial number could not be decrypted"); }
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        await access.LogAsync(link, ShareLinkAccessKind.SerialRevealed, iphash.Hash(ip),
+            Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        return Ok(new SerialRevealResponse(plain));
+    }
+
+    public record SerialEmailRequest(string ToEmail, string? Password);
+
+    [AllowAnonymous]
+    [HttpPost("public/{slug}/serial/email")]
+    public async Task<IActionResult> EmailSerial(string slug, [FromBody] SerialEmailRequest req,
+        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash,
+        [FromServices] INotificationService notify, CancellationToken ct)
+    {
+        var link = await access.FindActiveAsync(slug, ct);
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
+            return NotFound();
+        if (!SerialAccessOk(link, req.Password))
+            return Problem(statusCode: 403, title: "Access denied");
+        if (string.IsNullOrWhiteSpace(req.ToEmail) || !req.ToEmail.Contains('@'))
+            return Problem(statusCode: 422, title: "Invalid recipient email");
+
+        string plain;
+        try { plain = _serialProtector.Unprotect(link.SerialNumberEncrypted); }
+        catch (System.Security.Cryptography.CryptographicException)
+        { return Problem(statusCode: 500, title: "Serial number could not be decrypted"); }
+
+        var itemName = link.File?.Name ?? "Download";
+        var subject = $"Deine Seriennummer für {itemName}";
+        var body = $"""
+                    Hallo,
+
+                    hier ist die angeforderte Seriennummer für "{itemName}":
+
+                    {plain}
+
+                    — NimShare
+                    """;
+        await notify.SendShareLinkAsync(req.ToEmail.Trim(), "NimShare", subject, body, ct);
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        await access.LogAsync(link, ShareLinkAccessKind.SerialEmailed, iphash.Hash(ip),
+            Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        return Ok(new { sent = true });
+    }
+
     public record SendByEmailRequest(string ToEmail, string? Message);
 
     [HttpPost("{id:guid}/send-email")]

@@ -198,7 +198,8 @@ public class ShareController : Controller
             link.Owner.DisplayName,
             theme,
             ResolveOwnerAvatar(link.Owner),
-            BuildLandingSigner(link.SigningCertificate)));
+            BuildLandingSigner(link.SigningCertificate),
+            HasSerialNumber: link.SerialNumberEncrypted != null));
     }
 
     // v1.10.146: Zertifikats-Infos für Landing-Badge extrahieren.
@@ -888,7 +889,11 @@ public record LandingViewModel(
     LandingTheme Theme,
     string? OwnerAvatarUrl,
     // v1.10.146: optionales Absender-Zertifikat für Landing-Badge.
-    LandingSignerInfo? Signer = null);
+    LandingSignerInfo? Signer = null,
+    // v1.11.18: Seriennummer-Karte anzeigen? Klartext kommt nie ins HTML,
+    // nur ob eine hinterlegt ist — Wert wird erst nach Klick per fetch von
+    // /api/v1/links/public/{slug}/serial/reveal nachgeladen.
+    bool HasSerialNumber = false);
 
 /// <summary>v1.10.146 — Absender-Zertifikats-Info für die Landing.</summary>
 public record LandingSignerInfo(

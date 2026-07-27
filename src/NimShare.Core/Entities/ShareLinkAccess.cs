@@ -4,7 +4,11 @@ public enum ShareLinkAccessKind
 {
     Landing = 0,
     PasswordFail = 1,
-    Download = 2
+    Download = 2,
+    // v1.11.18: Besucher hat die Seriennummer angezeigt bzw. sich per Mail
+    // zusenden lassen — reiner Audit-Trail (int-Enum, keine Migration nötig).
+    SerialRevealed = 3,
+    SerialEmailed = 4
 }
 
 public class ShareLinkAccess

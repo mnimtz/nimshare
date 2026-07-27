@@ -388,6 +388,17 @@
   <data name="landing.ai_summary.disabled"><value>AI summary is disabled by the administrator.</value></data>
   <data name="landing.ai_summary.unsupported"><value>This file type isn't supported for AI summaries yet.</value></data>
   <data name="landing.ai_summary.error"><value>Couldn't generate a summary. Try again later.</value></data>
+  <data name="landing.serial.title"><value>Serial number</value></data>
+  <data name="landing.serial.reveal_button"><value>Show serial number</value></data>
+  <data name="landing.serial.copy"><value>Copy</value></data>
+  <data name="landing.serial.copied"><value>Copied!</value></data>
+  <data name="landing.serial.email_button"><value>Email it to me</value></data>
+  <data name="landing.serial.email_placeholder"><value>Your email address</value></data>
+  <data name="landing.serial.email_send"><value>Send</value></data>
+  <data name="landing.serial.email_sent"><value>Sent! Check your inbox.</value></data>
+  <data name="landing.serial.email_invalid"><value>Please enter a valid email address.</value></data>
+  <data name="landing.serial.error"><value>Something went wrong. Please try again.</value></data>
+  <data name="landing.serial.error_password"><value>Please enter the password above first.</value></data>
   <data name="landing.folder.lede"><value>Files in this folder:</value></data>
   <data name="browse.libraries.mine"><value>My Libraries</value></data>
   <data name="browse.libraries.shared"><value>Public area</value></data>
