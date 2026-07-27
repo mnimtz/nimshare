@@ -18,12 +18,28 @@ public class AiController : ControllerBase
     private readonly NimShareDbContext _db;
     private readonly IAiGatewayService _ai;
     private readonly IBlobStorageService _blobs;
+    private readonly IGeoIpService _geo;
 
-    public AiController(NimShareDbContext db, IAiGatewayService ai, IBlobStorageService blobs)
+    public AiController(NimShareDbContext db, IAiGatewayService ai, IBlobStorageService blobs, IGeoIpService geo)
     {
         _db = db;
         _ai = ai;
         _blobs = blobs;
+        _geo = geo;
+    }
+
+    /// <summary>v1.11.17: liefert (lat, lon) — bevorzugt die vom Client
+    /// übergebenen Koordinaten (präziser, kommt vom Browser-GPS falls der
+    /// Nutzer das erlaubt hat), sonst IP-basiert via GeoIpService (stadt-
+    /// genau, kein Permission-Prompt nötig). Ersetzt die Pflicht, bei jedem
+    /// Dashboard-Besuch die native Standort-Abfrage zu zeigen.</summary>
+    private async Task<(double? Lat, double? Lon)> ResolveCoordinatesAsync(double? lat, double? lon, CancellationToken ct)
+    {
+        if (lat is double la && lon is double lo && Math.Abs(la) <= 90 && Math.Abs(lo) <= 180)
+            return (la, lo);
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var (_, _, _, ipLat, ipLon) = await _geo.LookupFullAsync(ip, ct);
+        return (ipLat, ipLon);
     }
 
     /// <summary>
@@ -77,9 +93,12 @@ public class AiController : ControllerBase
             : hour < 22 ? "am Abend"
             : "spät abends";
 
-        // Optionales Wetter via Open-Meteo (frei, ohne Key).
+        // Optionales Wetter via Open-Meteo (frei, ohne Key). Koordinaten:
+        // Browser-GPS falls vom Client mitgeschickt, sonst IP-basiert
+        // (v1.11.17 — kein Standort-Permission-Prompt mehr nötig).
         string? weather = null;
-        if (lat is double la && lon is double lo && Math.Abs(la) <= 90 && Math.Abs(lo) <= 180)
+        var (resolvedLat, resolvedLon) = await ResolveCoordinatesAsync(lat, lon, ct);
+        if (resolvedLat is double la && resolvedLon is double lo)
         {
             try
             {
@@ -194,9 +213,12 @@ public class AiController : ControllerBase
     public async Task<IActionResult> Weather(double? lat, double? lon,
         [FromServices] IHttpClientFactory httpFactory, CancellationToken ct)
     {
-        if (lat is not double la || lon is not double lo
-            || Math.Abs(la) > 90 || Math.Abs(lo) > 180)
-            return BadRequest(new { error = "lat/lon required" });
+        // v1.11.17: IP-Fallback statt Pflicht-Browser-GPS — siehe
+        // ResolveCoordinatesAsync.
+        var (resolvedLat, resolvedLon) = await ResolveCoordinatesAsync(lat, lon, ct);
+        if (resolvedLat is not double la || resolvedLon is not double lo)
+            return Problem(statusCode: 503, title: "Location unavailable.",
+                detail: "Neither client coordinates nor an IP-based location could be resolved.");
         try
         {
             var http = httpFactory.CreateClient();

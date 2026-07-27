@@ -198,9 +198,12 @@
         } catch {}
     }
     // v1.10.122: Wetter-Symbol + heutige Vorhersage neben der Begrüssung.
+    // v1.11.17: lat/lon optional — ohne sie löst der Server per IP auf.
     async function fetchWeather(lat, lon) {
         try {
-            const r = await fetch('/api/v1/ai/weather?lat=' + lat + '&lon=' + lon, { credentials: 'same-origin' });
+            let url = '/api/v1/ai/weather';
+            if (lat != null && lon != null) url += '?lat=' + lat + '&lon=' + lon;
+            const r = await fetch(url, { credentials: 'same-origin' });
             if (!r.ok) return;
             const w = await r.json();
             const wrap = document.getElementById('aiWeather');
@@ -210,16 +213,12 @@
             if (wrap) { wrap.title = w.text || ''; wrap.style.display = ''; }
         } catch {}
     }
+    // v1.11.17: kein navigator.geolocation-Prompt mehr — der Server löst
+    // die Koordinaten jetzt selbst per IP auf (stadtgenau, kein Permission-
+    // Dialog bei jedem Dashboard-Besuch). fetchWeather() ohne lat/lon lässt
+    // den Server entscheiden.
     fetchGreeting(null, null);
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            p => {
-                const lat = p.coords.latitude.toFixed(3), lon = p.coords.longitude.toFixed(3);
-                fetchGreeting(lat, lon);
-                fetchWeather(lat, lon);
-            },
-            () => {}, { timeout: 5000, maximumAge: 600000 });
-    }
+    fetchWeather(null, null);
 })();
 async function quickShare(fileId, name) {
     const dlg = document.getElementById('quickShareDlg');
