@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Localization;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
@@ -11,15 +12,20 @@ namespace NimShare.Api.Controllers;
 
 public class InvitationsController : Controller
 {
+    private static readonly HashSet<string> SupportedLanguages = new(StringComparer.OrdinalIgnoreCase)
+        { "en", "de", "fr", "it", "es", "nl" };
+
     private readonly NimShareDbContext _db;
     private readonly IPasswordHasher _hasher;
     private readonly ICurrentUserService _users;
     private readonly ILocalAuthService _auth;
     private readonly IEmailGatewayService _gateway;
     private readonly IStringLocalizer<SharedResources> _l;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     public InvitationsController(NimShareDbContext db, IPasswordHasher hasher, ICurrentUserService users,
-        ILocalAuthService auth, IEmailGatewayService gateway, IStringLocalizer<SharedResources> l)
+        ILocalAuthService auth, IEmailGatewayService gateway, IStringLocalizer<SharedResources> l,
+        IStringLocalizerFactory localizerFactory)
     {
         _db = db;
         _hasher = hasher;
@@ -27,13 +33,71 @@ public class InvitationsController : Controller
         _auth = auth;
         _gateway = gateway;
         _l = l;
+        _localizerFactory = localizerFactory;
+    }
+
+    /// <summary>Runs `body` with CurrentUICulture temporarily switched to `language`
+    /// — used so invite/reminder emails go out in the language the admin picked for
+    /// the recipient, independent of the admin's own UI language.</summary>
+    private static T WithCulture<T>(string language, Func<T> body)
+    {
+        var prev = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(
+                SupportedLanguages.Contains(language ?? "") ? language! : "en");
+            return body();
+        }
+        catch (CultureNotFoundException)
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en");
+            return body();
+        }
+        finally { CultureInfo.CurrentUICulture = prev; }
+    }
+
+    /// <summary>Branded HTML shell for the invite/reminder mail — table-based +
+    /// inline styles so it renders consistently across email clients (Outlook
+    /// desktop included). Dynamic text pieces must already be HTML-encoded by
+    /// the caller; `url` is inserted only as an href/plain link, never as markup.</summary>
+    private static string BuildInviteHtml(string introHtml, string ctaLabel, string url, string expiryNoteHtml)
+    {
+        var encodedUrl = System.Net.WebUtility.HtmlEncode(url);
+        return $$"""
+        <!doctype html>
+        <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#f2f4f7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f7;padding:32px 16px;">
+            <tr><td align="center">
+              <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <tr><td style="background:linear-gradient(135deg,#00A0FB 0%,#00EB86 100%);padding:28px 32px;">
+                  <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:.2px;">NimShare</span>
+                </td></tr>
+                <tr><td style="padding:32px 32px 8px;">
+                  <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#231F20;">{{introHtml}}</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                    <tr><td style="border-radius:8px;background:#00A0FB;">
+                      <a href="{{encodedUrl}}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">{{ctaLabel}}</a>
+                    </td></tr>
+                  </table>
+                  <p style="margin:0 0 4px;font-size:13px;line-height:1.6;color:#6b7280;">{{expiryNoteHtml}}</p>
+                  <p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#9ca3af;word-break:break-all;">{{encodedUrl}}</p>
+                </td></tr>
+                <tr><td style="padding:16px 32px 28px;border-top:1px solid #eef0f3;">
+                  <p style="margin:0;font-size:12px;color:#9ca3af;">— NimShare</p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body></html>
+        """;
     }
 
     // ── Admin: send invite ─────────────────────────────────────────────────
     [Authorize(Policy = "WebUser")]
     [HttpPost("/settings/users/invite")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Send(string email, string displayName, string role, CancellationToken ct)
+    public async Task<IActionResult> Send(string email, string displayName, string role, string language, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         if (me.Role != UserRole.Admin) return Forbid();
@@ -61,17 +125,32 @@ public class InvitationsController : Controller
             Role = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ? UserRole.Admin : UserRole.User,
             TokenHash = _hasher.Hash(token),
             InvitedByUserId = me.Id,
+            Language = SupportedLanguages.Contains(language ?? "") ? language!.ToLowerInvariant() : "en",
         };
         _db.Invitations.Add(invite);
         await _db.SaveChangesAsync(ct);
 
         // Build the acceptance URL from the current request scheme+host.
         var url = Request.PublicUrl($"/accept-invite/{invite.Id}?t={token}");
-        var subject = $"{me.DisplayName} invited you to NimShare";
-        var body = $"Hello,\n\n{me.DisplayName} ({me.Email}) has invited you to NimShare.\n\nOpen this link to set your password and sign in:\n{url}\n\nThe link expires on {invite.ExpiresAt:u}.\n\n— NimShare";
+        var expiry = invite.ExpiresAt.ToString("u");
+        var (subject, body, html) = WithCulture(invite.Language, () =>
+        {
+            var t = _localizerFactory.Create(typeof(SharedResources));
+            var encName = System.Net.WebUtility.HtmlEncode(me.DisplayName);
+            var encEmail = System.Net.WebUtility.HtmlEncode(me.Email);
+            return (
+                t["invite.email.subject", me.DisplayName].Value,
+                t["invite.email.body", me.DisplayName, me.Email, url, expiry].Value,
+                BuildInviteHtml(
+                    t["invite.email.intro", encName, encEmail].Value,
+                    t["invite.email.cta"].Value,
+                    url,
+                    t["invite.email.expiry_note", expiry].Value)
+            );
+        });
         try
         {
-            await _gateway.SendAsync(email, subject, body, ct);
+            await _gateway.SendAsync(email, subject, body, html, attachments: null, ct);
             TempData["Notice"] = string.Format(_l["notice.invite_sent"].Value, email);
         }
         catch (Exception ex)
@@ -170,11 +249,25 @@ public class InvitationsController : Controller
         await _db.SaveChangesAsync(ct);
 
         var url = Request.PublicUrl($"/accept-invite/{inv.Id}?t={token}");
-        var subject = $"{me.DisplayName} invited you to NimShare (Erinnerung)";
-        var body = $"Hallo,\n\n{me.DisplayName} ({me.Email}) hat dich zu NimShare eingeladen.\n\nÖffne diesen Link um dein Passwort zu setzen:\n{url}\n\nDer Link läuft am {inv.ExpiresAt:u} ab.\n\n— NimShare";
+        var expiry = inv.ExpiresAt.ToString("u");
+        var (subject, body, html) = WithCulture(inv.Language, () =>
+        {
+            var t = _localizerFactory.Create(typeof(SharedResources));
+            var encName = System.Net.WebUtility.HtmlEncode(me.DisplayName);
+            var encEmail = System.Net.WebUtility.HtmlEncode(me.Email);
+            return (
+                t["invite.email.reminder.subject", me.DisplayName].Value,
+                t["invite.email.reminder.body", me.DisplayName, me.Email, url, expiry].Value,
+                BuildInviteHtml(
+                    t["invite.email.intro", encName, encEmail].Value,
+                    t["invite.email.cta"].Value,
+                    url,
+                    t["invite.email.expiry_note", expiry].Value)
+            );
+        });
         try
         {
-            await _gateway.SendAsync(inv.Email, subject, body, ct);
+            await _gateway.SendAsync(inv.Email, subject, body, html, attachments: null, ct);
             TempData["Notice"] = $"Einladung an {inv.Email} erneut gesendet.";
         }
         catch (Exception ex)

@@ -114,6 +114,7 @@
 
   <data name="users.invite"><value>Inviter un utilisateur</value></data>
   <data name="users.invite.lede"><value>Le destinataire reçoit un lien à usage unique, choisit son mot de passe et arrive directement dans NimShare.</value></data>
+  <data name="users.invite.language"><value>Langue</value></data>
   <data name="users.invite.send"><value>Envoyer l'invitation</value></data>
   <data name="users.invite.confirm_revoke"><value>Révoquer l&apos;invitation pour {0} ?</value></data>
   <data name="users.create_new.lede"><value>Vous préférez définir le mot de passe vous-même ? Utilisez le formulaire classique ci-dessous.</value></data>
@@ -544,6 +545,13 @@ Ouvrez le lien :
   <data name="notice.file_restored"><value>« {0} » restauré.</value></data>
   <data name="notice.purged_one"><value>Supprimé définitivement.</value></data>
   <data name="notice.purged_many"><value>{0} supprimés définitivement.</value></data>
+  <data name="invite.email.subject"><value>{0} vous a invité(e) à rejoindre NimShare</value></data>
+  <data name="invite.email.body"><value>Bonjour,&#10;&#10;{0} ({1}) vous a invité(e) à rejoindre NimShare.&#10;&#10;Ouvrez ce lien pour définir votre mot de passe et vous connecter :&#10;{2}&#10;&#10;Ce lien expire le {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.reminder.subject"><value>{0} vous a invité(e) à rejoindre NimShare (rappel)</value></data>
+  <data name="invite.email.reminder.body"><value>Bonjour,&#10;&#10;{0} ({1}) vous a invité(e) à rejoindre NimShare.&#10;&#10;Ouvrez ce lien pour définir votre mot de passe :&#10;{2}&#10;&#10;Ce lien expire le {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.intro"><value>{0} ({1}) vous a invité(e) à rejoindre NimShare.</value></data>
+  <data name="invite.email.cta"><value>Définir le mot de passe et se connecter</value></data>
+  <data name="invite.email.expiry_note"><value>Ce lien expire le {0}.</value></data>
   <data name="notice.invite_sent"><value>Invitation envoyée à {0}.</value></data>
   <data name="notice.password_reset_sent"><value>Lien de réinitialisation du mot de passe envoyé à {0}.</value></data>
   <data name="notice.group_created"><value>Groupe créé.</value></data>
@@ -1337,7 +1345,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>Envoi d'e-mails</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Le serveur SMTP configuré par l'instance, ou Resend/SendGrid, utilisé pour envoyer les invitations de signature, les réinitialisations de mot de passe et les notifications.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Fournisseur d'IA (facultatif)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Si les fonctionnalités d'IA sont activées par l'administrateur, le contenu des documents est envoyé au fournisseur configuré (OpenAI, Anthropic, Azure OpenAI) — uniquement pour la requête concernée, jamais pour l'entraînement de modèles.</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Si les fonctionnalités IA sont activées par l'administrateur, le contenu des documents — ainsi que, le cas échéant, votre nom d'affichage ou l'adresse e-mail d'un destinataire (pour les invitations rédigées par l'IA) — sont envoyés au fournisseur configuré (OpenAI, Anthropic, Azure OpenAI), uniquement pour cette requête spécifique, jamais pour l'entraînement. Ces fournisseurs sont contractuellement tenus de protéger ces données à un niveau équivalent au nôtre.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Conservation</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Les fichiers sont conservés jusqu'à ce que vous les supprimiez manuellement ou que vous supprimiez votre compte. Les journaux d'audit de signature sont conservés pendant 10 ans à des fins probatoires. Les journaux d'accès aux liens publics sont anonymisés après 12 mois.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Vos droits</value></data>

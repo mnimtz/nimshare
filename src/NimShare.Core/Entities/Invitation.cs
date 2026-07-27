@@ -12,6 +12,9 @@ public class Invitation
     public string DisplayName { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.User;
 
+    /// <summary>ISO language code (en/de/fr/it/es/nl) the invite + reminder emails are sent in.</summary>
+    public string Language { get; set; } = "en";
+
     /// <summary>bcrypt hash of the one-time token; the plain token only lives in the invite URL.</summary>
     public string TokenHash { get; set; } = string.Empty;
 

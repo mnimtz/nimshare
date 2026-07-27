@@ -79,10 +79,18 @@ struct AiConsentSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Was NICHT gesendet wird")
                             .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                        Label("Deine E-Mail, dein Name, deine anderen Dateien", systemImage: "xmark.circle")
+                        Label("Deine anderen, nicht relevanten Dateien", systemImage: "xmark.circle")
                         Label("Passwörter, Zertifikate, Zugriffs-Tokens", systemImage: "lock.fill")
                     }
                     .font(.caption)
+                    // v1.11.13: Apple-5.1.1(i) — die vorherige Zeile behauptete
+                    // pauschal "Deine E-Mail, dein Name" werde nie gesendet.
+                    // Diese Zustimmung (AiConsentedAt) gilt aber App-weit für
+                    // dasselbe Konto, auch für Web-only-Features wie den
+                    // KI-Einladungstext-Entwurf, der bewusst Name + Empfänger-
+                    // Email in den Prompt schreibt — die Aussage war für den
+                    // Account als Ganzes schlicht falsch. Jetzt nur noch
+                    // Behauptungen, die für JEDES Feature stimmen.
 
                     // v1.10.165: Privacy-Link auf den aktuellen Server der
                     // Instanz — NimShare ist self-hosted, hardcoded nimshare.com

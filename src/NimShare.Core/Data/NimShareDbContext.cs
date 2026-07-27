@@ -220,6 +220,7 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Email).HasMaxLength(320).IsRequired();
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Language).HasMaxLength(5).IsRequired();
         });
 
         b.Entity<EmailGatewaySettings>(e =>

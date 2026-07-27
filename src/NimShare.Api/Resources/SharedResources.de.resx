@@ -162,6 +162,7 @@
 
   <data name="users.invite"><value>Benutzer einladen</value></data>
   <data name="users.invite.lede"><value>Der Empfänger bekommt einen Einmal-Link, wählt sein Passwort selbst und landet direkt in NimShare.</value></data>
+  <data name="users.invite.language"><value>Sprache</value></data>
   <data name="users.invite.send"><value>Einladung senden</value></data>
   <data name="users.invite.confirm_revoke"><value>Einladung an {0} widerrufen?</value></data>
   <data name="users.create_new.lede"><value>Lieber Passwort selbst setzen und außerhalb weitergeben? Nutze das klassische Anlegen-Formular unten.</value></data>
@@ -545,6 +546,13 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.file_restored"><value>„{0}" wiederhergestellt.</value></data>
   <data name="notice.purged_one"><value>Endgültig gelöscht.</value></data>
   <data name="notice.purged_many"><value>{0} endgültig gelöscht.</value></data>
+  <data name="invite.email.subject"><value>{0} hat dich zu NimShare eingeladen</value></data>
+  <data name="invite.email.body"><value>Hallo,&#10;&#10;{0} ({1}) hat dich zu NimShare eingeladen.&#10;&#10;Öffne diesen Link, um dein Passwort zu setzen und dich anzumelden:&#10;{2}&#10;&#10;Der Link läuft am {3} ab.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.reminder.subject"><value>{0} hat dich zu NimShare eingeladen (Erinnerung)</value></data>
+  <data name="invite.email.reminder.body"><value>Hallo,&#10;&#10;{0} ({1}) hat dich zu NimShare eingeladen.&#10;&#10;Öffne diesen Link, um dein Passwort zu setzen:&#10;{2}&#10;&#10;Der Link läuft am {3} ab.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.intro"><value>{0} ({1}) hat dich eingeladen, NimShare beizutreten.</value></data>
+  <data name="invite.email.cta"><value>Passwort setzen &amp; anmelden</value></data>
+  <data name="invite.email.expiry_note"><value>Dieser Link läuft am {0} ab.</value></data>
   <data name="notice.invite_sent"><value>Einladung an {0} versendet.</value></data>
   <data name="notice.password_reset_sent"><value>Reset-Link an {0} gesendet.</value></data>
   <data name="notice.group_created"><value>Gruppe erstellt.</value></data>
@@ -1353,7 +1361,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>E-Mail-Versand</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Der von der Instanz konfigurierte SMTP-Server oder Resend/SendGrid, um Signatur-Einladungen, Passwort-Resets und Benachrichtigungen zu verschicken.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>KI-Anbieter (optional)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Wenn KI-Features (Auto-Summary, Tags, Chat, OCR) im Admin-Bereich aktiviert sind, werden Dokumentinhalte an den konfigurierten Anbieter (OpenAI, Anthropic, Azure OpenAI) gesendet — nur für die konkrete Anfrage, kein Training.</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Wenn KI-Features (Auto-Summary, Tags, Chat, OCR) im Admin-Bereich aktiviert sind, werden Dokumentinhalte — sowie, wo relevant, dein Anzeigename oder die E-Mail-Adresse eines Empfängers (bei KI-generierten Einladungstexten) — an den konfigurierten Anbieter (OpenAI, Anthropic, Azure OpenAI) gesendet, ausschließlich für die konkrete Anfrage, nie zum Training. Diese Anbieter sind vertraglich verpflichtet, diese Daten mindestens gleichwertig zu unserem eigenen Schutzniveau zu behandeln.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Aufbewahrung</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Dateien bleiben bis zur manuellen Löschung durch Sie oder bis zur Löschung Ihres Accounts. Signatur-Audits bleiben aus Beweiskraft-Gründen 10 Jahre erhalten (gesetzliche Aufbewahrungsfrist). Öffentliche Link-Zugriffs-Logs werden nach 12 Monaten anonymisiert.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Ihre Rechte</value></data>

@@ -24,6 +24,11 @@ public interface IEmailGatewayService
     // Mail mitzuschicken. attachments = null hält den bisherigen Pfad
     // unverändert (Text-Only Mail).
     Task SendAsync(string toEmail, string subject, string bodyText, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default);
+    // v1.11.13: Optionaler HTML-Body neben dem Plaintext-Fallback (multipart/
+    // alternative bei SMTP, "html"-Feld bei Resend) — für Mails, die optisch
+    // schöner aussehen sollen als reiner Text (z.B. die Einladungs-Mail).
+    // bodyHtml = null verhält sich exakt wie die Text-Only-Overloads oben.
+    Task SendAsync(string toEmail, string subject, string bodyText, string? bodyHtml, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default);
 }
 
 // Small value type — kein Stream, damit der Aufrufer über die Lifetime
@@ -93,9 +98,12 @@ public class EmailGatewayService : IEmailGatewayService
     }
 
     public Task SendAsync(string toEmail, string subject, string bodyText, CancellationToken ct = default)
-        => SendAsync(toEmail, subject, bodyText, attachments: null, ct);
+        => SendAsync(toEmail, subject, bodyText, bodyHtml: null, attachments: null, ct);
 
-    public async Task SendAsync(string toEmail, string subject, string bodyText, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default)
+    public Task SendAsync(string toEmail, string subject, string bodyText, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default)
+        => SendAsync(toEmail, subject, bodyText, bodyHtml: null, attachments, ct);
+
+    public async Task SendAsync(string toEmail, string subject, string bodyText, string? bodyHtml, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct = default)
     {
         var s = await LoadAsync(ct);
         switch (s.Provider)
@@ -104,43 +112,36 @@ public class EmailGatewayService : IEmailGatewayService
                 _log.LogInformation("Email gateway disabled — would send to {To}: {Subject}", toEmail, subject);
                 return;
             case EmailProvider.Smtp:
-                await SendSmtpAsync(s, toEmail, subject, bodyText, attachments, ct);
+                await SendSmtpAsync(s, toEmail, subject, bodyText, bodyHtml, attachments, ct);
                 return;
             case EmailProvider.Resend:
-                await SendResendAsync(s, toEmail, subject, bodyText, attachments, ct);
+                await SendResendAsync(s, toEmail, subject, bodyText, bodyHtml, attachments, ct);
                 return;
         }
     }
 
-    private async Task SendSmtpAsync(EmailGatewaySettings s, string to, string subject, string body, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
+    private async Task SendSmtpAsync(EmailGatewaySettings s, string to, string subject, string body, string? bodyHtml, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
     {
         var msg = new MimeMessage();
         msg.From.Add(new MailboxAddress(s.FromName, s.FromAddress));
         msg.To.Add(MailboxAddress.Parse(to));
         msg.Subject = subject;
-        if (attachments is null || attachments.Count == 0)
+        if (bodyHtml is null && (attachments is null || attachments.Count == 0))
         {
             msg.Body = new TextPart("plain") { Text = body };
         }
         else
         {
-            var multipart = new Multipart("mixed");
-            multipart.Add(new TextPart("plain") { Text = body });
-            foreach (var a in attachments)
+            // BodyBuilder wraps TextBody+HtmlBody as multipart/alternative and
+            // adds attachments as siblings — the right shape whether or not
+            // bodyHtml is set.
+            var builder = new BodyBuilder { TextBody = body, HtmlBody = bodyHtml };
+            if (attachments is not null)
             {
-                var slash = a.ContentType.IndexOf('/');
-                var mediaType = slash > 0 ? a.ContentType[..slash] : "application";
-                var mediaSub = slash > 0 ? a.ContentType[(slash + 1)..] : "octet-stream";
-                var part = new MimePart(mediaType, mediaSub)
-                {
-                    Content = new MimeContent(new MemoryStream(a.Content)),
-                    ContentDisposition = new ContentDisposition(ContentDisposition.Attachment) { FileName = a.Filename },
-                    ContentTransferEncoding = ContentEncoding.Base64,
-                    FileName = a.Filename,
-                };
-                multipart.Add(part);
+                foreach (var a in attachments)
+                    builder.Attachments.Add(a.Filename, a.Content, ContentType.Parse(a.ContentType));
             }
-            msg.Body = multipart;
+            msg.Body = builder.ToMessageBody();
         }
         using var smtp = new SmtpClient();
         await smtp.ConnectAsync(s.SmtpHost, s.SmtpPort,
@@ -151,7 +152,7 @@ public class EmailGatewayService : IEmailGatewayService
         await smtp.DisconnectAsync(true, ct);
     }
 
-    private async Task SendResendAsync(EmailGatewaySettings s, string to, string subject, string body, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
+    private async Task SendResendAsync(EmailGatewaySettings s, string to, string subject, string body, string? bodyHtml, IReadOnlyList<EmailAttachment>? attachments, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(s.ResendApiKeyEncrypted))
             throw new InvalidOperationException("Resend API key is not configured.");
@@ -159,33 +160,24 @@ public class EmailGatewayService : IEmailGatewayService
         var http = _http.CreateClient();
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         // Resend accepts attachments as an array of { filename, content } with
-        // content base64-encoded (docs: https://resend.com/docs/api-reference/emails/send-email).
-        object payload;
-        if (attachments is null || attachments.Count == 0)
+        // content base64-encoded, and an optional "html" field alongside
+        // "text" (docs: https://resend.com/docs/api-reference/emails/send-email).
+        var payload = new Dictionary<string, object?>
         {
-            payload = new
-            {
-                from = $"{s.FromName} <{s.FromAddress}>",
-                to = new[] { to },
-                subject,
-                text = body,
-            };
-        }
-        else
+            ["from"] = $"{s.FromName} <{s.FromAddress}>",
+            ["to"] = new[] { to },
+            ["subject"] = subject,
+            ["text"] = body,
+        };
+        if (bodyHtml is not null) payload["html"] = bodyHtml;
+        if (attachments is { Count: > 0 })
         {
-            payload = new
+            payload["attachments"] = attachments.Select(a => new
             {
-                from = $"{s.FromName} <{s.FromAddress}>",
-                to = new[] { to },
-                subject,
-                text = body,
-                attachments = attachments.Select(a => new
-                {
-                    filename = a.Filename,
-                    content = Convert.ToBase64String(a.Content),
-                    content_type = a.ContentType,
-                }).ToArray(),
-            };
+                filename = a.Filename,
+                content = Convert.ToBase64String(a.Content),
+                content_type = a.ContentType,
+            }).ToArray();
         }
         var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload),
             System.Text.Encoding.UTF8, "application/json");

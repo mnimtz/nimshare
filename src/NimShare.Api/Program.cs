@@ -741,11 +741,16 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStaticFiles();
 
-app.UseRequestLocalization();
-
 // v1.11.0: Subdomain-Sharing — muss VOR UseRouting laufen, weil der Path-
 // Rewrite ({slug}.domain/ → /s/{slug}) sonst nach dem Endpoint-Matching käme.
+// v1.11.13: UND vor UseRequestLocalization — sonst sieht der
+// PublicPathBrowserLanguageProvider (der /s/, /u/, /sign/ prüft) bei einem
+// Subdomain-Visit noch den ungerewriteten Root-Pfad "/", greift nicht, und
+// die Landing fällt zurück auf ein eventuelles altes Culture-Cookie statt
+// die Browser-Sprache des Empfängers zu nehmen wie bei normalen /s/-Links.
 app.UseMiddleware<SubdomainShareMiddleware>();
+
+app.UseRequestLocalization();
 
 app.UseRouting();
 app.UseRateLimiter();

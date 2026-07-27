@@ -322,7 +322,7 @@ public class AiController : ControllerBase
 
         // Only serve summaries for files behind a currently-valid share link.
         var link = await _db.ShareLinks
-            .Include(l => l.File)
+            .Include(l => l.File).ThenInclude(f => f.Owner)
             .SingleOrDefaultAsync(l => l.Slug == req.Slug && l.FileId != null, ct);
         if (link is null || link.File is null) return NotFound();
         // v1.10.148: dieselben Access-Gates wie im Download-Pfad
@@ -333,6 +333,14 @@ public class AiController : ControllerBase
         // Session-Gate-Cookie geprüft, den ShareController.Landing setzt.
         if (!link.IsActive(DateTimeOffset.UtcNow))
             return Problem(statusCode: 410, title: "Link no longer available");
+        // v1.11.13: Apple-5.1.1(i) — dieser Endpoint ist [AllowAnonymous] (der
+        // Besucher ist nicht eingeloggt), schickt aber den Dateiinhalt des
+        // FILE-OWNERS an den AI-Provider. Ohne dessen Zustimmung darf das
+        // nicht passieren, egal von welchem Endpoint aus die Datei angefasst
+        // wird — konsistent mit dem Owner-Consent-Gate in AiPostProcessor.
+        if (link.File.Owner is null || link.File.Owner.AiConsentedAt is null)
+            return Problem(statusCode: 403, title: "AI summary not available",
+                detail: "The file owner has not consented to AI processing.");
         if (!string.IsNullOrWhiteSpace(link.AllowedEmails))
         {
             var gate = HttpContext.Session.GetString($"gate.{link.Slug}");
@@ -887,6 +895,11 @@ public class AiController : ControllerBase
         if (!settings.EnableGuidedUploadRequests || settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "Guided upload requests are disabled.");
         var me = await users.GetOrProvisionAsync(User, ct);
+        // v1.11.13: Apple-5.1.1(i) — dieser Draft schickt die Empfänger-Email
+        // UND den Namen des Users an den Provider; das braucht explizite
+        // Zustimmung wie jeder andere AI-Endpoint auch. War hier vorher
+        // vergessen (Konsent-Nacharbeit für die erste Ablehnung unvollständig).
+        if (AiConsentGuard.RequireOrReject(this, me) is IActionResult noConsent) return noConsent;
         var link = await _db.UploadRequests.SingleOrDefaultAsync(l => l.Id == req.LinkId && l.OwnerId == me.Id, ct);
         if (link is null) return NotFound();
         var provider = await _ai.CreateProviderAsync(ct);

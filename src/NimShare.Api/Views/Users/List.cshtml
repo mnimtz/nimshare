@@ -47,6 +47,18 @@
                 <option value="Admin">@T["users.role.admin"]</option>
             </select>
         </div>
+        <div class="field" style="width:140px">
+            <label>@T["users.invite.language"]</label>
+            @{ var inviteLang = (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName ?? "en").ToLowerInvariant(); }
+            <select name="language">
+                @foreach (var (code, native) in new (string, string)[] {
+                    ("en", "English"), ("de", "Deutsch"), ("fr", "Français"),
+                    ("it", "Italiano"), ("es", "Español"), ("nl", "Nederlands") })
+                {
+                    <option value="@code" selected="@(code == inviteLang ? "selected" : null)">@native</option>
+                }
+            </select>
+        </div>
         <button type="submit" class="btn btn-primary">@T["users.invite.send"]</button>
     </form>
 </div>

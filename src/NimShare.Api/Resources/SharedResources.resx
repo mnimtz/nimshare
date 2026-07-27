@@ -162,6 +162,7 @@
 
   <data name="users.invite"><value>Invite a user</value></data>
   <data name="users.invite.lede"><value>The recipient gets a one-time link, sets their own password, and lands directly in NimShare.</value></data>
+  <data name="users.invite.language"><value>Language</value></data>
   <data name="users.invite.send"><value>Send invite</value></data>
   <data name="users.invite.confirm_revoke"><value>Revoke the invitation for {0}?</value></data>
   <data name="users.create_new.lede"><value>Prefer to set a password yourself and share it out-of-band? Use the classic create form instead.</value></data>
@@ -545,6 +546,13 @@ Open the link:
   <data name="notice.file_restored"><value>Restored "{0}".</value></data>
   <data name="notice.purged_one"><value>Permanently deleted.</value></data>
   <data name="notice.purged_many"><value>{0} permanently deleted.</value></data>
+  <data name="invite.email.subject"><value>{0} invited you to NimShare</value></data>
+  <data name="invite.email.body"><value>Hello,&#10;&#10;{0} ({1}) has invited you to NimShare.&#10;&#10;Open this link to set your password and sign in:&#10;{2}&#10;&#10;The link expires on {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.reminder.subject"><value>{0} invited you to NimShare (reminder)</value></data>
+  <data name="invite.email.reminder.body"><value>Hello,&#10;&#10;{0} ({1}) has invited you to NimShare.&#10;&#10;Open this link to set your password:&#10;{2}&#10;&#10;The link expires on {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.intro"><value>{0} ({1}) has invited you to join NimShare.</value></data>
+  <data name="invite.email.cta"><value>Set password &amp; sign in</value></data>
+  <data name="invite.email.expiry_note"><value>This link expires on {0}.</value></data>
   <data name="notice.invite_sent"><value>Invite sent to {0}.</value></data>
   <data name="notice.password_reset_sent"><value>Password reset link sent to {0}.</value></data>
   <data name="notice.group_created"><value>Group created.</value></data>
@@ -1351,7 +1359,7 @@ Thanks for using NimShare.</value></data>
   <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>Email delivery</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>The SMTP server configured by the instance, or Resend/SendGrid, used to send signature invitations, password resets and notifications.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI provider (optional)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>If AI features are enabled by the administrator, document contents are sent to the configured provider (OpenAI, Anthropic, Azure OpenAI) — only for the specific request, never for training.</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>If AI features are enabled by the administrator, document contents — and, where relevant, your display name or a message recipient's email address (for AI-drafted invitations) — are sent to the configured provider (OpenAI, Anthropic, Azure OpenAI) for that specific request only, never for training. These providers are contractually required to protect this data to a standard equal to our own.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Retention</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Files remain until you delete them manually or delete your account. Signature audits are retained for 10 years for evidentiary reasons. Public link access logs are anonymized after 12 months.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Your rights</value></data>

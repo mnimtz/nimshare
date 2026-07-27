@@ -215,6 +215,7 @@
 
   <data name="users.invite"><value>Gebruiker uitnodigen</value></data>
   <data name="users.invite.lede"><value>De ontvanger krijgt een eenmalige link, kiest zijn eigen wachtwoord en komt direct in NimShare.</value></data>
+  <data name="users.invite.language"><value>Taal</value></data>
   <data name="users.invite.send"><value>Uitnodiging versturen</value></data>
   <data name="users.invite.confirm_revoke"><value>Uitnodiging voor {0} intrekken?</value></data>
   <data name="users.create_new.lede"><value>Liever zelf een wachtwoord instellen? Gebruik het klassieke formulier hieronder.</value></data>
@@ -543,6 +544,13 @@ Open de link:
   <data name="notice.file_restored"><value>"{0}" hersteld.</value></data>
   <data name="notice.purged_one"><value>Definitief verwijderd.</value></data>
   <data name="notice.purged_many"><value>{0} definitief verwijderd.</value></data>
+  <data name="invite.email.subject"><value>{0} heeft je uitgenodigd voor NimShare</value></data>
+  <data name="invite.email.body"><value>Hallo,&#10;&#10;{0} ({1}) heeft je uitgenodigd voor NimShare.&#10;&#10;Open deze link om je wachtwoord in te stellen en in te loggen:&#10;{2}&#10;&#10;De link verloopt op {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.reminder.subject"><value>{0} heeft je uitgenodigd voor NimShare (herinnering)</value></data>
+  <data name="invite.email.reminder.body"><value>Hallo,&#10;&#10;{0} ({1}) heeft je uitgenodigd voor NimShare.&#10;&#10;Open deze link om je wachtwoord in te stellen:&#10;{2}&#10;&#10;De link verloopt op {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.intro"><value>{0} ({1}) heeft je uitgenodigd voor NimShare.</value></data>
+  <data name="invite.email.cta"><value>Wachtwoord instellen &amp; inloggen</value></data>
+  <data name="invite.email.expiry_note"><value>Deze link verloopt op {0}.</value></data>
   <data name="notice.invite_sent"><value>Uitnodiging verzonden naar {0}.</value></data>
   <data name="notice.password_reset_sent"><value>Resetlink verzonden naar {0}.</value></data>
   <data name="notice.group_created"><value>Groep aangemaakt.</value></data>
@@ -1336,7 +1344,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>E-mailverzending</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>De door de instantie geconfigureerde SMTP-server of Resend/SendGrid, gebruikt om ondertekeningsuitnodigingen, wachtwoordresets en meldingen te versturen.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI-provider (optioneel)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Als AI-functies (auto-samenvatting, tags, chat, OCR) door de beheerder zijn geactiveerd, worden documentinhouden verstuurd naar de geconfigureerde aanbieder (OpenAI, Anthropic, Azure OpenAI) — uitsluitend voor de specifieke aanvraag, nooit voor training.</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Als AI-functies door de beheerder zijn ingeschakeld, worden documentinhoud — en, waar relevant, je weergavenaam of het e-mailadres van een ontvanger (bij door AI opgestelde uitnodigingen) — naar de geconfigureerde provider (OpenAI, Anthropic, Azure OpenAI) gestuurd, uitsluitend voor dat specifieke verzoek, nooit voor training. Deze providers zijn contractueel verplicht deze gegevens op een niveau te beschermen dat gelijkwaardig is aan het onze.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Bewaartermijn</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Bestanden blijven bewaard totdat u ze handmatig verwijdert of uw account verwijdert. Ondertekeningsaudits blijven om bewijsredenen 10 jaar bewaard (wettelijke bewaartermijn). Toegangslogs van openbare links worden na 12 maanden geanonimiseerd.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Uw rechten</value></data>

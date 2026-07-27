@@ -578,6 +578,14 @@ public class SignController : Controller
             return Problem(statusCode: 503, title: "AI-Zusammenfassungen sind serverseitig deaktiviert.");
         if (!settings.EnableAutoSummary)
             return Problem(statusCode: 503, title: "AI-Zusammenfassung ist im AI-Gateway nicht aktiviert.");
+        // v1.11.13: Apple-5.1.1(i) — Signer/Viewer sind hier nur per Token
+        // authentifiziert, nicht per App-Account; die Zustimmung des
+        // INITIATORS (dessen Dokumentinhalt an den AI-Provider geht,
+        // inklusive möglicher OCR-Eskalation in ExtractTextAsync) muss
+        // trotzdem vorliegen — konsistent mit dem Owner-Gate im /s/-Pfad.
+        if (req.Initiator?.AiConsentedAt is null)
+            return Problem(statusCode: 403, title: "AI-Zusammenfassung nicht verfügbar",
+                detail: "Der Initiator hat der KI-Verarbeitung nicht zugestimmt.");
 
         var text = await ai.ExtractTextAsync(req.SourceFile.BlobPath, req.SourceFile.ContentType, _blobs, ct);
         if (string.IsNullOrWhiteSpace(text))

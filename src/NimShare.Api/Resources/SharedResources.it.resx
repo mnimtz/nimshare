@@ -114,6 +114,7 @@
 
   <data name="users.invite"><value>Invita un utente</value></data>
   <data name="users.invite.lede"><value>Il destinatario riceve un link one-time, sceglie la password e arriva direttamente in NimShare.</value></data>
+  <data name="users.invite.language"><value>Lingua</value></data>
   <data name="users.invite.send"><value>Invia invito</value></data>
   <data name="users.invite.confirm_revoke"><value>Revocare l&apos;invito per {0}?</value></data>
   <data name="users.create_new.lede"><value>Preferisci impostare tu la password? Usa il modulo classico qui sotto.</value></data>
@@ -544,6 +545,13 @@ Apri il link:
   <data name="notice.file_restored"><value>"{0}" ripristinato.</value></data>
   <data name="notice.purged_one"><value>Eliminato definitivamente.</value></data>
   <data name="notice.purged_many"><value>{0} eliminati definitivamente.</value></data>
+  <data name="invite.email.subject"><value>{0} ti ha invitato su NimShare</value></data>
+  <data name="invite.email.body"><value>Ciao,&#10;&#10;{0} ({1}) ti ha invitato su NimShare.&#10;&#10;Apri questo link per impostare la password e accedere:&#10;{2}&#10;&#10;Il link scade il {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.reminder.subject"><value>{0} ti ha invitato su NimShare (promemoria)</value></data>
+  <data name="invite.email.reminder.body"><value>Ciao,&#10;&#10;{0} ({1}) ti ha invitato su NimShare.&#10;&#10;Apri questo link per impostare la password:&#10;{2}&#10;&#10;Il link scade il {3}.&#10;&#10;— NimShare</value></data>
+  <data name="invite.email.intro"><value>{0} ({1}) ti ha invitato a unirti a NimShare.</value></data>
+  <data name="invite.email.cta"><value>Imposta la password e accedi</value></data>
+  <data name="invite.email.expiry_note"><value>Questo link scade il {0}.</value></data>
   <data name="notice.invite_sent"><value>Invito inviato a {0}.</value></data>
   <data name="notice.password_reset_sent"><value>Link di reset password inviato a {0}.</value></data>
   <data name="notice.group_created"><value>Gruppo creato.</value></data>
@@ -1337,7 +1345,7 @@ Grazie per usare NimShare.</value></data>
   <data name="privacy.thirdparty.smtp" xml:space="preserve"><value>Invio email</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Il server SMTP configurato dall'istanza, oppure Resend/SendGrid, usato per inviare inviti di firma, reset password e notifiche.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Provider IA (facoltativo)</value></data>
-  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Se le funzionalità IA sono attivate dall'amministratore, il contenuto dei documenti viene inviato al provider configurato (OpenAI, Anthropic, Azure OpenAI) — solo per la richiesta specifica, mai per l'addestramento.</value></data>
+  <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Se le funzionalità IA sono abilitate dall'amministratore, il contenuto dei documenti — e, se pertinente, il tuo nome visualizzato o l'indirizzo email di un destinatario (per gli inviti generati dall'IA) — vengono inviati al provider configurato (OpenAI, Anthropic, Azure OpenAI), solo per quella specifica richiesta, mai per l'addestramento. Questi provider sono contrattualmente tenuti a proteggere questi dati con un livello equivalente al nostro.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Conservazione</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>I file restano fino a quando non li elimini manualmente o elimini il tuo account. Gli audit delle firme vengono conservati per 10 anni per motivi probatori. I log di accesso ai link pubblici vengono anonimizzati dopo 12 mesi.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>I tuoi diritti</value></data>
