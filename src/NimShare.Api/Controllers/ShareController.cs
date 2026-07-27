@@ -61,6 +61,22 @@ public class ShareController : Controller
         return (country, city, device, isp);
     }
 
+    // v1.11.20 — CRITICAL Review-Fund: der AllowedEmails/OTP-Gate wurde
+    // bislang NUR auf der GET-Landing (file-Zweig) geprüft. Jeder Download-/
+    // Asset-Endpoint (Submit, DownloadFolderFile, DownloadAll, GalleryMedia,
+    // GalleryThumb) ließ sich direkt aufrufen und prüfte nur das Passwort —
+    // ein Angreifer mit gültigem Anti-Forgery-Cookie (das man einfach durch
+    // Aufruf der GET-Landing bekommt) konnte den kompletten Empfänger-
+    // Einschränken/6-stelliger-Code-Schutz umgehen, OHNE je eine erlaubte
+    // Email oder einen Code einzugeben. Zusätzlich fehlte der Gate-Check im
+    // Folder-Zweig von Landing() KOMPLETT — Ordner-Links mit AllowedEmails
+    // zeigten die volle Dateiliste + funktionierende Thumbnails ungeschützt.
+    // Dieser Helper wird jetzt an JEDER Stelle geprüft, die Inhalt/Dateien
+    // ausliefert.
+    private bool RecipientGateOk(ShareLink link)
+        => string.IsNullOrWhiteSpace(link.AllowedEmails)
+           || HttpContext.Session.GetString($"gate.{link.Slug}") == "ok";
+
     [HttpGet("{slug}")]
     public async Task<IActionResult> Landing(string slug, [FromServices] NimShare.Core.Data.NimShareDbContext db,
         [FromServices] IFolderService folderSvc,
@@ -75,6 +91,10 @@ public class ShareController : Controller
         {
             var now0 = DateTimeOffset.UtcNow;
             if (!link.IsActive(now0)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+            // v1.11.20: fehlte hier komplett — Ordner-Links mit AllowedEmails
+            // zeigten die volle Dateiliste ungeschützt, siehe RecipientGateOk-Doku.
+            if (!RecipientGateOk(link))
+                return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
             var folder = await db.Folders.FindAsync(new object[] { folderId }, ct);
             if (folder is null) return View("NotFound");
             var files = await folderSvc.ListFilesAsync(folder, ct);
@@ -170,12 +190,8 @@ public class ShareController : Controller
         // Recipient allow-list gate: if the link has AllowedEmails set, block
         // access until the visitor's email (and optional OTP) has been
         // verified in this session.
-        if (!string.IsNullOrWhiteSpace(link.AllowedEmails))
-        {
-            var gate = HttpContext.Session.GetString($"gate.{link.Slug}");
-            if (gate != "ok")
-                return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
-        }
+        if (!RecipientGateOk(link))
+            return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
 
         // Log the landing hit (fire-and-forget-ish, but awaited so we don't lose it).
         var lf1 = await LandingForensicsAsync(ct);
@@ -326,6 +342,9 @@ public class ShareController : Controller
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return NotFound();
         if (link.PasswordHash is not null) return Forbid();
+        // v1.11.20: siehe Submit() — dieselbe Lücke, hier für die Inline-
+        // Vorschau (Bild/PDF/Video) statt des eigentlichen Downloads.
+        if (!RecipientGateOk(link)) return Forbid();
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var ct2 = (link.File.ContentType ?? "").ToLowerInvariant();
@@ -362,6 +381,13 @@ public class ShareController : Controller
             var otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1_000_000).ToString();
             HttpContext.Session.SetString($"gate.{link.Slug}.otp", otp);
             HttpContext.Session.SetString($"gate.{link.Slug}.email", e);
+            // v1.11.20: Review-Fund — der Code hatte keinen Timestamp, die
+            // Mail-Behauptung "Gültig für 10 Minuten" war nie erzwungen (nur
+            // durch den globalen 10-min-Session-IdleTimeout zufällig
+            // begrenzt, der sich durch jede andere Session-Aktivität
+            // verlängert). Jetzt explizit gespeichert + geprüft.
+            HttpContext.Session.SetString($"gate.{link.Slug}.otp.at", DateTimeOffset.UtcNow.ToString("O"));
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp.attempts");
             try
             {
                 await notify.SendShareLinkAsync(e, "NimShare", "Dein Zugangs-Code",
@@ -374,6 +400,15 @@ public class ShareController : Controller
         return RedirectToAction(nameof(Landing), new { slug });
     }
 
+    private static readonly TimeSpan OtpValidity = TimeSpan.FromMinutes(10);
+    // v1.11.20: Review-Fund — 1 Mio. mögliche Codes ohne Attempt-Limit war
+    // nur durch die generelle 240-req/min-Rate-Limit-Policy gedeckelt
+    // (~35h Brute-Force von einer IP, trivial durch IP-Rotation umgangen).
+    // 8 Fehlversuche pro angefordertem Code, danach muss ein neuer
+    // angefordert werden — praktisch nutzbar für den echten Empfänger
+    // (Tippfehler), unbrauchbar für Brute-Force.
+    private const int MaxOtpAttempts = 8;
+
     [HttpPost("{slug}/gate/otp")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GateOtp(string slug, string? code, CancellationToken ct)
@@ -382,11 +417,34 @@ public class ShareController : Controller
         if (link is null) return View("NotFound");
         var expected = HttpContext.Session.GetString($"gate.{link.Slug}.otp");
         var email = HttpContext.Session.GetString($"gate.{link.Slug}.email");
+        var atRaw = HttpContext.Session.GetString($"gate.{link.Slug}.otp.at");
         if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(email))
             return RedirectToAction(nameof(Landing), new { slug });
+        if (!DateTimeOffset.TryParse(atRaw, out var at) || DateTimeOffset.UtcNow - at > OtpValidity)
+        {
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp");
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp.at");
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp.attempts");
+            return View("Gate", new GateViewModel(slug, true, otpSent: false,
+                error: "Der Code ist abgelaufen. Bitte erneut anfordern."));
+        }
+        var attempts = HttpContext.Session.GetInt32($"gate.{link.Slug}.otp.attempts") ?? 0;
+        if (attempts >= MaxOtpAttempts)
+        {
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp");
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp.at");
+            HttpContext.Session.Remove($"gate.{link.Slug}.otp.attempts");
+            return View("Gate", new GateViewModel(slug, true, otpSent: false,
+                error: "Zu viele Fehlversuche. Bitte einen neuen Code anfordern."));
+        }
         if ((code ?? "").Trim() != expected)
+        {
+            HttpContext.Session.SetInt32($"gate.{link.Slug}.otp.attempts", attempts + 1);
             return View("Gate", new GateViewModel(slug, true, otpSent: true, error: "Falscher Code."));
+        }
         HttpContext.Session.Remove($"gate.{link.Slug}.otp");
+        HttpContext.Session.Remove($"gate.{link.Slug}.otp.at");
+        HttpContext.Session.Remove($"gate.{link.Slug}.otp.attempts");
         HttpContext.Session.SetString($"gate.{link.Slug}", "ok");
         return RedirectToAction(nameof(Landing), new { slug });
     }
@@ -416,6 +474,13 @@ public class ShareController : Controller
         if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return View("NotFound");
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        // v1.11.20: CRITICAL Review-Fund — dieser Endpoint prüfte bislang NUR
+        // das Passwort, nie AllowedEmails/OTP. Ein direkter POST hierher
+        // (mit gültigem AF-Token, den man einfach durch Aufruf der GET-
+        // Landing bekommt) umging den Empfänger-Einschränken-Schutz
+        // vollständig. Siehe RecipientGateOk-Doku oben.
+        if (!RecipientGateOk(link))
+            return RedirectToAction(nameof(Landing), new { slug });
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         var ipHash = _iphash.Hash(ip);
@@ -452,6 +517,9 @@ public class ShareController : Controller
         if (link is null || link.FolderId is null) return View("NotFound");
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link))
+            return RedirectToAction(nameof(Landing), new { slug });
 
         var ipFf = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         var ipHash = _iphash.Hash(ipFf);
@@ -499,6 +567,9 @@ public class ShareController : Controller
         if (link is null || link.FolderId is null) return NotFound();
         if (!link.IsActive(DateTimeOffset.UtcNow))
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link))
+            return RedirectToAction(nameof(Landing), new { slug });
         // Password-Gate analog zum Einzel-Download.
         if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
         {
@@ -612,6 +683,8 @@ public class ShareController : Controller
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
         if (link.PasswordHash is not null) return Forbid();
+        // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link)) return Forbid();
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var file = await db.Files.SingleOrDefaultAsync(
@@ -642,6 +715,8 @@ public class ShareController : Controller
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
         if (link.PasswordHash is not null) return Forbid();
+        // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link)) return Forbid();
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var file = await db.Files.SingleOrDefaultAsync(
@@ -675,6 +750,8 @@ public class ShareController : Controller
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
         if (link.PasswordHash is not null) return Forbid();
+        // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link)) return Forbid();
         if (!link.IsActive(DateTimeOffset.UtcNow)) return NotFound();
         var images = await db.Files
             .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready
@@ -728,6 +805,9 @@ public class ShareController : Controller
         if (!isMedia) return Problem(statusCode: 415, title: _t["gallery.upload.only_media"].Value);
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
+        // v1.11.20: siehe Submit() — ein ungegateter Besucher soll auch nicht
+        // in ein Empfänger-eingeschränktes Album hochladen können.
+        if (!RecipientGateOk(link)) return Forbid();
         // Passwort-geschützte Album-Links: entweder Body-Passwort oder Session-Gate.
         if (link.PasswordHash is not null && !UploadPasswordOk(link, req.Password)) return Forbid();
         var now = DateTimeOffset.UtcNow;
@@ -767,6 +847,8 @@ public class ShareController : Controller
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null || !link.AllowUploads) return NotFound();
+        // v1.11.20: siehe GalleryUploadInit() — gleiche Lücke, gleicher Fix.
+        if (!RecipientGateOk(link)) return Forbid();
         if (link.PasswordHash is not null && !UploadPasswordOk(link, req?.Password)) return Forbid();
         var file = await db.Files.SingleOrDefaultAsync(
             f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Pending, ct);
