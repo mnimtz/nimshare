@@ -738,13 +738,29 @@ final class NimShareAPI: ObservableObject {
     // "Widerrufen" als eigene Aktion getrennt von "Löschen" in LinksView.
     struct UpdateShareLinkBody: Encodable {
         var isRevoked: Bool?
-        init(isRevoked: Bool? = nil) { self.isRevoked = isRevoked }
+        // v1.11.19: isPublic dazu — Admin-Toggle "öffentlich kuratiert
+        // machen", analog Web (Links.cshtml data-toggle-public, nur bei
+        // Admin-Rolle sichtbar; Server ignoriert das Feld sonst still).
+        var isPublic: Bool?
+        init(isRevoked: Bool? = nil, isPublic: Bool? = nil) {
+            self.isRevoked = isRevoked
+            self.isPublic = isPublic
+        }
     }
-    func updateShareLink(id: UUID, isRevoked: Bool? = nil) async throws -> ShareLinkDto {
-        let body = try Self.jsonEncoder.encode(UpdateShareLinkBody(isRevoked: isRevoked))
+    func updateShareLink(id: UUID, isRevoked: Bool? = nil, isPublic: Bool? = nil) async throws -> ShareLinkDto {
+        let body = try Self.jsonEncoder.encode(UpdateShareLinkBody(isRevoked: isRevoked, isPublic: isPublic))
         let req = request("PATCH", "api/v1/links/\(id)", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)
+    }
+
+    // v1.11.19: "Per E-Mail senden" — Server-Endpoint existiert seit v1.10.x
+    // (LinksController.SendByEmail), iOS rief ihn nie auf.
+    struct SendLinkByEmailBody: Encodable { let toEmail: String; let message: String? }
+    func sendShareLinkByEmail(id: UUID, toEmail: String, message: String? = nil) async throws {
+        let body = try Self.jsonEncoder.encode(SendLinkByEmailBody(toEmail: toEmail, message: message))
+        let req = request("POST", "api/v1/links/\(id)/send-email", body: body, contentType: "application/json")
+        _ = try await perform(req)
     }
 
     // v1.10.158: Link-Report — reiche Aggregate, für die LinkReportView.
