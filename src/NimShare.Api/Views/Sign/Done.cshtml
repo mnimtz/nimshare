@@ -23,16 +23,39 @@
         {
             <img src="@theme.LogoUrl" alt="Logo" style="max-height:44px;max-width:180px;object-fit:contain;margin-bottom:12px"/>
         }
-        <div style="font-size:4rem;line-height:1;margin-bottom:12px">@(Model.Signed ? "✅" : "✕")</div>
-        <h1 style="margin-top:0">@(Model.Signed ? T["sign.done_thanks"] : T["sign.done_declined"])</h1>
+        @{
+            var icon = Model.Outcome switch
+            {
+                NimShare.Api.Controllers.SignDoneOutcome.Signed => "✅",
+                NimShare.Api.Controllers.SignDoneOutcome.Acknowledged => "✅",
+                NimShare.Api.Controllers.SignDoneOutcome.Reassigned => "↪",
+                _ => "✕",
+            };
+            var title = Model.Outcome switch
+            {
+                NimShare.Api.Controllers.SignDoneOutcome.Signed => T["sign.done_thanks"],
+                NimShare.Api.Controllers.SignDoneOutcome.Acknowledged => T["sign.done_acknowledged"],
+                NimShare.Api.Controllers.SignDoneOutcome.Reassigned => T["sign.done_reassigned"],
+                _ => T["sign.done_declined"],
+            };
+        }
+        <div style="font-size:4rem;line-height:1;margin-bottom:12px">@icon</div>
+        <h1 style="margin-top:0">@title</h1>
         <p class="muted">
-            @if (Model.Signed)
+            @switch (Model.Outcome)
             {
-                <span>@string.Format(T["sign.done_signed_body"].Value, Model.Request.Initiator?.DisplayName ?? "")</span>
-            }
-            else
-            {
-                <span>@string.Format(T["sign.done_declined_body"].Value, Model.Request.Title ?? "")</span>
+                case NimShare.Api.Controllers.SignDoneOutcome.Signed:
+                    <span>@string.Format(T["sign.done_signed_body"].Value, Model.Request.Initiator?.DisplayName ?? "")</span>
+                    break;
+                case NimShare.Api.Controllers.SignDoneOutcome.Acknowledged:
+                    <span>@string.Format(T["sign.done_acknowledged_body"].Value, Model.Request.Initiator?.DisplayName ?? "")</span>
+                    break;
+                case NimShare.Api.Controllers.SignDoneOutcome.Reassigned:
+                    <span>@string.Format(T["sign.done_reassigned_body"].Value, Model.ReassignedToName ?? "")</span>
+                    break;
+                default:
+                    <span>@string.Format(T["sign.done_declined_body"].Value, Model.Request.Title ?? "")</span>
+                    break;
             }
         </p>
         <p class="muted" style="font-size:.75rem;margin-top:24px">

@@ -1205,6 +1205,10 @@ Please open this link to sign:
   <data name="sign.done_declined"><value>Request declined</value></data>
   <data name="sign.done_signed_body"><value>Your response has reached {0}. Once every signer is done you will receive the final signed document.</value></data>
   <data name="sign.done_declined_body"><value>You declined the signature request „{0}“. The initiator has been notified.</value></data>
+  <data name="sign.done_acknowledged"><value>Confirmed</value></data>
+  <data name="sign.done_acknowledged_body"><value>Your confirmation has reached {0}.</value></data>
+  <data name="sign.done_reassigned"><value>Forwarded</value></data>
+  <data name="sign.done_reassigned_body"><value>This request has been forwarded to {0}.</value></data>
   <data name="sign.mode_byo"><value>📎 Own certificate</value></data>
   <data name="sign.byo_hint"><value>Upload your own PFX/P12 file — the certificate is validated in memory and discarded immediately, we never store it.</value></data>
   <data name="sign.byo_file"><value>PFX / P12 file</value></data>

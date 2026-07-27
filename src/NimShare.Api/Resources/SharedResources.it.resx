@@ -1191,6 +1191,10 @@ Apri questo link per firmare:
   <data name="sign.done_declined"><value>Richiesta rifiutata</value></data>
   <data name="sign.done_signed_body"><value>La tua risposta è arrivata a {0}. Al completamento di tutte le firme riceverai il documento finale firmato.</value></data>
   <data name="sign.done_declined_body"><value>Hai rifiutato la richiesta di firma « {0} ». L'iniziatore è stato informato.</value></data>
+  <data name="sign.done_acknowledged"><value>Confermato</value></data>
+  <data name="sign.done_acknowledged_body"><value>La tua conferma è arrivata a {0}.</value></data>
+  <data name="sign.done_reassigned"><value>Inoltrata</value></data>
+  <data name="sign.done_reassigned_body"><value>Questa richiesta è stata inoltrata a {0}.</value></data>
   <data name="sign.mode_byo"><value>📎 Certificato proprio</value></data>
   <data name="sign.byo_hint"><value>Carica il tuo file PFX/P12 — il certificato viene verificato in memoria e cancellato subito, non lo conserviamo.</value></data>
   <data name="sign.byo_file"><value>File PFX / P12</value></data>

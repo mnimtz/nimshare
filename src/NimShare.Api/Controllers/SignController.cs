@@ -304,7 +304,7 @@ public class SignController : Controller
                 catch { }
             });
             ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
-        return View("Done", new SignDoneViewModel(req, p, false));
+        return View("Done", new SignDoneViewModel(req, p, SignDoneOutcome.Acknowledged));
         }
 
         // Persist signature PNG to blob if provided; else fall back to typed name.
@@ -460,7 +460,7 @@ public class SignController : Controller
         });
 
         ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
-        return View("Done", new SignDoneViewModel(req, p, true));
+        return View("Done", new SignDoneViewModel(req, p, SignDoneOutcome.Signed));
     }
 
     [HttpPost("/sign/{pid:guid}/decline")]
@@ -557,7 +557,7 @@ public class SignController : Controller
         }
         finally { System.Globalization.CultureInfo.CurrentUICulture = declPrev; }
         ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
-        return View("Done", new SignDoneViewModel(req, p, false));
+        return View("Done", new SignDoneViewModel(req, p, SignDoneOutcome.Declined));
     }
 
     /// <summary>AI-drafted summary of the source PDF in the requested language,
@@ -731,7 +731,7 @@ public class SignController : Controller
         finally { System.Globalization.CultureInfo.CurrentUICulture = prevCulture; }
 
         ViewData["Theme"] = await ResolveSignThemeAsync(req, ct);
-        return View("Done", new SignDoneViewModel(req, p, false));
+        return View("Done", new SignDoneViewModel(req, p, SignDoneOutcome.Reassigned, toName));
     }
 
     private async Task NotifyNextAsync(SignatureRequest req, SignatureParticipant justSigned, CancellationToken ct)
@@ -894,7 +894,15 @@ public class SignController : Controller
 }
 
 public record SignViewModel(SignatureRequest Request, SignatureParticipant Me, string Token);
-public record SignDoneViewModel(SignatureRequest Request, SignatureParticipant Me, bool Signed);
+// Bug-Fix v1.11.10 — Marcus: ein Viewer, der nur "Gelesen bestätigen"
+// klickt, sah danach "Anforderung abgelehnt". Root-Cause: Done.cshtml kannte
+// nur zwei Zustände (Signed=true/false), und "false" wurde für ALLE
+// Nicht-Signer-Wege wiederverwendet — Viewer-Bestätigung UND Reassign
+// landeten damit fälschlich auf der Decline-Meldung. Jetzt ein echtes
+// 4-Zustands-Enum statt eines binären Flags.
+public enum SignDoneOutcome { Signed, Acknowledged, Declined, Reassigned }
+public record SignDoneViewModel(SignatureRequest Request, SignatureParticipant Me,
+    SignDoneOutcome Outcome, string? ReassignedToName = null);
 
 /// <summary>Landing-Template-Snapshot für die Signatur-Landing (Sign.cshtml
 /// und Done.cshtml). Wird über ViewData["Theme"] durchgereicht — dieselbe

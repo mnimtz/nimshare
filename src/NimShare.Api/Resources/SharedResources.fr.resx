@@ -1191,6 +1191,10 @@ Ouvrez ce lien pour signer :
   <data name="sign.done_declined"><value>Demande refusée</value></data>
   <data name="sign.done_signed_body"><value>Votre réponse a bien été transmise à {0}. Une fois toutes les signatures obtenues, vous recevrez le document final signé.</value></data>
   <data name="sign.done_declined_body"><value>Vous avez refusé la demande de signature « {0} ». L'initiateur a été informé.</value></data>
+  <data name="sign.done_acknowledged"><value>Confirmé</value></data>
+  <data name="sign.done_acknowledged_body"><value>Votre confirmation a bien été transmise à {0}.</value></data>
+  <data name="sign.done_reassigned"><value>Transmis</value></data>
+  <data name="sign.done_reassigned_body"><value>Cette demande a été transmise à {0}.</value></data>
   <data name="sign.mode_byo"><value>📎 Mon certificat</value></data>
   <data name="sign.byo_hint"><value>Téléversez votre propre fichier PFX/P12 — le certificat est vérifié en mémoire et supprimé immédiatement, nous ne le conservons pas.</value></data>
   <data name="sign.byo_file"><value>Fichier PFX / P12</value></data>

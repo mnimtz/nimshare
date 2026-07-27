@@ -1190,6 +1190,10 @@ Open deze link om te tekenen:
   <data name="sign.done_declined"><value>Aanvraag geweigerd</value></data>
   <data name="sign.done_signed_body"><value>Jouw antwoord is ontvangen door {0}. Als alle handtekeningen binnen zijn, ontvang je het uiteindelijke ondertekende document.</value></data>
   <data name="sign.done_declined_body"><value>Je hebt de handtekeningaanvraag « {0} » geweigerd. De aanvrager is geïnformeerd.</value></data>
+  <data name="sign.done_acknowledged"><value>Bevestigd</value></data>
+  <data name="sign.done_acknowledged_body"><value>Jouw bevestiging is ontvangen door {0}.</value></data>
+  <data name="sign.done_reassigned"><value>Doorgestuurd</value></data>
+  <data name="sign.done_reassigned_body"><value>Deze aanvraag is doorgestuurd naar {0}.</value></data>
   <data name="sign.mode_byo"><value>📎 Eigen certificaat</value></data>
   <data name="sign.byo_hint"><value>Upload je eigen PFX/P12 bestand — het certificaat wordt in het geheugen geverifieerd en meteen verwijderd, wij bewaren het niet.</value></data>
   <data name="sign.byo_file"><value>PFX / P12 bestand</value></data>

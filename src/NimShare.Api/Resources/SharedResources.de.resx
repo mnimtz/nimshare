@@ -1207,6 +1207,10 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="sign.done_declined"><value>Anforderung abgelehnt</value></data>
   <data name="sign.done_signed_body"><value>Deine Antwort ist bei {0} eingegangen. Nach Abschluss aller Signaturen erhältst du das finale, unterschriebene Dokument.</value></data>
   <data name="sign.done_declined_body"><value>Du hast die Signatur-Anforderung „{0}“ abgelehnt. Der Initiator wurde informiert.</value></data>
+  <data name="sign.done_acknowledged"><value>Bestätigt</value></data>
+  <data name="sign.done_acknowledged_body"><value>Deine Bestätigung ist bei {0} eingegangen.</value></data>
+  <data name="sign.done_reassigned"><value>Weitergeleitet</value></data>
+  <data name="sign.done_reassigned_body"><value>Diese Anforderung wurde an {0} weitergeleitet.</value></data>
   <data name="sign.mode_byo"><value>📎 Eigenes Zertifikat</value></data>
   <data name="sign.byo_hint"><value>Lade dein eigenes PFX/P12 hoch — das Zertifikat wird nur im Speicher validiert und sofort verworfen, wir speichern es nicht.</value></data>
   <data name="sign.byo_file"><value>PFX / P12 Datei</value></data>
