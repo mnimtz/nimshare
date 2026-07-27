@@ -26,7 +26,7 @@
 }
 else
 {
-    <table class="table">
+    <table class="table table-cards-mobile">
         <thead>
         <tr>
             <th>@T["links.slug"]</th>
@@ -46,8 +46,8 @@ else
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
-                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>
+                <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td data-th="@T["file.name"]">
                     @if (l.File is not null)
                     {
                         <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
@@ -62,9 +62,9 @@ else
                     }
                     else { <span class="muted">—</span> }
                 </td>
-                <td>@l.DownloadCount @(l.MaxDownloads is int m ? $" / {m}" : "")</td>
-                <td class="muted">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
-                <td><span class="chip @state.Item1">@state.Item2</span></td>
+                <td data-th="@T["links.downloads"]">@l.DownloadCount @(l.MaxDownloads is int m ? $" / {m}" : "")</td>
+                <td class="muted" data-th="@T["links.expires"]">@(l.ExpiresAt?.ToString("u") ?? "—")</td>
+                <td data-th="@T["links.state"]"><span class="chip @state.Item1">@state.Item2</span></td>
                 <td>
                     @if (l.IsPublic)
                     {
@@ -103,7 +103,7 @@ else
 {
     <h2 style="margin-top:32px">🌐 @T["links.subdomain.section"]</h2>
     <p class="muted" style="margin-bottom:8px">@T["links.subdomain.lede"]</p>
-    <table class="table">
+    <table class="table table-cards-mobile">
         <thead>
             <tr>
                 <th>@T["links.subdomain.url"]</th>
@@ -124,8 +124,8 @@ else
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
-                <td><a href="@sdUrl" class="mono" target="_blank">@sdHost</a></td>
-                <td>
+                <td data-th="@T["links.subdomain.url"]"><a href="@sdUrl" class="mono" target="_blank">@sdHost</a></td>
+                <td data-th="@T["file.name"]">
                     @if (l.File is not null)
                     {
                         <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
@@ -140,8 +140,8 @@ else
                     }
                     else { <span class="muted">—</span> }
                 </td>
-                <td>@l.DownloadCount @(l.MaxDownloads is int m4 ? $" / {m4}" : "")</td>
-                <td><span class="chip @sdState.Item1">@sdState.Item2</span></td>
+                <td data-th="@T["links.downloads"]">@l.DownloadCount @(l.MaxDownloads is int m4 ? $" / {m4}" : "")</td>
+                <td data-th="@T["links.state"]"><span class="chip @sdState.Item1">@sdState.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="@sdUrl" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
@@ -166,7 +166,7 @@ else
 {
     <h2 style="margin-top:32px">👥 @T["links.group.section"]</h2>
     <p class="muted" style="margin-bottom:8px">@T["links.group.lede"]</p>
-    <table class="table">
+    <table class="table table-cards-mobile">
         <thead>
             <tr>
                 <th>@T["links.slug"]</th>
@@ -185,8 +185,8 @@ else
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
-                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>
+                <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td data-th="@T["file.name"]">
                     @if (l.File is not null)
                     {
                         <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
@@ -201,8 +201,8 @@ else
                     }
                     else { <span class="muted">—</span> }
                 </td>
-                <td>@l.DownloadCount @(l.MaxDownloads is int m3 ? $" / {m3}" : "")</td>
-                <td><span class="chip @gstate.Item1">@gstate.Item2</span></td>
+                <td data-th="@T["links.downloads"]">@l.DownloadCount @(l.MaxDownloads is int m3 ? $" / {m3}" : "")</td>
+                <td data-th="@T["links.state"]"><span class="chip @gstate.Item1">@gstate.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
@@ -223,7 +223,7 @@ else
 {
     <h2 style="margin-top:32px">🌐 @T["links.public.section"]</h2>
     <p class="muted" style="margin-bottom:8px">@T["links.public.lede"]</p>
-    <table class="table">
+    <table class="table table-cards-mobile">
         <thead>
             <tr>
                 <th>@T["links.slug"]</th>
@@ -243,8 +243,8 @@ else
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
             <tr>
-                <td><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
-                <td>
+                <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
+                <td data-th="@T["file.name"]">
                     @if (l.File is not null)
                     {
                         <span class="muted">📄 @T["links.for_file"]:</span> <strong>@l.File.Name</strong>
@@ -259,9 +259,9 @@ else
                     }
                     else { <span class="muted">—</span> }
                 </td>
-                <td class="muted">@l.Owner?.DisplayName</td>
-                <td>@l.DownloadCount @(l.MaxDownloads is int m2 ? $" / {m2}" : "")</td>
-                <td><span class="chip @pstate.Item1">@pstate.Item2</span></td>
+                <td class="muted" data-th="@T["links.public.by"]">@l.Owner?.DisplayName</td>
+                <td data-th="@T["links.downloads"]">@l.DownloadCount @(l.MaxDownloads is int m2 ? $" / {m2}" : "")</td>
+                <td data-th="@T["links.state"]"><span class="chip @pstate.Item1">@pstate.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     @* v1.10.97: Admin-Moderation für öffentliche Links. Marcus's

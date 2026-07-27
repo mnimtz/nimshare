@@ -437,14 +437,14 @@
             {
                 <details style="margin-top:var(--sp-6)">
                     <summary style="cursor:pointer;color:@accent;font-weight:600">@T["landing.gallery.other_files"] (@otherFiles.Count)</summary>
-                    <table class="table" style="margin-top:var(--sp-3)">
+                    <table class="table table-cards-mobile" style="margin-top:var(--sp-3)">
                         <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
                         <tbody>
                         @foreach (var f in otherFiles)
                         {
                             <tr>
-                                <td>@f.Name</td>
-                                <td class="muted">@Bytes(f.SizeBytes)</td>
+                                <td data-th="@T["file.name"]">@f.Name</td>
+                                <td class="muted" data-th="@T["file.size"]">@Bytes(f.SizeBytes)</td>
                                 <td>
                                     <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
                                         @if (Model.HasPassword)
@@ -476,14 +476,14 @@
         }
         else
         {
-            <table class="table" style="margin-top:var(--sp-6)">
+            <table class="table table-cards-mobile" style="margin-top:var(--sp-6)">
                 <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
                 <tbody>
                 @foreach (var f in Model.Files)
                 {
                     <tr>
-                        <td>@f.Name</td>
-                        <td class="muted">@Bytes(f.SizeBytes)</td>
+                        <td data-th="@T["file.name"]">@f.Name</td>
+                        <td class="muted" data-th="@T["file.size"]">@Bytes(f.SizeBytes)</td>
                         <td>
                             <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
                                 @if (Model.HasPassword)

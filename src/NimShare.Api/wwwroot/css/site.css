@@ -1568,6 +1568,68 @@ body.nav-open { position: relative; }
     }
 }
 
+/* v1.11.20 — Marcus's Bug-Report: die generische .table-Notbremse oben
+   (horizontal-scroll bei display:table-Zeilen) reicht nicht für Tabellen
+   mit einer Action-Zelle voller Buttons (Links.cshtml: bis zu 6 Buttons
+   in einer <td>, FolderLanding.cshtml: Name+Größe+Download-Button) — bei
+   ~360-400px Viewport-Breite bricht die table-cell-Höhenberechnung, wenn
+   Buttons in der Zelle mehrzeilig umbrechen, und Inhalt benachbarter
+   Zellen überlappt sichtbar (Screenshot: "Öffnen"/"Auswertung"-Pills über
+   dem Status-Chip). Additive `.table-cards-mobile`-Klasse statt die
+   globale `.table`-Regel zu ändern — andere Seiten mit `.table` (Groups,
+   Users, ApiTokens, …) bleiben unangetastet, nur explizit markierte
+   Tabellen wechseln unter 640px komplett auf gestapelte Karten statt
+   horizontal zu scrollen. `data-th="…"` auf jedem <td> liefert das Mini-
+   Label (::before), leere/label-lose Zellen (Status-Chip, Action-Zelle)
+   lassen data-th einfach weg. */
+@media (max-width: 640px) {
+    .table.table-cards-mobile { display: block; overflow: visible; }
+    .table.table-cards-mobile thead { display: none; }
+    .table.table-cards-mobile tbody { display: block; width: 100%; }
+    .table.table-cards-mobile tr {
+        display: block;
+        width: 100%;
+        margin-bottom: var(--sp-4);
+        border: 1px solid var(--tw-gray-200);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+    }
+    .table.table-cards-mobile tr:hover td { background: transparent; }
+    .table.table-cards-mobile td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--sp-3);
+        padding: var(--sp-2) var(--sp-3);
+        border-bottom: 1px solid var(--tw-gray-100);
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    .table.table-cards-mobile tr td:last-child { border-bottom: none; }
+    .table.table-cards-mobile td[data-th]::before {
+        content: attr(data-th);
+        font-weight: 600;
+        color: var(--tw-gray-500, #6b7280);
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        flex-shrink: 0;
+        padding-top: 3px;
+        white-space: nowrap;
+    }
+    /* Zellen ohne data-th (Status-Chip, Action-Cluster) sind Vollbreite-
+       Blöcke statt Label+Wert-Zeilen — ein Chip oder 4-6 Buttons brauchen
+       die volle Kartenbreite, nicht eine schmale rechte Hälfte. */
+    .table.table-cards-mobile td:not([data-th]) {
+        display: block;
+    }
+    .table.table-cards-mobile td:not([data-th]) > * {
+        display: inline-flex;
+        margin: 2px 6px 2px 0;
+    }
+}
+
 /* v1.10.53 — nimConfirm / nimAlert / nimToast Dialoge (siehe
    wwwroot/js/dialogs.js). Reuse .modal-backdrop/.modal-panel Basis
    und ergänzen Icon-Header + Danger-Variante + Toast-Container. */
