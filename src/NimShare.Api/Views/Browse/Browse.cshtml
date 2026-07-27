@@ -665,7 +665,7 @@ async function bulkZip() {
 }
 
 async function deleteFile(id) {
-    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["actions.confirm_delete"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/files/' + id, { method: 'DELETE', credentials: 'same-origin' });
     if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
 }
@@ -1400,7 +1400,7 @@ if (dropzone && CAN_WRITE) {
     ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
         e.preventDefault(); e.stopPropagation(); if (ev === 'dragleave' && e.target !== dropzone) return; dropzone.classList.remove('drag');
     }));
-    dropzone.addEventListener('drop', e => uploadFiles(e.dataTransfer.files));
+    dropzone.addEventListener('drop', e => handleDrop(e));
     const quickPick = document.getElementById('quickPick');
     if (quickPick) quickPick.addEventListener('change', () => uploadFiles(quickPick.files));
 }
@@ -1580,19 +1580,106 @@ async function chunkedBlockUpload(baseUrl, file, onProgress) {
         'application/xml', null,
         [['x-ms-blob-content-type', file.type || 'application/octet-stream']]);
 }
+// v1.11.12: Ordner-Drag&Drop. `dataTransfer.files` liefert bei einem
+// gedroppten Ordner nur einen nicht lesbaren Phantom-Eintrag (Name des
+// Ordners, kein Inhalt) — der Versuch, den als Datei hochzuladen, ließ den
+// Browser beim Body-Aufbau mit net::ERR_ACCESS_DENIED abbrechen (sah wie ein
+// Netzwerk/CORS-Problem aus, war aber rein clientseitig). Fix: über
+// DataTransferItem.webkitGetAsEntry() erkennen ob Ordner dabei sind, dann
+// rekursiv traversieren und die Unterordner-Struktur serverseitig nachbauen.
+function readAllDirEntries(reader) {
+    return new Promise((resolve, reject) => {
+        let all = [];
+        (function readBatch() {
+            reader.readEntries(batch => {
+                if (!batch.length) { resolve(all); return; }
+                all = all.concat(batch);
+                readBatch();
+            }, reject);
+        })();
+    });
+}
+function readFileFromEntry(entry) {
+    return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+async function collectEntriesRecursive(entry, pathSegments, out) {
+    if (entry.isFile) {
+        const file = await readFileFromEntry(entry);
+        out.push({ file, pathSegments });
+    } else if (entry.isDirectory) {
+        const children = await readAllDirEntries(entry.createReader());
+        for (const child of children) {
+            await collectEntriesRecursive(child, pathSegments.concat(entry.name), out);
+        }
+    }
+}
+const folderIdCache = new Map();
+async function resolveSubfolder(parentId, name) {
+    const key = parentId + '/' + name;
+    if (folderIdCache.has(key)) return folderIdCache.get(key);
+    const find = async () => {
+        const r = await fetch('/api/v1/folders/' + parentId + '/browse', { credentials: 'same-origin' });
+        if (!r.ok) return null;
+        const data = await r.json();
+        return (data.subfolders || []).find(f => f.name === name) || null;
+    };
+    let existing = await find();
+    if (!existing) {
+        const cR = await fetch('/api/v1/folders', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+            body: JSON.stringify({ parentId, name }),
+        });
+        if (cR.ok) {
+            const created = await cR.json();
+            folderIdCache.set(key, created.id);
+            return created.id;
+        }
+        // Namenskollision (z.B. Ordner existiert bereits von einem früheren Drop) — neu suchen.
+        existing = await find();
+    }
+    if (!existing) throw new Error('Ordner "' + name + '" konnte nicht angelegt werden');
+    folderIdCache.set(key, existing.id);
+    return existing.id;
+}
+async function resolveFolderPath(pathSegments) {
+    let parentId = FOLDER_ID;
+    for (const seg of pathSegments) parentId = await resolveSubfolder(parentId, seg);
+    return parentId;
+}
+async function handleDrop(e) {
+    const items = e.dataTransfer.items;
+    const canWalk = items && items.length && typeof items[0].webkitGetAsEntry === 'function';
+    const roots = canWalk
+        ? Array.from(items).filter(it => it.kind === 'file').map(it => it.webkitGetAsEntry()).filter(Boolean)
+        : [];
+    if (!roots.some(r => r.isDirectory)) { uploadFiles(e.dataTransfer.files); return; }
+    const collected = [];
+    for (const root of roots) await collectEntriesRecursive(root, [], collected);
+    try {
+        const entries = [];
+        for (const { file, pathSegments } of collected) {
+            const folderId = pathSegments.length ? await resolveFolderPath(pathSegments) : FOLDER_ID;
+            entries.push({ file, folderId });
+        }
+        uploadFiles(entries);
+    } catch (err) {
+        window.nimAlert ? nimAlert(String(err && err.message || err)) : alert(String(err && err.message || err));
+    }
+}
 async function uploadFiles(fileList) {
     if (!fileList || !fileList.length) return;
+    const items = Array.from(fileList).map(x => (x instanceof File) ? { file: x, folderId: FOLDER_ID } : x);
     upEnsurePanel();
-    const total = fileList.length;
+    const total = items.length;
     let done = 0, failed = 0;
     document.getElementById('upTitle').textContent = '↑ 0 / ' + total;
-    for (const file of fileList) {
+    for (const { file, folderId } of items) {
         const row = upAddRow(file.name, file.size);
         try {
             upSetProgress(row, 0, 'vorbereiten…');
             const initR = await fetch('/api/v1/files', {
                 method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
-                body: JSON.stringify({ folderId: FOLDER_ID, name: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size }),
+                body: JSON.stringify({ folderId, name: file.name, contentType: file.type || 'application/octet-stream', sizeBytes: file.size }),
             });
             if (!initR.ok) {
                 let msg = 'HTTP ' + initR.status;
