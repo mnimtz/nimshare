@@ -330,16 +330,20 @@ builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
 builder.Services.AddSingleton<ITimeService, TimeService>();
 builder.Services.AddScoped<ISlugService, SlugService>();
 builder.Services.AddSingleton<IIpHashService, IpHashService>();
-// v1.10.42 — GeoIp-Auflösung für Signatur-Audit + Link-Report. Default
-// Null (kein externer Call, keine DSGVO-Frage). Wenn Marcus
-// "NimShare:GeoIp:Provider" = "IpApiCo" in appsettings setzt, wird
-// stattdessen ipapi.co (HTTPS, kein Key, 1000 req/day) verwendet.
+// v1.10.42 — GeoIp-Auflösung für Signatur-Audit + Link-Report.
+// v1.11.15: Default war "Null" (kein externer Call) und der Opt-in-Key
+// "NimShare:GeoIp:Provider=IpApiCo" wurde nie gesetzt — Marcus sah deshalb
+// Länder/Städte/Herkunfts-ISP im Report seit Tag 1 komplett leer, obwohl
+// das Feature längst gebaut war. Jetzt umgekehrt: ipapi.co (HTTPS, kein
+// Key, 1000 req/Tag, IP verlässt den Server nur kurzzeitig, wird nicht
+// gespeichert — DSGVO-neutral, siehe GeoIpService-Doku) ist der Default;
+// explizit "NimShare:GeoIp:Provider=Disabled" setzen zum Abschalten.
 {
     var geoProvider = builder.Configuration["NimShare:GeoIp:Provider"];
-    if (string.Equals(geoProvider, "IpApiCo", StringComparison.OrdinalIgnoreCase))
-        builder.Services.AddSingleton<IGeoIpService, IpApiCoGeoIpService>();
-    else
+    if (string.Equals(geoProvider, "Disabled", StringComparison.OrdinalIgnoreCase))
         builder.Services.AddSingleton<IGeoIpService, NullGeoIpService>();
+    else
+        builder.Services.AddSingleton<IGeoIpService, IpApiCoGeoIpService>();
 }
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
