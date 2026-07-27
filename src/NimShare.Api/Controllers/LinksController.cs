@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -13,16 +14,23 @@ namespace NimShare.Api.Controllers;
 [Authorize(Policy = "ApiUser")]
 public class LinksController : ControllerBase
 {
+    // v1.11.18: gleiches DataProtection-Purpose-Pattern wie EmailGatewayService
+    // — muss dem Purpose-String in ShareController (Reveal/Email) exakt
+    // entsprechen, sonst schlägt Unprotect() fehl.
+    public const string SerialNumberProtectorPurpose = "NimShare.ShareLink.SerialNumber.v1";
+
     private readonly NimShareDbContext _db;
     private readonly ISlugService _slugs;
     private readonly IPasswordHasher _hasher;
     private readonly IQrCodeService _qr;
     private readonly ICurrentUserService _users;
     private readonly bool _configStoreFullIp;
+    private readonly IDataProtector _serialProtector;
 
     public LinksController(
         NimShareDbContext db, ISlugService slugs, IPasswordHasher hasher,
-        IQrCodeService qr, ICurrentUserService users, IConfiguration cfg)
+        IQrCodeService qr, ICurrentUserService users, IConfiguration cfg,
+        IDataProtectionProvider dpp)
     {
         _db = db;
         _slugs = slugs;
@@ -30,6 +38,7 @@ public class LinksController : ControllerBase
         _qr = qr;
         _users = users;
         _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+        _serialProtector = dpp.CreateProtector(SerialNumberProtectorPurpose);
     }
 
     public record CreateLinkRequest(
@@ -55,7 +64,10 @@ public class LinksController : ControllerBase
         bool ShowGpsMap = true,
         // v1.11.0: optionaler Subdomain-Slug (https://{slug}.{BaseDomain}).
         // Nur wirksam wenn das Feature aktiv ist und der User das Recht hat.
-        string? SubdomainSlug = null);
+        string? SubdomainSlug = null,
+        // v1.11.18: optionale Seriennummer/Lizenzcode, wird verschlüsselt
+        // gespeichert und erst nach Klick auf der Landing entschlüsselt.
+        string? SerialNumber = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -77,7 +89,18 @@ public class LinksController : ControllerBase
         bool ShowGpsMap = true,
         // v1.11.0: fertige Subdomain-URL (https://{slug}.{BaseDomain}), null
         // wenn der Link keinen Subdomain-Slug hat oder das Feature aus ist.
-        string? SubdomainUrl = null);
+        string? SubdomainUrl = null,
+        // v1.11.18: iOS zeigte bislang nur eigene Links (WHERE OwnerId==me),
+        // Web dagegen zusätzlich alle Public-Scope-Links (auch von anderen
+        // Ownern) + eigene Group-Scope-Links separat. Damit iOS dieselbe
+        // Liste sehen kann, liefert das DTO jetzt Scope-Klassifikation +
+        // Owner-Name (nur relevant, wenn IsOwnedByMe=false).
+        string Scope = "private",
+        bool IsOwnedByMe = true,
+        string? OwnerName = null,
+        // v1.11.18: Seriennummer optional pro Link — nie im Klartext im DTO,
+        // nur ob eine hinterlegt ist (Landing entschlüsselt on-demand).
+        bool HasSerialNumber = false);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -234,6 +257,10 @@ public class LinksController : ControllerBase
             ShowGpsMap = req.ShowGpsMap,
             // v1.11.0: Subdomain-Slug (oben validiert, null wenn nicht gewünscht).
             SubdomainSlug = subdomainSlug,
+            // v1.11.18: Seriennummer verschlüsselt ablegen — nie im Klartext
+            // in der DB oder im Response-DTO.
+            SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
+                ? null : _serialProtector.Protect(req.SerialNumber.Trim()),
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -289,7 +316,7 @@ public class LinksController : ControllerBase
                 $"Share-Link erstellt: /s/{link.Slug} ({subject})",
                 fileId: link.FileId, folderId: link.FolderId, ct: ct);
         }
-        return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link, await SubdomainBaseAsync(ct)));
+        return CreatedAtAction(nameof(GetById), new { id = link.Id }, ToDto(link, user.Id, await SubdomainBaseAsync(ct)));
     }
 
     [HttpGet]
@@ -299,25 +326,40 @@ public class LinksController : ControllerBase
         // v1.10.66: Include File+Folder damit IsPublic korrekt berechnet
         // werden kann (Split "Öffentliche Links" vs "Meine Links" im iOS-
         // und Web-Client).
+        // v1.11.18: iOS rief bislang dieselbe Query wie hier — nur eigene
+        // Links (OwnerId==me). Web (/links, HomeController.Links) zeigt
+        // zusätzlich alle Public-Scope-Links (auch von anderen Ownern) sowie
+        // die eigenen Group-Scope-Links separat. Damit iOS dieselbe
+        // Gesamtmenge sieht, matcht die Query jetzt HomeController.Links 1:1.
         var rows = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
             .Include(l => l.SigningCertificate)
-            .Where(l => l.OwnerId == user.Id)
+            .Include(l => l.Owner)
+            .Where(l => l.OwnerId == user.Id
+                     || (l.File != null && l.File.Scope == FileScope.Public)
+                     || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                     || l.IsPublic)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
         var subBase = await SubdomainBaseAsync(ct);
-        return Ok(rows.Select(l => ToDto(l, subBase)));
+        return Ok(rows.Select(l => ToDto(l, user.Id, subBase)));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<LinkDto>> GetById(Guid id, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
+        // v1.11.18: analog List() — auch Detail-Abruf für fremde Public-
+        // Scope-Links erlauben (read-only; Update/Delete bleiben Owner/Admin
+        // over die eigenen Guards weiter unten in Update()/Delete() geschützt).
         var link = await _db.ShareLinks
-            .Include(l => l.File).Include(l => l.Folder).Include(l => l.SigningCertificate)
-            .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
-        return link is null ? NotFound() : Ok(ToDto(link, await SubdomainBaseAsync(ct)));
+            .Include(l => l.File).Include(l => l.Folder).Include(l => l.SigningCertificate).Include(l => l.Owner)
+            .SingleOrDefaultAsync(l => l.Id == id && (l.OwnerId == user.Id
+                     || (l.File != null && l.File.Scope == FileScope.Public)
+                     || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                     || l.IsPublic), ct);
+        return link is null ? NotFound() : Ok(ToDto(link, user.Id, await SubdomainBaseAsync(ct)));
     }
 
     [HttpGet("{id:guid}/stats")]
@@ -476,7 +518,10 @@ public class LinksController : ControllerBase
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
     }
 
-    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic, string? AllowedEmails, bool? RequireEmailVerify);
+    public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic, string? AllowedEmails, bool? RequireEmailVerify,
+        // v1.11.18: analog AllowedEmails — leerer String löscht die Seriennummer,
+        // null = unverändert lassen.
+        string? SerialNumber = null);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -500,8 +545,11 @@ public class LinksController : ControllerBase
         if (req.AllowedEmails is not null)
             link.AllowedEmails = string.IsNullOrWhiteSpace(req.AllowedEmails) ? null : req.AllowedEmails.Trim();
         if (req.RequireEmailVerify is not null) link.RequireEmailVerify = req.RequireEmailVerify.Value;
+        if (req.SerialNumber is not null)
+            link.SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
+                ? null : _serialProtector.Protect(req.SerialNumber.Trim());
         await _db.SaveChangesAsync(ct);
-        return Ok(ToDto(link, await SubdomainBaseAsync(ct)));
+        return Ok(ToDto(link, user.Id, await SubdomainBaseAsync(ct)));
     }
 
     [HttpDelete("{id:guid}")]
@@ -554,25 +602,37 @@ public class LinksController : ControllerBase
         return Ok(new { sent = true });
     }
 
-    private LinkDto ToDto(ShareLink l, string? subdomainBase = null) => new(
-        l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
-        l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
-        l.PasswordHash != null, l.IsRevoked, l.CreatedAt,
-        // v1.10.66: Public wenn File/Folder Scope=Public, oder explizit
-        // als isPublic markierter Admin-Link.
-        IsPublic: (l.File != null && l.File.Scope == FileScope.Public)
+    private LinkDto ToDto(ShareLink l, Guid currentUserId, string? subdomainBase = null)
+    {
+        // v1.11.18: gleiche Scope-Klassifikation wie HomeController.Links —
+        // "public" wenn Ziel Public-Scope ODER admin-explizit IsPublic,
+        // sonst "group" wenn Ziel Group-Scope, sonst "private".
+        var isPublicScope = (l.File != null && l.File.Scope == FileScope.Public)
               || (l.Folder != null && l.Folder.Scope == FileScope.Public)
-              || l.IsPublic,
-        TargetKind: l.File != null ? "file" : (l.Folder != null ? "folder" : null),
-        TargetName: l.File?.Name ?? l.Folder?.Name,
-        Signer: BuildSignerInfo(l.SigningCertificate),
-        FolderIsGallery: l.Folder != null && l.Folder.Kind == FolderKind.Gallery,
-        DisplayAsGallery: l.DisplayAsGallery,
-        AllowUploads: l.AllowUploads,
-        ShowGpsMap: l.ShowGpsMap,
-        // v1.11.0: fertige Subdomain-URL, wenn Feature aktiv + Slug gesetzt.
-        SubdomainUrl: l.SubdomainSlug != null && subdomainBase != null
-            ? $"https://{l.SubdomainSlug}.{subdomainBase}" : null);
+              || l.IsPublic;
+        var isGroupScope = (l.File != null && l.File.Scope == FileScope.Group)
+              || (l.Folder != null && l.Folder.Scope == FileScope.Group);
+        var scope = isPublicScope ? "public" : (isGroupScope ? "group" : "private");
+        return new(
+            l.Id, l.Slug, BuildPublicUrl(l.Slug), $"/api/v1/links/{l.Id}/qr.svg",
+            l.ExpiresAt, l.MaxDownloads, l.DownloadCount, l.HitCount,
+            l.PasswordHash != null, l.IsRevoked, l.CreatedAt,
+            IsPublic: isPublicScope,
+            TargetKind: l.File != null ? "file" : (l.Folder != null ? "folder" : null),
+            TargetName: l.File?.Name ?? l.Folder?.Name,
+            Signer: BuildSignerInfo(l.SigningCertificate),
+            FolderIsGallery: l.Folder != null && l.Folder.Kind == FolderKind.Gallery,
+            DisplayAsGallery: l.DisplayAsGallery,
+            AllowUploads: l.AllowUploads,
+            ShowGpsMap: l.ShowGpsMap,
+            // v1.11.0: fertige Subdomain-URL, wenn Feature aktiv + Slug gesetzt.
+            SubdomainUrl: l.SubdomainSlug != null && subdomainBase != null
+                ? $"https://{l.SubdomainSlug}.{subdomainBase}" : null,
+            Scope: scope,
+            IsOwnedByMe: l.OwnerId == currentUserId,
+            OwnerName: l.OwnerId != currentUserId ? l.Owner?.DisplayName : null,
+            HasSerialNumber: l.SerialNumberEncrypted != null);
+    }
 
     /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>
     private async Task<string?> SubdomainBaseAsync(CancellationToken ct)

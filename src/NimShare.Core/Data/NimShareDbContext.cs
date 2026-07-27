@@ -132,6 +132,7 @@ public class NimShareDbContext : DbContext
         });
 
         b.Entity<ShareLink>().Property(x => x.AllowedEmails).HasMaxLength(2000);
+        b.Entity<ShareLink>().Property(x => x.SerialNumberEncrypted).HasMaxLength(4000);
 
         b.Entity<SignatureRequest>(e =>
         {

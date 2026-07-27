@@ -104,6 +104,15 @@ public class ShareLink
     /// </summary>
     public bool ShowGpsMap { get; set; } = true;
 
+    /// <summary>
+    /// v1.11.18 — Optionale Seriennummer/Lizenzcode, der zusätzlich zur Datei
+    /// mitgegeben wird (z.B. bei Software-Downloads). Verschlüsselt via
+    /// IDataProtector (gleiches Pattern wie EmailGatewaySettings) — steht nie
+    /// im rohen Landing-HTML, sondern wird erst nach Klick auf "Anzeigen"
+    /// serverseitig entschlüsselt und per Fetch nachgeladen.
+    /// </summary>
+    public string? SerialNumberEncrypted { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 
