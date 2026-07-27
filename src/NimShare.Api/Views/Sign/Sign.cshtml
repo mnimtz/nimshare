@@ -129,6 +129,11 @@
 
         <form method="post" action="/sign/@Model.Me.Id/submit?t=@Model.Token" style="margin-top:16px" id="signForm">
             @Html.AntiForgeryToken()
+            @* v1.11.9 — welche Seiten wurden wirklich gescrollt/gesehen?
+               Wird per IntersectionObserver auf #pdfPages befüllt (siehe
+               Script unten) und beim Submit final synchronisiert. *@
+            <input type="hidden" name="viewedPages" id="viewedPagesInput"/>
+            <input type="hidden" name="totalPages" id="totalPagesInput"/>
             @if (isSigner)
             {
                 <div class="field">
@@ -370,9 +375,31 @@ const wrap = document.getElementById('pdfPages');
 const src = wrap.dataset.src;
 const fields = JSON.parse(wrap.dataset.fields || '[]');
 
+// v1.11.9 — Marcus: "man könnte im Audit festhalten, ob er wirklich durch
+// alle, oder welche Seiten des Dokumentes gescrollt ist". Ein Page-Wrap gilt
+// als "gesehen", sobald mindestens die Hälfte davon im scrollbaren #pdfPages
+// sichtbar war. Wird bei jedem Submit (Signer wie Viewer) mitgeschickt und
+// landet im Audit-Trail — für Viewer ist das die einzige Bestätigung, dass
+// wirklich gelesen wurde, nicht nur der Link geöffnet.
+const viewedPages = new Set();
+let totalPageCount = 0;
+const pageObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+        if (e.isIntersecting) viewedPages.add(Number(e.target.dataset.pageNum));
+    }
+    syncViewedPagesInputs();
+}, { root: wrap, threshold: 0.5 });
+function syncViewedPagesInputs() {
+    const vInput = document.getElementById('viewedPagesInput');
+    const tInput = document.getElementById('totalPagesInput');
+    if (vInput) vInput.value = Array.from(viewedPages).sort((a, b) => a - b).join(',');
+    if (tInput) tInput.value = String(totalPageCount);
+}
+
 async function render() {
     try {
         const pdf = await pdfjsLib.getDocument(src).promise;
+        totalPageCount = pdf.numPages;
         wrap.innerHTML = '';
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
@@ -384,7 +411,9 @@ async function render() {
 
             const pageWrap = document.createElement('div');
             pageWrap.style.cssText = `position:relative;margin:0 auto ${pageNum < pdf.numPages ? '14px' : '0'};width:${viewport.width}px;height:${viewport.height}px;box-shadow:0 2px 8px rgba(0,0,0,.15);background:#fff`;
+            pageWrap.dataset.pageNum = pageNum;
             wrap.appendChild(pageWrap);
+            pageObserver.observe(pageWrap);
 
             const canvas = document.createElement('canvas');
             canvas.width = viewport.width; canvas.height = viewport.height;
@@ -443,6 +472,9 @@ async function render() {
     // anderen zeigten dauerhaft „📅 Datum" bzw. „Aa Text" statt der
     // eingegebenen Werte. Marcus's Feedback nach v1.10.83.
     wireFieldMirrors();
+    // v1.11.9 — Anfangszustand setzen (0 Seiten gesehen) statt leerer
+    // Hidden-Inputs, falls jemand sofort ohne jedes Scrollen absendet.
+    syncViewedPagesInputs();
 }
 
 function wireFieldMirrors() {
@@ -512,6 +544,12 @@ function wireFieldMirrors() {
 }
 
 render();
+
+// v1.11.9 — letzter Sync direkt vor dem Absenden (Sicherheitsnetz, falls der
+// IntersectionObserver-Callback aus irgendeinem Grund noch nicht gefeuert
+// hat). Gilt für Signer UND Viewer gleichermaßen — deshalb hier außerhalb
+// der @@if (isSigner)-Blöcke unten.
+document.getElementById('signForm')?.addEventListener('submit', syncViewedPagesInputs);
 </script>
 
 <script>

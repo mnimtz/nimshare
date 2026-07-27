@@ -352,8 +352,18 @@ public class SignaturesController : ControllerBase
         var url = Request.PublicUrl($"/sign/{p.Id}?t={raw}");
         var isSigner = p.Role == SignatureParticipantRole.Signer;
 
+        // Bug-Fix v1.11.9 — Marcus: "wenn ich jemanden rein zum Lesen
+        // definiere, erhält er die gleiche E-Mail — Aufforderung zum
+        // Unterschreiben". Root-Cause: der {{sender.action}}-Platzhalter
+        // funktioniert nur, wenn der Template-Autor ihn tatsächlich benutzt
+        // — ein frei formuliertes Template wie "Formaler Vertrag" mit fest
+        // eingetipptem "Bitte unterschreiben Sie..." im Text respektiert die
+        // Rolle nie, egal wer der Empfänger ist. Templates sind für den
+        // Signer-Fall gedacht; Viewer bekommen deshalb IMMER die eingebaute,
+        // rollen-korrekte Kopie ("Bitte lesen"), unabhängig vom gewählten
+        // Template.
         string subject, body;
-        if (template is not null)
+        if (template is not null && isSigner)
         {
             // User-authored template: render placeholders. Localisation lives
             // inside the template itself (author picked the language).

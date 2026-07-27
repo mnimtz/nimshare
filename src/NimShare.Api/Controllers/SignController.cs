@@ -250,7 +250,13 @@ public class SignController : Controller
     [HttpPost("/sign/{pid:guid}/submit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(Guid pid, string t, string? typedName,
-        string? signatureData, string? signMode, CancellationToken ct)
+        string? signatureData, string? signMode,
+        // v1.11.9 — Marcus: für Viewer soll der Audit-Trail festhalten, ob
+        // (und welche) Seiten wirklich gescrollt/gesehen wurden, statt nur
+        // "hat die Landing geöffnet". viewedPages ist eine sortierte,
+        // kommaseparierte Liste 1-basierter Seitenzahlen, die per
+        // IntersectionObserver im Sign.cshtml-Viewer getrackt werden.
+        string? viewedPages, int? totalPages, CancellationToken ct)
     {
         var (req, p) = await ResolveAsync(pid, t, ct);
         if (req is null || p is null) return View("Invalid");
@@ -270,6 +276,20 @@ public class SignController : Controller
             // background finalizer (same rationale as the signer path — the
             // PDF merge shouldn't block the viewer's response).
             p.Status = SignatureParticipantStatus.Viewed;
+            // v1.11.9 — bisher entstand hier KEIN eigener Audit-Eintrag (nur
+            // die passive "Viewed" beim ersten GET der Landing) — Marcus wollte
+            // festgehalten haben, ob und welche Seiten der Viewer tatsächlich
+            // gescrollt hat, bevor er bestätigt. Note bleibt bewusst
+            // unlokalisiert (wie "invited"/"created draft" — interne
+            // Audit-Log-Konvention, wird 1:1 im PDF-Bericht gedruckt).
+            var pagesNote = !string.IsNullOrWhiteSpace(viewedPages)
+                ? $"Pages viewed: {viewedPages}" + (totalPages is int tp ? $" of {tp}" : "")
+                : "acknowledged (no page-scroll data)";
+            _db.SignatureAudits.Add(new SignatureAudit
+            {
+                RequestId = req.Id, ParticipantId = p.Id,
+                Kind = SignatureAuditKind.Viewed, Note = pagesNote,
+            });
             await _db.SaveChangesAsync(ct);
             var scopesV = HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
             var reqIdV = req.Id;
