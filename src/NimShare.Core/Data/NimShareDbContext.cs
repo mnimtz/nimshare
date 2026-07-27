@@ -12,6 +12,7 @@ public class NimShareDbContext : DbContext
     public DbSet<StorageFile> Files => Set<StorageFile>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
+    public DbSet<LinkPrivacySettings> LinkPrivacySettings => Set<LinkPrivacySettings>();
     public DbSet<CustomDomain> CustomDomains => Set<CustomDomain>();
     public DbSet<UploadRequestLink> UploadRequests => Set<UploadRequestLink>();
     public DbSet<Group> Groups => Set<Group>();
@@ -396,6 +397,13 @@ public class NimShareDbContext : DbContext
         });
         b.Entity<ShareLink>()
             .Property(x => x.SubdomainSlug).HasMaxLength(63);
+
+        // v1.11.14: Link-Report-Datenschutz-Toggle als Singleton-Row (löst
+        // den bisherigen appsettings-only "ShareLinks:StoreFullIp" ab).
+        b.Entity<LinkPrivacySettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+        });
         b.Entity<ShareLink>()
             .HasIndex(x => x.SubdomainSlug).IsUnique()
             .HasFilter("\"SubdomainSlug\" IS NOT NULL");
@@ -517,6 +525,8 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.CountryCode).HasMaxLength(2);
             // v1.10.156: optionale Klartext-IP (max 45 = längste IPv6-Textform).
             e.Property(x => x.IpAddress).HasMaxLength(45);
+            // v1.11.14: ASN/Org-String aus der GeoIP-Auflösung.
+            e.Property(x => x.Isp).HasMaxLength(200);
             e.HasOne(x => x.ShareLink).WithMany(l => l.Accesses).HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
         });
 

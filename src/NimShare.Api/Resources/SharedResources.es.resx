@@ -953,6 +953,10 @@ Abre este enlace para firmar:
   <data name="report.col.ip"><value>IP</value></data>
   <data name="report.col.referer"><value>Origen</value></data>
   <data name="report.referer.direct"><value>(directo)</value></data>
+  <data name="report.referrer.likely_bot"><value>Probable solicitud automatizada</value></data>
+  <data name="report.referrer.likely_bot_tip"><value>Este origen parece una solicitud automatizada de vista previa de enlace (p. ej. Microsoft Teams, Slack), no necesariamente una visita real.</value></data>
+  <data name="report.settings.store_full_ip"><value>Guardar direcciones IP completas para todos los enlaces</value></data>
+  <data name="report.settings.store_full_ip_desc"><value>Si está activado, la IP en texto plano se guarda por cada visita (Art. 6(1)(f) RGPD) — menciónalo en tu propia política de privacidad.</value></data>
   <data name="report.heatmap.tooltip"><value>{0} {1}:00 UTC · {2} visitas</value></data>
   <data name="report.footer.slug_url_html"><value>Slug del enlace: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing"><value>Visita</value></data>

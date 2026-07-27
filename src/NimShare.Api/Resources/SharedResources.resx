@@ -956,6 +956,10 @@ Please open this link to sign:
   <data name="report.col.ip" xml:space="preserve"><value>IP</value></data>
   <data name="report.col.referer" xml:space="preserve"><value>Origin</value></data>
   <data name="report.referer.direct" xml:space="preserve"><value>(direct)</value></data>
+  <data name="report.referrer.likely_bot" xml:space="preserve"><value>Likely automated fetch</value></data>
+  <data name="report.referrer.likely_bot_tip" xml:space="preserve"><value>This referrer looks like an automated link-preview fetch (e.g. Microsoft Teams, Slack), not necessarily a real visitor.</value></data>
+  <data name="report.settings.store_full_ip" xml:space="preserve"><value>Store full IP addresses for all links</value></data>
+  <data name="report.settings.store_full_ip_desc" xml:space="preserve"><value>When enabled, the plain IP address is stored per visit (Art. 6(1)(f) GDPR) — mention this in your own privacy policy.</value></data>
   <data name="report.heatmap.tooltip" xml:space="preserve"><value>{0} {1}:00 UTC · {2} visits</value></data>
   <data name="report.footer.slug_url_html" xml:space="preserve"><value>Link slug: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing" xml:space="preserve"><value>Landing</value></data>

@@ -17,6 +17,7 @@
     var heatCells = (List<LinkReportController.HourHeatmapCell>)ViewData["HeatCells"]!;
     var medianTtd = (TimeSpan?)ViewData["MedianTtd"];
     var storeFullIp = (bool)ViewData["StoreFullIp"]!;
+    var isAdmin = (bool)ViewData["IsAdmin"]!;
     var maxY = Math.Max(1, buckets.Max(b => Math.Max(b.Landings, Math.Max(b.Downloads, b.PasswordFails))));
     var target = Model.File?.Name ?? Model.Folder?.Name ?? "—";
     var isActive = !Model.IsRevoked && (Model.ExpiresAt is null || Model.ExpiresAt > DateTimeOffset.UtcNow);
@@ -296,7 +297,13 @@
                 {
                     var pct = total == 0 ? 0 : (int)Math.Round(100.0 * r.Count / total);
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span style="flex:1;font-size:.9rem" class="mono">@r.Source</span>
+                        <span style="flex:1;font-size:.9rem" class="mono" title="@r.Source">
+                            @r.Label
+                            @if (r.IsBot)
+                            {
+                                <span class="chip chip-warn" style="font-size:.7rem;padding:1px 6px;margin-left:4px" title="@T["report.referrer.likely_bot_tip"]">🤖 @T["report.referrer.likely_bot"]</span>
+                            }
+                        </span>
                         <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
                             <div style="height:100%;width:@(pct)%;background:var(--tw-primary-alt)"></div>
                         </div>
@@ -365,6 +372,22 @@
                 <div class="muted" style="font-size:.75rem;margin-top:6px">
                     @Html.Raw(T["report.ip_notice_html"].Value)
                 </div>
+            }
+            @* v1.11.14: Admin-Toggle direkt hier — der Effekt (IP-Spalte
+               oben) ist unmittelbar sichtbar, spart eine eigene Settings-
+               Unterseite für einen einzelnen Boolean. Gilt instanzweit,
+               nicht nur für diesen Link. *@
+            @if (isAdmin)
+            {
+                <form method="post" action="/links/settings/privacy" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--tw-border,#eee)">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnToLinkId" value="@Model.Id"/>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;cursor:pointer">
+                        <input type="checkbox" name="storeFullIp" value="true" @(storeFullIp ? "checked" : "") onchange="this.form.requestSubmit()"/>
+                        @T["report.settings.store_full_ip"]
+                    </label>
+                    <p class="muted" style="font-size:.7rem;margin:4px 0 0 24px">@T["report.settings.store_full_ip_desc"]</p>
+                </form>
             }
         }
     </div>

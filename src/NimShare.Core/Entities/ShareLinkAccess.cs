@@ -39,4 +39,11 @@ public class ShareLinkAccess
     // Rechtliche Basis: berechtigtes Interesse nach Art. 6(1)(f) DSGVO;
     // Betreiber muss das im eigenen Impressum/Datenschutz anpassen.
     public string? IpAddress { get; set; }
+
+    /// <summary>v1.11.14: ASN/Org-String aus der GeoIP-Auflösung (z.B. "AS8075
+    /// Microsoft Corporation") — hilft, automatisierte Link-Vorschau-Abrufe
+    /// (Teams, Slack etc.) von echten Besuchen zu unterscheiden, siehe
+    /// RefererClassifier. Kein DSGVO-Sonderfall: dieselbe "nur Ergebnis, nie
+    /// die IP selbst"-Regel wie CountryCode/City.</summary>
+    public string? Isp { get; set; }
 }

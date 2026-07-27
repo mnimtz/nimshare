@@ -960,6 +960,10 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="report.col.ip"><value>IP</value></data>
   <data name="report.col.referer"><value>Herkunft</value></data>
   <data name="report.referer.direct"><value>(direkt)</value></data>
+  <data name="report.referrer.likely_bot"><value>Wahrscheinlich automatischer Abruf</value></data>
+  <data name="report.referrer.likely_bot_tip"><value>Diese Herkunft sieht nach einem automatisierten Link-Vorschau-Abruf aus (z.B. Microsoft Teams, Slack), nicht zwingend nach einem echten Besuch.</value></data>
+  <data name="report.settings.store_full_ip"><value>Volle IP-Adressen für alle Links speichern</value></data>
+  <data name="report.settings.store_full_ip_desc"><value>Wenn aktiviert, wird die Klartext-IP pro Besuch gespeichert (Art. 6 (1) f DSGVO) — bitte in der eigenen Datenschutzerklärung erwähnen.</value></data>
   <data name="report.heatmap.tooltip"><value>{0} {1}:00 UTC · {2} Zugriffe</value></data>
   <data name="report.footer.slug_url_html"><value>Link-Slug: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing"><value>Aufruf</value></data>

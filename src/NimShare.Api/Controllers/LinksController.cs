@@ -18,7 +18,7 @@ public class LinksController : ControllerBase
     private readonly IPasswordHasher _hasher;
     private readonly IQrCodeService _qr;
     private readonly ICurrentUserService _users;
-    private readonly bool _storeFullIp;
+    private readonly bool _configStoreFullIp;
 
     public LinksController(
         NimShareDbContext db, ISlugService slugs, IPasswordHasher hasher,
@@ -29,7 +29,7 @@ public class LinksController : ControllerBase
         _hasher = hasher;
         _qr = qr;
         _users = users;
-        _storeFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+        _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
     }
 
     public record CreateLinkRequest(
@@ -340,6 +340,11 @@ public class LinksController : ControllerBase
     // Heatmap und Time-to-Download-Median. StoreFullIp-Flag zeigt der App,
     // ob sie die IP-Spalte einblenden darf.
     public record ReportCountRow(string Key, int Count);
+    // v1.11.14: Label (Klartext, z.B. "Microsoft Teams") + IsBot ergänzt,
+    // aus RefererClassifier — "Key" bleibt der rohe Host (Feldname
+    // unverändert für Abwärtskompatibilität mit älteren iOS-Builds, die
+    // dieses Feld einfach ignorieren).
+    public record ReportReferrerRow(string Key, string Label, bool IsBot, int Count);
     public record ReportDailyRow(DateOnly Day, int Landings, int Downloads, int PasswordFails);
     public record ReportHeatCell(int DayOfWeek, int Hour, int Count);
     public record ReportEvent(DateTimeOffset At, string Kind, string? CountryCode,
@@ -352,7 +357,7 @@ public class LinksController : ControllerBase
         List<ReportCountRow> Cities,
         List<ReportCountRow> Devices,
         List<ReportCountRow> Timezones,
-        List<ReportCountRow> Referrers,
+        List<ReportReferrerRow> Referrers,
         List<ReportHeatCell> HourHeatmap,
         List<ReportEvent> RecentEvents,
         int TotalEventCount,
@@ -411,15 +416,15 @@ public class LinksController : ControllerBase
             .GroupBy(e => e.Timezone!)
             .Select(g => new ReportCountRow(g.Key, g.Count()))
             .OrderByDescending(r => r.Count).Take(10).ToList();
-        var referrers = all.Select(e => e.Referer ?? "")
-            .Select(r =>
-            {
-                if (string.IsNullOrWhiteSpace(r)) return "";
-                try { return new Uri(r).Host; } catch { return "(direct)"; }
-            })
-            .Where(s => !string.IsNullOrEmpty(s))
-            .GroupBy(s => s!)
-            .Select(g => new ReportCountRow(g.Key, g.Count()))
+        var referrers = all
+            .Select(e => RefererClassifier.Classify(e.Referer, e.UserAgent, e.Isp))
+            .Where(c => c is not null)
+            .GroupBy(c => c!.Host)
+            .Select(g => new ReportReferrerRow(
+                g.Key,
+                g.OrderByDescending(c => c!.IsLikelyAutomatedFetch).First()!.DisplayLabel,
+                g.Any(c => c!.IsLikelyAutomatedFetch),
+                g.Count()))
             .OrderByDescending(r => r.Count).Take(8).ToList();
 
         var heat = new int[7, 24];
@@ -445,15 +450,17 @@ public class LinksController : ControllerBase
             medianTtdSec = deltas[deltas.Count / 2];
         }
 
+        var privacySettings = await _db.LinkPrivacySettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var storeFullIp = privacySettings?.StoreFullIp ?? _configStoreFullIp;
         var events = all.Take(200).Select(a => new ReportEvent(
             a.At, a.Kind.ToString(), a.CountryCode, a.City, a.DeviceType, a.Timezone, a.Referer,
-            _storeFullIp ? a.IpAddress : null)).ToList();
+            storeFullIp ? a.IpAddress : null)).ToList();
 
         return Ok(new ReportResponse(
             link.Id, link.Slug, link.HitCount, link.DownloadCount, unique,
             medianTtdSec, link.LastAccessAt, byDay,
             countries, cities, devices, timezones, referrers,
-            heatCells, events, all.Count, _storeFullIp));
+            heatCells, events, all.Count, storeFullIp));
     }
 
     [HttpGet("{id:guid}/qr.svg")]

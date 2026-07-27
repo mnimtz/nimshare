@@ -20,17 +20,20 @@ public class LinkReportController : Controller
 {
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
-    private readonly bool _storeFullIp;
+    private readonly bool _configStoreFullIp;
 
     public LinkReportController(NimShareDbContext db, ICurrentUserService users, IConfiguration cfg)
     {
         _db = db;
         _users = users;
-        _storeFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+        _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
     }
 
     public record DailyBucket(DateOnly Day, int Landings, int Downloads, int PasswordFails);
-    public record ReferrerRow(string Source, int Count);
+    // v1.11.14: Label (Klartext, z.B. "Microsoft Teams") + IsBot (aus
+    // RefererClassifier) ergänzt — Source bleibt der rohe Host für den
+    // Fall, dass kein bekanntes Muster gematcht hat.
+    public record ReferrerRow(string Source, string Label, bool IsBot, int Count);
     // v1.10.158: neue Aggregat-Records für Country/City/Device/Timezone-Karten.
     public record CountRow(string Key, int Count);
     // 7-Tage-Wochenraster × 24 Stunden (UTC). Werte = Landing-Anzahl.
@@ -84,13 +87,21 @@ public class LinkReportController : Controller
         // Unique visitors ~ distinct IP hashes über ALLE Events.
         var uniqueVisitors = allEvents.Select(e => e.IpHash).Where(h => !string.IsNullOrEmpty(h)).Distinct().Count();
 
-        // Referrer top list — collapse host only. Aus ALLEN Events.
+        // Referrer top list — collapse host only, klassifiziert via
+        // RefererClassifier (erkennt bekannte Link-Vorschau-Bots wie Teams/
+        // Slack). Aus ALLEN Events.
         var refs = allEvents
-            .Select(e => e.Referer ?? "")
-            .Select(NormaliseReferer)
-            .Where(s => !string.IsNullOrEmpty(s))
-            .GroupBy(s => s!)
-            .Select(g => new ReferrerRow(g.Key, g.Count()))
+            .Select(e => RefererClassifier.Classify(e.Referer, e.UserAgent, e.Isp))
+            .Where(c => c is not null)
+            .GroupBy(c => c!.Host)
+            .Select(g => new ReferrerRow(
+                g.Key,
+                // Falls irgendein Event in der Gruppe ein bekanntes Muster
+                // gematcht hat, gewinnt dessen Label (host-basiertes Match
+                // ist pro Host konstant).
+                g.OrderByDescending(c => c!.IsLikelyAutomatedFetch).First()!.DisplayLabel,
+                g.Any(c => c!.IsLikelyAutomatedFetch),
+                g.Count()))
             .OrderByDescending(r => r.Count)
             .Take(8)
             .ToList();
@@ -177,19 +188,34 @@ public class LinkReportController : Controller
         ViewData["Timezones"] = timezones;
         ViewData["HeatCells"] = heatCells;
         ViewData["MedianTtd"] = medianTtd;
-        ViewData["StoreFullIp"] = _storeFullIp;
+        var privacySettings = await _db.LinkPrivacySettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        ViewData["StoreFullIp"] = privacySettings?.StoreFullIp ?? _configStoreFullIp;
+        ViewData["IsAdmin"] = me.Role == UserRole.Admin;
         return View(link);
     }
 
-    private static string NormaliseReferer(string? r)
+    /// <summary>v1.11.14 — Admin-Toggle für Klartext-IP-Speicherung, direkt
+    /// auf der Report-Seite (statt einer eigenen Settings-Unterseite —
+    /// hier ist der Effekt sichtbar). Löst den bisherigen appsettings-only
+    /// "ShareLinks:StoreFullIp"-Wert ab (der als Fallback erhalten bleibt,
+    /// solange kein Admin je gespeichert hat).</summary>
+    [HttpPost("/links/settings/privacy")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SavePrivacy(bool storeFullIp, Guid returnToLinkId, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(r)) return "";
-        try
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (me.Role != UserRole.Admin) return Forbid();
+        var s = await _db.LinkPrivacySettings.FirstOrDefaultAsync(ct);
+        if (s is null)
         {
-            var u = new Uri(r);
-            return u.Host;
+            s = new LinkPrivacySettings();
+            _db.LinkPrivacySettings.Add(s);
         }
-        catch { return "(direct)"; }
+        s.StoreFullIp = storeFullIp;
+        s.UpdatedAt = DateTimeOffset.UtcNow;
+        s.UpdatedByUserId = me.Id;
+        await _db.SaveChangesAsync(ct);
+        return RedirectToAction(nameof(Detail), new { id = returnToLinkId });
     }
 
     /// <summary>Wandelt einen ISO-3166-1-Alpha-2-Code (z.B. "DE") in das

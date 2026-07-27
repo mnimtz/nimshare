@@ -953,6 +953,10 @@ Ouvrez ce lien pour signer :
   <data name="report.col.ip"><value>IP</value></data>
   <data name="report.col.referer"><value>Provenance</value></data>
   <data name="report.referer.direct"><value>(direct)</value></data>
+  <data name="report.referrer.likely_bot"><value>Probablement un accès automatisé</value></data>
+  <data name="report.referrer.likely_bot_tip"><value>Cette origine ressemble à un accès automatisé pour un aperçu de lien (ex. Microsoft Teams, Slack), pas forcément à une visite réelle.</value></data>
+  <data name="report.settings.store_full_ip"><value>Enregistrer les adresses IP complètes pour tous les liens</value></data>
+  <data name="report.settings.store_full_ip_desc"><value>Si activé, l'adresse IP en clair est enregistrée pour chaque visite (Art. 6(1)(f) RGPD) — à mentionner dans votre propre politique de confidentialité.</value></data>
   <data name="report.heatmap.tooltip"><value>{0} {1}:00 UTC · {2} vues</value></data>
   <data name="report.footer.slug_url_html"><value>Slug du lien : &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL : &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing"><value>Vue</value></data>

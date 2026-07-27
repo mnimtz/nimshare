@@ -952,6 +952,10 @@ Open deze link om te tekenen:
   <data name="report.col.ip"><value>IP</value></data>
   <data name="report.col.referer"><value>Herkomst</value></data>
   <data name="report.referer.direct"><value>(direct)</value></data>
+  <data name="report.referrer.likely_bot"><value>Waarschijnlijk automatisch opgehaald</value></data>
+  <data name="report.referrer.likely_bot_tip"><value>Deze herkomst lijkt op een geautomatiseerde link-voorbeeld-aanvraag (bijv. Microsoft Teams, Slack), niet per se een echt bezoek.</value></data>
+  <data name="report.settings.store_full_ip"><value>Volledige IP-adressen opslaan voor alle links</value></data>
+  <data name="report.settings.store_full_ip_desc"><value>Indien ingeschakeld wordt het IP-adres in platte tekst per bezoek opgeslagen (Art. 6(1)(f) AVG) — vermeld dit in je eigen privacyverklaring.</value></data>
   <data name="report.heatmap.tooltip"><value>{0} {1}:00 UTC · {2} bezoeken</value></data>
   <data name="report.footer.slug_url_html"><value>Link-slug: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing"><value>Bezoek</value></data>

@@ -21,9 +21,10 @@ public interface ILinkAccessService
     // wenn ShareLinks:StoreFullIp=true (analog Signatures:StoreFullIp).
     // ipPlain darf immer übergeben werden — der Service entscheidet, ob er
     // sie speichert. Rechtsgrundlage: berechtigtes Interesse Art. 6(1)(f).
+    // v1.11.14: zusätzlicher optionaler isp-Parameter (ASN/Org aus GeoIP).
     Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ipPlain,
         string? ua, string? referer,
-        string? country, string? city, string? device, string? timezone, CancellationToken ct = default);
+        string? country, string? city, string? device, string? isp, string? timezone, CancellationToken ct = default);
 
     /// <summary>
     /// Atomically increments <see cref="ShareLink.DownloadCount"/> for a link that is still
@@ -41,7 +42,7 @@ public interface ILinkAccessService
 public class LinkAccessService : ILinkAccessService
 {
     private readonly NimShareDbContext _db;
-    private readonly bool _storeFullIp;
+    private readonly bool _configStoreFullIp;
 
     public LinkAccessService(NimShareDbContext db, IConfiguration cfg)
     {
@@ -50,7 +51,16 @@ public class LinkAccessService : ILinkAccessService
         // Betreiber muss aktiv opt-in via appsettings.json /
         // Env „ShareLinks__StoreFullIp=true" und im Impressum/Datenschutz
         // die Nutzung erwähnen. Analog zum bestehenden Signaturen-Toggle.
-        _storeFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+        // v1.11.14: nur noch der FALLBACK, bevor ein Admin den Toggle je
+        // über /links/settings/privacy gespeichert hat — siehe
+        // GetStoreFullIpAsync, das die DB-Zeile bevorzugt.
+        _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
+    }
+
+    private async Task<bool> GetStoreFullIpAsync(CancellationToken ct)
+    {
+        var s = await _db.LinkPrivacySettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        return s?.StoreFullIp ?? _configStoreFullIp;
     }
 
     public Task<ShareLink?> FindActiveAsync(string slug, CancellationToken ct = default)
@@ -61,16 +71,17 @@ public class LinkAccessService : ILinkAccessService
             .SingleOrDefaultAsync(x => x.Slug == slug, ct);
 
     public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)
-        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country: null, city: null, device: null, timezone: null, ct);
+        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country: null, city: null, device: null, isp: null, timezone: null, ct);
 
     public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer,
         string? country, string? city, string? device, string? timezone, CancellationToken ct = default)
-        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country, city, device, timezone, ct);
+        => LogAsync(link, kind, ipHash, ipPlain: null, ua, referer, country, city, device, isp: null, timezone, ct);
 
     public async Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ipPlain,
         string? ua, string? referer,
-        string? country, string? city, string? device, string? timezone, CancellationToken ct = default)
+        string? country, string? city, string? device, string? isp, string? timezone, CancellationToken ct = default)
     {
+        var storeFullIp = await GetStoreFullIpAsync(ct);
         _db.ShareLinkAccesses.Add(new ShareLinkAccess
         {
             ShareLinkId = link.Id,
@@ -79,7 +90,7 @@ public class LinkAccessService : ILinkAccessService
             // v1.10.158: Klartext-IP nur speichern wenn Betreiber-Toggle an.
             // Trim auf 45 Zeichen (längste IPv6-Textform), damit ein
             // manipulierter Header nicht die Column sprengt.
-            IpAddress = (_storeFullIp && !string.IsNullOrEmpty(ipPlain))
+            IpAddress = (storeFullIp && !string.IsNullOrEmpty(ipPlain))
                 ? (ipPlain.Length > 45 ? ipPlain[..45] : ipPlain)
                 : null,
             UserAgent = ua,
@@ -87,6 +98,7 @@ public class LinkAccessService : ILinkAccessService
             CountryCode = country,
             City = city,
             DeviceType = device,
+            Isp = string.IsNullOrEmpty(isp) ? null : (isp.Length > 200 ? isp[..200] : isp),
             Timezone = timezone,
         });
         link.HitCount++;

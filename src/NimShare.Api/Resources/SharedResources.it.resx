@@ -953,6 +953,10 @@ Apri questo link per firmare:
   <data name="report.col.ip"><value>IP</value></data>
   <data name="report.col.referer"><value>Provenienza</value></data>
   <data name="report.referer.direct"><value>(diretto)</value></data>
+  <data name="report.referrer.likely_bot"><value>Probabile richiesta automatica</value></data>
+  <data name="report.referrer.likely_bot_tip"><value>Questa origine sembra una richiesta automatica di anteprima link (es. Microsoft Teams, Slack), non necessariamente una visita reale.</value></data>
+  <data name="report.settings.store_full_ip"><value>Salva indirizzi IP completi per tutti i link</value></data>
+  <data name="report.settings.store_full_ip_desc"><value>Se attivato, l'indirizzo IP in chiaro viene salvato per ogni visita (Art. 6(1)(f) GDPR) — menzionalo nella tua informativa sulla privacy.</value></data>
   <data name="report.heatmap.tooltip"><value>{0} {1}:00 UTC · {2} visite</value></data>
   <data name="report.footer.slug_url_html"><value>Slug del link: &lt;span class="mono"&gt;{0}&lt;/span&gt; · URL: &lt;a href="/s/{0}" class="mono"&gt;{1}&lt;/a&gt;</value></data>
   <data name="report.access_kind.landing"><value>Visita</value></data>
