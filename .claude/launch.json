@@ -4,7 +4,7 @@
     {
       "name": "nimshare-local",
       "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["-c", "ASPNETCORE_URLS=http://127.0.0.1:5133 /Users/marcus.nimtz/.dotnet/dotnet run --project src/NimShare.Api/NimShare.Api.csproj --no-build -c Release --no-launch-profile"],
+      "runtimeArgs": ["-c", "cd /Users/marcus.nimtz/Documents/Claude/FileShare && ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://127.0.0.1:5133 /Users/marcus.nimtz/.dotnet/dotnet run --project src/NimShare.Api/NimShare.Api.csproj --no-build -c Release --no-launch-profile"],
       "port": 5133
     }
   ]

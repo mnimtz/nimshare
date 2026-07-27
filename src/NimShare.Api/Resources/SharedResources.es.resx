@@ -704,6 +704,8 @@ Abre el enlace:
   <data name="sig.new.type_checkbox"><value>Casilla</value></data>
   <data name="sig.new.click_drag_hint"><value>Clic + arrastrar en la página {0}</value></data>
   <data name="sig.new.page_of"><value>Página {0} / {1}</value></data>
+  <data name="sig.new.search.internal_user"><value>Usuario de NimShare</value></data>
+  <data name="sig.new.search.contact"><value>Contacto</value></data>
   <data name="sig.new.role_signer"><value>✍ Firmante</value></data>
   <data name="sig.new.role_viewer"><value>👁 Solo lectura</value></data>
   <data name="sig.new.chip_signer"><value>Firmante</value></data>

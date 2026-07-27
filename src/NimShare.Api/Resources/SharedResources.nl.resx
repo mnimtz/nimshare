@@ -703,6 +703,8 @@ Open de link:
   <data name="sig.new.type_checkbox"><value>Selectievakje</value></data>
   <data name="sig.new.click_drag_hint"><value>Klik + sleep op pagina {0}</value></data>
   <data name="sig.new.page_of"><value>Pagina {0} / {1}</value></data>
+  <data name="sig.new.search.internal_user"><value>NimShare-gebruiker</value></data>
+  <data name="sig.new.search.contact"><value>Contact</value></data>
   <data name="sig.new.role_signer"><value>✍ Ondertekenaar</value></data>
   <data name="sig.new.role_viewer"><value>👁 Alleen lezen</value></data>
   <data name="sig.new.chip_signer"><value>Ondertekenaar</value></data>

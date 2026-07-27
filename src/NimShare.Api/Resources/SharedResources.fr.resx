@@ -704,6 +704,8 @@ Ouvrez le lien :
   <data name="sig.new.type_checkbox"><value>Case à cocher</value></data>
   <data name="sig.new.click_drag_hint"><value>Cliquer + glisser sur la page {0}</value></data>
   <data name="sig.new.page_of"><value>Page {0} / {1}</value></data>
+  <data name="sig.new.search.internal_user"><value>Utilisateur NimShare</value></data>
+  <data name="sig.new.search.contact"><value>Contact</value></data>
   <data name="sig.new.role_signer"><value>✍ Signataire</value></data>
   <data name="sig.new.role_viewer"><value>👁 Lecture seule</value></data>
   <data name="sig.new.chip_signer"><value>Signataire</value></data>

@@ -705,6 +705,8 @@ Open the link:
   <data name="sig.new.type_checkbox"><value>Checkbox</value></data>
   <data name="sig.new.click_drag_hint"><value>Click + drag on page {0}</value></data>
   <data name="sig.new.page_of"><value>Page {0} / {1}</value></data>
+  <data name="sig.new.search.internal_user"><value>NimShare user</value></data>
+  <data name="sig.new.search.contact"><value>Contact</value></data>
   <data name="sig.new.role_signer"><value>✍ Signer</value></data>
   <data name="sig.new.role_viewer"><value>👁 Read only</value></data>
   <data name="sig.new.chip_signer"><value>Signer</value></data>

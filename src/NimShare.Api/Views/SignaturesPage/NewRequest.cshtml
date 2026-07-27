@@ -30,6 +30,8 @@
     data-t-chip-viewer="@T["sig.new.chip_viewer"]"
     data-t-click-drag="@T["sig.new.click_drag_hint"]"
     data-t-page-of="@T["sig.new.page_of"]"
+    data-t-internal-user="@T["sig.new.search.internal_user"]"
+    data-t-contact="@T["sig.new.search.contact"]"
     data-t-error="@T["common.error"]">
     <h2 class="card-title">@T["sig.new.step1"]</h2>
     <div class="tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--tw-gray-300);margin-bottom:12px">
@@ -145,9 +147,13 @@ Danke!</textarea>
     <p class="muted">@T["sig.new.step2_lede"]</p>
     <div id="pList" style="display:flex;flex-direction:column;gap:6px;margin:12px 0"></div>
     <div class="row" style="gap:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px;position:relative">
-            <input type="email" id="pEmail" placeholder="@T["sig.new.email_ph"]" list="contactsList" style="width:100%" autocomplete="off"/>
-            <datalist id="contactsList"></datalist>
+        <div style="flex:1;min-width:220px;position:relative">
+            <input type="email" id="pEmail" placeholder="@T["sig.new.email_ph"]" style="width:100%" autocomplete="off"/>
+            @* v1.11.8 — Marcus: "search while typing... ein Dropdown hier ist
+               der Super-Killer". Ersetzt das alte HTML5-Datalist (nur 200
+               vorgeladene Kontakte, kein Zugriff aufs NimShare-User-Directory)
+               durch eine echte Live-Suche über BEIDE Quellen. *@
+            <div id="pSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--tw-gray-300);border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,.14);max-height:280px;overflow-y:auto;margin-top:4px"></div>
         </div>
         <input type="text" id="pName" placeholder="@T["sig.new.name_ph"]" style="flex:1;min-width:180px"/>
         <select id="pRole">
@@ -167,23 +173,38 @@ Danke!</textarea>
     <h2 class="card-title">@T["sig.new.step3"]</h2>
     <p class="muted">@T["sig.new.step3_lede"]</p>
     <div id="fieldSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
-    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-        <label>@T["sig.new.for_label"]</label>
-        <select id="fParticipant" onchange="updateFieldSummary()"></select>
-        <label>@T["sig.new.type_label"]</label>
-        <select id="fType">
-            <option value="Signature">@T["sig.new.type_signature"]</option>
-            <option value="Text">@T["sig.new.type_text"]</option>
-            <option value="Date">@T["sig.new.type_date"]</option>
-            <option value="Checkbox">@T["sig.new.type_checkbox"]</option>
-        </select>
-        <span class="muted" style="margin-left:auto" id="pageInfo"></span>
-    </div>
-    <div id="pdfWrap" style="border:1px solid var(--tw-gray-300);border-radius:6px;overflow:hidden;background:#eee;user-select:none;position:relative"></div>
-    <div class="row" style="gap:6px;margin-top:8px;justify-content:center">
-        <button class="btn btn-ghost btn-sm" onclick="prevPage()">◀</button>
-        <span id="pgLabel" class="muted"></span>
-        <button class="btn btn-ghost btn-sm" onclick="nextPage()">▶</button>
+    @* v1.11.8 — Marcus: die Für:/Typ:-Dropdowns waren "umständlich", er
+       wollte eine hübsche Schnell-Auswahl NEBEN dem Dokument. Die echten
+       &lt;select&gt;s bleiben im DOM (nur visuell versteckt) — alle bisherige
+       Logik (Drag-Handler liest .value, renderPList() befüllt die Optionen)
+       bleibt unverändert, die Chips spiegeln nur deren Zustand. *@
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="width:190px;flex-shrink:0">
+            <div class="muted" style="font-size:.78rem;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.02em">@T["sig.new.for_label"]</div>
+            <div id="fParticipantChips" style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px"></div>
+
+            <div class="muted" style="font-size:.78rem;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.02em">@T["sig.new.type_label"]</div>
+            <div id="fTypeChips" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+
+            <select id="fParticipant" onchange="updateFieldSummary()" style="display:none"></select>
+            <select id="fType" style="display:none">
+                <option value="Signature">@T["sig.new.type_signature"]</option>
+                <option value="Text">@T["sig.new.type_text"]</option>
+                <option value="Date">@T["sig.new.type_date"]</option>
+                <option value="Checkbox">@T["sig.new.type_checkbox"]</option>
+            </select>
+        </div>
+        <div style="flex:1;min-width:0">
+            <div class="row" style="justify-content:flex-end;margin-bottom:6px">
+                <span class="muted" id="pageInfo"></span>
+            </div>
+            <div id="pdfWrap" style="border:1px solid var(--tw-gray-300);border-radius:6px;overflow:hidden;background:#eee;user-select:none;position:relative"></div>
+            <div class="row" style="gap:6px;margin-top:8px;justify-content:center">
+                <button class="btn btn-ghost btn-sm" onclick="prevPage()">◀</button>
+                <span id="pgLabel" class="muted"></span>
+                <button class="btn btn-ghost btn-sm" onclick="nextPage()">▶</button>
+            </div>
+        </div>
     </div>
     <div class="row" style="justify-content:space-between;margin-top:16px">
         <button class="btn btn-ghost" onclick="show(2)">← @T["common.back"]</button>
@@ -224,34 +245,90 @@ async function loadTemplates(preselectId) {
     } catch {}
 }
 
-// Load email templates + contacts on page open so the dropdowns are ready.
-(async () => {
-    await loadTemplates();
-    try {
-        const contacts = await fetch('/api/v1/contacts?limit=200', { credentials: 'same-origin' }).then(r => r.json());
-        const dl = document.getElementById('contactsList');
-        for (const c of contacts) {
-            const o = document.createElement('option');
-            o.value = c.email;
-            o.label = c.name + (c.company ? ' — ' + c.company : '');
-            dl.appendChild(o);
-        }
-        // When user picks an email from the datalist, auto-fill the name field.
-        window.__contactByEmail = new Map(contacts.map(c => [c.email, c.name]));
-    } catch {}
-})();
+(async () => { await loadTemplates(); })();
 
+// v1.11.8 — Marcus: "search while typing... ein Dropdown hier ist der
+// Super-Killer" + "Zugriff aufs Adressbuch / Interne Benutzer nicht gut
+// umgesetzt, bzw nur teilweise". Ersetzt das alte HTML5-Datalist (nur 200
+// vorgeladene Kontakte, ohne NimShare-User-Directory) durch eine echte
+// Live-Suche über BEIDE Quellen parallel: private Kontakte
+// (/api/v1/contacts) und interne NimShare-User (/api/v1/contacts/directory,
+// bereits explizit für "Signieren/Adressieren" gedacht).
+let pSearchTimer = null;
+let pSearchList = [];
 document.addEventListener('DOMContentLoaded', () => {
     const emailEl = document.getElementById('pEmail');
     if (!emailEl) return;
-    emailEl.addEventListener('change', () => {
-        const map = window.__contactByEmail;
-        if (!map) return;
-        const name = map.get(emailEl.value.trim().toLowerCase()) || map.get(emailEl.value.trim());
-        const nameEl = document.getElementById('pName');
-        if (name && !nameEl.value) nameEl.value = name;
+    emailEl.addEventListener('input', () => {
+        clearTimeout(pSearchTimer);
+        const q = emailEl.value.trim();
+        if (q.length < 2) { hidePSearch(); return; }
+        pSearchTimer = setTimeout(() => runPSearch(q), 300);
     });
+    emailEl.addEventListener('focus', () => {
+        if (emailEl.value.trim().length >= 2 && pSearchList.length) showPSearch();
+    });
+    // mousedown (not click/blur) on results fires first so selecting an
+    // item registers before the input's blur hides the panel.
+    emailEl.addEventListener('blur', () => setTimeout(hidePSearch, 150));
 });
+function hidePSearch() {
+    const el = document.getElementById('pSearchResults');
+    if (el) el.style.display = 'none';
+}
+function showPSearch() {
+    const el = document.getElementById('pSearchResults');
+    if (el) el.style.display = 'block';
+}
+async function runPSearch(q) {
+    let contacts = [], directory = [];
+    try {
+        [contacts, directory] = await Promise.all([
+            fetch('/api/v1/contacts?limit=8&q=' + encodeURIComponent(q), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+            fetch('/api/v1/contacts/directory?limit=8&q=' + encodeURIComponent(q), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+        ]);
+    } catch { hidePSearch(); return; }
+    const seen = new Set();
+    const merged = [];
+    for (const u of directory) {
+        const key = u.email.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ name: u.name, email: u.email, kind: 'user' });
+    }
+    for (const c of contacts) {
+        const key = c.email.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ name: c.name, email: c.email, company: c.company, kind: 'contact' });
+    }
+    pSearchList = merged;
+    renderPSearch();
+}
+function renderPSearch() {
+    const el = document.getElementById('pSearchResults');
+    if (!el) return;
+    if (!pSearchList.length) { hidePSearch(); return; }
+    el.innerHTML = pSearchList.map((item, i) => `
+        <div class="pSearchItem" data-i="${i}" style="padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--tw-gray-100)">
+            <span style="font-size:1.1rem" title="${item.kind === 'user' ? T.tInternalUser || 'NimShare user' : T.tContact || 'Contact'}">${item.kind === 'user' ? '👤' : '📇'}</span>
+            <span style="flex:1;min-width:0;overflow:hidden">
+                <div style="font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.name)}</div>
+                <div class="muted" style="font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.email)}${item.company ? ' · ' + esc(item.company) : ''}</div>
+            </span>
+        </div>`).join('');
+    el.querySelectorAll('.pSearchItem').forEach(row => {
+        row.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            const item = pSearchList[Number(row.dataset.i)];
+            document.getElementById('pEmail').value = item.email;
+            document.getElementById('pName').value = item.name;
+            hidePSearch();
+            document.getElementById('pName').focus();
+        });
+    });
+    showPSearch();
+}
 
 function show(n) {
     for (const i of [1,2,3]) document.getElementById('wizStep' + i).style.display = i === n ? '' : 'none';
@@ -371,9 +448,99 @@ function renderPList() {
         .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
 
+// Colour rotation so each participant's fields are visually distinct on the
+// PDF — solves "wer gehört zu welchem Feld". v1.11.8: gehoben auf Top-Level
+// (vorher innerhalb setupDrag() verschachtelt — dadurch waren redrawFields()
+// und updateFieldSummary(), beide Top-Level-Funktionen, ReferenceError-
+// anfällig sobald sie colorFor()/styleField() aufriefen; funktionierte nur
+// solange keiner der beiden Pfade je tatsächlich lief).
+const PALETTE = [
+    { border: '#002854', bg: 'rgba(0,40,84,.14)', fg: '#002854' },   // Tungsten blue
+    { border: '#c53030', bg: 'rgba(197,48,48,.12)', fg: '#c53030' },  // red
+    { border: '#2f855a', bg: 'rgba(47,133,90,.12)', fg: '#2f855a' },  // green
+    { border: '#805ad5', bg: 'rgba(128,90,213,.14)', fg: '#805ad5' },  // purple
+    { border: '#d69e2e', bg: 'rgba(214,158,46,.14)', fg: '#8a5a00' },  // amber
+    { border: '#0987a0', bg: 'rgba(9,135,160,.14)', fg: '#0987a0' },   // teal
+];
+function colorFor(participantId) {
+    const idx = Math.max(0, participants.findIndex(p => p.id === participantId));
+    return PALETTE[idx % PALETTE.length];
+}
+function styleField(box, type, participantId) {
+    const col = colorFor(participantId);
+    const p = participants.find(x => x.id === participantId);
+    const icon = type === 'Signature' ? '✍' : (type === 'Text' ? 'T' : (type === 'Date' ? '📅' : '☑'));
+    box.style.borderStyle = 'solid';
+    box.style.borderColor = col.border;
+    box.style.background = col.bg;
+    box.style.color = col.fg;
+    box.style.fontWeight = '700';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.justifyContent = 'center';
+    box.style.fontSize = '.75rem';
+    box.style.textAlign = 'center';
+    box.style.lineHeight = '1.1';
+    box.style.padding = '2px 4px';
+    box.textContent = ''; // reset — we're rebuilding with icon + name
+    const label = document.createElement('div');
+    label.innerHTML = `<div style="font-size:1.15rem">${icon}</div><div style="font-size:.65rem;font-weight:600;opacity:.85">${esc((p && p.name) || '?')}</div>`;
+    box.appendChild(label);
+}
+
+// v1.11.8 — Schnell-Auswahl-Chips neben dem Dokument statt der bisherigen
+// zwei Dropdowns. Die echten <select>-Elemente bleiben als versteckter
+// State-Speicher bestehen (Drag-Handler liest weiterhin ihr .value) — die
+// Chips spiegeln nur deren aktuellen Wert und lösen bei Klick 'change' aus.
+function typeLabel(v) {
+    const opt = document.querySelector(`#fType option[value="${v}"]`);
+    return opt ? opt.textContent : v;
+}
+function renderTypeChips() {
+    const sel = document.getElementById('fType');
+    const cur = sel.value || 'Signature';
+    const types = Array.from(sel.options).map(o => o.value);
+    const icons = { Signature: '✍', Text: 'T', Date: '📅', Checkbox: '☑' };
+    document.getElementById('fTypeChips').innerHTML = types.map(v => `
+        <button type="button" class="fTypeChip" data-v="${v}" style="padding:10px 4px;border-radius:8px;border:2px solid ${v === cur ? '#002854' : 'var(--tw-gray-300)'};background:${v === cur ? 'rgba(0,40,84,.08)' : '#fff'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.68rem;font-weight:600;color:${v === cur ? '#002854' : 'inherit'}">
+            <span style="font-size:1.3rem">${icons[v] || '•'}</span>${esc(typeLabel(v))}
+        </button>`).join('');
+    document.getElementById('fTypeChips').querySelectorAll('.fTypeChip').forEach(b => {
+        b.addEventListener('click', () => {
+            sel.value = b.dataset.v;
+            renderTypeChips();
+        });
+    });
+}
+function renderParticipantChips() {
+    const sel = document.getElementById('fParticipant');
+    // fParticipant's <option>s are (re)built by renderPList() — reuse that
+    // filtering so the chip list always matches what the drag-handler sees.
+    if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+    const cur = sel.value;
+    document.getElementById('fParticipantChips').innerHTML = Array.from(sel.options).map(o => {
+        const p = participants.find(x => x.id === o.value);
+        const col = colorFor(o.value);
+        const active = o.value === cur;
+        const icon = p && p.role === 'Signer' ? '✍' : '👁';
+        return `<button type="button" class="fPartChip" data-v="${o.value}" style="text-align:left;padding:8px 10px;border-radius:8px;border:2px solid ${active ? col.border : 'var(--tw-gray-300)'};background:${active ? col.bg : '#fff'};cursor:pointer;display:flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;color:${active ? col.fg : 'inherit'}">
+            <span>${icon}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.textContent)}</span>
+        </button>`;
+    }).join('');
+    document.getElementById('fParticipantChips').querySelectorAll('.fPartChip').forEach(b => {
+        b.addEventListener('click', () => {
+            sel.value = b.dataset.v;
+            sel.dispatchEvent(new Event('change'));
+            renderParticipantChips();
+        });
+    });
+}
+
 async function goStep3() {
     if (participants.filter(p => p.role === 'Signer').length === 0) return nimAlert(T.tMinSigner);
     show(3);
+    renderParticipantChips();
+    renderTypeChips();
     const src = '/api/v1/signatures/' + requestId + '/source-pdf';
     pdfDoc = await pdfjsLib.getDocument(src).promise;
     curPage = 1;
@@ -496,41 +663,8 @@ function setupDrag(overlay) {
         updateFieldSummary();
     }
 
-    // Colour rotation so each participant's fields are visually distinct on
-    // the PDF — solves "wer gehört zu welchem Feld".
-    const PALETTE = [
-        { border: '#002854', bg: 'rgba(0,40,84,.14)', fg: '#002854' },   // Tungsten blue
-        { border: '#c53030', bg: 'rgba(197,48,48,.12)', fg: '#c53030' },  // red
-        { border: '#2f855a', bg: 'rgba(47,133,90,.12)', fg: '#2f855a' },  // green
-        { border: '#805ad5', bg: 'rgba(128,90,213,.14)', fg: '#805ad5' },  // purple
-        { border: '#d69e2e', bg: 'rgba(214,158,46,.14)', fg: '#8a5a00' },  // amber
-        { border: '#0987a0', bg: 'rgba(9,135,160,.14)', fg: '#0987a0' },   // teal
-    ];
-    function colorFor(participantId) {
-        const idx = Math.max(0, participants.findIndex(p => p.id === participantId));
-        return PALETTE[idx % PALETTE.length];
-    }
-    function styleField(box, type, participantId) {
-        const col = colorFor(participantId);
-        const p = participants.find(x => x.id === participantId);
-        const icon = type === 'Signature' ? '✍' : (type === 'Text' ? 'T' : (type === 'Date' ? '📅' : '☑'));
-        box.style.borderStyle = 'solid';
-        box.style.borderColor = col.border;
-        box.style.background = col.bg;
-        box.style.color = col.fg;
-        box.style.fontWeight = '700';
-        box.style.display = 'flex';
-        box.style.alignItems = 'center';
-        box.style.justifyContent = 'center';
-        box.style.fontSize = '.75rem';
-        box.style.textAlign = 'center';
-        box.style.lineHeight = '1.1';
-        box.style.padding = '2px 4px';
-        box.textContent = ''; // reset — we're rebuilding with icon + name
-        const label = document.createElement('div');
-        label.innerHTML = `<div style="font-size:1.15rem">${icon}</div><div style="font-size:.65rem;font-weight:600;opacity:.85">${esc((p && p.name) || '?')}</div>`;
-        box.appendChild(label);
-    }
+    // v1.11.8: PALETTE/colorFor/styleField gehoben auf Top-Level (siehe
+    // oben bei goStep3) — hier nicht mehr dupliziert.
 
     overlay.addEventListener('mousedown', begin);
     overlay.addEventListener('mousemove', move);

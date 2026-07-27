@@ -711,6 +711,8 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="sig.new.type_checkbox"><value>Checkbox</value></data>
   <data name="sig.new.click_drag_hint"><value>Klicken + ziehen auf Seite {0}</value></data>
   <data name="sig.new.page_of"><value>Seite {0} / {1}</value></data>
+  <data name="sig.new.search.internal_user"><value>NimShare-Benutzer</value></data>
+  <data name="sig.new.search.contact"><value>Kontakt</value></data>
   <data name="sig.new.role_signer"><value>✍ Unterschreiber</value></data>
   <data name="sig.new.role_viewer"><value>👁 Nur lesen</value></data>
   <data name="sig.new.chip_signer"><value>Unterzeichner</value></data>
