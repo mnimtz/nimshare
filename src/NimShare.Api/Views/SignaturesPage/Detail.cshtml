@@ -321,7 +321,7 @@
 async function remindOne(pid) {
     // Use the request-level remind endpoint; server will re-issue tokens for
     // pending participants and email them individually.
-    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
     const r = await fetch('/api/v1/signatures/@Model.Id/remind', {
         method: 'POST', credentials: 'same-origin'
     });
@@ -329,7 +329,7 @@ async function remindOne(pid) {
     else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 async function remindAll() {
-    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(@T["sig.detail.confirm_remind"].Value))) return;
     const r = await fetch('/api/v1/signatures/@Model.Id/remind', {
         method: 'POST', credentials: 'same-origin'
     });
@@ -337,7 +337,7 @@ async function remindAll() {
     else nimAlert(@Json.Serialize(@T["common.error"].Value) + ': ' + r.status, { kind: 'error' });
 }
 async function cancelReq() {
-    if (!confirm(@Json.Serialize(@T["sig.detail.confirm_cancel"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(@T["sig.detail.confirm_cancel"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/signatures/@Model.Id/cancel', {
         method: 'POST', credentials: 'same-origin'
     });

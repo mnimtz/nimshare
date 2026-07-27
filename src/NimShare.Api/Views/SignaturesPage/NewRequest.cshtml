@@ -32,6 +32,8 @@
     data-t-page-of="@T["sig.new.page_of"]"
     data-t-internal-user="@T["sig.new.search.internal_user"]"
     data-t-contact="@T["sig.new.search.contact"]"
+    data-t-dup-sig-warn="@T["sig.new.err.dup_sig_warn"]"
+    data-t-dup-sig-confirm="@T["sig.new.err.dup_sig_confirm"]"
     data-t-error="@T["common.error"]">
     <h2 class="card-title">@T["sig.new.step1"]</h2>
     <div class="tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--tw-gray-300);margin-bottom:12px">
@@ -694,10 +696,21 @@ function updateFieldSummary() {
         const sigCount = fields.filter(f => f.participantId === p.id && f.type === 'Signature').length;
         const otherCount = fields.filter(f => f.participantId === p.id && f.type !== 'Signature').length;
         const col = colorFor(p.id);
+        // v1.11.11 — Marcus fand ein fertiges PDF mit zwei Signaturen an zwei
+        // verschiedenen Stellen (aus zwei separat platzierten Signaturfeldern
+        // für denselben Signer — das "Trotzdem hinzufügen?"-Duplikat-Prompt
+        // erlaubt das bewusst für Randfälle wie Initialen+Vollsignatur, aber
+        // ein versehentliches Duplikat war hier vorher leicht zu übersehen).
+        // Ab 2 Signaturfeldern jetzt eine auffällige Warnfarbe statt der
+        // normalen Badge-Farbe, damit sowas vor dem Senden auffällt.
+        const dup = sigCount > 1;
         const badge = p.role === 'Signer'
-            ? (sigCount > 0 ? `✍ ${sigCount}` : '⚠ ' + (T.tNoSigYet || 'kein Feld'))
+            ? (sigCount > 0 ? `${dup ? '⚠' : '✍'} ${sigCount}` : '⚠ ' + (T.tNoSigYet || 'kein Feld'))
             : '👁';
-        return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;border:1.5px solid ${col.border};background:${col.bg};color:${col.fg};font-size:.78rem;font-weight:600">${badge} ${esc(p.name)}${otherCount ? ` <span style="opacity:.7">+${otherCount}</span>` : ''}</span>`;
+        const borderColor = dup ? '#c53030' : col.border;
+        const bg = dup ? 'rgba(197,48,48,.14)' : col.bg;
+        const fg = dup ? '#c53030' : col.fg;
+        return `<span title="${dup ? esc(T.tDupSigWarn || 'Mehrere Signaturfelder für diese Person — vor dem Senden prüfen.') : ''}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;border:1.5px solid ${borderColor};background:${bg};color:${fg};font-size:.78rem;font-weight:600">${badge} ${esc(p.name)}${otherCount ? ` <span style="opacity:.7">+${otherCount}</span>` : ''}</span>`;
     }).join(' ');
     el.innerHTML = parts;
 }
@@ -708,6 +721,17 @@ function nextPage() { if (curPage < pdfDoc.numPages) { curPage++; renderPage(); 
 async function sendReq() {
     if (fields.filter(f => f.type === 'Signature').length === 0) {
         if (!await nimConfirm(T.tNoSigfield, { danger: true })) return;
+    }
+    // v1.11.11 — letzte Chance, ein versehentliches Doppel-Signaturfeld zu
+    // bemerken, bevor die Anfrage tatsächlich verschickt wird (siehe
+    // updateFieldSummary-Warnbadge oben — hier zusätzlich als harter Stopper,
+    // weil die Badge-Farbe allein leicht übersehen wird).
+    const dupNames = participants
+        .filter(p => p.role === 'Signer' && fields.filter(f => f.participantId === p.id && f.type === 'Signature').length > 1)
+        .map(p => p.name);
+    if (dupNames.length > 0) {
+        const msg = (T.tDupSigConfirm || 'Mehrere Signaturfelder für {0} — trotzdem senden?').replace('{0}', dupNames.join(', '));
+        if (!await nimConfirm(msg, { danger: true })) return;
     }
     const tpl = document.getElementById('templateId').value;
     const r = await fetch('/api/v1/signatures/' + requestId + '/send' + (tpl ? '?templateId=' + encodeURIComponent(tpl) : ''), {

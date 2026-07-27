@@ -168,7 +168,7 @@ async function saveContact(ev) {
     return false;
 }
 async function delContact(id) {
-    if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["common.confirm_delete"].Value), { danger: true })) return;
     try { await api('DELETE', '/api/v1/contacts/' + id); reload(); }
     catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }

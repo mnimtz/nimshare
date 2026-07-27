@@ -189,7 +189,7 @@ async function saveTpl(ev) {
     return false;
 }
 async function deleteTpl(id) {
-    if (!confirm(@Json.Serialize(T["common.confirm_delete"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["common.confirm_delete"].Value), { danger: true })) return;
     try { await api('DELETE', '/api/v1/email-templates/' + id); location.reload(); }
     catch (e) { nimAlert(e.message, { kind: 'error' }); }
 }

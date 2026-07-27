@@ -115,6 +115,7 @@
   <data name="users.invite"><value>Invita un utente</value></data>
   <data name="users.invite.lede"><value>Il destinatario riceve un link one-time, sceglie la password e arriva direttamente in NimShare.</value></data>
   <data name="users.invite.send"><value>Invia invito</value></data>
+  <data name="users.invite.confirm_revoke"><value>Revocare l&apos;invito per {0}?</value></data>
   <data name="users.create_new.lede"><value>Preferisci impostare tu la password? Usa il modulo classico qui sotto.</value></data>
 
   <data name="invite.accept.title"><value>Imposta la tua password</value></data>
@@ -721,6 +722,8 @@ Apri il link:
   <data name="sig.new.err.email_name"><value>Email + nome obbligatori.</value></data>
   <data name="sig.new.err.min_signer"><value>Almeno un firmatario.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Nessun campo firma posizionato — inviare comunque?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Più campi firma per questa persona — controllare prima di inviare.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Più campi firma per {0} — inviare comunque?</value></data>
   <data name="sig.new.err.network"><value>Errore di rete</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Richiesta di firma creata, ma l'email è fallita per questi destinatari:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Controlla /settings/email — il gateway email potrebbe essere disattivato o non configurato correttamente.</value></data>

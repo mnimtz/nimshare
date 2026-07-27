@@ -163,6 +163,7 @@
   <data name="users.invite"><value>Invite a user</value></data>
   <data name="users.invite.lede"><value>The recipient gets a one-time link, sets their own password, and lands directly in NimShare.</value></data>
   <data name="users.invite.send"><value>Send invite</value></data>
+  <data name="users.invite.confirm_revoke"><value>Revoke the invitation for {0}?</value></data>
   <data name="users.create_new.lede"><value>Prefer to set a password yourself and share it out-of-band? Use the classic create form instead.</value></data>
 
   <data name="invite.accept.title"><value>Set your password</value></data>
@@ -722,6 +723,8 @@ Open the link:
   <data name="sig.new.err.email_name"><value>Email + name required.</value></data>
   <data name="sig.new.err.min_signer"><value>At least one signer.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>No signature field placed — send anyway?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Multiple signature fields for this person — check before sending.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Multiple signature fields for {0} — send anyway?</value></data>
   <data name="sig.new.err.network"><value>Network error</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Signature request created, but email failed for these recipients:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Check /settings/email — the email gateway may be disabled or misconfigured.</value></data>

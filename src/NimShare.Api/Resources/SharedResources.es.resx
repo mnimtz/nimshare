@@ -115,6 +115,7 @@
   <data name="users.invite"><value>Invitar a un usuario</value></data>
   <data name="users.invite.lede"><value>El destinatario recibe un enlace único, elige su contraseña y entra directamente en NimShare.</value></data>
   <data name="users.invite.send"><value>Enviar invitación</value></data>
+  <data name="users.invite.confirm_revoke"><value>¿Revocar la invitación para {0}?</value></data>
   <data name="users.create_new.lede"><value>¿Prefieres establecer tú la contraseña? Usa el formulario clásico de abajo.</value></data>
 
   <data name="invite.accept.title"><value>Establece tu contraseña</value></data>
@@ -721,6 +722,8 @@ Abre el enlace:
   <data name="sig.new.err.email_name"><value>Correo + nombre obligatorios.</value></data>
   <data name="sig.new.err.min_signer"><value>Al menos un firmante.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Ningún campo de firma colocado — ¿enviar de todos modos?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Varios campos de firma para esta persona — revisa antes de enviar.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Varios campos de firma para {0} — ¿enviar de todos modos?</value></data>
   <data name="sig.new.err.network"><value>Error de red</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Solicitud de firma creada, pero el correo falló para estos destinatarios:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Revisa /settings/email — la puerta de enlace de correo puede estar desactivada o mal configurada.</value></data>

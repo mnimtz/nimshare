@@ -204,7 +204,7 @@ async function setDefault(id) {
     if (r.ok) reload();
 }
 async function delCert(id) {
-    if (!confirm(@Json.Serialize(T["actions.confirm_delete"].Value))) return;
+    if (!await nimConfirm(@Json.Serialize(T["actions.confirm_delete"].Value), { danger: true })) return;
     const r = await fetch('/api/v1/certificates/' + id, { method: 'DELETE', credentials: 'same-origin' });
     if (r.ok) reload();
 }

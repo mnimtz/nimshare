@@ -216,6 +216,7 @@
   <data name="users.invite"><value>Gebruiker uitnodigen</value></data>
   <data name="users.invite.lede"><value>De ontvanger krijgt een eenmalige link, kiest zijn eigen wachtwoord en komt direct in NimShare.</value></data>
   <data name="users.invite.send"><value>Uitnodiging versturen</value></data>
+  <data name="users.invite.confirm_revoke"><value>Uitnodiging voor {0} intrekken?</value></data>
   <data name="users.create_new.lede"><value>Liever zelf een wachtwoord instellen? Gebruik het klassieke formulier hieronder.</value></data>
 
   <data name="invite.accept.title"><value>Stel je wachtwoord in</value></data>
@@ -720,6 +721,8 @@ Open de link:
   <data name="sig.new.err.email_name"><value>E-mail + naam verplicht.</value></data>
   <data name="sig.new.err.min_signer"><value>Minstens één ondertekenaar.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Geen handtekeningveld geplaatst — toch versturen?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Meerdere handtekeningvelden voor deze persoon — controleer voor het verzenden.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Meerdere handtekeningvelden voor {0} — toch versturen?</value></data>
   <data name="sig.new.err.network"><value>Netwerkfout</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Handtekeningverzoek aangemaakt, maar de e-mail is mislukt voor deze ontvangers:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Controleer /settings/email — de e-mailgateway is mogelijk uitgeschakeld of verkeerd geconfigureerd.</value></data>

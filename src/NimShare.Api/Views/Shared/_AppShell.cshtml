@@ -274,15 +274,37 @@
         @RenderBody()
     </main>
 </div>
-@* v1.10.53 — nimConfirm/nimAlert/nimToast global verfügbar. `defer`
-   damit die Skripte darunter (die noch alte confirm() nutzen bis
-   sie migriert sind) trotzdem laden können. *@
+@* v1.10.53 — nimConfirm/nimAlert/nimToast global verfügbar. *@
 <script src="~/js/dialogs.js" defer></script>
 <script>
     // Localised labels for the JS helpers below (nsPrompt/nsConfirm/avatar popover).
     window.T_cancel = @Json.Serialize(T["modal.cancel"].Value);
     window.T_profile = @Json.Serialize(T["nav.profile"].Value);
     window.T_logout = @Json.Serialize(T["nav.signout"].Value);
+</script>
+<script defer>
+    // v1.11.11 — Marcus: "wir wollten doch diese altmodischen Browser-
+    // Popups nicht mehr nutzen". Letzte verbliebene Stelle war ein
+    // Grüppchen <form onsubmit="return confirm('...')"> — das native
+    // window.confirm() lässt sich nicht durch nimConfirm() (Promise-basiert)
+    // ersetzen ohne den Submit erst abzufangen. Generischer, EINMALIGER
+    // Ersatz per data-confirm-Attribut statt pro Formular eigenes JS:
+    // <form data-confirm="Text..."> statt onsubmit="return confirm(...)".
+    // Optional data-confirm-safe="1" für nicht-destruktive Bestätigungen
+    // (Default ist "danger"-Styling, weil hier bisher ausschließlich
+    // löschende/überschreibende Aktionen betroffen waren).
+    document.addEventListener('submit', async (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        const msg = form.dataset.confirm;
+        if (!msg || form.dataset.confirmed === '1') return;
+        e.preventDefault();
+        const ok = await window.nimConfirm(msg, { danger: form.dataset.confirmSafe !== '1' });
+        if (ok) {
+            form.dataset.confirmed = '1';
+            if (form.requestSubmit) form.requestSubmit(); else form.submit();
+        }
+    });
 </script>
 <script>
     // Close off-canvas drawer when a nav link is tapped (mobile).

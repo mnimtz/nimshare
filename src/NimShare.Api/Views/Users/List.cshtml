@@ -123,7 +123,7 @@
                                 <button type="submit" class="btn btn-ghost btn-sm" title="Email erneut senden (neuer Token)">📧 Neu senden</button>
                             </form>
                             <form method="post" action="/settings/users/invite/@i.Id/revoke" style="display:inline"
-                                  onsubmit="return confirm('Einladung an @i.Email widerrufen?')">
+                                  data-confirm="@string.Format(T["users.invite.confirm_revoke"].Value, i.Email)">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--status-critical)">✕</button>
                             </form>

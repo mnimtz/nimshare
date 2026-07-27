@@ -163,6 +163,7 @@
   <data name="users.invite"><value>Benutzer einladen</value></data>
   <data name="users.invite.lede"><value>Der Empfänger bekommt einen Einmal-Link, wählt sein Passwort selbst und landet direkt in NimShare.</value></data>
   <data name="users.invite.send"><value>Einladung senden</value></data>
+  <data name="users.invite.confirm_revoke"><value>Einladung an {0} widerrufen?</value></data>
   <data name="users.create_new.lede"><value>Lieber Passwort selbst setzen und außerhalb weitergeben? Nutze das klassische Anlegen-Formular unten.</value></data>
 
   <data name="invite.accept.title"><value>Passwort festlegen</value></data>
@@ -728,6 +729,8 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="sig.new.err.email_name"><value>E-Mail + Name Pflicht.</value></data>
   <data name="sig.new.err.min_signer"><value>Mindestens ein Unterzeichner.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Kein Signaturfeld platziert — sicher absenden?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Mehrere Signaturfelder für diese Person — vor dem Senden prüfen.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Mehrere Signaturfelder für {0} — trotzdem senden?</value></data>
   <data name="sig.new.err.network"><value>Netzwerkfehler</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Signatur-Anforderung erstellt, aber Email für diese Empfänger fehlgeschlagen:</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Prüfe /settings/email — das Email-Gateway ist evtl. deaktiviert oder falsch konfiguriert.</value></data>

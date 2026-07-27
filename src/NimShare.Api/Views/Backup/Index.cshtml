@@ -29,7 +29,7 @@
         <h2 style="color:var(--status-critical, #d64545)">@T["backup.restore.title"]</h2>
         <p class="muted">@T["backup.restore.desc"]</p>
         <form method="post" action="/settings/backup/restore" enctype="multipart/form-data"
-              onsubmit="return confirm('@T["backup.restore.confirm_js"]');">
+              data-confirm="@T["backup.restore.confirm_js"]">
             @Html.AntiForgeryToken()
             <div class="field">
                 <label>@T["backup.restore.file"]</label>

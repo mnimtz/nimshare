@@ -115,6 +115,7 @@
   <data name="users.invite"><value>Inviter un utilisateur</value></data>
   <data name="users.invite.lede"><value>Le destinataire reçoit un lien à usage unique, choisit son mot de passe et arrive directement dans NimShare.</value></data>
   <data name="users.invite.send"><value>Envoyer l'invitation</value></data>
+  <data name="users.invite.confirm_revoke"><value>Révoquer l&apos;invitation pour {0} ?</value></data>
   <data name="users.create_new.lede"><value>Vous préférez définir le mot de passe vous-même ? Utilisez le formulaire classique ci-dessous.</value></data>
 
   <data name="invite.accept.title"><value>Définissez votre mot de passe</value></data>
@@ -721,6 +722,8 @@ Ouvrez le lien :
   <data name="sig.new.err.email_name"><value>E-mail + nom obligatoires.</value></data>
   <data name="sig.new.err.min_signer"><value>Au moins un signataire.</value></data>
   <data name="sig.new.err.no_sigfield_confirm"><value>Aucun champ de signature placé — envoyer quand même ?</value></data>
+  <data name="sig.new.err.dup_sig_warn"><value>Plusieurs champs de signature pour cette personne — à vérifier avant l'envoi.</value></data>
+  <data name="sig.new.err.dup_sig_confirm"><value>Plusieurs champs de signature pour {0} — envoyer quand même ?</value></data>
   <data name="sig.new.err.network"><value>Erreur réseau</value></data>
   <data name="sig.new.send.email_failed_prefix"><value>Demande de signature créée, mais l'e-mail a échoué pour ces destinataires :</value></data>
   <data name="sig.new.send.check_email_gateway"><value>Vérifiez /settings/email — la passerelle e-mail est peut-être désactivée ou mal configurée.</value></data>

@@ -12,7 +12,7 @@
     </div>
     @if (files.Any())
     {
-        <form method="post" action="/trash/empty" onsubmit="return confirm('@T["trash.confirm_empty"]')">
+        <form method="post" action="/trash/empty" data-confirm="@T["trash.confirm_empty"]">
             @Html.AntiForgeryToken()
             <button class="btn btn-secondary">🧨 @T["trash.empty"]</button>
         </form>
@@ -53,7 +53,7 @@ else
                         @Html.AntiForgeryToken()
                         <button class="btn btn-ghost" title="@T["trash.restore"]">↩ @T["trash.restore"]</button>
                     </form>
-                    <form method="post" action="/trash/@f.Id/purge" style="display:inline" onsubmit="return confirm('@T["trash.confirm_purge"]')">
+                    <form method="post" action="/trash/@f.Id/purge" style="display:inline" data-confirm="@T["trash.confirm_purge"]">
                         @Html.AntiForgeryToken()
                         <button class="btn btn-ghost" title="@T["trash.purge"]" style="color:var(--status-critical)">✕ @T["trash.purge"]</button>
                     </form>
