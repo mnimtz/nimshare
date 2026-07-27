@@ -204,16 +204,44 @@ final class NimShareAPI: ObservableObject {
         return try decode(R.self, data).id
     }
 
+    // v1.11.18: x/y/width/height nachgerüstet — vorher konnte iOS nur den
+    // Anchor-Preset ("BottomCenter" auf Seite 1) senden, nie eine exakte
+    // Position. Web platziert per pdf.js-Drag-Overlay: x/y/width/height sind
+    // PDF-Punkte (72dpi), Y GEMESSEN VON OBEN nach unten (nicht die native
+    // PDF-Bottom-Left-Konvention — SignaturePdfService/XGraphics zeichnet
+    // Top-Left-Y-runter, siehe Kommentar in NewRequest.cshtml `end()`).
+    // SignatureFieldPlacementView rendert die Seite als Bild bei bekannter
+    // Punkt-Skalierung und rechnet Drag-Pixel direkt in dieses System um —
+    // keine zusätzliche Flip-Logik nötig.
     struct AddFieldBody: Encodable {
         let participantId: UUID; let type: String; let page: Int; let anchor: String; let label: String?
+        let x: Double?; let y: Double?; let width: Double?; let height: Double?
+        init(participantId: UUID, type: String, page: Int, anchor: String, label: String? = nil,
+             x: Double? = nil, y: Double? = nil, width: Double? = nil, height: Double? = nil) {
+            self.participantId = participantId
+            self.type = type
+            self.page = page
+            self.anchor = anchor
+            self.label = label
+            self.x = x; self.y = y; self.width = width; self.height = height
+        }
     }
+    @discardableResult
     func addSignatureField(_ requestId: UUID, participantId: UUID, type: String = "Signature",
-                           page: Int = 1, anchor: String = "BottomCenter", label: String? = nil) async throws -> UUID {
-        let body = try Self.jsonEncoder.encode(AddFieldBody(participantId: participantId, type: type, page: page, anchor: anchor, label: label))
+                           page: Int = 1, anchor: String = "BottomCenter", label: String? = nil,
+                           x: Double? = nil, y: Double? = nil, width: Double? = nil, height: Double? = nil) async throws -> UUID {
+        let body = try Self.jsonEncoder.encode(AddFieldBody(participantId: participantId, type: type, page: page, anchor: anchor, label: label,
+                                                              x: x, y: y, width: width, height: height))
         let req = request("POST", "api/v1/signatures/\(requestId)/fields", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         struct R: Decodable { let id: UUID }
         return try decode(R.self, data).id
+    }
+    // v1.11.18: bisher nie aufgerufen — Server bietet DELETE seit v1.10.146
+    // (Undo für ein mis-platziertes Feld), iOS hatte keine UI dafür.
+    func removeSignatureField(_ requestId: UUID, fieldId: UUID) async throws {
+        let req = request("DELETE", "api/v1/signatures/\(requestId)/fields/\(fieldId)")
+        _ = try await perform(req)
     }
 
     func sendSignatureRequest(_ id: UUID) async throws -> SignatureRequestDto {

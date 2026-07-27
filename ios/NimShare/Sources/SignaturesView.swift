@@ -154,19 +154,29 @@ struct NewSignatureRequestSheet: View {
                 switch step {
                 case 1: stepOne
                 case 2: stepTwo
+                case 3: stepThree
                 default: EmptyView()
                 }
             }
-            .navigationTitle(step == 1 ? "Dokument" : "Empfänger")
+            .navigationTitle(step == 1 ? "Dokument" : (step == 2 ? "Empfänger" : "Felder platzieren"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Abbrechen") { dismiss() }
                 }
+                // v1.11.18: "Absenden" jetzt hinter Step 3 (Feld-Platzierung)
+                // statt direkt hinter Step 2 — der Ersteller sieht/bestimmt
+                // erst, wo die Signatur landet, wie im Web-Wizard.
                 if step == 2 {
                     ToolbarItem(placement: .topBarTrailing) {
+                        Button("Weiter →") { step = 3 }
+                            .disabled(participants.filter { $0.role == "Signer" }.isEmpty)
+                    }
+                }
+                if step == 3 {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Absenden") { Task { await send() } }
-                            .disabled(participants.filter { $0.role == "Signer" }.isEmpty || busy)
+                            .disabled(busy)
                     }
                 }
             }
@@ -412,13 +422,25 @@ struct NewSignatureRequestSheet: View {
         do {
             let pid = try await api.addSignatureParticipant(rid, email: newEmail, name: newName,
                 role: newRole, order: participants.count)
-            if newRole == "Signer" {
-                _ = try await api.addSignatureField(rid, participantId: pid, type: "Signature",
-                    page: 1, anchor: "BottomCenter")
-            }
+            // v1.11.18: kein automatisches Anchor-Feld mehr — Platzierung
+            // passiert jetzt explizit in Step 3 (SignatureFieldPlacementView),
+            // analog Web, wo der Ersteller die Position selbst bestimmt statt
+            // ein blindes "Seite 1, unten Mitte" zu bekommen.
             participants.append(Participant(email: newEmail, name: newName, role: newRole, serverId: pid))
             newEmail = ""; newName = ""
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
+    }
+
+    // v1.11.18: Step 3 — visuelles Feld-Placement, iOS-Parität zum
+    // pdf.js-Drag-Overlay in NewRequest.cshtml. Marcus: "kann dort keine
+    // felder plazieren, frag mich wo die unterschrift dann erscheinen soll".
+    @ViewBuilder
+    private var stepThree: some View {
+        if let rid = requestId, let fid = pickedFileId {
+            SignatureFieldPlacementView(requestId: rid, sourceFileId: fid, participants: participants)
+        } else {
+            ContentUnavailableView("Kein Dokument", systemImage: "doc.questionmark")
+        }
     }
 
     private func send() async {
