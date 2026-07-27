@@ -1474,6 +1474,9 @@ Merci d'utiliser NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Certificat de l'expéditeur</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Aucun certificat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Joignez votre certificat pour que le destinataire voie qui a créé ce lien.</value></data>
+  <data name="share.serial.legend" xml:space="preserve"><value>Numéro de série</value></data>
+  <data name="share.serial.label" xml:space="preserve"><value>Numéro de série / code de licence</value></data>
+  <data name="share.serial.hint" xml:space="preserve"><value>Affiché sur la page de destination uniquement après que le destinataire clique pour le révéler — jamais intégré dans le HTML brut de la page.</value></data>
   <data name="share.cert.line_expired" xml:space="preserve"><value>Signé par {0} — certificat expiré</value></data>
   <data name="share.cert.expired_note" xml:space="preserve"><value>Le certificat était valide au moment de la création du lien, mais il a expiré depuis. Traite le fichier avec la prudence habituelle, sans avoir besoin de le rejeter.</value></data>
   <data name="share.cert.verify_title" xml:space="preserve"><value>Vérifier cette signature</value></data>

@@ -1476,6 +1476,9 @@ Thanks for using NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Sender certificate</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>No certificate</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Attach your certificate so the recipient sees who created this link.</value></data>
+  <data name="share.serial.legend" xml:space="preserve"><value>Serial number</value></data>
+  <data name="share.serial.label" xml:space="preserve"><value>Serial number / license code</value></data>
+  <data name="share.serial.hint" xml:space="preserve"><value>Shown on the landing page only after the recipient clicks to reveal it — never embedded in the page's raw HTML.</value></data>
   <data name="share.cert.line_expired" xml:space="preserve"><value>Signed by {0} — certificate expired</value></data>
   <data name="share.cert.expired_note" xml:space="preserve"><value>The certificate was valid when this link was created but has since expired. Handle the file with the usual caution but no need to reject it.</value></data>
   <data name="share.cert.verify_title" xml:space="preserve"><value>Verify this signature</value></data>

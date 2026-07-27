@@ -1478,6 +1478,9 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Absender-Zertifikat</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Kein Zertifikat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.</value></data>
+  <data name="share.serial.legend" xml:space="preserve"><value>Seriennummer</value></data>
+  <data name="share.serial.label" xml:space="preserve"><value>Seriennummer / Lizenzcode</value></data>
+  <data name="share.serial.hint" xml:space="preserve"><value>Wird auf der Landing-Seite erst nach Klick des Empfängers angezeigt — steht nie im rohen HTML der Seite.</value></data>
   <data name="share.cert.line_expired" xml:space="preserve"><value>Signiert von {0} — Zertifikat abgelaufen</value></data>
   <data name="share.cert.expired_note" xml:space="preserve"><value>Das Zertifikat war beim Erstellen des Links gültig, ist inzwischen aber abgelaufen. Geh mit der Datei wie gewohnt vorsichtig um — ablehnen musst du sie deshalb nicht.</value></data>
   <data name="share.cert.verify_title" xml:space="preserve"><value>Diese Signatur prüfen</value></data>

@@ -120,6 +120,17 @@
             </div>
             <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> @T["links.restrict.otp_label"]</label>
         </details>
+        @* v1.11.18: Optionale Seriennummer/Lizenzcode — z.B. bei Software-
+           Downloads. Wird verschlüsselt gespeichert, auf der Landing nur
+           nach Klick + optional per E-Mail zugesendet. *@
+        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+            <summary style="cursor:pointer;font-weight:500">🔑 @T["share.serial.legend"]</summary>
+            <div class="field" style="margin-top:8px">
+                <label>@T["share.serial.label"]</label>
+                <input type="text" id="shareSerialNumber" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"/>
+                <div class="helper">@T["share.serial.hint"]</div>
+            </div>
+        </details>
         @* v1.10.146: Absender-Zertifikat-Picker (lädt eigene Zertifikate). *@
         <div class="field" style="margin-top:10px">
             <label>@T["share.cert.picker_label"]</label>
@@ -606,6 +617,8 @@ async function createShareLink() {
         showGpsMap: document.getElementById('shareShowGpsMap') ? document.getElementById('shareShowGpsMap').checked : true,
         // v1.11.0: optionaler Subdomain-Slug (null wenn Toggle aus/leer).
         subdomainSlug: readSubdomainSlug('share'),
+        // v1.11.18: optionale Seriennummer/Lizenzcode.
+        serialNumber: document.getElementById('shareSerialNumber').value.trim() || null,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

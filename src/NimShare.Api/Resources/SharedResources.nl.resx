@@ -1473,6 +1473,9 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.cert.picker_label" xml:space="preserve"><value>Afzender-certificaat</value></data>
   <data name="share.cert.picker_none" xml:space="preserve"><value>Geen certificaat</value></data>
   <data name="share.cert.picker_hint" xml:space="preserve"><value>Koppel je certificaat zodat de ontvanger ziet wie de link heeft gemaakt.</value></data>
+  <data name="share.serial.legend" xml:space="preserve"><value>Serienummer</value></data>
+  <data name="share.serial.label" xml:space="preserve"><value>Serienummer / licentiecode</value></data>
+  <data name="share.serial.hint" xml:space="preserve"><value>Wordt op de landingspagina pas getoond nadat de ontvanger erop klikt om het te onthullen — staat nooit in de ruwe HTML van de pagina.</value></data>
   <data name="share.cert.line_expired" xml:space="preserve"><value>Ondertekend door {0} — certificaat verlopen</value></data>
   <data name="share.cert.expired_note" xml:space="preserve"><value>Het certificaat was geldig toen deze link werd aangemaakt, maar is inmiddels verlopen. Ga met het bestand om zoals je gewend bent — afwijzen hoeft niet.</value></data>
   <data name="share.cert.verify_title" xml:space="preserve"><value>Deze handtekening verifiëren</value></data>
