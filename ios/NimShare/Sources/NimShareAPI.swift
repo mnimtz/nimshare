@@ -568,6 +568,9 @@ final class NimShareAPI: ObservableObject {
         let allowUploads: Bool?
         // v1.11.0: Link zusätzlich als Subdomain (slug.base.tld) freigeben.
         let subdomainSlug: String?
+        // v1.11.18: optionale Seriennummer/Lizenzcode — Server verschlüsselt,
+        // Landing zeigt sie erst nach Klick.
+        let serialNumber: String?
 
         // v1.10.169: expliziter init mit Defaults. Swift's synthesized
         // memberwise init verschluckt sich an inline `= nil`-Defaults auf
@@ -578,7 +581,7 @@ final class NimShareAPI: ObservableObject {
              maxDownloads: Int?, expiresAt: Date?, message: String?,
              notifyOnAccess: Bool, signingCertificateId: UUID?,
              displayAsGallery: Bool? = nil, allowUploads: Bool? = nil,
-             subdomainSlug: String? = nil) {
+             subdomainSlug: String? = nil, serialNumber: String? = nil) {
             self.fileId = fileId
             self.folderId = folderId
             self.slug = slug
@@ -591,6 +594,7 @@ final class NimShareAPI: ObservableObject {
             self.displayAsGallery = displayAsGallery
             self.allowUploads = allowUploads
             self.subdomainSlug = subdomainSlug
+            self.serialNumber = serialNumber
         }
     }
     /// Create a share link with default options (no password, no expiry, no
@@ -698,6 +702,21 @@ final class NimShareAPI: ObservableObject {
     func deleteShareLink(id: UUID) async throws {
         let req = request("DELETE", "api/v1/links/\(id)")
         _ = try await perform(req)
+    }
+
+    // v1.11.18: PATCH-Update für Share-Links — vorher rief iOS nie diesen
+    // Endpoint auf, obwohl der Server ihn seit v1.10.x anbietet (Web nutzt ihn
+    // für Widerrufen, Public-Toggle, AllowedEmails). Erster Konsument hier:
+    // "Widerrufen" als eigene Aktion getrennt von "Löschen" in LinksView.
+    struct UpdateShareLinkBody: Encodable {
+        var isRevoked: Bool?
+        init(isRevoked: Bool? = nil) { self.isRevoked = isRevoked }
+    }
+    func updateShareLink(id: UUID, isRevoked: Bool? = nil) async throws -> ShareLinkDto {
+        let body = try Self.jsonEncoder.encode(UpdateShareLinkBody(isRevoked: isRevoked))
+        let req = request("PATCH", "api/v1/links/\(id)", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(ShareLinkDto.self, data)
     }
 
     // v1.10.158: Link-Report — reiche Aggregate, für die LinkReportView.
@@ -1041,13 +1060,14 @@ final class NimShareAPI: ObservableObject {
                              signingCertificateId: UUID? = nil,
                              displayAsGallery: Bool? = nil,
                              allowUploads: Bool? = nil,
-                             subdomainSlug: String? = nil) async throws -> ShareLinkDto {
+                             subdomainSlug: String? = nil,
+                             serialNumber: String? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
             notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId,
             displayAsGallery: displayAsGallery, allowUploads: allowUploads,
-            subdomainSlug: subdomainSlug))
+            subdomainSlug: subdomainSlug, serialNumber: serialNumber))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)

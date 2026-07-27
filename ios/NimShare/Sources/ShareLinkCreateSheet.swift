@@ -24,6 +24,8 @@ struct ShareLinkCreateSheet: View {
     @State private var expiryDate = Date().addingTimeInterval(60*60*24*7)
     @State private var message = ""
     @State private var notifyOnAccess = false
+    // v1.11.18: optionale Seriennummer/Lizenzcode — analog Web-Modal.
+    @State private var serialNumber = ""
 
     @State private var busy = false
     @State private var error: String?
@@ -148,6 +150,16 @@ struct ShareLinkCreateSheet: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            // v1.11.18: optionale Seriennummer — z.B. bei Software-Downloads.
+            // Wird serverseitig verschlüsselt, auf der Landing erst nach
+            // Klick angezeigt + optional per E-Mail zugesendet.
+            Section("Seriennummer (optional)") {
+                TextField("z.B. XXXX-XXXX-XXXX-XXXX", text: $serialNumber)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                Text("Wird auf der Landing-Seite erst nach Klick des Empfängers angezeigt.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
             Section {
                 Button("Freigabelink erstellen") { Task { await create() } }
@@ -207,7 +219,8 @@ struct ShareLinkCreateSheet: View {
                 signingCertificateId: selectedCertId,    // v1.10.146
                 displayAsGallery: isFolderTarget && displayAsGallery ? true : nil,  // v1.10.172
                 allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil,
-                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug)  // v1.11.0
+                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug),  // v1.11.0
+                serialNumber: serialNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : serialNumber.trimmingCharacters(in: .whitespaces)  // v1.11.18
             )
             result = link
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }

@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// v1.10.71 / v1.10.148: 1:1-Parity mit Web-`/settings/links`.
-/// Zeigt zwei Sektionen (👤 Privat / 🌍 Öffentlich, sofern befüllt) —
-/// eine Gruppen-Sektion war ursprünglich als dritte geplant, ist aber
-/// nicht implementiert: ShareLinkDto trägt kein Group-Kennzeichen,
-/// Gruppen-Scope-Links fallen unter „Privat". Jede Row mit „📄 Datei: X"
-/// oder „📁 Ordner: Y" statt bloß Slug, plus Status-Chip (aktiv /
-/// abgelaufen / widerrufen), Downloads, Password-Icon, Copy + Teilen.
+/// v1.10.71 / v1.10.148 / v1.11.18: 1:1-Parity mit Web-`/links`
+/// (HomeController.Links). Drei Sektionen — 👤 Privat / 👥 Gruppen /
+/// 🌍 Öffentlich — nach `ShareLinkDto.scope` (Server liefert seit v1.11.18
+/// dieselbe Gesamtmenge wie Web: eigene Links + Public-Scope-Links anderer
+/// Owner + eigene Group-Scope-Links, statt nur OwnerId==me). Fällt auf die
+/// alte isPublic-basierte 2er-Aufteilung zurück, falls ein älterer Server
+/// noch kein `scope`-Feld liefert. Jede Row mit „📄 Datei: X" oder
+/// „📁 Ordner: Y" statt bloß Slug, plus Status-Chip (aktiv / abgelaufen /
+/// widerrufen), Downloads, Password-/Seriennummer-Icon, Owner-Name bei
+/// fremden Links, Copy + Teilen.
 struct LinksView: View {
     @EnvironmentObject var auth: AuthStore
     @State private var links: [ShareLinkDto] = []
@@ -31,11 +34,25 @@ struct LinksView: View {
                                        description: Text("Erstelle Freigabelinks aus dem Dateien-Browser (rechtsklick / Kontext-Menü)."))
             } else {
                 List {
-                    let publicLinks = links.filter { $0.isPublic == true }
-                    let mine = links.filter { $0.isPublic != true }
-                    if !mine.isEmpty {
+                    // v1.11.18: bevorzugt scope-basiert (private/group/public);
+                    // Fallback auf isPublic für ältere Server-Antworten ohne
+                    // das Feld.
+                    let hasScope = links.contains { $0.scope != nil }
+                    let privateLinks = hasScope
+                        ? links.filter { $0.scope == "private" || $0.scope == nil }
+                        : links.filter { $0.isPublic != true }
+                    let groupLinks = hasScope ? links.filter { $0.scope == "group" } : []
+                    let publicLinks = hasScope
+                        ? links.filter { $0.scope == "public" }
+                        : links.filter { $0.isPublic == true }
+                    if !privateLinks.isEmpty {
                         Section("👤 Privat") {
-                            ForEach(mine) { linkRow($0) }
+                            ForEach(privateLinks) { linkRow($0) }
+                        }
+                    }
+                    if !groupLinks.isEmpty {
+                        Section("👥 Gruppen") {
+                            ForEach(groupLinks) { linkRow($0) }
                         }
                     }
                     if !publicLinks.isEmpty {
@@ -72,6 +89,7 @@ struct LinksView: View {
         // v1.11.0-UX-Fix: Kontext-Menü kopiert/teilt dieselbe primäre URL wie
         // die Row selbst (Subdomain wenn vorhanden, sonst die klassische).
         let primaryUrl = (link.subdomainUrl?.isEmpty == false) ? link.subdomainUrl! : link.url
+        let canModerate = link.isOwnedByMe != false   // nil (alter Server) = eigener Link
         NavigationLink { LinkReportView(linkId: link.id, slug: link.slug) } label: { row(link) }
             .contextMenu {
                 Button { UIPasteboard.general.string = primaryUrl } label: {
@@ -80,15 +98,37 @@ struct LinksView: View {
                 if let u = URL(string: primaryUrl) {
                     ShareLink(item: u) { Label("Teilen", systemImage: "square.and.arrow.up") }
                 }
-                Button(role: .destructive) { pendingDelete = link } label: {
-                    Label("Löschen", systemImage: "trash")
+                if canModerate {
+                    // v1.11.18: Widerrufen als eigene Aktion getrennt von
+                    // Löschen — deaktiviert den Link, ohne ihn samt
+                    // Report-Historie zu entfernen (analog Web).
+                    Button { Task { await toggleRevoke(link) } } label: {
+                        Label(link.isRevoked ? "Wieder aktivieren" : "Widerrufen",
+                              systemImage: link.isRevoked ? "arrow.uturn.backward.circle" : "xmark.circle")
+                    }
+                    Button(role: .destructive) { pendingDelete = link } label: {
+                        Label("Löschen", systemImage: "trash")
+                    }
                 }
             }
             .swipeActions(edge: .trailing) {
-                Button(role: .destructive) { pendingDelete = link } label: {
-                    Label("Löschen", systemImage: "trash")
+                if canModerate {
+                    Button(role: .destructive) { pendingDelete = link } label: {
+                        Label("Löschen", systemImage: "trash")
+                    }
+                    Button { Task { await toggleRevoke(link) } } label: {
+                        Label(link.isRevoked ? "Aktivieren" : "Widerrufen",
+                              systemImage: link.isRevoked ? "arrow.uturn.backward.circle" : "xmark.circle")
+                    }.tint(.orange)
                 }
             }
+    }
+
+    private func toggleRevoke(_ link: ShareLinkDto) async {
+        guard let api = auth.api else { return }
+        do { _ = try await api.updateShareLink(id: link.id, isRevoked: !link.isRevoked); await load() }
+        catch is CancellationError {}
+        catch let ex { error = ex.localizedDescription }
     }
 
     private func delete(_ link: ShareLinkDto) async {
@@ -133,7 +173,17 @@ struct LinksView: View {
             HStack(spacing: 6) {
                 Text(link.slug).font(.caption.monospaced()).foregroundStyle(Theme.tungstenBlue)
                 if link.hasPassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary) }
+                // v1.11.18: Seriennummer-Indikator, analog Web (🔑-Zeile auf
+                // der Landing) — zeigt dem Owner auf einen Blick, welche
+                // Links eine hinterlegt haben.
+                if link.hasSerialNumber == true { Image(systemName: "key.fill").font(.caption).foregroundStyle(.secondary) }
                 if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.warnRed) }
+            }
+            // v1.11.18: Owner-Name bei fremden Links (Public/Group-Scope von
+            // anderen Usern) — analog Web-Spalte "Owner.DisplayName" in
+            // Links.cshtml. Bei eigenen Links (isOwnedByMe != false) leer.
+            if link.isOwnedByMe == false, let owner = link.ownerName {
+                Text("von \(owner)").font(.caption2).foregroundStyle(.secondary)
             }
             HStack(spacing: 6) {
                 if hasSubdomain { Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.tungstenBlue) }

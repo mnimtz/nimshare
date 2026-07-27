@@ -196,6 +196,14 @@ struct ShareLinkDto: Codable, Identifiable, Hashable {
     // wenn der Link als Subdomain freigegeben wurde. Optional, damit ältere
     // Server ohne dieses Feld weiter dekodieren.
     let subdomainUrl: String?
+    // v1.11.18: GET /api/v1/links liefert jetzt dieselbe Menge wie Web
+    // (eigene Links + alle Public-Scope-Links anderer Owner + eigene
+    // Group-Scope-Links) statt nur OwnerId==me — vorher sah iOS systematisch
+    // weniger Links als Web. scope = "private"|"group"|"public".
+    let scope: String?
+    let isOwnedByMe: Bool?
+    let ownerName: String?
+    let hasSerialNumber: Bool?
 }
 
 // MARK: - Contacts (v1.10.71 iOS parity — Adressbuch)
