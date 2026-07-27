@@ -156,7 +156,8 @@ public class ShareController : Controller
                 IsGallery: isGalleryView,
                 AllowUploads: link.AllowUploads && isGalleryView,
                 FolderId: folder.Id,
-                GeoPoints: geo));
+                GeoPoints: geo,
+                HasSerialNumber: link.SerialNumberEncrypted != null));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -857,7 +858,11 @@ public record FolderLandingViewModel(
     // v1.10.178: Aufnahmeort-Koordinaten für die Album-Landing-Karte. Leer =
     // keine Karte rendern. Reihenfolge egal, fitBounds baut aus NW+SO die
     // Ansicht auf.
-    List<FolderLandingGeoPoint>? GeoPoints = null);
+    List<FolderLandingGeoPoint>? GeoPoints = null,
+    // v1.11.20: Seriennummer-Karte auch für Folder-Links (Bug-Fix — war
+    // fälschlich auf File-Links beschränkt, obwohl das Share-Modal das Feld
+    // für beide Link-Typen anbietet).
+    bool HasSerialNumber = false);
 // v1.10.191: Thumb400/Thumb1600 = direkte SAS-URLs auf den Blob-Cache, wenn
 // die Thumbs fertig sind (ThumbsReadyAt gesetzt). Null = pending (Platz-
 // halter + Polling) oder kein Bild / Passwort-Link.

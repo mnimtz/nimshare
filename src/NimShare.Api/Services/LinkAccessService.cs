@@ -68,6 +68,11 @@ public class LinkAccessService : ILinkAccessService
             .Include(x => x.File)
             .Include(x => x.Owner)
             .Include(x => x.SigningCertificate)   // v1.10.146: Landing-Badge
+            // v1.11.20: Folder-Name wird u.a. für den Seriennummer-Email-
+            // Betreff/-Text auf Folder-Links gebraucht (LinksController.
+            // EmailSerial) — vorher fehlte das Include, `link.Folder` war für
+            // jeden Aufrufer dieser Methode immer null.
+            .Include(x => x.Folder)
             .SingleOrDefaultAsync(x => x.Slug == slug, ct);
 
     public Task LogAsync(ShareLink link, ShareLinkAccessKind kind, string ipHash, string? ua, string? referer, CancellationToken ct = default)

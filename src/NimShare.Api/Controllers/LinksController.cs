@@ -266,12 +266,12 @@ public class LinksController : ControllerBase
             // v1.11.0: Subdomain-Slug (oben validiert, null wenn nicht gewünscht).
             SubdomainSlug = subdomainSlug,
             // v1.11.18: Seriennummer verschlüsselt ablegen — nie im Klartext
-            // in der DB oder im Response-DTO. v1.11.19: nur für File-Links
-            // (die Web-UI zeigt die Karte nur auf der File-Landing); auf
-            // Folder-Links serverseitig wie DisplayAsGallery/AllowUploads
-            // still auf null erzwungen statt ein nirgends anzeigbares,
-            // aber über die API weiterhin abrufbares Feld zu speichern.
-            SerialNumberEncrypted = (file is not null && !string.IsNullOrWhiteSpace(req.SerialNumber))
+            // in der DB oder im Response-DTO. v1.11.20: Marcus's Bug-Report —
+            // v1.11.19 hatte das fälschlich auf File-Links beschränkt, obwohl
+            // das Share-Modal das Feld für BEIDE Link-Typen anbietet (z.B.
+            // ein "Downloads"-Ordner mit Installer + Lizenzcode ist ein
+            // legitimer Anwendungsfall). Jetzt für File- UND Folder-Links.
+            SerialNumberEncrypted = !string.IsNullOrWhiteSpace(req.SerialNumber)
                 ? _serialProtector.Protect(req.SerialNumber.Trim()) : null,
         };
         _db.ShareLinks.Add(link);
@@ -569,10 +569,8 @@ public class LinksController : ControllerBase
         if (req.AllowedEmails is not null)
             link.AllowedEmails = string.IsNullOrWhiteSpace(req.AllowedEmails) ? null : req.AllowedEmails.Trim();
         if (req.RequireEmailVerify is not null) link.RequireEmailVerify = req.RequireEmailVerify.Value;
-        // v1.11.19: nur für File-Links (siehe Create()). Update() lädt kein
-        // Include(l => l.File), darum FileId (Scalar-Spalte, immer geladen)
-        // statt der Nav-Property prüfen.
-        if (req.SerialNumber is not null && link.FileId is not null)
+        // v1.11.20: für File- UND Folder-Links (siehe Create()-Korrektur).
+        if (req.SerialNumber is not null)
             link.SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
                 ? null : _serialProtector.Protect(req.SerialNumber.Trim());
         await _db.SaveChangesAsync(ct);
@@ -629,12 +627,9 @@ public class LinksController : ControllerBase
         [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash, CancellationToken ct)
     {
         var link = await access.FindActiveAsync(slug, ct);
-        // v1.11.19: Seriennummer ist nur für File-Links vorgesehen (Web-UI
-        // zeigt sie nur auf der File-Landing) — Folder-Links können zwar
-        // technisch eine gesetzt haben (kein serverseitiges Verbot beim
-        // Anlegen), sollen sie aber nicht über diesen Endpoint preisgeben.
-        if (link is null || !link.IsActive(DateTimeOffset.UtcNow)
-            || link.SerialNumberEncrypted is null || link.File is null)
+        // v1.11.20: File- UND Folder-Links (siehe LinksController.Create()-
+        // Korrektur — die File-only-Beschränkung von v1.11.19 war ein Bug).
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
             return NotFound();
         if (!SerialAccessOk(link, req.Password))
             return Problem(statusCode: 403, title: "Access denied");
@@ -664,8 +659,8 @@ public class LinksController : ControllerBase
         [FromServices] INotificationService notify, CancellationToken ct)
     {
         var link = await access.FindActiveAsync(slug, ct);
-        if (link is null || !link.IsActive(DateTimeOffset.UtcNow)
-            || link.SerialNumberEncrypted is null || link.File is null)
+        // v1.11.20: File- UND Folder-Links (siehe RevealSerial-Korrektur).
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
             return NotFound();
         if (!SerialAccessOk(link, req.Password))
             return Problem(statusCode: 403, title: "Access denied");
@@ -677,7 +672,7 @@ public class LinksController : ControllerBase
         catch (System.Security.Cryptography.CryptographicException)
         { return Problem(statusCode: 500, title: "Serial number could not be decrypted"); }
 
-        var itemName = link.File?.Name ?? "Download";
+        var itemName = link.File?.Name ?? link.Folder?.Name ?? "Download";
         var subject = $"Deine Seriennummer für {itemName}";
         var body = $"""
                     Hallo,
