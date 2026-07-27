@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NimShare.Api.Services;
@@ -180,6 +181,13 @@ public class LinksController : ControllerBase
             return Problem(statusCode: 422, title: "Either FileId or FolderId is required.");
         if (req.FileId is not null && req.FolderId is not null)
             return Problem(statusCode: 422, title: "Provide either FileId or FolderId, not both.");
+        // v1.11.19: Review-Fund — ohne Längenprüfung lief ein langer
+        // eingefügter Lizenzblock roh in _serialProtector.Protect(), dessen
+        // Output über die HasMaxLength(4000)-Spalte hinauswachsen und
+        // SaveChangesAsync() mit einer rohen 500 statt einer sauberen 422
+        // crashen lassen konnte.
+        if (req.SerialNumber is { Length: > 1000 })
+            return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
 
         StorageFile? file = null;
         NimShare.Core.Entities.Folder? folder = null;
@@ -258,9 +266,13 @@ public class LinksController : ControllerBase
             // v1.11.0: Subdomain-Slug (oben validiert, null wenn nicht gewünscht).
             SubdomainSlug = subdomainSlug,
             // v1.11.18: Seriennummer verschlüsselt ablegen — nie im Klartext
-            // in der DB oder im Response-DTO.
-            SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
-                ? null : _serialProtector.Protect(req.SerialNumber.Trim()),
+            // in der DB oder im Response-DTO. v1.11.19: nur für File-Links
+            // (die Web-UI zeigt die Karte nur auf der File-Landing); auf
+            // Folder-Links serverseitig wie DisplayAsGallery/AllowUploads
+            // still auf null erzwungen statt ein nirgends anzeigbares,
+            // aber über die API weiterhin abrufbares Feld zu speichern.
+            SerialNumberEncrypted = (file is not null && !string.IsNullOrWhiteSpace(req.SerialNumber))
+                ? _serialProtector.Protect(req.SerialNumber.Trim()) : null,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -511,8 +523,17 @@ public class LinksController : ControllerBase
         // Auth required — otherwise anyone with a link.Id could learn the slug
         // behind it and check whether that id exists.
         var user = await _users.GetOrProvisionAsync(User, ct);
+        // v1.11.19: List()/GetById() wurden in v1.11.18 gelockert, damit iOS
+        // dieselbe Menge wie Web sieht (eigene + fremde Public-Scope-Links +
+        // eigene Group-Links) — LinkDto.QrCodeUrl zeigt seither für JEDE
+        // dieser Zeilen auf diesen Endpoint. Ohne diese Lockerung wäre der
+        // Link für fremde Public-Links ein toter 404 (die QR kodiert ohnehin
+        // nur die public /s/{slug}-URL, kein Owner-Geheimnis).
         var link = await _db.ShareLinks
-            .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+            .SingleOrDefaultAsync(l => l.Id == id && (l.OwnerId == user.Id
+                     || (l.File != null && l.File.Scope == FileScope.Public)
+                     || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                     || l.IsPublic), ct);
         if (link is null) return NotFound();
         var url = BuildPublicUrl(link.Slug);
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
@@ -533,6 +554,9 @@ public class LinksController : ControllerBase
             ? await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id, ct)
             : await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
+        // v1.11.19: siehe Create() — gleiche Längenprüfung vor Protect().
+        if (req.SerialNumber is { Length: > 1000 })
+            return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
         if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
         if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
         if (req.Message is not null) link.Message = req.Message;
@@ -545,7 +569,10 @@ public class LinksController : ControllerBase
         if (req.AllowedEmails is not null)
             link.AllowedEmails = string.IsNullOrWhiteSpace(req.AllowedEmails) ? null : req.AllowedEmails.Trim();
         if (req.RequireEmailVerify is not null) link.RequireEmailVerify = req.RequireEmailVerify.Value;
-        if (req.SerialNumber is not null)
+        // v1.11.19: nur für File-Links (siehe Create()). Update() lädt kein
+        // Include(l => l.File), darum FileId (Scalar-Spalte, immer geladen)
+        // statt der Nav-Property prüfen.
+        if (req.SerialNumber is not null && link.FileId is not null)
             link.SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
                 ? null : _serialProtector.Protect(req.SerialNumber.Trim());
         await _db.SaveChangesAsync(ct);
@@ -590,13 +617,24 @@ public class LinksController : ControllerBase
     public record SerialRevealRequest(string? Password);
     public record SerialRevealResponse(string SerialNumber);
 
+    // v1.11.19: Review-Fund — dieser Endpoint erlaubte einen Passwort-
+    // Brute-Force ohne jedes Limit, während der eigentliche Download-Pfad
+    // (ShareController) klassenweit mit [EnableRateLimiting("public-share")]
+    // gedeckelt ist. Gleiche Policy hier ergänzt, sonst wäre die Serial-
+    // Reveal-Route ein ungedrosseltes Orakel für `link.PasswordHash`.
     [AllowAnonymous]
+    [EnableRateLimiting("public-share")]
     [HttpPost("public/{slug}/serial/reveal")]
     public async Task<IActionResult> RevealSerial(string slug, [FromBody] SerialRevealRequest req,
         [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash, CancellationToken ct)
     {
         var link = await access.FindActiveAsync(slug, ct);
-        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
+        // v1.11.19: Seriennummer ist nur für File-Links vorgesehen (Web-UI
+        // zeigt sie nur auf der File-Landing) — Folder-Links können zwar
+        // technisch eine gesetzt haben (kein serverseitiges Verbot beim
+        // Anlegen), sollen sie aber nicht über diesen Endpoint preisgeben.
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow)
+            || link.SerialNumberEncrypted is null || link.File is null)
             return NotFound();
         if (!SerialAccessOk(link, req.Password))
             return Problem(statusCode: 403, title: "Access denied");
@@ -614,14 +652,20 @@ public class LinksController : ControllerBase
 
     public record SerialEmailRequest(string ToEmail, string? Password);
 
+    // v1.11.19: Review-Fund — ohne Rate-Limit war dieser Endpoint zusätzlich
+    // als offenes Mail-Relay missbrauchbar (beliebige ToEmail-Werte in
+    // Schleife, kein Passwort nötig bei passwortlosen Links). Gleiche Policy
+    // wie RevealSerial deckelt beide Angriffsflächen.
     [AllowAnonymous]
+    [EnableRateLimiting("public-share")]
     [HttpPost("public/{slug}/serial/email")]
     public async Task<IActionResult> EmailSerial(string slug, [FromBody] SerialEmailRequest req,
         [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash,
         [FromServices] INotificationService notify, CancellationToken ct)
     {
         var link = await access.FindActiveAsync(slug, ct);
-        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || link.SerialNumberEncrypted is null)
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow)
+            || link.SerialNumberEncrypted is null || link.File is null)
             return NotFound();
         if (!SerialAccessOk(link, req.Password))
             return Problem(statusCode: 403, title: "Access denied");
