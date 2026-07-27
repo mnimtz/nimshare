@@ -121,21 +121,24 @@ public class SignController : Controller
         return View("Sign", new SignViewModel(req, p, t));
     }
 
-    /// <summary>Load the same LandingTemplate an initiator uses for download
-    /// shares (v1.10.6): personal template first, global as fallback. Applied
-    /// to the /sign/{pid} landing so signature invites carry the same brand
-    /// as the initiator's download links — logo, avatar, primary colour,
-    /// header/footer copy.</summary>
+    /// <summary>Bug-Fix v1.11.7 — Marcus: "Signatur wird mit dem privaten
+    /// Design gesendet, hier sollte das öffentliche Design genutzt werden."
+    /// Anders als reine Download-Share-Landings (die bewusst personal-first
+    /// gehen, v1.10.6) ist ein Signatur-Vorgang meist ein formeller/
+    /// geschäftlicher Vorgang im Namen der Organisation — die Instanz-weite
+    /// (Global/public) Marke soll hier führen, das persönliche Template
+    /// (falls einer den einzelnen Nutzer betrifft) nur als Fallback, wenn
+    /// gar kein globales Template existiert.</summary>
     private async Task<SignLandingTheme> ResolveSignThemeAsync(SignatureRequest req, CancellationToken ct)
     {
         NimShare.Core.Entities.LandingTemplate? tpl = null;
         try
         {
             tpl = await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+            tpl ??= await _db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal
                 && x.OwnerUserId == req.InitiatorUserId, ct);
-            tpl ??= await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
         }
         catch { /* table might be missing on very old DBs — fall through to defaults */ }
         string? avatarUrl = null;

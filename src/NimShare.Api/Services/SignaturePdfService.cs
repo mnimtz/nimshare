@@ -142,6 +142,23 @@ public class SignaturePdfService : ISignaturePdfService
             }
         }
 
+        // Bug-Fix v1.11.7: erzwungener Seitenumbruch (nicht nur "falls kein
+        // Platz mehr") — Marcus wollte, dass "Event timeline" immer sauber
+        // auf einer neuen Seite beginnt statt direkt unter Fields angehängt
+        // zu werden. No-op wenn wir gerade erst eine frische Seite begonnen
+        // haben (sonst gäbe es unnötige Leerseiten).
+        void ForcePage()
+        {
+            if (y > topY + 5)
+            {
+                DrawFooter(g, page, pageNo);
+                var (np, ng) = NewPage(doc);
+                page = np; g = ng; pageNo++;
+                pageWidth = page.Width.Point;
+                y = topY;
+            }
+        }
+
         // ── Titel-Header ─────────────────────────────────────────────
         g.DrawRectangle(accent, marginX, y - 5, pageWidth - 2 * marginX, 44);
         g.DrawString("SIGNATURE AUDIT REPORT", titleFont, XBrushes.White,
@@ -177,7 +194,17 @@ public class SignaturePdfService : ISignaturePdfService
             y += 14;
         }
 
-        g.DrawRectangle(lightGray, marginX, y - 2, pageWidth - 2 * marginX, 172);
+        // Bug-Fix v1.11.7: die Box hatte eine FESTE Höhe (172), aber die
+        // Anzahl KV-Zeilen ist variabel (Sent/Deadline/Completed sind
+        // optional) — bei weniger Zeilen als das Maximum blieb "y" nach der
+        // Schleife deutlich über dem unteren Rand der Box, und "Participants"
+        // startete dann mitten IN der Box statt darunter. Marcus's Report:
+        // "Participants beginnt im grauen Kasten". Fix: y nach der Schleife
+        // hart auf den bekannten Box-Boden setzen statt content-abhängig
+        // weiterlaufen zu lassen.
+        const double metaBoxHeight = 172;
+        var metaBoxTop = y - 2;
+        g.DrawRectangle(lightGray, marginX, metaBoxTop, pageWidth - 2 * marginX, metaBoxHeight);
         g.DrawString("Request metadata", h2Font, accent, new XPoint(marginX + 6, y + 10));
         y += 20;
         KV("Request ID",       req.Id.ToString(), mono: true);
@@ -189,7 +216,7 @@ public class SignaturePdfService : ISignaturePdfService
         if (req.SentAt.HasValue)      KV("Sent (UTC)",      req.SentAt.Value.ToString("yyyy-MM-dd HH:mm:ss"));
         if (req.Deadline.HasValue)    KV("Deadline (UTC)",  req.Deadline.Value.ToString("yyyy-MM-dd HH:mm:ss"));
         if (req.CompletedAt.HasValue) KV("Completed (UTC)", req.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-        y += 12;
+        y = metaBoxTop + metaBoxHeight + 16;
 
         // ── Participants ─────────────────────────────────────────────
         CheckPage(30);
@@ -274,7 +301,9 @@ public class SignaturePdfService : ISignaturePdfService
         }
 
         // ── Event-Timeline ──────────────────────────────────────────
-        CheckPage(30);
+        // Bug-Fix v1.11.7: Marcus wollte einen sauberen Seitenumbruch hier
+        // statt "Event timeline" direkt unter Fields anzuhängen.
+        ForcePage();
         g.DrawString($"Event timeline ({audits.Count})", h2Font, accent, new XPoint(marginX, y));
         y += 18;
 

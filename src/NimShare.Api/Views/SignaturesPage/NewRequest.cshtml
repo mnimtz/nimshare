@@ -441,8 +441,17 @@ function setupDrag(overlay) {
         const w = Math.abs(c.x - start.x), h = Math.abs(c.y - start.y);
         start = null;
         if (w < 20 || h < 15) { box.remove(); return; }
+        // Bug-Fix v1.11.7: der Server (SignaturePdfService/XGraphics) nutzt
+        // wie AnchorRect() zeigt (BottomCenter: y = pageHeight - sigH - 70,
+        // also GROSSES y = unten) durchgängig Top-Left-Y-runter-Koordinaten —
+        // NICHT die native PDF-Konvention (Bottom-Left-Y-rauf). Der bisherige
+        // Code hat hier fälschlich auf Bottom-Left geflippt, wodurch jedes
+        // frei gezogene Feld vertikal gespiegelt landete (z.B. eine unten
+        // platzierte Signatur erschien oben auf der Seite) — Marcus's Report:
+        // "signiertes PDF zeigt quasi nur das originale leere PDF" (das Feld
+        // war da, nur an der falschen Stelle, meist verdeckt/übersehen).
         const pdfX = x / pageViewport.scale;
-        const pdfY = (pageViewport.height - (y + h)) / pageViewport.scale;
+        const pdfY = y / pageViewport.scale;
         const pdfW = w / pageViewport.scale, pdfH = h / pageViewport.scale;
         const participantId = document.getElementById('fParticipant').value;
         const type = document.getElementById('fType').value;
