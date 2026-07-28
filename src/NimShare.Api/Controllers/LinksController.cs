@@ -27,6 +27,9 @@ public class LinksController : ControllerBase
     private readonly ICurrentUserService _users;
     private readonly bool _configStoreFullIp;
     private readonly IDataProtector _serialProtector;
+    // v1.11.22: separater Protector für Key-Store-Einträge — muss dem
+    // Purpose-String in KeyStoreController exakt entsprechen.
+    private readonly IDataProtector _keyStoreProtector;
 
     public LinksController(
         NimShareDbContext db, ISlugService slugs, IPasswordHasher hasher,
@@ -40,6 +43,7 @@ public class LinksController : ControllerBase
         _users = users;
         _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
         _serialProtector = dpp.CreateProtector(SerialNumberProtectorPurpose);
+        _keyStoreProtector = dpp.CreateProtector(KeyStoreController.ProtectorPurpose);
     }
 
     public record CreateLinkRequest(
@@ -68,7 +72,12 @@ public class LinksController : ControllerBase
         string? SubdomainSlug = null,
         // v1.11.18: optionale Seriennummer/Lizenzcode, wird verschlüsselt
         // gespeichert und erst nach Klick auf der Landing entschlüsselt.
-        string? SerialNumber = null);
+        string? SerialNumber = null,
+        // v1.11.22: Lizenzschlüssel-Modus (Key-Store-Lookup per Besucher-
+        // Email) — schließt sich mit SerialNumber gegenseitig aus, siehe
+        // ShareLink.KeyStoreMode-Doku. Optionaler Doku-Link daneben.
+        bool KeyStoreMode = false,
+        string? DocumentationUrl = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -101,7 +110,10 @@ public class LinksController : ControllerBase
         string? OwnerName = null,
         // v1.11.18: Seriennummer optional pro Link — nie im Klartext im DTO,
         // nur ob eine hinterlegt ist (Landing entschlüsselt on-demand).
-        bool HasSerialNumber = false);
+        bool HasSerialNumber = false,
+        // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
+        bool KeyStoreMode = false,
+        string? DocumentationUrl = null);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -188,6 +200,12 @@ public class LinksController : ControllerBase
         // crashen lassen konnte.
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
+        // v1.11.22: Doku-Link muss eine echte absolute http(s)-URL sein —
+        // sonst würde der Landing-Link auf einen kaputten href zeigen.
+        if (!string.IsNullOrWhiteSpace(req.DocumentationUrl)
+            && !(Uri.TryCreate(req.DocumentationUrl, UriKind.Absolute, out var docUri)
+                 && (docUri.Scheme == Uri.UriSchemeHttp || docUri.Scheme == Uri.UriSchemeHttps)))
+            return Problem(statusCode: 422, title: "Documentation URL must be a valid http(s) link.");
 
         StorageFile? file = null;
         NimShare.Core.Entities.Folder? folder = null;
@@ -271,8 +289,15 @@ public class LinksController : ControllerBase
             // das Share-Modal das Feld für BEIDE Link-Typen anbietet (z.B.
             // ein "Downloads"-Ordner mit Installer + Lizenzcode ist ein
             // legitimer Anwendungsfall). Jetzt für File- UND Folder-Links.
-            SerialNumberEncrypted = !string.IsNullOrWhiteSpace(req.SerialNumber)
+            // v1.11.22: KeyStoreMode und die statische Seriennummer schließen
+            // sich aus — bei aktiviertem Key-Store-Modus wird eine evtl.
+            // trotzdem mitgeschickte statische Nummer stillschweigend
+            // ignoriert (analog anderer sich-ausschließender Flag-Paare in
+            // diesem Endpoint, z.B. DisplayAsGallery/File-Link).
+            SerialNumberEncrypted = (!req.KeyStoreMode && !string.IsNullOrWhiteSpace(req.SerialNumber))
                 ? _serialProtector.Protect(req.SerialNumber.Trim()) : null,
+            KeyStoreMode = req.KeyStoreMode,
+            DocumentationUrl = string.IsNullOrWhiteSpace(req.DocumentationUrl) ? null : req.DocumentationUrl.Trim(),
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -542,7 +567,10 @@ public class LinksController : ControllerBase
     public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic, string? AllowedEmails, bool? RequireEmailVerify,
         // v1.11.18: analog AllowedEmails — leerer String löscht die Seriennummer,
         // null = unverändert lassen.
-        string? SerialNumber = null);
+        string? SerialNumber = null,
+        // v1.11.22: analog. null = unverändert lassen.
+        bool? KeyStoreMode = null,
+        string? DocumentationUrl = null);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -557,6 +585,11 @@ public class LinksController : ControllerBase
         // v1.11.19: siehe Create() — gleiche Längenprüfung vor Protect().
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
+        // v1.11.22: siehe Create() — gleiche URL-Validierung.
+        if (!string.IsNullOrWhiteSpace(req.DocumentationUrl)
+            && !(Uri.TryCreate(req.DocumentationUrl, UriKind.Absolute, out var docUri2)
+                 && (docUri2.Scheme == Uri.UriSchemeHttp || docUri2.Scheme == Uri.UriSchemeHttps)))
+            return Problem(statusCode: 422, title: "Documentation URL must be a valid http(s) link.");
         if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
         if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
         if (req.Message is not null) link.Message = req.Message;
@@ -573,6 +606,11 @@ public class LinksController : ControllerBase
         if (req.SerialNumber is not null)
             link.SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
                 ? null : _serialProtector.Protect(req.SerialNumber.Trim());
+        if (req.KeyStoreMode is not null) link.KeyStoreMode = req.KeyStoreMode.Value;
+        if (req.DocumentationUrl is not null)
+            link.DocumentationUrl = string.IsNullOrWhiteSpace(req.DocumentationUrl) ? null : req.DocumentationUrl.Trim();
+        // v1.11.22: gegenseitiger Ausschluss auch beim Update erzwingen.
+        if (link.KeyStoreMode) link.SerialNumberEncrypted = null;
         await _db.SaveChangesAsync(ct);
         return Ok(ToDto(link, user.Id, await SubdomainBaseAsync(ct)));
     }
@@ -691,6 +729,102 @@ public class LinksController : ControllerBase
         return Ok(new { sent = true });
     }
 
+    // ── v1.11.22: Öffentliche Key-Store-Lookup-Endpoints ────────────────
+    // Für Links im Lizenzschlüssel-Modus (KeyStoreMode=true). Der Besucher
+    // gibt seine Email ein — sie dient GLEICHZEITIG als Identifikation (wer
+    // bekommt welchen Key) UND als einziges mögliche Ziel für den Email-
+    // Versand (bewusst kein separates "an"-Feld: sonst könnte man die Email
+    // eines fremden Kunden eintippen und sich dessen Key an die EIGENE
+    // Adresse schicken lassen).
+    public record KeyStoreLookupRequest(string Email, string? Password);
+    public record KeyStoreLookupResponse(string KeyValue, string KeyType, string? DocumentationUrl, DateTimeOffset? ValidUntil);
+
+    private async Task<KeyStoreEntry?> FindKeyStoreMatchAsync(Guid ownerId, string email, CancellationToken ct)
+    {
+        var needle = email.Trim().ToLowerInvariant();
+        if (!needle.Contains('@')) return null;
+        var domain = needle.Split('@')[1];
+        // Exakter Email-Treffer geht vor Domain-Wildcard (spezifischer Kunde
+        // vor "irgendwer aus dieser Firma").
+        var exact = await _db.KeyStoreEntries
+            .SingleOrDefaultAsync(k => k.OwnerUserId == ownerId && k.CustomerEmail == needle, ct);
+        if (exact is not null) return exact;
+        return await _db.KeyStoreEntries
+            .Where(k => k.OwnerUserId == ownerId && k.CustomerEmailDomain == domain)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("public-share")]
+    [HttpPost("public/{slug}/keystore/reveal")]
+    public async Task<IActionResult> RevealKeyStoreKey(string slug, [FromBody] KeyStoreLookupRequest req,
+        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash, CancellationToken ct)
+    {
+        var link = await access.FindActiveAsync(slug, ct);
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || !link.KeyStoreMode) return NotFound();
+        if (!SerialAccessOk(link, req.Password))
+            return Problem(statusCode: 403, title: "Access denied");
+        if (string.IsNullOrWhiteSpace(req.Email) || !req.Email.Contains('@'))
+            return Problem(statusCode: 422, title: "Invalid email");
+
+        var match = await FindKeyStoreMatchAsync(link.OwnerId, req.Email, ct);
+        if (match is null) return NotFound();
+
+        string plain;
+        try { plain = _keyStoreProtector.Unprotect(match.KeyValueEncrypted); }
+        catch (System.Security.Cryptography.CryptographicException)
+        { return Problem(statusCode: 500, title: "Key could not be decrypted"); }
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        await access.LogAsync(link, ShareLinkAccessKind.KeyStoreRevealed, iphash.Hash(ip),
+            Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        return Ok(new KeyStoreLookupResponse(plain, match.KeyType, link.DocumentationUrl, match.ValidUntil));
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("public-share")]
+    [HttpPost("public/{slug}/keystore/email")]
+    public async Task<IActionResult> EmailKeyStoreKey(string slug, [FromBody] KeyStoreLookupRequest req,
+        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash,
+        [FromServices] INotificationService notify, CancellationToken ct)
+    {
+        var link = await access.FindActiveAsync(slug, ct);
+        if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || !link.KeyStoreMode) return NotFound();
+        if (!SerialAccessOk(link, req.Password))
+            return Problem(statusCode: 403, title: "Access denied");
+        if (string.IsNullOrWhiteSpace(req.Email) || !req.Email.Contains('@'))
+            return Problem(statusCode: 422, title: "Invalid email");
+
+        var match = await FindKeyStoreMatchAsync(link.OwnerId, req.Email, ct);
+        if (match is null) return NotFound();
+
+        string plain;
+        try { plain = _keyStoreProtector.Unprotect(match.KeyValueEncrypted); }
+        catch (System.Security.Cryptography.CryptographicException)
+        { return Problem(statusCode: 500, title: "Key could not be decrypted"); }
+
+        var itemName = link.File?.Name ?? link.Folder?.Name ?? "Download";
+        var subject = $"Dein Lizenzschlüssel für {itemName}";
+        var docLine = string.IsNullOrWhiteSpace(link.DocumentationUrl) ? "" : $"\nDokumentation: {link.DocumentationUrl}\n";
+        var body = $"""
+                    Hallo,
+
+                    hier ist dein {match.KeyType}-Lizenzschlüssel für "{itemName}":
+
+                    {plain}
+                    {docLine}
+                    — NimShare
+                    """;
+        // v1.11.22: bewusst an DIESELBE Email, mit der der Key gefunden wurde
+        // — kein separates "an"-Feld (siehe Klassen-Kommentar oben).
+        await notify.SendShareLinkAsync(req.Email.Trim(), "NimShare", subject, body, ct);
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+        await access.LogAsync(link, ShareLinkAccessKind.KeyStoreEmailed, iphash.Hash(ip),
+            Request.Headers.UserAgent, Request.Headers.Referer, ct);
+        return Ok(new { sent = true });
+    }
+
     public record SendByEmailRequest(string ToEmail, string? Message);
 
     [HttpPost("{id:guid}/send-email")]
@@ -750,7 +884,9 @@ public class LinksController : ControllerBase
             Scope: scope,
             IsOwnedByMe: l.OwnerId == currentUserId,
             OwnerName: l.OwnerId != currentUserId ? l.Owner?.DisplayName : null,
-            HasSerialNumber: l.SerialNumberEncrypted != null);
+            HasSerialNumber: l.SerialNumberEncrypted != null,
+            KeyStoreMode: l.KeyStoreMode,
+            DocumentationUrl: l.DocumentationUrl);
     }
 
     /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>

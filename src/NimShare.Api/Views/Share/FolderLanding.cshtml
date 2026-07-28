@@ -198,6 +198,112 @@
             }
             </script>
         }
+        else if (Model.KeyStoreMode)
+        {
+            @* v1.11.22: Lizenzschlüssel-Modus für Ordner-Links — gleiche Logik
+               wie File-Landing, aber prompt()-basiertes Passwort (siehe
+               Kommentar bei der Seriennummer-Karte oben im File). *@
+            <div class="card" id="keystoreCard" style="margin-top:var(--sp-4);background:var(--tw-gray-100)">
+                <strong>🔑 @T["landing.keystore.title"]</strong>
+                <p class="muted" style="margin:6px 0 0;font-size:.88rem">@T["landing.keystore.lede"]</p>
+                <div class="field" style="max-width:340px;margin-top:8px">
+                    <label for="keystoreEmailInput">@T["landing.keystore.email_placeholder"]</label>
+                    <input type="email" id="keystoreEmailInput" placeholder="name@example.com"/>
+                </div>
+                <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:8px">
+                    <button type="button" class="btn btn-primary btn-sm" style="background:@accent;color:#fff" onclick="keystoreReveal()" id="keystoreRevealBtn">@T["landing.keystore.reveal_button"]</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="keystoreSendEmail()" id="keystoreEmailBtn">@T["landing.keystore.email_button"]</button>
+                </div>
+                <div id="keystoreErrorOut" class="helper" style="display:none;margin-top:var(--sp-3);color:var(--status-critical)"></div>
+                <div id="keystoreStatusOut" class="helper" style="display:none;margin-top:var(--sp-3)"></div>
+                <div id="keystoreValueOut" style="display:none;margin-top:var(--sp-3)">
+                    <div class="muted" id="keystoreTypeOut" style="font-size:.82rem;margin-bottom:2px"></div>
+                    <span id="keystoreValueText" class="mono" style="letter-spacing:.08em;font-size:1.05rem;font-weight:600;user-select:all"></span>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="keystoreCopy()" style="margin-left:var(--sp-2)" id="keystoreCopyBtn">@T["landing.serial.copy"]</button>
+                    <div id="keystoreValidUntilOut" class="muted" style="font-size:.8rem;margin-top:4px"></div>
+                    <div id="keystoreDocOut" style="margin-top:8px"></div>
+                </div>
+            </div>
+            <script>
+            let keystorePasswordCache = null;
+            function keystorePassword() {
+                if (!@Json.Serialize(Model.HasPassword)) return null;
+                if (keystorePasswordCache) return keystorePasswordCache;
+                keystorePasswordCache = prompt(@Json.Serialize(T["landing.password.label"].Value)) || null;
+                return keystorePasswordCache;
+            }
+            async function keystoreParseError(r) {
+                if (r.status === 403) { keystorePasswordCache = null; return @Json.Serialize(T["landing.serial.error_password"].Value); }
+                if (r.status === 404) return @Json.Serialize(T["landing.keystore.not_found"].Value);
+                if (r.status === 422) return @Json.Serialize(T["landing.keystore.invalid_email"].Value);
+                return @Json.Serialize(T["landing.serial.error"].Value);
+            }
+            function keystoreRenderDoc(url) {
+                const out = document.getElementById('keystoreDocOut');
+                if (!url) { out.innerHTML = ''; return; }
+                const a = document.createElement('a');
+                a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.className = 'btn btn-ghost btn-sm';
+                a.textContent = '📖 ' + @Json.Serialize(T["landing.keystore.doc_link"].Value);
+                out.innerHTML = '';
+                out.appendChild(a);
+            }
+            async function keystoreReveal() {
+                const email = document.getElementById('keystoreEmailInput').value.trim();
+                const err = document.getElementById('keystoreErrorOut');
+                const status = document.getElementById('keystoreStatusOut');
+                err.style.display = 'none'; status.style.display = 'none';
+                if (!email || !email.includes('@@')) { err.textContent = @Json.Serialize(T["landing.keystore.invalid_email"].Value); err.style.display = 'block'; return; }
+                const btn = document.getElementById('keystoreRevealBtn');
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/api/v1/links/public/@Model.Slug/keystore/reveal', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ email, password: keystorePassword() })
+                    });
+                    if (!r.ok) { err.textContent = await keystoreParseError(r); err.style.display = 'block'; btn.disabled = false; return; }
+                    const d = await r.json();
+                    document.getElementById('keystoreTypeOut').textContent = d.keyType;
+                    document.getElementById('keystoreValueText').textContent = d.keyValue;
+                    document.getElementById('keystoreValidUntilOut').textContent = d.validUntil
+                        ? @Json.Serialize(T["landing.keystore.valid_until_prefix"].Value) + ' ' + new Date(d.validUntil).toLocaleDateString()
+                        : '';
+                    keystoreRenderDoc(d.documentationUrl);
+                    document.getElementById('keystoreValueOut').style.display = 'block';
+                    btn.disabled = false;
+                } catch { err.textContent = @Json.Serialize(T["landing.serial.error"].Value); err.style.display = 'block'; btn.disabled = false; }
+            }
+            async function keystoreCopy() {
+                const text = document.getElementById('keystoreValueText').textContent;
+                try { await navigator.clipboard.writeText(text); } catch {}
+                const btn = document.getElementById('keystoreCopyBtn');
+                const original = btn.textContent;
+                btn.textContent = @Json.Serialize(T["landing.serial.copied"].Value);
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            }
+            async function keystoreSendEmail() {
+                const email = document.getElementById('keystoreEmailInput').value.trim();
+                const err = document.getElementById('keystoreErrorOut');
+                const status = document.getElementById('keystoreStatusOut');
+                err.style.display = 'none'; status.style.display = 'none';
+                if (!email || !email.includes('@@')) { err.textContent = @Json.Serialize(T["landing.keystore.invalid_email"].Value); err.style.display = 'block'; return; }
+                const btn = document.getElementById('keystoreEmailBtn');
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/api/v1/links/public/@Model.Slug/keystore/email', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ email, password: keystorePassword() })
+                    });
+                    if (!r.ok) { err.textContent = await keystoreParseError(r); err.style.display = 'block'; btn.disabled = false; return; }
+                    status.textContent = @Json.Serialize(T["landing.keystore.email_sent"].Value);
+                    status.style.display = 'block';
+                    btn.disabled = false;
+                } catch { err.textContent = @Json.Serialize(T["landing.serial.error"].Value); err.style.display = 'block'; btn.disabled = false; }
+            }
+            </script>
+        }
 
         @* v1.10.178: Aufnahmeort-Karte oberhalb des Grids. Nur wenn ≥1 Foto
            GPS-EXIF hat. fitBounds sorgt automatisch für den passenden Zoom

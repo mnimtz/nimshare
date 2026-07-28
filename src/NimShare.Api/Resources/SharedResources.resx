@@ -1616,4 +1616,18 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.confirm_delete" xml:space="preserve"><value>Delete this key?</value></data>
   <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Delete the selected keys?</value></data>
   <data name="keystore.delete_error" xml:space="preserve"><value>Couldn't delete.</value></data>
+  <data name="landing.keystore.title"><value>License key</value></data>
+  <data name="landing.keystore.lede"><value>Enter your email address to retrieve the license key assigned to you.</value></data>
+  <data name="landing.keystore.email_placeholder"><value>Your email address</value></data>
+  <data name="landing.keystore.reveal_button"><value>Show my key</value></data>
+  <data name="landing.keystore.email_button"><value>Email it to me</value></data>
+  <data name="landing.keystore.not_found"><value>No license key was found for this email address.</value></data>
+  <data name="landing.keystore.invalid_email"><value>Please enter a valid email address.</value></data>
+  <data name="landing.keystore.doc_link"><value>Documentation</value></data>
+  <data name="landing.keystore.valid_until_prefix"><value>Valid until: </value></data>
+  <data name="landing.keystore.email_sent"><value>Sent! Check your inbox.</value></data>
+  <data name="share.keystore.mode_label"><value>Use license key from Key-Store instead</value></data>
+  <data name="share.keystore.mode_hint"><value>The visitor identifies with their email address; the matching key from your Key-Store is shown to them automatically. Mutually exclusive with the fixed serial number above.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Documentation link (optional)</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Shown as a button next to the revealed key on the landing page.</value></data>
 </root>

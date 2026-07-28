@@ -1613,4 +1613,18 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="keystore.confirm_delete" xml:space="preserve"><value>Deze sleutel verwijderen?</value></data>
   <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Geselecteerde sleutels verwijderen?</value></data>
   <data name="keystore.delete_error" xml:space="preserve"><value>Kon niet verwijderen.</value></data>
+  <data name="landing.keystore.title"><value>Licentiesleutel</value></data>
+  <data name="landing.keystore.lede"><value>Voer je e-mailadres in om de aan jou toegewezen licentiesleutel op te halen.</value></data>
+  <data name="landing.keystore.email_placeholder"><value>Je e-mailadres</value></data>
+  <data name="landing.keystore.reveal_button"><value>Toon mijn sleutel</value></data>
+  <data name="landing.keystore.email_button"><value>Mail hem naar mij</value></data>
+  <data name="landing.keystore.not_found"><value>Er is geen licentiesleutel gevonden voor dit e-mailadres.</value></data>
+  <data name="landing.keystore.invalid_email"><value>Voer een geldig e-mailadres in.</value></data>
+  <data name="landing.keystore.doc_link"><value>Documentatie</value></data>
+  <data name="landing.keystore.valid_until_prefix"><value>Geldig tot: </value></data>
+  <data name="landing.keystore.email_sent"><value>Verzonden! Controleer je inbox.</value></data>
+  <data name="share.keystore.mode_label"><value>Gebruik in plaats daarvan een licentiesleutel uit de Key-Store</value></data>
+  <data name="share.keystore.mode_hint"><value>De bezoeker identificeert zich met zijn e-mailadres; de bijpassende sleutel uit jouw Key-Store wordt automatisch getoond. Sluit elkaar uit met het vaste serienummer hierboven.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Link naar documentatie (optioneel)</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Wordt getoond als knop naast de onthulde sleutel op de landingspagina.</value></data>
 </root>

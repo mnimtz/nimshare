@@ -113,6 +113,23 @@ public class ShareLink
     /// </summary>
     public string? SerialNumberEncrypted { get; set; }
 
+    /// <summary>
+    /// v1.11.22 — Lizenzschlüssel-Modus: statt eines fest im Link
+    /// hinterlegten SerialNumberEncrypted-Werts fragt die Landing die
+    /// E-Mail des Besuchers ab und sucht einen passenden KeyStoreEntry des
+    /// Link-Besitzers (exakte Email oder Domain-Wildcard). Schließt sich mit
+    /// SerialNumberEncrypted gegenseitig aus — die Web-UI erlaubt nur eine
+    /// der beiden Optionen pro Link.
+    /// </summary>
+    public bool KeyStoreMode { get; set; }
+
+    /// <summary>
+    /// v1.11.22 — Optionaler Doku-Link, hübsch auf der Landing neben der
+    /// Seriennummer/dem Lizenzschlüssel angezeigt (Marcus: Produkt-
+    /// Dokumentation für Software-Downloads).
+    /// </summary>
+    public string? DocumentationUrl { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
 

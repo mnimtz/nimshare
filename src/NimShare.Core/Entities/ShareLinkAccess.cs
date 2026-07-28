@@ -8,7 +8,11 @@ public enum ShareLinkAccessKind
     // v1.11.18: Besucher hat die Seriennummer angezeigt bzw. sich per Mail
     // zusenden lassen — reiner Audit-Trail (int-Enum, keine Migration nötig).
     SerialRevealed = 3,
-    SerialEmailed = 4
+    SerialEmailed = 4,
+    // v1.11.22: Key-Store-Lookup-Ergebnis für einen Besucher, der seine
+    // Email im "Lizenzschlüssel"-Modus eingegeben hat.
+    KeyStoreRevealed = 5,
+    KeyStoreEmailed = 6
 }
 
 public class ShareLinkAccess

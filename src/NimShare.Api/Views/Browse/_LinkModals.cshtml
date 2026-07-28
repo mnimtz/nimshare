@@ -122,13 +122,23 @@
         </details>
         @* v1.11.18: Optionale Seriennummer/Lizenzcode — z.B. bei Software-
            Downloads. Wird verschlüsselt gespeichert, auf der Landing nur
-           nach Klick + optional per E-Mail zugesendet. *@
+           nach Klick + optional per E-Mail zugesendet.
+           v1.11.22: Alternative — „Lizenzschlüssel"-Modus zieht den Key
+           automatisch aus dem Key-Store anhand der Besucher-Email; beide
+           Modi schließen sich gegenseitig aus (Server enforced das auch). *@
         <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
             <summary style="cursor:pointer;font-weight:500">🔑 @T["share.serial.legend"]</summary>
-            <div class="field" style="margin-top:8px">
+            <div class="field" style="margin-top:8px" id="shareSerialFieldWrap">
                 <label>@T["share.serial.label"]</label>
                 <input type="text" id="shareSerialNumber" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"/>
                 <div class="helper">@T["share.serial.hint"]</div>
+            </div>
+            <label style="font-weight:400;display:block;margin-top:10px"><input type="checkbox" id="shareKeyStoreMode" onchange="onShareKeyStoreModeChange()"/> @T["share.keystore.mode_label"]</label>
+            <div class="helper" style="margin-top:2px">@T["share.keystore.mode_hint"]</div>
+            <div class="field" id="shareDocUrlWrap" style="display:none;margin-top:8px">
+                <label>@T["share.keystore.doc_url_label"]</label>
+                <input type="url" id="shareDocumentationUrl" autocomplete="off" placeholder="https://..."/>
+                <div class="helper">@T["share.keystore.doc_url_hint"]</div>
             </div>
         </details>
         @* v1.10.146: Absender-Zertifikat-Picker (lädt eigene Zertifikate). *@
@@ -547,9 +557,24 @@ function onShareDisplayGalleryChange() {
         if (cb) cb.checked = false;
     }
 }
+// v1.11.22: Seriennummer-Freitext und Key-Store-Modus schließen sich aus —
+// Aktivieren des einen versteckt/leert das andere Feld in der UI (Server
+// enforced die Exklusivität ohnehin nochmal beim Speichern).
+function onShareKeyStoreModeChange() {
+    const on = document.getElementById('shareKeyStoreMode').checked;
+    const serialWrap = document.getElementById('shareSerialFieldWrap');
+    const docWrap = document.getElementById('shareDocUrlWrap');
+    if (serialWrap) serialWrap.style.display = on ? 'none' : '';
+    if (docWrap) docWrap.style.display = on ? '' : 'none';
+    if (on) document.getElementById('shareSerialNumber').value = '';
+    else document.getElementById('shareDocumentationUrl').value = '';
+}
 function resetShareModal() {
-    ['shareSlug','sharePw','shareMax','shareExp','shareMsg'].forEach(id => document.getElementById(id).value = '');
+    ['shareSlug','sharePw','shareMax','shareExp','shareMsg','shareSerialNumber','shareAllowedEmails','shareDocumentationUrl'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('shareNotify').checked = false;
+    document.getElementById('shareOtp').checked = false;
+    document.getElementById('shareKeyStoreMode').checked = false;
+    onShareKeyStoreModeChange();
     document.getElementById('shareResult').style.display = 'none';
     const st = document.getElementById('shareSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
@@ -619,6 +644,9 @@ async function createShareLink() {
         subdomainSlug: readSubdomainSlug('share'),
         // v1.11.18: optionale Seriennummer/Lizenzcode.
         serialNumber: document.getElementById('shareSerialNumber').value.trim() || null,
+        // v1.11.22: Key-Store-Modus + optionaler Doku-Link (nur relevant wenn aktiv).
+        keyStoreMode: !!document.getElementById('shareKeyStoreMode')?.checked,
+        documentationUrl: document.getElementById('shareDocumentationUrl').value.trim() || null,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

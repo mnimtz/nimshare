@@ -1618,4 +1618,18 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.confirm_delete" xml:space="preserve"><value>Diesen Schlüssel löschen?</value></data>
   <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Ausgewählte Schlüssel löschen?</value></data>
   <data name="keystore.delete_error" xml:space="preserve"><value>Konnte nicht gelöscht werden.</value></data>
+  <data name="landing.keystore.title"><value>Lizenzschlüssel</value></data>
+  <data name="landing.keystore.lede"><value>Gib deine E-Mail-Adresse ein, um den dir zugewiesenen Lizenzschlüssel abzurufen.</value></data>
+  <data name="landing.keystore.email_placeholder"><value>Deine E-Mail-Adresse</value></data>
+  <data name="landing.keystore.reveal_button"><value>Meinen Schlüssel abrufen</value></data>
+  <data name="landing.keystore.email_button"><value>Per E-Mail zusenden</value></data>
+  <data name="landing.keystore.not_found"><value>Für diese E-Mail-Adresse wurde kein Lizenzschlüssel gefunden.</value></data>
+  <data name="landing.keystore.invalid_email"><value>Bitte gib eine gültige E-Mail-Adresse ein.</value></data>
+  <data name="landing.keystore.doc_link"><value>Dokumentation</value></data>
+  <data name="landing.keystore.valid_until_prefix"><value>Gültig bis: </value></data>
+  <data name="landing.keystore.email_sent"><value>Gesendet! Bitte Posteingang prüfen.</value></data>
+  <data name="share.keystore.mode_label"><value>Stattdessen Lizenzschlüssel aus Key-Store verwenden</value></data>
+  <data name="share.keystore.mode_hint"><value>Der Besucher identifiziert sich mit seiner E-Mail-Adresse; der passende Schlüssel aus deinem Key-Store wird ihm automatisch angezeigt. Schließt sich mit der festen Seriennummer oben aus.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Link zur Dokumentation (optional)</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Wird als Button neben dem angezeigten Schlüssel auf der Landing-Seite gezeigt.</value></data>
 </root>

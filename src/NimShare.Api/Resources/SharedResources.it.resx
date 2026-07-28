@@ -1614,4 +1614,18 @@ Grazie per usare NimShare.</value></data>
   <data name="keystore.confirm_delete" xml:space="preserve"><value>Eliminare questa chiave?</value></data>
   <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Eliminare le chiavi selezionate?</value></data>
   <data name="keystore.delete_error" xml:space="preserve"><value>Impossibile eliminare.</value></data>
+  <data name="landing.keystore.title"><value>Chiave di licenza</value></data>
+  <data name="landing.keystore.lede"><value>Inserisci il tuo indirizzo email per recuperare la chiave di licenza a te assegnata.</value></data>
+  <data name="landing.keystore.email_placeholder"><value>Il tuo indirizzo email</value></data>
+  <data name="landing.keystore.reveal_button"><value>Mostra la mia chiave</value></data>
+  <data name="landing.keystore.email_button"><value>Inviamela via email</value></data>
+  <data name="landing.keystore.not_found"><value>Nessuna chiave di licenza trovata per questo indirizzo email.</value></data>
+  <data name="landing.keystore.invalid_email"><value>Inserisci un indirizzo email valido.</value></data>
+  <data name="landing.keystore.doc_link"><value>Documentazione</value></data>
+  <data name="landing.keystore.valid_until_prefix"><value>Valido fino al: </value></data>
+  <data name="landing.keystore.email_sent"><value>Inviato! Controlla la tua casella di posta.</value></data>
+  <data name="share.keystore.mode_label"><value>Usa invece una chiave di licenza dal Key-Store</value></data>
+  <data name="share.keystore.mode_hint"><value>Il visitatore si identifica con il proprio indirizzo email; la chiave corrispondente dal tuo Key-Store gli viene mostrata automaticamente. Si esclude a vicenda con il numero di serie fisso sopra.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Link alla documentazione (opzionale)</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Mostrato come pulsante accanto alla chiave rivelata nella pagina di destinazione.</value></data>
 </root>

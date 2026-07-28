@@ -177,7 +177,9 @@ public class ShareController : Controller
                 AllowUploads: link.AllowUploads && isGalleryView,
                 FolderId: folder.Id,
                 GeoPoints: geo,
-                HasSerialNumber: link.SerialNumberEncrypted != null));
+                HasSerialNumber: link.SerialNumberEncrypted != null,
+                KeyStoreMode: link.KeyStoreMode,
+                DocumentationUrl: link.DocumentationUrl));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -216,7 +218,9 @@ public class ShareController : Controller
             theme,
             ResolveOwnerAvatar(link.Owner),
             BuildLandingSigner(link.SigningCertificate),
-            HasSerialNumber: link.SerialNumberEncrypted != null));
+            HasSerialNumber: link.SerialNumberEncrypted != null,
+            KeyStoreMode: link.KeyStoreMode,
+            DocumentationUrl: link.DocumentationUrl));
     }
 
     // v1.10.146: Zertifikats-Infos für Landing-Badge extrahieren.
@@ -957,7 +961,10 @@ public record FolderLandingViewModel(
     // v1.11.20: Seriennummer-Karte auch für Folder-Links (Bug-Fix — war
     // fälschlich auf File-Links beschränkt, obwohl das Share-Modal das Feld
     // für beide Link-Typen anbietet).
-    bool HasSerialNumber = false);
+    bool HasSerialNumber = false,
+    // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
+    bool KeyStoreMode = false,
+    string? DocumentationUrl = null);
 // v1.10.191: Thumb400/Thumb1600 = direkte SAS-URLs auf den Blob-Cache, wenn
 // die Thumbs fertig sind (ThumbsReadyAt gesetzt). Null = pending (Platz-
 // halter + Polling) oder kein Bild / Passwort-Link.
@@ -993,7 +1000,10 @@ public record LandingViewModel(
     // v1.11.18: Seriennummer-Karte anzeigen? Klartext kommt nie ins HTML,
     // nur ob eine hinterlegt ist — Wert wird erst nach Klick per fetch von
     // /api/v1/links/public/{slug}/serial/reveal nachgeladen.
-    bool HasSerialNumber = false);
+    bool HasSerialNumber = false,
+    // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
+    bool KeyStoreMode = false,
+    string? DocumentationUrl = null);
 
 /// <summary>v1.10.146 — Absender-Zertifikats-Info für die Landing.</summary>
 public record LandingSignerInfo(

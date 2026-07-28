@@ -1614,4 +1614,18 @@ Gracias por usar NimShare.</value></data>
   <data name="keystore.confirm_delete" xml:space="preserve"><value>¿Eliminar esta clave?</value></data>
   <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>¿Eliminar las claves seleccionadas?</value></data>
   <data name="keystore.delete_error" xml:space="preserve"><value>No se pudo eliminar.</value></data>
+  <data name="landing.keystore.title"><value>Clave de licencia</value></data>
+  <data name="landing.keystore.lede"><value>Introduce tu dirección de correo electrónico para obtener la clave de licencia asignada a ti.</value></data>
+  <data name="landing.keystore.email_placeholder"><value>Tu dirección de correo electrónico</value></data>
+  <data name="landing.keystore.reveal_button"><value>Mostrar mi clave</value></data>
+  <data name="landing.keystore.email_button"><value>Enviármela por correo</value></data>
+  <data name="landing.keystore.not_found"><value>No se encontró ninguna clave de licencia para esta dirección de correo electrónico.</value></data>
+  <data name="landing.keystore.invalid_email"><value>Introduce una dirección de correo electrónico válida.</value></data>
+  <data name="landing.keystore.doc_link"><value>Documentación</value></data>
+  <data name="landing.keystore.valid_until_prefix"><value>Válido hasta: </value></data>
+  <data name="landing.keystore.email_sent"><value>¡Enviado! Revisa tu bandeja de entrada.</value></data>
+  <data name="share.keystore.mode_label"><value>Usar clave de licencia del Almacén de claves en su lugar</value></data>
+  <data name="share.keystore.mode_hint"><value>El visitante se identifica con su dirección de correo electrónico; la clave correspondiente de tu Almacén de claves se le muestra automáticamente. Se excluye mutuamente con el número de serie fijo de arriba.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Enlace a la documentación (opcional)</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Se muestra como un botón junto a la clave revelada en la página de destino.</value></data>
 </root>
