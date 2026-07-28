@@ -1626,8 +1626,8 @@ Gracias por usar NimShare.</value></data>
   <data name="landing.keystore.email_sent"><value>¡Enviado! Revisa tu bandeja de entrada.</value></data>
   <data name="share.keystore.mode_label"><value>Usar clave de licencia del Almacén de claves en su lugar</value></data>
   <data name="share.keystore.mode_hint"><value>El visitante se identifica con su dirección de correo electrónico; la clave correspondiente de tu Almacén de claves se le muestra automáticamente. Se excluye mutuamente con el número de serie fijo de arriba.</value></data>
-  <data name="share.keystore.doc_url_label"><value>Enlace a la documentación (opcional)</value></data>
-  <data name="share.keystore.doc_url_hint"><value>Se muestra como un botón junto a la clave revelada en la página de destino.</value></data>
+  <data name="share.keystore.doc_url_label"><value>Mostrar enlace a la documentación</value></data>
+  <data name="share.keystore.doc_url_hint"><value>Muestra un enlace fijo a la documentación del producto PowerPDF como un botón junto a la clave revelada en la página de destino.</value></data>
   <data name="keystore.field.key_value_serial"><value>Número de serie</value></data>
   <data name="keystore.field.key_value_product"><value>Código de producto</value></data>
   <data name="keystore.error.value_parts_required"><value>Rellena ambas partes, o deja ambas vacías para conservar la clave actual.</value></data>
