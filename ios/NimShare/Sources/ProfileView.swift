@@ -51,6 +51,14 @@ struct ProfileView: View {
                 }
             }
 
+            // v1.11.39: iOS-Parität — Key-Store fehlte komplett (siehe
+            // Feature-Audit), Marcus's Wunsch: nachziehen.
+            Section("Vertrieb") {
+                NavigationLink { KeyStoreView() } label: {
+                    Label("Key-Store", systemImage: "key.fill")
+                }
+            }
+
             // v1.10.88: iOS-Parität — API-Tokens, Webhooks
             // (v1.10.126: Linksammlung als Startseiten-Kachel ausgelagert)
             Section("Wissen & Automatisierung") {

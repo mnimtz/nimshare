@@ -1414,4 +1414,149 @@ final class NimShareAPI: ObservableObject {
         let (data, _) = try await perform(req)
         return try decode([EmailTemplateDto].self, data)
     }
+
+    // ── Key-Store (v1.11.39: iOS-Parität) ──
+    struct KeyStoreEntryDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let customerName: String
+        let customerEmail: String?
+        let customerEmailDomain: String?
+        let keyType: String
+        let validFrom: Date?
+        let validUntil: Date?
+        let notes: String?
+        let createdAt: Date
+        let updatedAt: Date?
+        let ownerName: String?
+        let isOwnedByMe: Bool
+    }
+    struct KeyStoreRevealDto: Codable { let keyValue: String }
+    struct CreateKeyStoreEntryBody: Encodable {
+        let customerName: String
+        let customerEmail: String?
+        let customerEmailDomain: String?
+        let keyType: String
+        let keyValue: String
+        let validFrom: Date?
+        let validUntil: Date?
+        let notes: String?
+    }
+    struct UpdateKeyStoreEntryBody: Encodable {
+        let customerName: String?
+        let customerEmail: String?
+        let customerEmailDomain: String?
+        let keyType: String?
+        let keyValue: String?
+        let validFrom: Date?
+        let validUntil: Date?
+        let notes: String?
+        let clearValidFrom: Bool
+        let clearValidUntil: Bool
+    }
+    func listKeyStoreEntries(q: String? = nil) async throws -> [KeyStoreEntryDto] {
+        var query: [URLQueryItem] = []
+        if let q, !q.isEmpty { query.append(.init(name: "q", value: q)) }
+        let req = request("GET", "api/v1/keystore", query: query)
+        let (data, _) = try await perform(req)
+        return try decode([KeyStoreEntryDto].self, data)
+    }
+    func revealKeyStoreEntry(_ id: UUID) async throws -> KeyStoreRevealDto {
+        let req = request("GET", "api/v1/keystore/\(id)/reveal")
+        let (data, _) = try await perform(req)
+        return try decode(KeyStoreRevealDto.self, data)
+    }
+    func createKeyStoreEntry(_ body: CreateKeyStoreEntryBody) async throws -> KeyStoreEntryDto {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("POST", "api/v1/keystore", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreEntryDto.self, respData)
+    }
+    func updateKeyStoreEntry(_ id: UUID, _ body: UpdateKeyStoreEntryBody) async throws -> KeyStoreEntryDto {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("PATCH", "api/v1/keystore/\(id)", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreEntryDto.self, respData)
+    }
+    func deleteKeyStoreEntry(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/keystore/\(id)")
+        _ = try await perform(req)
+    }
+
+    // ── Key-Store Documents (v1.11.37 auf dem Server, hier nachgezogen) ──
+    struct KeyStoreDocumentDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let label: String
+        let isFile: Bool
+        let fileName: String?
+        let url: String?
+        let keyTypes: [String]
+        let createdAt: Date
+        let updatedAt: Date?
+        let ownerName: String?
+        let isOwnedByMe: Bool
+    }
+    struct CreateKeyStoreLinkDocBody: Encodable {
+        let label: String
+        let url: String
+        let keyTypes: [String]
+    }
+    struct UpdateKeyStoreDocBody: Encodable {
+        let label: String?
+        let url: String?
+        let keyTypes: [String]?
+    }
+    func listKeyStoreDocuments() async throws -> [KeyStoreDocumentDto] {
+        let req = request("GET", "api/v1/keystore/documents")
+        let (data, _) = try await perform(req)
+        return try decode([KeyStoreDocumentDto].self, data)
+    }
+    func createKeyStoreLinkDocument(label: String, url: String, keyTypes: [String]) async throws -> KeyStoreDocumentDto {
+        let data = try Self.jsonEncoder.encode(CreateKeyStoreLinkDocBody(label: label, url: url, keyTypes: keyTypes))
+        let req = request("POST", "api/v1/keystore/documents/link", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreDocumentDto.self, respData)
+    }
+    /// multipart/form-data — der Server-Endpoint nimmt IFormFile, kein SAS-
+    /// Zweiphasen-Upload wie bei normalen Dateien (kleine PDFs, admin-seitig).
+    private func multipartFileBody(fields: [(String, String)], fileField: String, fileData: Data, fileName: String, mimeType: String, boundary: String) -> Data {
+        var body = Data()
+        for (k, v) in fields {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(v)\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fileField)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        return body
+    }
+    func uploadKeyStoreDocument(label: String, keyTypes: [String], fileData: Data, fileName: String, mimeType: String) async throws -> KeyStoreDocumentDto {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let body = multipartFileBody(
+            fields: [("label", label), ("keyTypes", keyTypes.joined(separator: ","))],
+            fileField: "file", fileData: fileData, fileName: fileName, mimeType: mimeType, boundary: boundary)
+        let req = request("POST", "api/v1/keystore/documents/upload", body: body, contentType: "multipart/form-data; boundary=\(boundary)")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreDocumentDto.self, respData)
+    }
+    func replaceKeyStoreDocumentFile(_ id: UUID, fileData: Data, fileName: String, mimeType: String) async throws -> KeyStoreDocumentDto {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let body = multipartFileBody(
+            fields: [], fileField: "file", fileData: fileData, fileName: fileName, mimeType: mimeType, boundary: boundary)
+        let req = request("POST", "api/v1/keystore/documents/\(id)/replace-file", body: body, contentType: "multipart/form-data; boundary=\(boundary)")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreDocumentDto.self, respData)
+    }
+    func updateKeyStoreDocument(_ id: UUID, label: String? = nil, url: String? = nil, keyTypes: [String]? = nil) async throws -> KeyStoreDocumentDto {
+        let data = try Self.jsonEncoder.encode(UpdateKeyStoreDocBody(label: label, url: url, keyTypes: keyTypes))
+        let req = request("PATCH", "api/v1/keystore/documents/\(id)", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreDocumentDto.self, respData)
+    }
+    func deleteKeyStoreDocument(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/keystore/documents/\(id)")
+        _ = try await perform(req)
+    }
 }
