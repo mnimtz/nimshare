@@ -106,7 +106,7 @@ public class ShareController : Controller
                 lf0.Country, lf0.City, lf0.Device, lf0.Isp, timezone: null, ct);
             // v1.11.33: Folder shares nutzen dieselbe strikt scope-basierte
             // Template-Auflösung wie File-Shares (siehe ResolveThemeAsync).
-            var folderTheme = await ResolveThemeAsync(folder.Scope,
+            var folderTheme = await ResolveThemeAsync(db, folder.Scope,
                 folder.OwnerUserId ?? Guid.Empty, ct);
             // v1.10.178: Aufnahmeorte für die Album-Landing-Karte. Nur Fotos
             // mit EXIF-GPS werden aufgenommen; leere Liste = keine Karte.
@@ -197,7 +197,7 @@ public class ShareController : Controller
             Request.Headers.UserAgent, Request.Headers.Referer,
             lf1.Country, lf1.City, lf1.Device, lf1.Isp, timezone: null, ct);
 
-        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, ct);
+        var theme = await ResolveThemeAsync(db, link.File.Scope, link.File.OwnerId, ct);
         return View("Landing", new LandingViewModel(
             link.Slug,
             link.File.Name,
@@ -243,7 +243,10 @@ public class ShareController : Controller
     /// andere (Personal/Group + private User-Links) ShowAvatarOnPersonalShares.
     /// Prefers the uploaded blob (served through /avatars/{userId}) over any
     /// external AvatarUrl.</summary>
-    private static string? ResolveOwnerAvatar(NimShare.Core.Entities.User owner, bool isPublicShare = false)
+    // v1.11.34: internal statt private — UploadRequestPublicController nutzt
+    // dieselbe Scope-basierte Branding-Logik für Upload-Anfrage-Landings
+    // (Marcus's Wunsch: gleiches Logo/Avatar-Verhalten wie bei Share-Links).
+    internal static string? ResolveOwnerAvatar(NimShare.Core.Entities.User owner, bool isPublicShare = false)
     {
         if (owner is null) return null;
         var allowed = isPublicShare ? owner.ShowAvatarOnPublicShares : owner.ShowAvatarOnPersonalShares;
@@ -268,13 +271,14 @@ public class ShareController : Controller
     /// A missing template returns an empty theme so the view falls back to
     /// the built-in NimShare look.
     /// </summary>
-    private async Task<LandingTheme> ResolveThemeAsync(
+    internal static async Task<LandingTheme> ResolveThemeAsync(
+        NimShare.Core.Data.NimShareDbContext db,
         NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, CancellationToken ct)
     {
         var t = scope == NimShare.Core.Entities.FileScope.Personal
-            ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+            ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
-            : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+            : await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
         return new LandingTheme(
             t?.Title, t?.Subtitle, t?.BodyMarkdown, t?.FooterText,

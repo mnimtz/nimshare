@@ -53,9 +53,24 @@ public class UploadRequestPublicController : Controller
         if (link is null) return View("NotFound");
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return View("Expired");
+
+        // v1.11.34: Marcus's Wunsch — gleiche Scope-basierte Branding-Logik
+        // (Logo/Farbe/Avatar) wie bei Share-Links, statt immer nur dem
+        // festen NimShare-Icon. Scope kommt vom echten Zielordner (seit
+        // v1.11.32 gesetzt); ohne Zielordner (Alt-Links/API ohne Folder)
+        // Fallback auf Personal — deckt sich mit dem Fallback in
+        // ResolveTargetFolderAsync() unten.
+        var targetFolder = link.TargetFolderId is Guid tfid
+            ? await _db.Folders.FindAsync(new object[] { tfid }, ct)
+            : null;
+        var scope = targetFolder?.Scope ?? FileScope.Personal;
+        var scopeOwnerId = targetFolder?.OwnerUserId ?? link.OwnerId;
+        var theme = await ShareController.ResolveThemeAsync(_db, scope, scopeOwnerId, ct);
+        var avatar = ShareController.ResolveOwnerAvatar(link.Owner, isPublicShare: scope == FileScope.Public);
+
         return View("UploadLanding", new UploadLandingViewModel(
             link.Slug, RenderMarkdown(link.Message), link.PasswordHash is not null, link.Owner.DisplayName,
-            ShareController.BuildLandingSigner(link.SigningCertificate)));
+            ShareController.BuildLandingSigner(link.SigningCertificate), theme, avatar));
     }
 
     public record InitUploadRequest(string Filename, long SizeBytes, string ContentType, string? Password);
@@ -232,4 +247,9 @@ public class UploadRequestPublicController : Controller
 }
 
 public record UploadLandingViewModel(string Slug, string MessageHtml, bool HasPassword, string OwnerName,
-    LandingSignerInfo? Signer = null);   // v1.10.146
+    LandingSignerInfo? Signer = null,   // v1.10.146
+    // v1.11.34: gleiches Branding wie Share-Landings — Logo/Farbe vom
+    // scope-passenden LandingTemplate, Avatar nur wenn der Owner es für
+    // diesen Scope freigegeben hat.
+    LandingTheme? Theme = null,
+    string? OwnerAvatarUrl = null);

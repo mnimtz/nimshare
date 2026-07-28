@@ -99,7 +99,17 @@ public sealed class IpApiCoGeoIpService : IGeoIpService
             // Endpoint gibt JSON mit country/city/org/latitude/longitude
             // zurück. Kein Key nötig.
             var resp = await client.GetAsync($"https://ipapi.co/{Uri.EscapeDataString(ip)}/json/", ct);
-            if (!resp.IsSuccessStatusCode) { CacheNegative(ip); return (null, null, null, null, null); }
+            if (!resp.IsSuccessStatusCode)
+            {
+                // v1.11.34: war komplett unlogged — ein 429 (Rate-Limit) oder
+                // sonstiger Non-2xx blieb für immer unsichtbar, Country/City
+                // einfach leer ohne jede Spur im Log. Marcus's Report: IP wird
+                // geloggt, Land/Stadt bleibt aber immer leer.
+                var body = await resp.Content.ReadAsStringAsync(ct);
+                _log.LogWarning("GeoIP lookup for {Ip} returned {Status}: {Body}", ip, (int)resp.StatusCode, body);
+                CacheNegative(ip);
+                return (null, null, null, null, null);
+            }
             var json = await resp.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
@@ -136,7 +146,10 @@ public sealed class IpApiCoGeoIpService : IGeoIpService
         }
         catch (Exception ex)
         {
-            _log.LogDebug(ex, "GeoIP lookup failed for {Ip}", ip);
+            // v1.11.34: war LogDebug — bei appsettings.json's Default-Level
+            // "Information" komplett unsichtbar. Timeouts/DNS-Fehler/Rate-
+            // Limits blieben dadurch für immer unauffindbar im Log.
+            _log.LogWarning(ex, "GeoIP lookup failed for {Ip}", ip);
             CacheNegative(ip);
             return (null, null, null, null, null);
         }

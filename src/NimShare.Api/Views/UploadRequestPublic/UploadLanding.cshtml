@@ -1,9 +1,33 @@
 @model NimShare.Api.Controllers.UploadLandingViewModel
-@{ ViewData["Title"] = T["upload.landing.title"]; Layout = "_Layout"; }
+@{
+    ViewData["Title"] = T["upload.landing.title"];
+    Layout = "_Layout";
+    var theme = Model.Theme;
+    // v1.11.34: gleiches Branding-Pattern wie Share/FolderLanding — Logo,
+    // Farbe, Hero und Avatar kommen jetzt vom scope-passenden LandingTemplate
+    // statt immer nur dem festen NimShare-Icon (Marcus's Wunsch).
+    var accent = string.IsNullOrWhiteSpace(theme?.PrimaryColor) ? "#002854" : theme!.PrimaryColor!;
+}
+@if (!string.IsNullOrEmpty(theme?.HeroUrl))
+{
+    <div style="height:180px;background:@accent url('@theme.HeroUrl') center/contain no-repeat;margin-bottom:-40px"></div>
+}
 <div class="landing-shell">
-    <div class="landing-card">
+    <div class="landing-card" style="position:relative;border-top:4px solid @accent">
+        @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
+        {
+            <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
+                 style="position:absolute;top:24px;right:28px;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 5px #fff,0 0 0 6px rgba(0,0,0,.06);z-index:2"/>
+        }
         <div class="landing-brand">
-            <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            @if (!string.IsNullOrWhiteSpace(theme?.LogoUrl))
+            {
+                <img src="@theme.LogoUrl" alt="Logo" style="max-height:48px;max-width:280px;object-fit:contain"/>
+            }
+            else
+            {
+                <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
+            }
             <small>@T["upload.landing.request_by"] @Model.OwnerName</small>
         </div>
         @* v1.10.146/153: Absender-Zertifikat-Badge — teilt Partial mit den Share-Landings. *@
@@ -12,7 +36,17 @@
             @await Html.PartialAsync("_LandingSignerBadge",
                 new NimShare.Api.Views.Shared.LandingSignerBadgeVm(Model.Signer, $"/u/{Model.Slug}/signer-cert.cer"))
         }
-        <h1>@T["upload.landing.title"]</h1>
+        <h1 style="color:@accent">@(string.IsNullOrWhiteSpace(theme?.Title) ? T["upload.landing.title"].Value : theme!.Title!)</h1>
+        @if (!string.IsNullOrWhiteSpace(theme?.Subtitle))
+        {
+            <p class="lede">@theme.Subtitle</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
+        {
+            <div style="margin:var(--sp-4) 0;line-height:1.55">
+                @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
+            </div>
+        }
         @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
         {
             <div class="card" style="background:var(--tw-gray-100)">@Html.Raw(Model.MessageHtml)</div>
@@ -38,6 +72,16 @@
         }
         <button id="upload-btn" class="btn btn-primary" style="margin-top:var(--sp-4)">@T["upload.landing.button"]</button>
         <div id="upload-status" class="helper"></div>
+        <p class="landing-meta" style="margin-top:var(--sp-6)">
+            @if (!string.IsNullOrWhiteSpace(theme?.FooterText))
+            {
+                @theme.FooterText
+            }
+            else
+            {
+                <text>@T["landing.powered_by"] <strong>NimShare</strong></text>
+            }
+        </p>
     </div>
 </div>
 <style>
