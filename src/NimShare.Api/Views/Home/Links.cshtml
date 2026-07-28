@@ -342,6 +342,12 @@ else
                 : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
+            // v1.11.36 — Marcus's Report: Eigentümer eines öffentlichen Links
+            // konnten ihn in der UI nicht selbst löschen/widerrufen, obwohl der
+            // Server (LinksController.Delete/Update) das für den Owner längst
+            // erlaubt — die UI blendete Revoke/Delete hier fälschlich nur für
+            // Admins ein. isAdmin bleibt zusätzlich (v1.10.97: Admin-Moderation).
+            var canManagePublic = isAdmin || l.OwnerId == currentUserId;
             <tr>
                 <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
                 <td data-th="@T["file.name"]">
@@ -366,11 +372,10 @@ else
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     @* v1.11.35 — Marcus's Wunsch: Auswertung sehen dürfen alle, die den
                        Link sehen können — öffentliche Links sind für alle sichtbar, also
-                       auch der Report-Button hier ungated. Revoke/Delete bleiben Admin-only
-                       (v1.10.97: Admin-Moderation für öffentliche Links). *@
+                       auch der Report-Button hier ungated. *@
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
-                    @if (isAdmin)
+                    @if (canManagePublic)
                     {
                         @if (!l.IsRevoked)
                         {
