@@ -1,9 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
 using NimShare.Core.Data;
 using NimShare.Core.Entities;
@@ -30,11 +32,17 @@ public class LinksController : ControllerBase
     // v1.11.22: separater Protector für Key-Store-Einträge — muss dem
     // Purpose-String in KeyStoreController exakt entsprechen.
     private readonly IDataProtector _keyStoreProtector;
+    // v1.11.37: Doku-PDFs/Links (Key-Store-Dokumente) + Attachment-fähiger
+    // Mail-Versand + lokalisierte Fallback-Texte für die Key-Store-Mail.
+    private readonly IBlobStorageService _blobs;
+    private readonly IEmailGatewayService _emailGateway;
+    private readonly IStringLocalizer<SharedResources> _l;
 
     public LinksController(
         NimShareDbContext db, ISlugService slugs, IPasswordHasher hasher,
         IQrCodeService qr, ICurrentUserService users, IConfiguration cfg,
-        IDataProtectionProvider dpp)
+        IDataProtectionProvider dpp, IBlobStorageService blobs,
+        IEmailGatewayService emailGateway, IStringLocalizer<SharedResources> l)
     {
         _db = db;
         _slugs = slugs;
@@ -44,6 +52,9 @@ public class LinksController : ControllerBase
         _configStoreFullIp = cfg.GetValue<bool>("ShareLinks:StoreFullIp");
         _serialProtector = dpp.CreateProtector(SerialNumberProtectorPurpose);
         _keyStoreProtector = dpp.CreateProtector(KeyStoreController.ProtectorPurpose);
+        _blobs = blobs;
+        _emailGateway = emailGateway;
+        _l = l;
     }
 
     public record CreateLinkRequest(
@@ -757,7 +768,9 @@ public class LinksController : ControllerBase
     // eines fremden Kunden eintippen und sich dessen Key an die EIGENE
     // Adresse schicken lassen).
     public record KeyStoreLookupRequest(string Email, string? Password);
-    public record KeyStoreLookupResponse(string KeyValue, string KeyType, string? DocumentationUrl, DateTimeOffset? ValidUntil);
+    public record KeyStoreDocLinkDto(string Label, string Url, bool IsFile);
+    public record KeyStoreLookupResponse(string KeyValue, string KeyType, string? DocumentationUrl,
+        DateTimeOffset? ValidUntil, IReadOnlyList<KeyStoreDocLinkDto> Documents);
 
     private async Task<KeyStoreEntry?> FindKeyStoreMatchAsync(Guid ownerId, string email, CancellationToken ct)
     {
@@ -773,6 +786,33 @@ public class LinksController : ControllerBase
             .Where(k => k.OwnerUserId == ownerId && k.CustomerEmailDomain == domain)
             .FirstOrDefaultAsync(ct);
     }
+
+    /// <summary>v1.11.37 — Marcus: Doku-Dokumente (PDFs/feste Links wie der
+    /// "Tenant"-Login) erscheinen NUR, wenn die "Dokumentation"-Checkbox beim
+    /// Link aktiviert wurde (link.DocumentationUrl gesetzt) UND ihre Key-Typ-
+    /// Auswahl exakt zum beim Reveal ermittelten KeyStoreEntry.KeyType passt.
+    /// File-Dokumente bekommen eine kurzlebige Download-SAS statt eines
+    /// dauerhaften öffentlichen Links.</summary>
+    private async Task<List<KeyStoreDocLinkDto>> FindMatchingDocumentsAsync(ShareLink link, string keyType, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(link.DocumentationUrl)) return new();
+        var docs = await _db.KeyStoreDocuments.Where(d => d.OwnerUserId == link.OwnerId).ToListAsync(ct);
+        return docs.Where(d => d.AppliesTo(keyType)).Select(d => new KeyStoreDocLinkDto(
+            d.Label,
+            d.IsFile
+                ? _blobs.CreateDownloadSas(d.BlobPath!, d.FileName ?? d.Label, GuessContentType(d.FileName), TimeSpan.FromMinutes(15)).ToString()
+                : d.Url!,
+            d.IsFile)).ToList();
+    }
+
+    private static string GuessContentType(string? fileName) =>
+        System.IO.Path.GetExtension(fileName ?? "").ToLowerInvariant() switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            _ => "application/octet-stream",
+        };
 
     [AllowAnonymous]
     [EnableRateLimiting("public-share")]
@@ -795,18 +835,19 @@ public class LinksController : ControllerBase
         catch (System.Security.Cryptography.CryptographicException)
         { return Problem(statusCode: 500, title: "Key could not be decrypted"); }
 
+        var documents = await FindMatchingDocumentsAsync(link, match.KeyType, ct);
+
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         await access.LogAsync(link, ShareLinkAccessKind.KeyStoreRevealed, iphash.Hash(ip),
             Request.Headers.UserAgent, Request.Headers.Referer, ct);
-        return Ok(new KeyStoreLookupResponse(plain, match.KeyType, link.DocumentationUrl, match.ValidUntil));
+        return Ok(new KeyStoreLookupResponse(plain, match.KeyType, link.DocumentationUrl, match.ValidUntil, documents));
     }
 
     [AllowAnonymous]
     [EnableRateLimiting("public-share")]
     [HttpPost("public/{slug}/keystore/email")]
     public async Task<IActionResult> EmailKeyStoreKey(string slug, [FromBody] KeyStoreLookupRequest req,
-        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash,
-        [FromServices] INotificationService notify, CancellationToken ct)
+        [FromServices] ILinkAccessService access, [FromServices] IIpHashService iphash, CancellationToken ct)
     {
         var link = await access.FindActiveAsync(slug, ct);
         if (link is null || !link.IsActive(DateTimeOffset.UtcNow) || !link.KeyStoreMode) return NotFound();
@@ -824,20 +865,82 @@ public class LinksController : ControllerBase
         { return Problem(statusCode: 500, title: "Key could not be decrypted"); }
 
         var itemName = link.File?.Name ?? link.Folder?.Name ?? "Download";
-        var subject = $"Dein Lizenzschlüssel für {itemName}";
-        var docLine = string.IsNullOrWhiteSpace(link.DocumentationUrl) ? "" : $"\nDokumentation: {link.DocumentationUrl}\n";
-        var body = $"""
-                    Hallo,
+        var documents = await FindMatchingDocumentsAsync(link, match.KeyType, ct);
 
-                    hier ist dein {match.KeyType}-Lizenzschlüssel für "{itemName}":
+        // v1.11.37 — Marcus: die Mail soll in der Sprache raus, in der der
+        // Besucher die Landing gerade sieht (CultureInfo.CurrentUICulture ist
+        // für diesen Request bereits durch die RequestLocalization-Middleware
+        // auf die vom Besucher gewählte Sprache gesetzt — dasselbe Cookie wie
+        // beim Landing-Seitenaufruf, siehe AiController.CurrentLanguageIso).
+        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        if (string.IsNullOrEmpty(lang) || lang == "iv") lang = "en";
 
-                    {plain}
-                    {docLine}
-                    — NimShare
-                    """;
+        // v1.11.37 — falls der Besitzer eine eigene Vorlage für diese Sprache
+        // als Default markiert hat (Kind=KeyStoreDelivery), wird DIE gerendert
+        // statt des hartkodierten Fallback-Texts.
+        var template = await _db.EmailTemplates.SingleOrDefaultAsync(t =>
+            t.OwnerUserId == link.OwnerId && t.Kind == EmailTemplateKind.KeyStoreDelivery
+            && t.Locale == lang && t.IsDefault, ct);
+
+        string subject, body;
+        if (template is not null)
+        {
+            var ctx = new Dictionary<string, string?>
+            {
+                ["customer.name"] = match.CustomerName,
+                ["key.type"] = match.KeyType,
+                ["key.value"] = plain,
+                ["item.name"] = itemName,
+                ["sender.name"] = link.Owner?.DisplayName ?? "",
+                ["recipient.email"] = req.Email.Trim(),
+            };
+            subject = EmailTemplateRenderer.Render(template.Subject, ctx);
+            body = EmailTemplateRenderer.Render(template.BodyMarkdown, ctx);
+        }
+        else
+        {
+            subject = _l["email.keystore.subject", itemName].Value;
+            body = string.Join("\n", new[]
+            {
+                _l["email.keystore.greeting"].Value,
+                "",
+                _l["email.keystore.intro", match.KeyType, itemName].Value,
+                "",
+                plain,
+            });
+        }
+        if (!string.IsNullOrWhiteSpace(link.DocumentationUrl))
+            body += $"\n\n{_l["email.keystore.doc_line", link.DocumentationUrl].Value}";
+        if (documents.Count > 0)
+        {
+            body += $"\n\n{_l["email.keystore.documents_heading"].Value}";
+            foreach (var d in documents)
+                body += d.IsFile ? $"\n📎 {d.Label}" : $"\n🔗 {d.Label}: {d.Url}";
+        }
+        body += "\n\n— NimShare";
+
+        // v1.11.37 — PDF-Dokumente werden zusätzlich zum Text-Link direkt
+        // angehängt (Marcus's Wunsch), damit der Empfänger nicht extra
+        // klicken muss. Feste Links (z.B. Tenant-Login) bleiben Text-Links.
+        List<EmailAttachment>? attachments = null;
+        var fileDocs = await _db.KeyStoreDocuments
+            .Where(d => d.OwnerUserId == link.OwnerId && d.BlobPath != null)
+            .ToListAsync(ct);
+        foreach (var d in fileDocs.Where(d => d.AppliesTo(match.KeyType)))
+        {
+            try
+            {
+                using var ms = new MemoryStream();
+                await _blobs.DownloadToAsync(d.BlobPath!, ms, ct);
+                attachments ??= new List<EmailAttachment>();
+                attachments.Add(new EmailAttachment(d.FileName ?? $"{d.Label}.pdf", GuessContentType(d.FileName), ms.ToArray()));
+            }
+            catch { /* Anhang fehlgeschlagen darf den Mail-Versand nicht blockieren */ }
+        }
+
         // v1.11.22: bewusst an DIESELBE Email, mit der der Key gefunden wurde
         // — kein separates "an"-Feld (siehe Klassen-Kommentar oben).
-        await notify.SendShareLinkAsync(req.Email.Trim(), "NimShare", subject, body, ct);
+        await _emailGateway.SendAsync(req.Email.Trim(), subject, body, attachments, ct);
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         await access.LogAsync(link, ShareLinkAccessKind.KeyStoreEmailed, iphash.Hash(ip),

@@ -21,6 +21,11 @@ public static class EmailTemplateRenderer
         "doc.name",
         "url",
         "message",
+        // v1.11.37 — Key-Store-Lizenzschlüssel-Mail (Kind=KeyStoreDelivery).
+        "customer.name",
+        "key.type",
+        "key.value",
+        "item.name",
     };
 
     private static readonly Regex TokenRx = new(@"\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}",

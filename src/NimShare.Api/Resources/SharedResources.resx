@@ -1647,4 +1647,36 @@ Thanks for using NimShare.</value></data>
   <data name="upload.landing.pick_first"><value>Pick a file first.</value></data>
   <data name="upload.landing.uploading"><value>Uploading</value></data>
   <data name="upload.landing.done"><value>Done — thanks!</value></data>
+
+  <data name="email.keystore.subject"><value>Your license key for {0}</value></data>
+  <data name="email.keystore.greeting"><value>Hello,</value></data>
+  <data name="email.keystore.intro"><value>here is your {0} license key for &quot;{1}&quot;:</value></data>
+  <data name="email.keystore.doc_line"><value>Documentation: {0}</value></data>
+  <data name="email.keystore.documents_heading"><value>Additional documents:</value></data>
+  <data name="keystore.documents.section"><value>Documentation</value></data>
+  <data name="keystore.documents.lede"><value>PDFs or fixed links (e.g. a portal login) shown to visitors next to a revealed license key — bound to specific key types.</value></data>
+  <data name="keystore.documents.new"><value>New document</value></data>
+  <data name="keystore.documents.col.label"><value>Label</value></data>
+  <data name="keystore.documents.col.type"><value>Type</value></data>
+  <data name="keystore.documents.col.key_types"><value>Key types</value></data>
+  <data name="keystore.documents.empty"><value>No documents yet.</value></data>
+  <data name="keystore.documents.field.label"><value>Label (button caption)</value></data>
+  <data name="keystore.documents.field.kind"><value>Kind</value></data>
+  <data name="keystore.documents.field.file"><value>File (PDF)</value></data>
+  <data name="keystore.documents.field.file_current"><value>Current file:</value></data>
+  <data name="keystore.documents.field.url"><value>URL</value></data>
+  <data name="keystore.documents.field.key_types"><value>Applies to key types</value></data>
+  <data name="keystore.documents.field.key_types_hint"><value>This document only appears when the revealed key's type matches one of the selected types.</value></data>
+  <data name="keystore.documents.kind.file"><value>File</value></data>
+  <data name="keystore.documents.kind.link"><value>Fixed link</value></data>
+  <data name="keystore.documents.error.label_required"><value>Label is required.</value></data>
+  <data name="keystore.documents.error.file_required"><value>A file is required.</value></data>
+  <data name="keystore.documents.error.url_required"><value>A valid URL is required.</value></data>
+  <data name="keystore.documents.error.types_required"><value>At least one key type is required.</value></data>
+  <data name="keystore.documents.save_error"><value>Could not save document.</value></data>
+  <data name="keystore.documents.delete_error"><value>Could not delete document.</value></data>
+  <data name="keystore.documents.confirm_delete"><value>Delete this document?</value></data>
+  <data name="keystore.templates.title"><value>Email template</value></data>
+  <data name="keystore.templates.lede"><value>Customize the text used when a license key is sent by email — with an optional AI suggestion. The email language matches the language the recipient viewed the page in.</value></data>
+  <data name="keystore.templates.link"><value>Manage email template</value></data>
 </root>

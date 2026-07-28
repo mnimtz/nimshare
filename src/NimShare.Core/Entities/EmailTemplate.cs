@@ -40,4 +40,7 @@ public enum EmailTemplateKind
     // Reserved for future scope expansion:
     ShareLink = 10,
     UploadRequest = 20,
+    // v1.11.37 — Marcus's Key-Store: Lizenzschlüssel-Versand-Mail ("Key via
+    // Email zusenden" auf der KeyStoreMode-Landing).
+    KeyStoreDelivery = 30,
 }

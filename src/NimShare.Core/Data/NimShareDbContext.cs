@@ -40,6 +40,7 @@ public class NimShareDbContext : DbContext
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<KeyStoreEntry> KeyStoreEntries => Set<KeyStoreEntry>();
+    public DbSet<KeyStoreDocument> KeyStoreDocuments => Set<KeyStoreDocument>();
     public DbSet<SigningCertificate> SigningCertificates => Set<SigningCertificate>();
     public DbSet<FilePin> FilePins => Set<FilePin>();
     // v1.10.82: App-Store-Blocker (Apple 1.2 UGC-Guideline)
@@ -339,6 +340,19 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.KeyType).HasMaxLength(100).IsRequired();
             e.Property(x => x.KeyValueEncrypted).HasMaxLength(2000).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(2000);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // v1.11.37 — Key-Store-Dokumente (PDFs/Links, gebunden an Key-Typen).
+        b.Entity<KeyStoreDocument>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OwnerUserId);
+            e.Property(x => x.Label).HasMaxLength(200).IsRequired();
+            e.Property(x => x.BlobPath).HasMaxLength(500);
+            e.Property(x => x.FileName).HasMaxLength(300);
+            e.Property(x => x.Url).HasMaxLength(2000);
+            e.Property(x => x.KeyTypesCsv).HasMaxLength(1000).IsRequired();
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 

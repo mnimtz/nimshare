@@ -1645,4 +1645,36 @@ Grazie per usare NimShare.</value></data>
   <data name="upload.landing.pick_first"><value>Seleziona prima un file.</value></data>
   <data name="upload.landing.uploading"><value>Caricamento in corso</value></data>
   <data name="upload.landing.done"><value>Fatto — grazie!</value></data>
+
+  <data name="email.keystore.subject"><value>La tua chiave di licenza per {0}</value></data>
+  <data name="email.keystore.greeting"><value>Ciao,</value></data>
+  <data name="email.keystore.intro"><value>ecco la tua chiave di licenza {0} per &quot;{1}&quot;:</value></data>
+  <data name="email.keystore.doc_line"><value>Documentazione: {0}</value></data>
+  <data name="email.keystore.documents_heading"><value>Altri documenti:</value></data>
+  <data name="keystore.documents.section"><value>Documentazione</value></data>
+  <data name="keystore.documents.lede"><value>PDF o link fissi (es. un login al portale) mostrati ai visitatori accanto alla chiave di licenza rivelata — associati a tipi di chiave specifici.</value></data>
+  <data name="keystore.documents.new"><value>Nuovo documento</value></data>
+  <data name="keystore.documents.col.label"><value>Etichetta</value></data>
+  <data name="keystore.documents.col.type"><value>Tipo</value></data>
+  <data name="keystore.documents.col.key_types"><value>Tipi di chiave</value></data>
+  <data name="keystore.documents.empty"><value>Ancora nessun documento.</value></data>
+  <data name="keystore.documents.field.label"><value>Etichetta (testo del pulsante)</value></data>
+  <data name="keystore.documents.field.kind"><value>Genere</value></data>
+  <data name="keystore.documents.field.file"><value>File (PDF)</value></data>
+  <data name="keystore.documents.field.file_current"><value>File attuale:</value></data>
+  <data name="keystore.documents.field.url"><value>URL</value></data>
+  <data name="keystore.documents.field.key_types"><value>Si applica ai tipi di chiave</value></data>
+  <data name="keystore.documents.field.key_types_hint"><value>Questo documento appare solo se il tipo della chiave rivelata corrisponde a uno dei tipi selezionati.</value></data>
+  <data name="keystore.documents.kind.file"><value>File</value></data>
+  <data name="keystore.documents.kind.link"><value>Link fisso</value></data>
+  <data name="keystore.documents.error.label_required"><value>L'etichetta è obbligatoria.</value></data>
+  <data name="keystore.documents.error.file_required"><value>È richiesto un file.</value></data>
+  <data name="keystore.documents.error.url_required"><value>È richiesto un URL valido.</value></data>
+  <data name="keystore.documents.error.types_required"><value>È richiesto almeno un tipo di chiave.</value></data>
+  <data name="keystore.documents.save_error"><value>Impossibile salvare il documento.</value></data>
+  <data name="keystore.documents.delete_error"><value>Impossibile eliminare il documento.</value></data>
+  <data name="keystore.documents.confirm_delete"><value>Eliminare questo documento?</value></data>
+  <data name="keystore.templates.title"><value>Modello di email</value></data>
+  <data name="keystore.templates.lede"><value>Personalizza il testo utilizzato quando una chiave di licenza viene inviata via email — con suggerimento IA opzionale. La lingua dell'email corrisponde alla lingua in cui il destinatario ha visto la pagina.</value></data>
+  <data name="keystore.templates.link"><value>Gestisci il modello di email</value></data>
 </root>

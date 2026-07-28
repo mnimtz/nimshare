@@ -475,14 +475,18 @@ public class AiController : ControllerBase
 
     public record DraftReq(Guid LinkId, string? Context);
 
-    public record DraftTemplateReq(string Prompt, string? Locale);
+    public record DraftTemplateReq(string Prompt, string? Locale, string? Kind);
 
     /// <summary>
-    /// AI-drafts an email template (subject + body-markdown) for the
-    /// signature workflow. Prompt is user-supplied ("Formal contract for a
-    /// legal counterparty"); locale defaults to the user's PreferredCulture.
-    /// The reply MUST include placeholder tokens like {{recipient.name}} and
-    /// {{url}} — the frontend just shoves the result into the editor.
+    /// AI-drafts an email template (subject + body-markdown). Prompt is
+    /// user-supplied ("Formal contract for a legal counterparty"); locale
+    /// defaults to the user's PreferredCulture. The reply MUST include
+    /// placeholder tokens like {{recipient.name}} and {{url}} — the frontend
+    /// just shoves the result into the editor.
+    ///
+    /// v1.11.37 — Kind steuert Instruktion + erlaubte Platzhalter: bisher nur
+    /// für SignatureInvite gedacht, jetzt auch für KeyStoreDelivery (Marcus's
+    /// Key-Store-Lizenzschlüssel-Mail) mit eigenem Platzhalter-Satz.
     /// </summary>
     [Authorize(Policy = "ApiUser")]
     [HttpPost("draft-email-template")]
@@ -503,13 +507,22 @@ public class AiController : ControllerBase
             : req.Locale;
         var provider = await _ai.CreateProviderAsync(ct);
 
-        var promptShort = string.IsNullOrWhiteSpace(req.Prompt) ? "signature request" : req.Prompt.Trim();
-        var instruction = $"You are drafting an email template used to invite a person to sign a document. " +
+        var isKeyStore = string.Equals(req.Kind, "KeyStoreDelivery", StringComparison.OrdinalIgnoreCase);
+        var promptShort = string.IsNullOrWhiteSpace(req.Prompt)
+            ? (isKeyStore ? "license key delivery" : "signature request")
+            : req.Prompt.Trim();
+        var purpose = isKeyStore
+            ? "an email that delivers a software license key to a customer"
+            : "an email template used to invite a person to sign a document";
+        var placeholderList = isKeyStore
+            ? "{{customer.name}}, {{sender.name}}, {{key.type}}, {{key.value}}, {{item.name}}"
+            : "{{recipient.name}}, {{sender.name}}, {{doc.title}}, {{url}}";
+        var instruction = $"You are drafting {purpose}. " +
             $"Style/tone: {promptShort}. Write in the language whose ISO code is '{lang}'. " +
             $"Return EXACTLY two blocks, plain text, separated by a line 'BODY:':\n" +
             $"SUBJECT: <one-line subject>\nBODY:\n<3-6 short paragraphs of body>\n\n" +
             $"Include these Handlebars placeholders LITERALLY, so downstream code can substitute:\n" +
-            $"{{{{recipient.name}}}}, {{{{sender.name}}}}, {{{{doc.title}}}}, {{{{url}}}}. " +
+            $"{placeholderList}. " +
             $"Optionally include {{{{message}}}} in the body if relevant. Do NOT introduce other placeholders. " +
             $"Do not add greetings, disclaimers, HTML, or Markdown headings.";
 
@@ -523,7 +536,7 @@ public class AiController : ControllerBase
         if (provider is GeminiProvider gp)
         {
             var (draftedText, error) = await gp.GenerateWithDetailAsync(
-                $"You are drafting an email template for a signature invite. Style: {promptShort}. Language ISO: {lang}. Return EXACTLY 'SUBJECT: <line>' then a newline 'BODY:' then 3–6 short paragraphs. Use these literal Handlebars placeholders: {{{{recipient.name}}}}, {{{{sender.name}}}}, {{{{doc.title}}}}, {{{{url}}}}. Optional: {{{{message}}}}. No HTML, no markdown headings.",
+                $"You are drafting {purpose}. Style: {promptShort}. Language ISO: {lang}. Return EXACTLY 'SUBJECT: <line>' then a newline 'BODY:' then 3–6 short paragraphs. Use these literal Handlebars placeholders: {placeholderList}. Optional: {{{{message}}}}. No HTML, no markdown headings.",
                 0.6, 2048, ct);
             raw = draftedText; err = error;
         }

@@ -136,6 +136,11 @@ public class EmailTemplatesApiController : ControllerBase
             ["doc.name"] = "contract.pdf",
             ["url"] = "https://nimshare.example/sign/xyz",
             ["message"] = _l["email_tpl.preview.message"].Value,
+            // v1.11.37 — Key-Store-Lizenzschlüssel-Mail-Platzhalter.
+            ["customer.name"] = _l["email_tpl.preview.recipient_name"].Value,
+            ["key.type"] = "Evaluation-CLS",
+            ["key.value"] = "AV09Z-K13-8FXD-BAVZ-XT",
+            ["item.name"] = _l["email_tpl.preview.doc_title"].Value,
         };
         return Ok(new
         {
@@ -156,7 +161,11 @@ public class EmailTemplatesApiController : ControllerBase
     }
 }
 
-/// <summary>Razor views: /signatures/templates + /signatures/templates/{id}</summary>
+/// <summary>Razor views: /signatures/templates (SignatureInvite) und
+/// /keystore/templates (v1.11.37 — KeyStoreDelivery, Marcus's Wunsch nach
+/// einer eigenen Email-Vorlagen-Kategorie im Key-Store, inkl. KI-Vorschlag).
+/// Beide Routen teilen sich dieselbe View — die Vorlagen-Art steuert
+/// Zurück-Link, Platzhalter-Hinweis und den gespeicherten Kind-Wert.</summary>
 [Authorize(Policy = "WebUser")]
 public class EmailTemplatesPageController : Controller
 {
@@ -169,13 +178,19 @@ public class EmailTemplatesPageController : Controller
     }
 
     [HttpGet("/signatures/templates")]
-    public async Task<IActionResult> Index(CancellationToken ct)
+    public Task<IActionResult> Index(CancellationToken ct) => IndexFor(EmailTemplateKind.SignatureInvite, ct);
+
+    [HttpGet("/keystore/templates")]
+    public Task<IActionResult> IndexKeyStore(CancellationToken ct) => IndexFor(EmailTemplateKind.KeyStoreDelivery, ct);
+
+    private async Task<IActionResult> IndexFor(EmailTemplateKind kind, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var rows = await _db.EmailTemplates
-            .Where(t => t.OwnerUserId == me.Id)
+            .Where(t => t.OwnerUserId == me.Id && t.Kind == kind)
             .OrderByDescending(t => t.IsDefault).ThenBy(t => t.Name)
             .ToListAsync(ct);
-        return View(rows);
+        ViewData["Kind"] = kind.ToString();
+        return View("Index", rows);
     }
 }

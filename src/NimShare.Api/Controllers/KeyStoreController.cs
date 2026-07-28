@@ -26,12 +26,14 @@ public class KeyStoreController : ControllerBase
     private readonly NimShareDbContext _db;
     private readonly ICurrentUserService _users;
     private readonly IDataProtector _protector;
+    private readonly IBlobStorageService _blobs;
 
-    public KeyStoreController(NimShareDbContext db, ICurrentUserService users, IDataProtectionProvider dpp)
+    public KeyStoreController(NimShareDbContext db, ICurrentUserService users, IDataProtectionProvider dpp, IBlobStorageService blobs)
     {
         _db = db;
         _users = users;
         _protector = dpp.CreateProtector(ProtectorPurpose);
+        _blobs = blobs;
     }
 
     public record KeyStoreEntryDto(
@@ -190,6 +192,184 @@ public class KeyStoreController : ControllerBase
     private Task<KeyStoreEntry?> FindAsync(Guid id, User me, CancellationToken ct)
     {
         var query = _db.KeyStoreEntries.Include(x => x.OwnerUser).Where(x => x.Id == id);
+        query = me.Role == UserRole.Admin ? query : query.Where(x => x.OwnerUserId == me.Id);
+        return query.SingleOrDefaultAsync(ct);
+    }
+
+    // ── v1.11.37 — Key-Store-Dokumente ──────────────────────────────────────
+    // Pro-User verwaltete Dokumente (PDF-Upload oder fester Link), gebunden an
+    // eine Auswahl von Key-Typen. Erscheinen auf der öffentlichen Landing
+    // eines KeyStoreMode-Links, sobald der Ersteller die "Dokumentation"-
+    // Checkbox aktiviert UND der beim Reveal ermittelte KeyStoreEntry.KeyType
+    // zu einem der hier ausgewählten Typen passt (siehe LinksController).
+
+    public record KeyStoreDocumentDto(Guid Id, string Label, bool IsFile, string? FileName, string? Url,
+        List<string> KeyTypes, DateTimeOffset CreatedAt, DateTimeOffset? UpdatedAt,
+        string? OwnerName, bool IsOwnedByMe);
+
+    private KeyStoreDocumentDto ToDocDto(KeyStoreDocument d, Guid meId) => new(
+        d.Id, d.Label, d.IsFile, d.FileName, d.Url, d.KeyTypes.ToList(), d.CreatedAt, d.UpdatedAt,
+        OwnerName: d.OwnerUserId != meId ? d.OwnerUser?.DisplayName : null,
+        IsOwnedByMe: d.OwnerUserId == meId);
+
+    [HttpGet("documents")]
+    public async Task<IActionResult> ListDocuments(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var query = _db.KeyStoreDocuments.Include(x => x.OwnerUser).AsQueryable();
+        query = me.Role == UserRole.Admin ? query : query.Where(x => x.OwnerUserId == me.Id);
+        var rows = await query.OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+        return Ok(rows.Select(x => ToDocDto(x, me.Id)));
+    }
+
+    public record CreateLinkDocReq(string Label, string Url, List<string> KeyTypes);
+
+    [HttpPost("documents/link")]
+    public async Task<IActionResult> CreateLinkDocument([FromBody] CreateLinkDocReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (string.IsNullOrWhiteSpace(req.Label))
+            return Problem(statusCode: 422, title: "Label is required.");
+        if (string.IsNullOrWhiteSpace(req.Url)
+            || !(Uri.TryCreate(req.Url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
+            return Problem(statusCode: 422, title: "A valid http(s) URL is required.");
+        if (req.KeyTypes is null || req.KeyTypes.Count == 0)
+            return Problem(statusCode: 422, title: "At least one key type is required.");
+
+        var doc = new KeyStoreDocument
+        {
+            OwnerUserId = me.Id,
+            Label = req.Label.Trim(),
+            Url = req.Url.Trim(),
+            KeyTypesCsv = string.Join(',', req.KeyTypes.Select(t => t.Trim()).Where(t => t.Length > 0)),
+        };
+        _db.KeyStoreDocuments.Add(doc);
+        await _db.SaveChangesAsync(ct);
+        doc.OwnerUser = me;
+        return CreatedAtAction(nameof(ListDocuments), null, ToDocDto(doc, me.Id));
+    }
+
+    [HttpPost("documents/upload")]
+    [RequestSizeLimit(25 * 1024 * 1024)]
+    public async Task<IActionResult> UploadDocument([FromForm] string label, [FromForm] string keyTypes,
+        [FromForm] IFormFile file, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (string.IsNullOrWhiteSpace(label))
+            return Problem(statusCode: 422, title: "Label is required.");
+        var types = (keyTypes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (types.Length == 0)
+            return Problem(statusCode: 422, title: "At least one key type is required.");
+        if (file is null || file.Length == 0)
+            return Problem(statusCode: 422, title: "A file is required.");
+        if (file.Length > 20 * 1024 * 1024)
+            return Problem(statusCode: 422, title: "File is too large (max 20 MB).");
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+
+        var doc = new KeyStoreDocument
+        {
+            OwnerUserId = me.Id,
+            Label = label.Trim(),
+            FileName = file.FileName,
+            KeyTypesCsv = string.Join(',', types),
+        };
+        var path = $"keystore-docs/{me.Id:N}/{doc.Id:N}/{file.FileName}";
+        var ticket = _blobs.CreateUploadTicket(path);
+        using (var http = new HttpClient())
+        using (var content = new StreamContent(file.OpenReadStream()))
+        {
+            content.Headers.Add("x-ms-blob-type", "BlockBlob");
+            content.Headers.Add("x-ms-blob-content-type", contentType);
+            var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
+            if (!resp.IsSuccessStatusCode)
+                return Problem(statusCode: 502, title: "Upload to storage failed.");
+        }
+        doc.BlobPath = path;
+        _db.KeyStoreDocuments.Add(doc);
+        await _db.SaveChangesAsync(ct);
+        doc.OwnerUser = me;
+        return CreatedAtAction(nameof(ListDocuments), null, ToDocDto(doc, me.Id));
+    }
+
+    public record UpdateDocReq(string? Label, string? Url, List<string>? KeyTypes);
+
+    [HttpPatch("documents/{id:guid}")]
+    public async Task<IActionResult> UpdateDocument(Guid id, [FromBody] UpdateDocReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var d = await FindDocAsync(id, me, ct);
+        if (d is null) return NotFound();
+        if (!string.IsNullOrWhiteSpace(req.Label)) d.Label = req.Label.Trim();
+        if (req.Url is not null && !d.IsFile)
+        {
+            if (string.IsNullOrWhiteSpace(req.Url)
+                || !(Uri.TryCreate(req.Url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
+                return Problem(statusCode: 422, title: "A valid http(s) URL is required.");
+            d.Url = req.Url.Trim();
+        }
+        if (req.KeyTypes is { Count: > 0 })
+            d.KeyTypesCsv = string.Join(',', req.KeyTypes.Select(t => t.Trim()).Where(t => t.Length > 0));
+        d.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(ToDocDto(d, me.Id));
+    }
+
+    /// <summary>Ersetzt die Datei eines File-Dokuments durch eine neuere
+    /// Version — Marcus's Wunsch "leicht erneuern". Label/Key-Typen bleiben,
+    /// nur BlobPath/FileName werden getauscht, der alte Blob wird gelöscht.</summary>
+    [HttpPost("documents/{id:guid}/replace-file")]
+    [RequestSizeLimit(25 * 1024 * 1024)]
+    public async Task<IActionResult> ReplaceDocumentFile(Guid id, [FromForm] IFormFile file, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var d = await FindDocAsync(id, me, ct);
+        if (d is null) return NotFound();
+        if (!d.IsFile) return Problem(statusCode: 422, title: "This document is a link, not a file.");
+        if (file is null || file.Length == 0) return Problem(statusCode: 422, title: "A file is required.");
+        if (file.Length > 20 * 1024 * 1024) return Problem(statusCode: 422, title: "File is too large (max 20 MB).");
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+
+        var oldPath = d.BlobPath;
+        var newPath = $"keystore-docs/{d.OwnerUserId:N}/{d.Id:N}/{file.FileName}";
+        var ticket = _blobs.CreateUploadTicket(newPath);
+        using (var http = new HttpClient())
+        using (var content = new StreamContent(file.OpenReadStream()))
+        {
+            content.Headers.Add("x-ms-blob-type", "BlockBlob");
+            content.Headers.Add("x-ms-blob-content-type", contentType);
+            var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
+            if (!resp.IsSuccessStatusCode)
+                return Problem(statusCode: 502, title: "Upload to storage failed.");
+        }
+        d.BlobPath = newPath;
+        d.FileName = file.FileName;
+        d.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        if (!string.IsNullOrEmpty(oldPath) && oldPath != newPath)
+        {
+            try { await _blobs.DeleteAsync(oldPath, ct); } catch { /* orphaned bytes, not fatal */ }
+        }
+        return Ok(ToDocDto(d, me.Id));
+    }
+
+    [HttpDelete("documents/{id:guid}")]
+    public async Task<IActionResult> DeleteDocument(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var d = await FindDocAsync(id, me, ct);
+        if (d is null) return NotFound();
+        if (d.IsFile)
+        {
+            try { await _blobs.DeleteAsync(d.BlobPath!, ct); } catch { /* orphaned bytes, not fatal */ }
+        }
+        _db.KeyStoreDocuments.Remove(d);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    private Task<KeyStoreDocument?> FindDocAsync(Guid id, User me, CancellationToken ct)
+    {
+        var query = _db.KeyStoreDocuments.Where(x => x.Id == id);
         query = me.Role == UserRole.Admin ? query : query.Where(x => x.OwnerUserId == me.Id);
         return query.SingleOrDefaultAsync(ct);
     }

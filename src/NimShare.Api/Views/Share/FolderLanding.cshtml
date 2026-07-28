@@ -238,15 +238,29 @@
                 if (r.status === 422) return @Json.Serialize(T["landing.keystore.invalid_email"].Value);
                 return @Json.Serialize(T["landing.serial.error"].Value);
             }
-            function keystoreRenderDoc(url) {
+            // v1.11.37 — siehe Landing.cshtml: mehrere gematchte Dokumente als
+            // Button-Reihe statt nur ein einzelner fester Doku-Link.
+            function keystoreRenderDocs(docUrl, documents) {
                 const out = document.getElementById('keystoreDocOut');
-                if (!url) { out.innerHTML = ''; return; }
-                const a = document.createElement('a');
-                a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-                a.className = 'btn btn-ghost btn-sm';
-                a.textContent = '📖 ' + @Json.Serialize(T["landing.keystore.doc_link"].Value);
                 out.innerHTML = '';
-                out.appendChild(a);
+                if (!docUrl && (!documents || documents.length === 0)) return;
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+                if (docUrl) {
+                    const a = document.createElement('a');
+                    a.href = docUrl; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                    a.className = 'btn btn-ghost btn-sm';
+                    a.textContent = '📖 ' + @Json.Serialize(T["landing.keystore.doc_link"].Value);
+                    wrap.appendChild(a);
+                }
+                (documents || []).forEach(d => {
+                    const a = document.createElement('a');
+                    a.href = d.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                    a.className = 'btn btn-ghost btn-sm';
+                    a.textContent = (d.isFile ? '📄 ' : '🔗 ') + d.label;
+                    wrap.appendChild(a);
+                });
+                out.appendChild(wrap);
             }
             async function keystoreReveal() {
                 const email = document.getElementById('keystoreEmailInput').value.trim();
@@ -269,7 +283,7 @@
                     document.getElementById('keystoreValidUntilOut').textContent = d.validUntil
                         ? @Json.Serialize(T["landing.keystore.valid_until_prefix"].Value) + ' ' + new Date(d.validUntil).toLocaleDateString()
                         : '';
-                    keystoreRenderDoc(d.documentationUrl);
+                    keystoreRenderDocs(d.documentationUrl, d.documents);
                     document.getElementById('keystoreValueOut').style.display = 'block';
                     btn.disabled = false;
                 } catch { err.textContent = @Json.Serialize(T["landing.serial.error"].Value); err.style.display = 'block'; btn.disabled = false; }

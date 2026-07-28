@@ -1645,4 +1645,36 @@ Merci d'utiliser NimShare.</value></data>
   <data name="upload.landing.pick_first"><value>Choisissez d'abord un fichier.</value></data>
   <data name="upload.landing.uploading"><value>Envoi en cours</value></data>
   <data name="upload.landing.done"><value>Terminé — merci !</value></data>
+
+  <data name="email.keystore.subject"><value>Votre clé de licence pour {0}</value></data>
+  <data name="email.keystore.greeting"><value>Bonjour,</value></data>
+  <data name="email.keystore.intro"><value>voici votre clé de licence {0} pour « {1} » :</value></data>
+  <data name="email.keystore.doc_line"><value>Documentation : {0}</value></data>
+  <data name="email.keystore.documents_heading"><value>Documents supplémentaires :</value></data>
+  <data name="keystore.documents.section"><value>Documentation</value></data>
+  <data name="keystore.documents.lede"><value>PDF ou liens fixes (p. ex. une connexion au portail) affichés aux visiteurs à côté de la clé de licence révélée — liés à des types de clé spécifiques.</value></data>
+  <data name="keystore.documents.new"><value>Nouveau document</value></data>
+  <data name="keystore.documents.col.label"><value>Libellé</value></data>
+  <data name="keystore.documents.col.type"><value>Type</value></data>
+  <data name="keystore.documents.col.key_types"><value>Types de clé</value></data>
+  <data name="keystore.documents.empty"><value>Aucun document pour l'instant.</value></data>
+  <data name="keystore.documents.field.label"><value>Libellé (texte du bouton)</value></data>
+  <data name="keystore.documents.field.kind"><value>Genre</value></data>
+  <data name="keystore.documents.field.file"><value>Fichier (PDF)</value></data>
+  <data name="keystore.documents.field.file_current"><value>Fichier actuel :</value></data>
+  <data name="keystore.documents.field.url"><value>URL</value></data>
+  <data name="keystore.documents.field.key_types"><value>S'applique aux types de clé</value></data>
+  <data name="keystore.documents.field.key_types_hint"><value>Ce document n'apparaît que si le type de la clé révélée correspond à l'un des types sélectionnés.</value></data>
+  <data name="keystore.documents.kind.file"><value>Fichier</value></data>
+  <data name="keystore.documents.kind.link"><value>Lien fixe</value></data>
+  <data name="keystore.documents.error.label_required"><value>Le libellé est requis.</value></data>
+  <data name="keystore.documents.error.file_required"><value>Un fichier est requis.</value></data>
+  <data name="keystore.documents.error.url_required"><value>Une URL valide est requise.</value></data>
+  <data name="keystore.documents.error.types_required"><value>Au moins un type de clé est requis.</value></data>
+  <data name="keystore.documents.save_error"><value>Impossible d'enregistrer le document.</value></data>
+  <data name="keystore.documents.delete_error"><value>Impossible de supprimer le document.</value></data>
+  <data name="keystore.documents.confirm_delete"><value>Supprimer ce document ?</value></data>
+  <data name="keystore.templates.title"><value>Modèle d'e-mail</value></data>
+  <data name="keystore.templates.lede"><value>Personnalisez le texte utilisé lors de l'envoi d'une clé de licence par e-mail — avec suggestion IA optionnelle. La langue de l'e-mail correspond à la langue dans laquelle le destinataire a vu la page.</value></data>
+  <data name="keystore.templates.link"><value>Gérer le modèle d'e-mail</value></data>
 </root>
