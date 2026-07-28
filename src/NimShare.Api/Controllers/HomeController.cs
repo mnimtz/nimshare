@@ -117,9 +117,20 @@ public class HomeController : Controller
             .ToList();
 
         // v1.11.0 — Marcus's Wunsch: eigene "Subdomains"-Sektion, quer zu den
-        // obigen (nicht-exklusiven) Scope-Kategorien — zeigt einfach jeden
-        // sichtbaren Link mit gesetztem SubdomainSlug samt fertiger URL.
-        var subdomainLinks = all.Where(l => !string.IsNullOrEmpty(l.SubdomainSlug)).ToList();
+        // obigen (nicht-exklusiven) Scope-Kategorien.
+        // v1.11.27: Subdomain-Links sind jetzt für ALLE User sichtbar,
+        // unabhängig von Owner/Scope — vorher zeigte diese Sektion nur die
+        // Teilmenge von "all" (eigene + Public-Scope), fremde Subdomain-Links
+        // auf Personal-/Group-Scope-Zielen blieben unsichtbar. Löschrechte
+        // bleiben unverändert (weiterhin nur Owner oder Admin, siehe
+        // LinksController.Update()/Delete()) — es geht nur um Sichtbarkeit.
+        var subdomainLinks = await _db.ShareLinks
+            .Include(l => l.File)
+            .Include(l => l.Folder)
+            .Include(l => l.Owner)
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(ct);
         var sdSettings = await _subdomains.GetSettingsAsync(ct);
         ViewData["SubdomainLinks"] = subdomainLinks;
         ViewData["SubdomainBase"] = sdSettings is { Enabled: true } ? sdSettings.BaseDomain : null;
@@ -127,6 +138,9 @@ public class HomeController : Controller
         ViewData["PublicLinks"] = publicLinks;
         ViewData["GroupLinks"] = groupLinks;
         ViewData["IsAdmin"] = user.Role == UserRole.Admin;
+        // v1.11.27: für die Subdomain-Sektion — jetzt fremde Links sichtbar,
+        // Revoke/Delete-Buttons pro Zeile brauchen die eigene Id zum Vergleich.
+        ViewData["CurrentUserId"] = user.Id;
         return View(privateLinks);
     }
 

@@ -7,6 +7,7 @@
     var subdomainLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["SubdomainLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var subdomainBase = ViewData["SubdomainBase"] as string;
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+    var currentUserId = (Guid)(ViewData["CurrentUserId"] ?? Guid.Empty);
 }
 <div class="page-header">
     <div>
@@ -108,14 +109,20 @@ else
             <tr>
                 <th>@T["links.subdomain.url"]</th>
                 <th>@T["file.name"]</th>
+                <th>@T["links.public.by"]</th>
                 <th>@T["links.downloads"]</th>
                 <th>@T["links.state"]</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
+        @* v1.11.27: Subdomain-Links sind jetzt für ALLE User sichtbar
+           (siehe HomeController.Links) — Revoke/Delete bleiben aber weiter
+           nur Owner oder Admin vorbehalten, daher der Owner-/Rechte-Check
+           pro Zeile statt wie vorher pauschal für alle Zeilen. *@
         @foreach (var l in subdomainLinks)
         {
+            var canManage = isAdmin || l.OwnerId == currentUserId;
             var sdHost = $"{l.SubdomainSlug}.{subdomainBase}";
             var sdUrl = $"https://{sdHost}";
             var sdState = l.IsRevoked
@@ -140,17 +147,24 @@ else
                     }
                     else { <span class="muted">—</span> }
                 </td>
+                <td class="muted" data-th="@T["links.public.by"]">@l.Owner?.DisplayName</td>
                 <td data-th="@T["links.downloads"]">@l.DownloadCount @(l.MaxDownloads is int m4 ? $" / {m4}" : "")</td>
                 <td data-th="@T["links.state"]"><span class="chip @sdState.Item1">@sdState.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="@sdUrl" target="_blank">↗ @T["links.action.open"]</a>
-                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
-                    <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
-                    @if (!l.IsRevoked)
+                    @if (canManage)
                     {
-                        <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
+                        <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     }
-                    <button class="btn btn-ghost btn-sm" data-delete="@l.Id">@T["links.action.delete"]</button>
+                    <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
+                    @if (canManage)
+                    {
+                        @if (!l.IsRevoked)
+                        {
+                            <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
+                        }
+                        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" data-delete="@l.Id">@T["links.action.delete"]</button>
+                    }
                 </td>
             </tr>
         }

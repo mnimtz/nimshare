@@ -50,7 +50,9 @@ public class UploadRequestsController : ControllerBase
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
 
         // v1.11.0: Subdomain-Slug — identische Regeln wie bei ShareLinks
-        // (Feature aktiv, User-Recht, DNS-safe, nicht reserviert, frei).
+        // (Feature instanzweit aktiv, DNS-safe, nicht reserviert, frei).
+        // v1.11.27: Marcus's Wunsch — jeder User darf Subdomain-Links anlegen
+        // (das Admin-vergebene Per-User-Recht CanUseSubdomainShares entfällt).
         string? subdomainSlug = null;
         string? subdomainBase = null;
         if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
@@ -59,8 +61,6 @@ public class UploadRequestsController : ControllerBase
             var subSettings = await subSvc.GetSettingsAsync(ct);
             if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
                 return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
-            if (user.Role != UserRole.Admin && !user.CanUseSubdomainShares)
-                return Problem(statusCode: 403, title: "You are not allowed to create subdomain shares.");
             var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
             if (!subSvc.IsValidSlug(candidate, out var reason))
                 return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);

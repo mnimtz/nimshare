@@ -162,10 +162,9 @@ public class LinksController : ControllerBase
         var user = await _users.GetOrProvisionAsync(User, ct);
         var s = await subSvc.GetSettingsAsync(ct);
         var enabled = s is { Enabled: true } && !string.IsNullOrEmpty(s.BaseDomain);
-        return Ok(new SubdomainInfoResponse(
-            enabled,
-            enabled ? s!.BaseDomain : null,
-            enabled && (user.Role == UserRole.Admin || user.CanUseSubdomainShares)));
+        // v1.11.27: Marcus's Wunsch — Subdomain-Sharing steht jetzt jedem User
+        // offen (nicht mehr nur Admins/Admin-freigeschalteten Usern).
+        return Ok(new SubdomainInfoResponse(enabled, enabled ? s!.BaseDomain : null, enabled));
     }
 
     // Live-Check für das Subdomain-Feld (analog slug-check).
@@ -225,9 +224,11 @@ public class LinksController : ControllerBase
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
 
-        // v1.11.0: optionaler Subdomain-Slug. Feature muss aktiv sein, der
-        // User braucht das Admin-vergebene Recht (Admins immer), der Slug
-        // muss DNS-safe + nicht reserviert + über beide Link-Typen frei sein.
+        // v1.11.0: optionaler Subdomain-Slug. Feature muss instanzweit aktiv
+        // sein, der Slug muss DNS-safe + nicht reserviert + über beide Link-
+        // Typen frei sein.
+        // v1.11.27: Marcus's Wunsch — jeder User darf Subdomain-Links anlegen
+        // (das Admin-vergebene Per-User-Recht CanUseSubdomainShares entfällt).
         string? subdomainSlug = null;
         if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
         {
@@ -235,8 +236,6 @@ public class LinksController : ControllerBase
             var subSettings = await subSvc.GetSettingsAsync(ct);
             if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
                 return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
-            if (user.Role != UserRole.Admin && !user.CanUseSubdomainShares)
-                return Problem(statusCode: 403, title: "You are not allowed to create subdomain shares.");
             var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
             if (!subSvc.IsValidSlug(candidate, out var reason))
                 return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
@@ -383,8 +382,23 @@ public class LinksController : ControllerBase
                      || l.IsPublic)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
+        // v1.11.27: Marcus's Wunsch — Subdomain-Links sind jetzt für ALLE User
+        // sichtbar (nicht nur eigene/Public-Scope), unabhängig vom Owner.
+        // Lösch-/Bearbeitungsrechte ändern sich NICHT (weiterhin nur Owner
+        // oder Admin, siehe Update()/Delete()) — es geht nur um Sichtbarkeit.
+        var subdomainExtra = await _db.ShareLinks
+            .Include(l => l.File)
+            .Include(l => l.Folder)
+            .Include(l => l.SigningCertificate)
+            .Include(l => l.Owner)
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .ToListAsync(ct);
+        var merged = rows.Concat(subdomainExtra)
+            .GroupBy(l => l.Id).Select(g => g.First())
+            .OrderByDescending(l => l.CreatedAt)
+            .ToList();
         var subBase = await SubdomainBaseAsync(ct);
-        return Ok(rows.Select(l => ToDto(l, user.Id, subBase)));
+        return Ok(merged.Select(l => ToDto(l, user.Id, subBase)));
     }
 
     [HttpGet("{id:guid}")]

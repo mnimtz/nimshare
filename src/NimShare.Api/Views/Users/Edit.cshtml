@@ -111,20 +111,10 @@
     }
 </div>
 
-@* v1.11.0: Recht „Subdomain-Freigaben erstellen" — Teil des Haupt-Save-Forms
-   (siehe Kommentar unten bei der Update()-Action: ein separates <form> hier
-   wäre in HTML in das äußere Formular verschachtelt, was Browser silently
-   falsch parsen — das war der Grund für den "kann nicht speichern"-Bug.
-   Admins dürfen ohnehin immer Subdomain-Links anlegen (Server enforced das),
-   dieser Schalter ist nur für normale User relevant. *@
-<div class="card" style="margin-bottom:16px">
-    <h2 class="card-title">🌐 @T["subdomains.user_perm.heading"]</h2>
-    <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
-        <input type="checkbox" name="canUseSubdomainShares" value="true" @(Model.CanUseSubdomainShares ? "checked" : "")/>
-        <span>@T["subdomains.user_perm_label"]</span>
-    </label>
-    <div class="helper" style="margin-top:4px">@T["subdomains.user_perm_hint"]</div>
-</div>
+@* v1.11.27: Marcus's Wunsch — Subdomain-Sharing steht jetzt jedem User
+   offen, das Admin-vergebene Per-User-Recht entfällt. Der Toggle hier hatte
+   dadurch keine Wirkung mehr und wurde entfernt (siehe LinksController /
+   UploadRequestsController — CanUseSubdomainShares-Check gestrichen). *@
 
 @if (!isEntra)
 {
