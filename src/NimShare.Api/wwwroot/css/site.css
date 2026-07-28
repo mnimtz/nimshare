@@ -237,6 +237,15 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 0 0 3px rgba(0,160,251,.16);
 }
 .field + .field { margin-top: var(--sp-4); }
+/* v1.11.25: gleiches Problem wie bei .card + .card oben — der Sibling-
+   Selector matcht auch zwei .field nebeneinander in einer .row (flex), CSS
+   kennt keinen visuellen Kontext, nur DOM-Reihenfolge. Ergebnis: das zweite
+   Feld einer 2-spaltigen Zeile bekam einen ungewollten margin-top und
+   rutschte sichtbar nach unten (Marcus's Bug-Report: "E-Mail-Domain optisch
+   nach unten versetzt", auch im Freigabelink-/Upload-Anfrage-Modal). */
+.row > .field + .field,
+[style*="display:flex"] > .field + .field,
+[style*="display:grid"] > .field + .field { margin-top: 0; }
 .helper { font-size: .8rem; color: var(--tw-muted-blue); margin-top: var(--sp-1); }
 
 /* ── Tables ────────────────────────────────────────────────────── */
