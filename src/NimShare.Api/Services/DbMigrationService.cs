@@ -230,12 +230,16 @@ public class DbMigrationService : IDbMigrationService
             ("SignatureParticipants",(s,t,c) => CopySet<NimShare.Core.Entities.SignatureParticipant>(s, t, c)),
             ("SignatureFields",      (s,t,c) => CopySet<NimShare.Core.Entities.SignatureField>(s, t, c)),
             ("SignatureAudits",      (s,t,c) => CopySet<NimShare.Core.Entities.SignatureAudit>(s, t, c)),
-            ("WikiPages",            (s,t,c) => CopySet<NimShare.Core.Entities.WikiPage>(s, t, c)),
             ("ApiTokens",            (s,t,c) => CopySet<NimShare.Core.Entities.ApiToken>(s, t, c)),
             ("Webhooks",             (s,t,c) => CopySet<NimShare.Core.Entities.Webhook>(s, t, c)),
             ("EmailTemplates",       (s,t,c) => CopySet<NimShare.Core.Entities.EmailTemplate>(s, t, c)),
             ("Contacts",             (s,t,c) => CopySet<NimShare.Core.Entities.Contact>(s, t, c)),
             ("SigningCertificates",  (s,t,c) => CopySet<NimShare.Core.Entities.SigningCertificate>(s, t, c)),
+            // v1.11.38: fehlten bisher komplett in dieser Liste — bei einem
+            // Azure-SQL-Umzug wären Key-Store-Kunden/Keys/Dokumente verloren
+            // gegangen (Tabellen existierten, wurden nur nie kopiert).
+            ("KeyStoreEntries",      (s,t,c) => CopySet<NimShare.Core.Entities.KeyStoreEntry>(s, t, c)),
+            ("KeyStoreDocuments",    (s,t,c) => CopySet<NimShare.Core.Entities.KeyStoreDocument>(s, t, c)),
         };
         try
         {

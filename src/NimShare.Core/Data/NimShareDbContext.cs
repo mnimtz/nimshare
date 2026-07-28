@@ -34,7 +34,6 @@ public class NimShareDbContext : DbContext
     public DbSet<SignatureField> SignatureFields => Set<SignatureField>();
     public DbSet<SignatureAudit> SignatureAudits => Set<SignatureAudit>();
     public DbSet<OfficeSettings> OfficeSettings => Set<OfficeSettings>();
-    public DbSet<WikiPage> WikiPages => Set<WikiPage>();
     public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
     public DbSet<Webhook> Webhooks => Set<Webhook>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
@@ -483,22 +482,6 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.ResolutionNote).HasMaxLength(2000);
             e.HasOne(x => x.Reporter).WithMany().HasForeignKey(x => x.ReporterUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.ResolvedBy).WithMany().HasForeignKey(x => x.ResolvedByUserId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
-        });
-
-        b.Entity<WikiPage>(e =>
-        {
-            e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.Scope, x.OwnerUserId });
-            e.HasIndex(x => new { x.Scope, x.OwnerGroupId });
-            e.HasIndex(x => x.ParentPageId);
-            e.Property(x => x.Title).HasMaxLength(240).IsRequired();
-            e.Property(x => x.Slug).HasMaxLength(120).IsRequired();
-            e.Property(x => x.ContentMarkdown).HasMaxLength(100_000);
-            e.HasOne(x => x.ParentPage).WithMany().HasForeignKey(x => x.ParentPageId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
-            e.HasOne(x => x.OwnerGroup).WithMany().HasForeignKey(x => x.OwnerGroupId).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
-            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.LastEditedByUser).WithMany().HasForeignKey(x => x.LastEditedByUserId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
         });
 
         b.Entity<StorageFile>()

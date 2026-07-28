@@ -107,9 +107,6 @@ public class UserDeletionService : IUserDeletionService
         _db.UploadRequests.RemoveRange(await _db.UploadRequests.Where(u => u.OwnerId == userId).ToListAsync(ct));
         _db.CustomDomains.RemoveRange(await _db.CustomDomains.Where(d => d.OwnerId == userId).ToListAsync(ct));
 
-        // 8) Wiki-Owner-Pages
-        _db.WikiPages.RemoveRange(await _db.WikiPages.Where(w => w.OwnerUserId == userId).ToListAsync(ct));
-
         // 9) Ordner (persönliche + vom User erstellte in Groups) — Public-Ordner nicht,
         //    weil andere Nutzer sie brauchen. Cascade auf StorageFile ist oben schon
         //    manuell gelaufen.
