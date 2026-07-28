@@ -131,8 +131,19 @@ public class HomeController : Controller
             .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
+        // v1.11.31: Marcus's Report — Upload-Anfrage-Links mit Subdomain
+        // tauchten in dieser Sektion nirgends auf, weil hier nur ShareLinks
+        // abgefragt wurden. UploadRequestLink hat aber genauso ein
+        // SubdomainSlug-Feld (Create() akzeptiert es seit v1.11.0). Gleiche
+        // Sichtbarkeit (alle User) wie oben bei den ShareLinks.
+        var uploadSubdomainLinks = await _db.UploadRequests
+            .Include(l => l.Owner)
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(ct);
         var sdSettings = await _subdomains.GetSettingsAsync(ct);
         ViewData["SubdomainLinks"] = subdomainLinks;
+        ViewData["UploadSubdomainLinks"] = uploadSubdomainLinks;
         ViewData["SubdomainBase"] = sdSettings is { Enabled: true } ? sdSettings.BaseDomain : null;
 
         // v1.11.29 — Marcus's Report: Upload-Anfrage-Links tauchten auf /links

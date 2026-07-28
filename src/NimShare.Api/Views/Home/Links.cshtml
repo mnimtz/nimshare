@@ -7,6 +7,7 @@
     var subdomainLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["SubdomainLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var subdomainBase = ViewData["SubdomainBase"] as string;
     var uploadLinks = (List<NimShare.Core.Entities.UploadRequestLink>)(ViewData["UploadLinks"] ?? new List<NimShare.Core.Entities.UploadRequestLink>());
+    var uploadSubdomainLinks = (List<NimShare.Core.Entities.UploadRequestLink>)(ViewData["UploadSubdomainLinks"] ?? new List<NimShare.Core.Entities.UploadRequestLink>());
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
     var currentUserId = (Guid)(ViewData["CurrentUserId"] ?? Guid.Empty);
 }
@@ -155,7 +156,7 @@ else
 @* v1.11.0 — Marcus's Wunsch: eigene Sektion nur für Links mit Subdomain-URL,
    quer zu Privat/Gruppen/Öffentlich, damit man sofort sieht welche Links
    eine wichtig.nimshare.com-Adresse haben. *@
-@if (subdomainBase is not null && subdomainLinks.Any())
+@if (subdomainBase is not null && (subdomainLinks.Any() || uploadSubdomainLinks.Any()))
 {
     <h2 style="margin-top:32px">🌐 @T["links.subdomain.section"]</h2>
     <p class="muted" style="margin-bottom:8px">@T["links.subdomain.lede"]</p>
@@ -219,6 +220,35 @@ else
                             <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
                         }
                         <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" data-delete="@l.Id">@T["links.action.delete"]</button>
+                    }
+                </td>
+            </tr>
+        }
+        @* v1.11.31: Upload-Anfrage-Links mit Subdomain — gleiche Tabelle,
+           anderer Link-Typ (kein File/Folder, kein Report/Revoke-Endpoint,
+           nur Delete über /api/v1/upload-requests). *@
+        @foreach (var l in uploadSubdomainLinks)
+        {
+            var canManageU = isAdmin || l.OwnerId == currentUserId;
+            var sdHostU = $"{l.SubdomainSlug}.{subdomainBase}";
+            var sdUrlU = $"https://{sdHostU}";
+            var sdStateU = l.IsRevoked
+                ? ("chip-critical", @T["links.revoked"].Value)
+                : (l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow) || (l.MaxUploads is not null && l.UploadCount >= l.MaxUploads)
+                    ? ("chip-warn", @T["links.expired"].Value)
+                    : ("chip-ok", @T["links.active"].Value);
+            <tr>
+                <td data-th="@T["links.subdomain.url"]"><a href="@sdUrlU" class="mono" target="_blank">@sdHostU</a></td>
+                <td data-th="@T["file.name"]"><span class="muted">📤 @T["links.uploads.target_folder"]:</span> <strong>@l.TargetFolder</strong></td>
+                <td class="muted" data-th="@T["links.public.by"]">@l.Owner?.DisplayName</td>
+                <td data-th="@T["links.downloads"]">@l.UploadCount @(l.MaxUploads is int m6 ? $" / {m6}" : "")</td>
+                <td data-th="@T["links.state"]"><span class="chip @sdStateU.Item1">@sdStateU.Item2</span></td>
+                <td>
+                    <a class="btn btn-secondary btn-sm" href="@sdUrlU" target="_blank">↗ @T["links.action.open"]</a>
+                    <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrlU">@T["links.action.copy"]</button>
+                    @if (canManageU)
+                    {
+                        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" data-delete-upload="@l.Id">@T["links.action.delete"]</button>
                     }
                 </td>
             </tr>
