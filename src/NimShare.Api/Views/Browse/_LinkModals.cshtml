@@ -254,6 +254,14 @@
             <label>@T["upload.message"]</label>
             <textarea id="urMsg" rows="2"></textarea>
         </div>
+        @* v1.11.28: Uploads landen zusätzlich in einem yyyy-MM-dd-Unterordner
+           unter dem Zielordner — Default an, damit man später leichter findet
+           was wann reinkam. *@
+        <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="urDateSubfolders" checked/>
+            <span>@T["upload.date_subfolders_label"]</span>
+        </label>
+        <div class="helper" style="margin-top:2px">@T["upload.date_subfolders_hint"]</div>
         @* v1.10.146: Absender-Zertifikat auch für Upload-Anfragen. *@
         <div class="field">
             <label>@T["share.cert.picker_label"]</label>
@@ -615,6 +623,7 @@ function resetShareModal() {
 function openUploadRequestModal(folderId) {
     currentUploadReqFolder = folderId;
     ['urSlug','urPw','urMax','urExp','urMsg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('urDateSubfolders').checked = true;
     const st = document.getElementById('urSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
     document.getElementById('urResult').style.display = 'none';
@@ -718,6 +727,7 @@ async function createUploadRequest() {
         expiresAt: document.getElementById('urExp').value ? new Date(document.getElementById('urExp').value).toISOString() : null,
         message: document.getElementById('urMsg').value || null,
         targetFolder: 'Received',
+        useDateSubfolders: document.getElementById('urDateSubfolders').checked,
         notifyOnUpload: true,
         signingCertificateId: document.getElementById('urCert').value || null,
         // v1.11.0: optionaler Subdomain-Slug (null wenn Toggle aus/leer).

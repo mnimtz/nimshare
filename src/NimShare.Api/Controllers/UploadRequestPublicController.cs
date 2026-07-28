@@ -105,6 +105,14 @@ public class UploadRequestPublicController : Controller
             .ExecuteUpdateAsync(s => s.SetProperty(l => l.UploadCount, l => l.UploadCount + 1), ct);
         if (reserved == 0) return StatusCode(410); // gone/expired/full
 
+        // v1.11.28: BUGFIX — bislang wurde nur das Freitext-Label
+        // (StorageFile.Folder) gesetzt, nie die echte FolderId. Damit landete
+        // JEDE per Upload-Anfrage empfangene Datei mit FolderId=null in der
+        // DB — für die Ordneransicht unsichtbar (Marcus's Report: Mail kam,
+        // "Done" wurde angezeigt, aber die Datei tauchte nirgends auf).
+        var folderSvc = HttpContext.RequestServices.GetRequiredService<IFolderService>();
+        var targetFolder = await ResolveTargetFolderAsync(link, folderSvc, ct);
+
         var file = new StorageFile
         {
             OwnerId = link.OwnerId,
@@ -112,6 +120,8 @@ public class UploadRequestPublicController : Controller
             SizeBytes = req.SizeBytes,
             ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,
             Folder = link.TargetFolder,
+            FolderId = targetFolder.Id,
+            Scope = targetFolder.Scope,
             Status = StorageFileStatus.Pending,
         };
         file.BlobPath = $"users/{link.OwnerId:N}/{file.Id:N}/{SanitiseFilename(req.Filename)}";
@@ -159,6 +169,51 @@ public class UploadRequestPublicController : Controller
             HttpContext.RequestServices.GetRequiredService<IThumbnailService>()
                 .Enqueue(file.Id, file.BlobPath, file.ContentType);
         return Ok(new { ok = true });
+    }
+
+    /// <summary>v1.11.28: Löst TargetFolder in eine echte Folder-Entity auf
+    /// (findet oder legt sie unter dem Personal-Root des Owners an) und
+    /// persistiert TargetFolderId einmalig am Link, damit nachfolgende
+    /// Uploads sie direkt wiederverwenden statt jedes Mal neu aufzulösen.
+    /// Bei UseDateSubfolders=true kommt zusätzlich ein yyyy-MM-dd-Unterordner
+    /// dazu (wird NICHT am Link persistiert, ändert sich ja täglich).</summary>
+    private async Task<Folder> ResolveTargetFolderAsync(UploadRequestLink link, IFolderService folderSvc, CancellationToken ct)
+    {
+        Folder? target = null;
+        if (link.TargetFolderId is Guid existingId)
+            target = await _db.Folders.FindAsync(new object[] { existingId }, ct);
+
+        if (target is null)
+        {
+            var root = await folderSvc.GetOrCreateRootAsync(FileScope.Personal, link.OwnerId, null, link.Owner, ct);
+            var name = string.IsNullOrWhiteSpace(link.TargetFolder) ? "Received" : link.TargetFolder;
+            target = await folderSvc.ResolvePathAsync(root, new[] { name }, ct);
+            if (target is null)
+            {
+                try { target = await folderSvc.CreateChildAsync(root, name, link.Owner, ct); }
+                catch (InvalidOperationException)
+                {
+                    // Race: ein zweiter gleichzeitiger Upload hat ihn zuerst angelegt.
+                    target = await folderSvc.ResolvePathAsync(root, new[] { name }, ct);
+                }
+            }
+            link.TargetFolderId = target!.Id;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (!link.UseDateSubfolders) return target!;
+
+        var dateName = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
+        var dateFolder = await folderSvc.ResolvePathAsync(target!, new[] { dateName }, ct);
+        if (dateFolder is null)
+        {
+            try { dateFolder = await folderSvc.CreateChildAsync(target!, dateName, link.Owner, ct); }
+            catch (InvalidOperationException)
+            {
+                dateFolder = await folderSvc.ResolvePathAsync(target!, new[] { dateName }, ct);
+            }
+        }
+        return dateFolder!;
     }
 
     private static string RenderMarkdown(string? md)

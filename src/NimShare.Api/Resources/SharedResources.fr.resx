@@ -1631,4 +1631,10 @@ Merci d'utiliser NimShare.</value></data>
   <data name="keystore.field.key_value_serial"><value>Numéro de série</value></data>
   <data name="keystore.field.key_value_product"><value>Code produit</value></data>
   <data name="keystore.error.value_parts_required"><value>Veuillez remplir les deux parties, ou les laisser vides pour conserver la clé actuelle.</value></data>
+  <data name="report.access_kind.serial_revealed"><value>Numéro de série affiché</value></data>
+  <data name="report.access_kind.serial_emailed"><value>Numéro de série envoyé par e-mail</value></data>
+  <data name="report.access_kind.keystore_revealed"><value>Clé de licence affichée</value></data>
+  <data name="report.access_kind.keystore_emailed"><value>Clé de licence envoyée par e-mail</value></data>
+  <data name="upload.date_subfolders_label"><value>Classer dans des sous-dossiers par date</value></data>
+  <data name="upload.date_subfolders_hint"><value>Chaque fichier envoyé atterrit en plus dans un sous-dossier nommé par date (p. ex. 2026-07-28), pour le retrouver plus facilement ensuite.</value></data>
 </root>

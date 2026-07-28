@@ -33,6 +33,10 @@ public class UploadRequestsController : ControllerBase
         string? Message,
         string? TargetFolder,
         bool NotifyOnUpload,
+        // v1.11.28: Uploads landen zusätzlich in einem yyyy-MM-dd-Unterordner
+        // unter TargetFolder — Default an, damit man später leichter findet
+        // was wann reinkam.
+        bool UseDateSubfolders = true,
         string? RecurringDaysOfWeek = null,
         int? RecurringWindowDays = null,
         // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
@@ -88,6 +92,7 @@ public class UploadRequestsController : ControllerBase
             MaxUploads = req.MaxUploads,
             Message = req.Message,
             TargetFolder = string.IsNullOrWhiteSpace(req.TargetFolder) ? "Received" : req.TargetFolder!,
+            UseDateSubfolders = req.UseDateSubfolders,
             NotifyOnUpload = req.NotifyOnUpload,
             RecurringDaysOfWeek = string.IsNullOrWhiteSpace(req.RecurringDaysOfWeek) ? null : req.RecurringDaysOfWeek!.Trim(),
             RecurringWindowDays = req.RecurringWindowDays is > 0 ? req.RecurringWindowDays.Value : 7,

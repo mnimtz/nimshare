@@ -1635,4 +1635,10 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.field.key_value_serial"><value>Seriennummer</value></data>
   <data name="keystore.field.key_value_product"><value>Produktcode</value></data>
   <data name="keystore.error.value_parts_required"><value>Bitte beide Teile ausfüllen, oder beide leer lassen um den aktuellen Schlüssel zu behalten.</value></data>
+  <data name="report.access_kind.serial_revealed"><value>Seriennummer angezeigt</value></data>
+  <data name="report.access_kind.serial_emailed"><value>Seriennummer per E-Mail gesendet</value></data>
+  <data name="report.access_kind.keystore_revealed"><value>Lizenzschlüssel angezeigt</value></data>
+  <data name="report.access_kind.keystore_emailed"><value>Lizenzschlüssel per E-Mail gesendet</value></data>
+  <data name="upload.date_subfolders_label"><value>In Datums-Unterordner einsortieren</value></data>
+  <data name="upload.date_subfolders_hint"><value>Jeder Upload landet zusätzlich in einem nach Datum benannten Unterordner (z.B. 2026-07-28), damit du später leichter findest was wann reinkam.</value></data>
 </root>

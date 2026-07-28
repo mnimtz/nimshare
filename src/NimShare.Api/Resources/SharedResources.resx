@@ -1633,4 +1633,10 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.field.key_value_serial"><value>Serial number</value></data>
   <data name="keystore.field.key_value_product"><value>Product code</value></data>
   <data name="keystore.error.value_parts_required"><value>Please fill in both parts, or leave both empty to keep the current key.</value></data>
+  <data name="report.access_kind.serial_revealed"><value>Serial number shown</value></data>
+  <data name="report.access_kind.serial_emailed"><value>Serial number emailed</value></data>
+  <data name="report.access_kind.keystore_revealed"><value>License key shown</value></data>
+  <data name="report.access_kind.keystore_emailed"><value>License key emailed</value></data>
+  <data name="upload.date_subfolders_label"><value>Sort into date subfolders</value></data>
+  <data name="upload.date_subfolders_hint"><value>Each upload lands in an extra subfolder named by date (e.g. 2026-07-28), so you can find them again more easily later.</value></data>
 </root>

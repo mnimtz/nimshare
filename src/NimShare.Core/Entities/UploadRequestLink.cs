@@ -29,6 +29,11 @@ public class UploadRequestLink
     public Guid? TargetFolderId { get; set; }
     public Folder? TargetFolderRef { get; set; }
 
+    /// <summary>v1.11.28 — wenn true, landet jeder Upload zusätzlich in einem
+    /// nach Datum benannten Unterordner (yyyy-MM-dd, UTC) unter TargetFolder,
+    /// statt alle Uploads flach in einen Ordner zu werfen. Default an.</summary>
+    public bool UseDateSubfolders { get; set; } = true;
+
     public bool NotifyOnUpload { get; set; } = true;
     public bool IsRevoked { get; set; }
 

@@ -1630,4 +1630,10 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="keystore.field.key_value_serial"><value>Serienummer</value></data>
   <data name="keystore.field.key_value_product"><value>Productcode</value></data>
   <data name="keystore.error.value_parts_required"><value>Vul beide delen in, of laat beide leeg om de huidige sleutel te behouden.</value></data>
+  <data name="report.access_kind.serial_revealed"><value>Serienummer getoond</value></data>
+  <data name="report.access_kind.serial_emailed"><value>Serienummer per e-mail verzonden</value></data>
+  <data name="report.access_kind.keystore_revealed"><value>Licentiesleutel getoond</value></data>
+  <data name="report.access_kind.keystore_emailed"><value>Licentiesleutel per e-mail verzonden</value></data>
+  <data name="upload.date_subfolders_label"><value>Sorteren in datum-submappen</value></data>
+  <data name="upload.date_subfolders_hint"><value>Elke upload komt ook in een submap met de datum als naam (bijv. 2026-07-28), zodat je later makkelijker terugvindt wat wanneer binnenkwam.</value></data>
 </root>
