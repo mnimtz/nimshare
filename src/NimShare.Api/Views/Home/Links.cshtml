@@ -208,10 +208,11 @@ else
                 <td data-th="@T["links.state"]"><span class="chip @sdState.Item1">@sdState.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="@sdUrl" target="_blank">↗ @T["links.action.open"]</a>
-                    @if (canManage)
-                    {
-                        <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
-                    }
+                    @* v1.11.35 — Marcus's Wunsch: Auswertung sehen dürfen alle, die den
+                       Link auch sehen können — Subdomain-Links sind seit v1.11.27 für
+                       alle sichtbar, also auch der Report-Button hier ungated. Revoke/
+                       Delete bleiben bewusst bei canManage (keine neue Löschberechtigung). *@
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
                     @if (canManage)
                     {
@@ -363,12 +364,11 @@ else
                 <td data-th="@T["links.state"]"><span class="chip @pstate.Item1">@pstate.Item2</span></td>
                 <td>
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
-                    @* v1.10.97: Admin-Moderation für öffentliche Links. Marcus's
-                       Report: „als Admin auch öffentlich links löschen dürfen". *@
-                    @if (isAdmin)
-                    {
-                        <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
-                    }
+                    @* v1.11.35 — Marcus's Wunsch: Auswertung sehen dürfen alle, die den
+                       Link sehen können — öffentliche Links sind für alle sichtbar, also
+                       auch der Report-Button hier ungated. Revoke/Delete bleiben Admin-only
+                       (v1.10.97: Admin-Moderation für öffentliche Links). *@
+                    <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
                     @if (isAdmin)
                     {

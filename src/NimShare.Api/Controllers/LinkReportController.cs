@@ -43,10 +43,22 @@ public class LinkReportController : Controller
     public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
+        // v1.11.35 — Marcus's Wunsch: Auswertung/Report sehen dürfen alle
+        // User, die den Link auch sonst sehen können (nicht nur Owner/Admin)
+        // — identische Sichtbarkeits-Regel wie HomeController.Links()/
+        // LinksController.List() (eigene + Public-Scope-Ziel + IsPublic +
+        // Subdomain-Links, die seit v1.11.27 für alle sichtbar sind).
         var link = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
-            .SingleOrDefaultAsync(l => l.Id == id && (l.OwnerId == me.Id || me.Role == UserRole.Admin), ct);
+            .SingleOrDefaultAsync(l => l.Id == id && (
+                me.Role == UserRole.Admin
+                || l.OwnerId == me.Id
+                || (l.File != null && l.File.Scope == FileScope.Public)
+                || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                || l.IsPublic
+                || (l.SubdomainSlug != null && l.SubdomainSlug != "")
+            ), ct);
         if (link is null) return NotFound();
 
         // v1.10.158: ALLE Events des Links laden für die Aggregate. Die Event-
