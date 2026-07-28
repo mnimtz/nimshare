@@ -113,6 +113,41 @@ var authBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefault
         options.Cookie.Name = "nimshare.auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        // v1.11.21 — Marcus's Report: "manchmal, wenn ich mich einlogge,
+        // besonders mobil, komm ich nicht aufs dashboard, sondern lande
+        // irgendwie auf /browse, sieht komisch aus". Root cause: /browse
+        // (BrowseController) rendert seine Ordner-/Datei-Liste NICHT
+        // server-seitig fertig, sondern lädt sie per fetch() gegen
+        // /api/v1/browse/list nach — und dieser Endpoint hängt (wie ALLE
+        // api/v1/*-Routen) an der "ApiUser"-Policy, die u.a. das Cookie-
+        // Schema akzeptiert. Ohne diese Events-Overrides behandelt das
+        // Cookie-Middleware JEDEN nicht-authentifizierten Aufruf gleich —
+        // auch einen fetch() — und schickt ein 302 auf /login?ReturnUrl=…
+        // zurück. Der Browser folgt dem Redirect automatisch, fetch() bekommt
+        // dann HTML statt JSON zurück, JSON.parse() wirft, die Ordnerliste
+        // bleibt leer/kaputt hängen — genau das "sieht komisch aus". Auf
+        // Mobile Safari läuft das Auth-Cookie durch aggressiveres
+        // Hintergrund-/Tab-Handling öfter in genau dieses Zeitfenster
+        // (Cookie kurz vor Ablauf beim App-Wechsel), daher "besonders mobil".
+        // Der zweite Teil des Reports (Login landet auf /browse statt
+        // /dashboard) ist SEPARAT und schlicht das normale ReturnUrl-
+        // Verhalten (AccountController.Login redirected nach dem Login
+        // dorthin, wo man ursprünglich hinwollte) — kein Bug, aber die kaputte
+        // AJAX-Antwort auf DIESER Seite machte es sichtbar/verwirrend.
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            var isApiOrAjax = ctx.Request.Path.StartsWithSegments("/api")
+                || string.Equals(ctx.Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)
+                || (ctx.Request.Headers.Accept.ToString().Contains("application/json")
+                    && !ctx.Request.Headers.Accept.ToString().Contains("text/html"));
+            if (isApiOrAjax)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+            ctx.Response.Redirect(ctx.RedirectUri);
+            return Task.CompletedTask;
+        };
     });
 
 if (entraConfigured)
