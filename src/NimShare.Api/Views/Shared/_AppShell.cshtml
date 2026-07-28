@@ -127,6 +127,10 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
+            @* v1.11.22: Key-Store — Marcus's Anfrage, für alle User sichtbar
+               (nicht nur Admins). Owner-Scoping passiert serverseitig im
+               Controller (eigene Einträge, Admins sehen alle). *@
+            <a href="/keystore"  class="@Exact("/keystore")">🔑 @T["nav.keystore"]</a>
 
             @{
                 // v1.10.153: Zertifikate aus Signatur-Gruppe rausgezogen zum

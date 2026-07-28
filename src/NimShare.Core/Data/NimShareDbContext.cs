@@ -39,6 +39,7 @@ public class NimShareDbContext : DbContext
     public DbSet<Webhook> Webhooks => Set<Webhook>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<KeyStoreEntry> KeyStoreEntries => Set<KeyStoreEntry>();
     public DbSet<SigningCertificate> SigningCertificates => Set<SigningCertificate>();
     public DbSet<FilePin> FilePins => Set<FilePin>();
     // v1.10.82: App-Store-Blocker (Apple 1.2 UGC-Guideline)
@@ -322,6 +323,21 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.Company).HasMaxLength(200);
             e.Property(x => x.Notes).HasMaxLength(2000);
             e.Property(x => x.Tags).HasMaxLength(500);
+            e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // v1.11.22 — Key-Store: Kunden + Lizenzschlüssel pro User.
+        b.Entity<KeyStoreEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.OwnerUserId);
+            e.HasIndex(x => new { x.OwnerUserId, x.CustomerEmail });
+            e.Property(x => x.CustomerName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.CustomerEmail).HasMaxLength(250);
+            e.Property(x => x.CustomerEmailDomain).HasMaxLength(250);
+            e.Property(x => x.KeyType).HasMaxLength(100).IsRequired();
+            e.Property(x => x.KeyValueEncrypted).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.Notes).HasMaxLength(2000);
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 

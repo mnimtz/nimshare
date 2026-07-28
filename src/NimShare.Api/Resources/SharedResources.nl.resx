@@ -1570,4 +1570,47 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="profile.ai.toggle_hint"><value>Je verzoeken en relevante tekstfragmenten uit je bestanden worden naar de bovengenoemde aanbieder gestuurd. Wachtwoorden, certificaten en andere bestanden worden NIET verstuurd.</value></data>
   <data name="profile.ai.revoke_hint"><value>Je kunt je toestemming hier op elk moment intrekken.</value></data>
   <data name="profile.ai.privacy_link"><value>Privacybeleid</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>Sleutelbeheer</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>Sleutelbeheer</value></data>
+  <data name="keystore.lede" xml:space="preserve"><value>Beheer je klanten en hun licentiesleutels — koppel een deellink aan een sleutel zodat ontvangers automatisch de juiste zien.</value></data>
+  <data name="keystore.search_placeholder" xml:space="preserve"><value>Zoek klant, e-mail, domein, type…</value></data>
+  <data name="keystore.new" xml:space="preserve"><value>Nieuwe sleutel</value></data>
+  <data name="keystore.edit" xml:space="preserve"><value>Sleutel bewerken</value></data>
+  <data name="keystore.delete_selected" xml:space="preserve"><value>Selectie verwijderen</value></data>
+  <data name="keystore.selected_suffix" xml:space="preserve"><value>geselecteerd</value></data>
+  <data name="keystore.loading" xml:space="preserve"><value>Laden…</value></data>
+  <data name="keystore.empty" xml:space="preserve"><value>Nog geen sleutels. Klik op "Nieuwe sleutel" om je eerste klant toe te voegen.</value></data>
+  <data name="keystore.load_error" xml:space="preserve"><value>Kon sleutels niet laden.</value></data>
+  <data name="keystore.col.customer" xml:space="preserve"><value>Klant</value></data>
+  <data name="keystore.col.contact" xml:space="preserve"><value>E-mail / domein</value></data>
+  <data name="keystore.col.type" xml:space="preserve"><value>Type</value></data>
+  <data name="keystore.col.valid_until" xml:space="preserve"><value>Geldig tot</value></data>
+  <data name="keystore.col.status" xml:space="preserve"><value>Status</value></data>
+  <data name="keystore.col.owner" xml:space="preserve"><value>Eigenaar</value></data>
+  <data name="keystore.status.active" xml:space="preserve"><value>Actief</value></data>
+  <data name="keystore.status.expired" xml:space="preserve"><value>Verlopen</value></data>
+  <data name="keystore.status.upcoming" xml:space="preserve"><value>Nog niet actief</value></data>
+  <data name="keystore.action.reveal" xml:space="preserve"><value>Tonen</value></data>
+  <data name="keystore.action.edit" xml:space="preserve"><value>Bewerken</value></data>
+  <data name="keystore.action.delete" xml:space="preserve"><value>Verwijderen</value></data>
+  <data name="keystore.reveal_error" xml:space="preserve"><value>Kon de sleutel niet ophalen.</value></data>
+  <data name="keystore.field.customer_name" xml:space="preserve"><value>Klantnaam</value></data>
+  <data name="keystore.field.customer_email" xml:space="preserve"><value>E-mail klant</value></data>
+  <data name="keystore.field.customer_domain" xml:space="preserve"><value>E-maildomein</value></data>
+  <data name="keystore.field.contact_hint" xml:space="preserve"><value>Vul een exact e-mailadres voor één persoon in, of een domein (bijv. "acme.com") voor iedereen @acme.com. Minstens één is verplicht.</value></data>
+  <data name="keystore.field.key_type" xml:space="preserve"><value>Sleuteltype</value></data>
+  <data name="keystore.field.key_type_placeholder" xml:space="preserve"><value>bijv. Proefversie, Volledige versie, Abonnement</value></data>
+  <data name="keystore.field.key_value" xml:space="preserve"><value>Sleutelwaarde</value></data>
+  <data name="keystore.field.key_value_unchanged" xml:space="preserve"><value>Laat leeg om de huidige sleutel te behouden</value></data>
+  <data name="keystore.field.valid_from" xml:space="preserve"><value>Geldig vanaf</value></data>
+  <data name="keystore.field.valid_until" xml:space="preserve"><value>Geldig tot</value></data>
+  <data name="keystore.field.notes" xml:space="preserve"><value>Notities</value></data>
+  <data name="keystore.error.name_required" xml:space="preserve"><value>Voer een klantnaam in.</value></data>
+  <data name="keystore.error.contact_required" xml:space="preserve"><value>Voer een e-mailadres of domein in.</value></data>
+  <data name="keystore.error.type_required" xml:space="preserve"><value>Voer een sleuteltype in.</value></data>
+  <data name="keystore.error.value_required" xml:space="preserve"><value>Voer een sleutelwaarde in.</value></data>
+  <data name="keystore.save_error" xml:space="preserve"><value>Kon niet opslaan.</value></data>
+  <data name="keystore.confirm_delete" xml:space="preserve"><value>Deze sleutel verwijderen?</value></data>
+  <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Geselecteerde sleutels verwijderen?</value></data>
+  <data name="keystore.delete_error" xml:space="preserve"><value>Kon niet verwijderen.</value></data>
 </root>

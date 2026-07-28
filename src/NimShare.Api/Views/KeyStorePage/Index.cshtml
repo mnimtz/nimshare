@@ -1,0 +1,297 @@
+@{
+    ViewData["Title"] = T["keystore.title"].Value;
+    Layout = "_AppShell";
+    var isAdmin = User.IsInRole("Admin");
+}
+<div class="workspace-inner" style="max-width:1100px;margin:0 auto">
+    <div class="page-head">
+        <h1>🔑 @T["keystore.title"]</h1>
+        <p class="muted">@T["keystore.lede"]</p>
+    </div>
+
+    <div class="row" style="gap:var(--sp-3);align-items:center;flex-wrap:wrap;margin:16px 0">
+        <input type="search" id="ksSearch" placeholder="@T["keystore.search_placeholder"]"
+               style="flex:1;min-width:220px;padding:10px 14px"/>
+        <button class="btn btn-primary" onclick="ksOpenCreate()">+ @T["keystore.new"]</button>
+    </div>
+
+    <div id="ksBulkBar" class="card" style="display:none;margin-bottom:12px;background:var(--tw-gray-100);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span id="ksBulkCount"></span>
+        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="ksBulkDelete()">🗑 @T["keystore.delete_selected"]</button>
+    </div>
+
+    <div id="ksLoading" class="muted">@T["keystore.loading"]</div>
+    <div id="ksEmpty" class="card" style="display:none"><p class="muted">@T["keystore.empty"]</p></div>
+
+    <table class="table table-cards-mobile" id="ksTable" style="display:none">
+        <thead>
+            <tr>
+                <th style="width:36px"><input type="checkbox" id="ksSelectAll" onchange="ksToggleAll(this.checked)"/></th>
+                <th>@T["keystore.col.customer"]</th>
+                <th>@T["keystore.col.contact"]</th>
+                <th>@T["keystore.col.type"]</th>
+                <th>@T["keystore.col.valid_until"]</th>
+                <th>@T["keystore.col.status"]</th>
+                @if (isAdmin)
+                {
+                    <th>@T["keystore.col.owner"]</th>
+                }
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="ksBody"></tbody>
+    </table>
+</div>
+
+<!-- Create/Edit modal -->
+<div class="modal-backdrop" id="ksModal" onclick="if(event.target===this)ksCloseModal()">
+    <div class="modal-panel" style="max-width:520px">
+        <h2 id="ksModalTitle">@T["keystore.new"]</h2>
+        <input type="hidden" id="ksId"/>
+        <div class="field">
+            <label>@T["keystore.field.customer_name"]</label>
+            <input type="text" id="ksCustomerName" required/>
+        </div>
+        <div class="row" style="gap:var(--sp-3)">
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.customer_email"]</label>
+                <input type="email" id="ksCustomerEmail" placeholder="kunde@firma.com"/>
+            </div>
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.customer_domain"]</label>
+                <input type="text" id="ksCustomerDomain" placeholder="firma.com"/>
+            </div>
+        </div>
+        <div class="helper">@T["keystore.field.contact_hint"]</div>
+        <div class="row" style="gap:var(--sp-3);margin-top:8px">
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.key_type"]</label>
+                <input type="text" id="ksKeyType" placeholder="@T["keystore.field.key_type_placeholder"]" required/>
+            </div>
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.key_value"]</label>
+                <input type="text" id="ksKeyValue" class="mono" placeholder="AV09Z-K13-2G9D-98MT-81"/>
+            </div>
+        </div>
+        <div class="row" style="gap:var(--sp-3);margin-top:8px">
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.valid_from"]</label>
+                <input type="date" id="ksValidFrom"/>
+            </div>
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.valid_until"]</label>
+                <input type="date" id="ksValidUntil"/>
+            </div>
+        </div>
+        <div class="field" style="margin-top:8px">
+            <label>@T["keystore.field.notes"]</label>
+            <textarea id="ksNotes" rows="2"></textarea>
+        </div>
+        <div id="ksModalError" class="helper" style="display:none;color:var(--status-critical);margin-top:8px"></div>
+        <div class="actions" style="margin-top:16px">
+            <button type="button" class="btn btn-ghost" onclick="ksCloseModal()">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="ksSave()" id="ksSaveBtn">@T["modal.save"]</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let ksRows = [];
+let ksSelected = new Set();
+const KS_IS_ADMIN = @Json.Serialize(isAdmin);
+
+async function ksApi(method, path, body) {
+    const r = await fetch(path, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+    });
+    return r;
+}
+
+function ksStatus(row) {
+    const now = new Date();
+    if (row.validUntil && new Date(row.validUntil) < now) return { cls: 'chip-critical', label: @Json.Serialize(T["keystore.status.expired"].Value) };
+    if (row.validFrom && new Date(row.validFrom) > now) return { cls: 'chip-warn', label: @Json.Serialize(T["keystore.status.upcoming"].Value) };
+    return { cls: 'chip-ok', label: @Json.Serialize(T["keystore.status.active"].Value) };
+}
+
+function ksFmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString();
+}
+
+function ksRender() {
+    const tbody = document.getElementById('ksBody');
+    tbody.innerHTML = '';
+    document.getElementById('ksLoading').style.display = 'none';
+    if (ksRows.length === 0) {
+        document.getElementById('ksEmpty').style.display = 'block';
+        document.getElementById('ksTable').style.display = 'none';
+        return;
+    }
+    document.getElementById('ksEmpty').style.display = 'none';
+    document.getElementById('ksTable').style.display = '';
+    for (const row of ksRows) {
+        const st = ksStatus(row);
+        const contact = row.customerEmail || (row.customerEmailDomain ? '@@' + row.customerEmailDomain : '—');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td data-th=""><input type="checkbox" class="ks-row-check" data-id="${row.id}" ${ksSelected.has(row.id) ? 'checked' : ''}/></td>
+            <td data-th="${@Json.Serialize(T["keystore.col.customer"].Value)}"><strong>${ksEsc(row.customerName)}</strong></td>
+            <td data-th="${@Json.Serialize(T["keystore.col.contact"].Value)}" class="mono">${ksEsc(contact)}</td>
+            <td data-th="${@Json.Serialize(T["keystore.col.type"].Value)}">${ksEsc(row.keyType)}</td>
+            <td data-th="${@Json.Serialize(T["keystore.col.valid_until"].Value)}" class="muted">${ksFmtDate(row.validUntil)}</td>
+            <td data-th="${@Json.Serialize(T["keystore.col.status"].Value)}"><span class="chip ${st.cls}">${st.label}</span></td>
+            ${KS_IS_ADMIN ? `<td data-th="${@Json.Serialize(T["keystore.col.owner"].Value)}" class="muted">${row.isOwnedByMe ? '—' : ksEsc(row.ownerName || '')}</td>` : ''}
+            <td>
+                <button class="btn btn-ghost btn-sm" onclick="ksReveal('${row.id}', this)">🔑 @T["keystore.action.reveal"]</button>
+                <button class="btn btn-ghost btn-sm" onclick="ksOpenEdit('${row.id}')">@T["keystore.action.edit"]</button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="ksDelete('${row.id}')">@T["keystore.action.delete"]</button>
+            </td>`;
+        tbody.appendChild(tr);
+    }
+    document.querySelectorAll('.ks-row-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (cb.checked) ksSelected.add(cb.dataset.id); else ksSelected.delete(cb.dataset.id);
+            ksUpdateBulkBar();
+        });
+    });
+    ksUpdateBulkBar();
+}
+
+function ksEsc(s) {
+    return (s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function ksUpdateBulkBar() {
+    const bar = document.getElementById('ksBulkBar');
+    if (ksSelected.size === 0) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    document.getElementById('ksBulkCount').textContent =
+        ksSelected.size + ' ' + @Json.Serialize(T["keystore.selected_suffix"].Value);
+}
+
+function ksToggleAll(checked) {
+    ksSelected = new Set(checked ? ksRows.map(r => r.id) : []);
+    ksRender();
+}
+
+async function ksLoad() {
+    const q = document.getElementById('ksSearch').value.trim();
+    const r = await ksApi('GET', '/api/v1/keystore' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    if (!r.ok) { document.getElementById('ksLoading').textContent = @Json.Serialize(T["keystore.load_error"].Value); return; }
+    ksRows = await r.json();
+    ksRender();
+}
+
+let ksSearchTimer = null;
+document.getElementById('ksSearch').addEventListener('input', () => {
+    clearTimeout(ksSearchTimer);
+    ksSearchTimer = setTimeout(ksLoad, 300);
+});
+
+async function ksReveal(id, btn) {
+    btn.disabled = true;
+    const r = await ksApi('GET', '/api/v1/keystore/' + id + '/reveal');
+    btn.disabled = false;
+    if (!r.ok) { nimAlert(@Json.Serialize(T["keystore.reveal_error"].Value), { kind: 'error' }); return; }
+    const d = await r.json();
+    if (window.nsPrompt) window.nsPrompt(@Json.Serialize(T["keystore.action.reveal"].Value), '', d.keyValue);
+    else prompt(@Json.Serialize(T["keystore.action.reveal"].Value), d.keyValue);
+}
+
+function ksOpenCreate() {
+    document.getElementById('ksModalTitle').textContent = @Json.Serialize(T["keystore.new"].Value);
+    document.getElementById('ksId').value = '';
+    document.getElementById('ksCustomerName').value = '';
+    document.getElementById('ksCustomerEmail').value = '';
+    document.getElementById('ksCustomerDomain').value = '';
+    document.getElementById('ksKeyType').value = '';
+    document.getElementById('ksKeyValue').value = '';
+    document.getElementById('ksValidFrom').value = '';
+    document.getElementById('ksValidUntil').value = '';
+    document.getElementById('ksNotes').value = '';
+    document.getElementById('ksModalError').style.display = 'none';
+    document.getElementById('ksModal').classList.add('open');
+}
+
+async function ksOpenEdit(id) {
+    const row = ksRows.find(r => r.id === id);
+    if (!row) return;
+    document.getElementById('ksModalTitle').textContent = @Json.Serialize(T["keystore.edit"].Value);
+    document.getElementById('ksId').value = row.id;
+    document.getElementById('ksCustomerName').value = row.customerName;
+    document.getElementById('ksCustomerEmail').value = row.customerEmail || '';
+    document.getElementById('ksCustomerDomain').value = row.customerEmailDomain || '';
+    document.getElementById('ksKeyType').value = row.keyType;
+    document.getElementById('ksKeyValue').value = '';
+    document.getElementById('ksKeyValue').placeholder = @Json.Serialize(T["keystore.field.key_value_unchanged"].Value);
+    document.getElementById('ksValidFrom').value = row.validFrom ? row.validFrom.substring(0, 10) : '';
+    document.getElementById('ksValidUntil').value = row.validUntil ? row.validUntil.substring(0, 10) : '';
+    document.getElementById('ksNotes').value = row.notes || '';
+    document.getElementById('ksModalError').style.display = 'none';
+    document.getElementById('ksModal').classList.add('open');
+}
+
+function ksCloseModal() {
+    document.getElementById('ksModal').classList.remove('open');
+}
+
+async function ksSave() {
+    const id = document.getElementById('ksId').value;
+    const err = document.getElementById('ksModalError');
+    err.style.display = 'none';
+    const name = document.getElementById('ksCustomerName').value.trim();
+    const email = document.getElementById('ksCustomerEmail').value.trim();
+    const domain = document.getElementById('ksCustomerDomain').value.trim();
+    const keyType = document.getElementById('ksKeyType').value.trim();
+    const keyValue = document.getElementById('ksKeyValue').value.trim();
+    if (!name) { err.textContent = @Json.Serialize(T["keystore.error.name_required"].Value); err.style.display = 'block'; return; }
+    if (!email && !domain) { err.textContent = @Json.Serialize(T["keystore.error.contact_required"].Value); err.style.display = 'block'; return; }
+    if (!keyType) { err.textContent = @Json.Serialize(T["keystore.error.type_required"].Value); err.style.display = 'block'; return; }
+    if (!id && !keyValue) { err.textContent = @Json.Serialize(T["keystore.error.value_required"].Value); err.style.display = 'block'; return; }
+
+    const body = {
+        customerName: name,
+        customerEmail: email || null,
+        customerEmailDomain: domain || null,
+        keyType,
+        validFrom: document.getElementById('ksValidFrom').value ? new Date(document.getElementById('ksValidFrom').value).toISOString() : null,
+        validUntil: document.getElementById('ksValidUntil').value ? new Date(document.getElementById('ksValidUntil').value).toISOString() : null,
+        notes: document.getElementById('ksNotes').value.trim() || null,
+    };
+    if (keyValue) body.keyValue = keyValue;
+
+    const btn = document.getElementById('ksSaveBtn');
+    btn.disabled = true;
+    const r = id ? await ksApi('PATCH', '/api/v1/keystore/' + id, body) : await ksApi('POST', '/api/v1/keystore', body);
+    btn.disabled = false;
+    if (!r.ok) {
+        let msg = @Json.Serialize(T["keystore.save_error"].Value);
+        try { const p = await r.json(); if (p.title) msg = p.title; } catch {}
+        err.textContent = msg; err.style.display = 'block';
+        return;
+    }
+    ksCloseModal();
+    await ksLoad();
+}
+
+async function ksDelete(id) {
+    if (!await nimConfirm(@Json.Serialize(T["keystore.confirm_delete"].Value), { danger: true })) return;
+    const r = await ksApi('DELETE', '/api/v1/keystore/' + id);
+    if (r.ok) { ksSelected.delete(id); await ksLoad(); }
+    else nimAlert(@Json.Serialize(T["keystore.delete_error"].Value), { kind: 'error' });
+}
+
+async function ksBulkDelete() {
+    if (ksSelected.size === 0) return;
+    if (!await nimConfirm(@Json.Serialize(T["keystore.confirm_bulk_delete"].Value), { danger: true })) return;
+    const r = await ksApi('POST', '/api/v1/keystore/bulk-delete', { ids: Array.from(ksSelected) });
+    if (r.ok) { ksSelected = new Set(); await ksLoad(); }
+    else nimAlert(@Json.Serialize(T["keystore.delete_error"].Value), { kind: 'error' });
+}
+
+ksLoad();
+</script>

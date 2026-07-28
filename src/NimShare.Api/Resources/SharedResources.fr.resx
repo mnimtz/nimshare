@@ -1571,4 +1571,47 @@ Merci d'utiliser NimShare.</value></data>
   <data name="profile.ai.toggle_hint"><value>Vos requêtes et les extraits de texte pertinents de vos fichiers sont envoyés au fournisseur ci-dessus. Les mots de passe, certificats et autres fichiers ne sont PAS envoyés.</value></data>
   <data name="profile.ai.revoke_hint"><value>Vous pouvez révoquer votre consentement ici à tout moment.</value></data>
   <data name="profile.ai.privacy_link"><value>Politique de confidentialité</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>Coffre de clés</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>Coffre de clés</value></data>
+  <data name="keystore.lede" xml:space="preserve"><value>Gérez vos clients et leurs clés de licence — associez un lien de partage à une clé pour que les destinataires voient automatiquement la bonne.</value></data>
+  <data name="keystore.search_placeholder" xml:space="preserve"><value>Rechercher client, e-mail, domaine, type…</value></data>
+  <data name="keystore.new" xml:space="preserve"><value>Nouvelle clé</value></data>
+  <data name="keystore.edit" xml:space="preserve"><value>Modifier la clé</value></data>
+  <data name="keystore.delete_selected" xml:space="preserve"><value>Supprimer la sélection</value></data>
+  <data name="keystore.selected_suffix" xml:space="preserve"><value>sélectionné(s)</value></data>
+  <data name="keystore.loading" xml:space="preserve"><value>Chargement…</value></data>
+  <data name="keystore.empty" xml:space="preserve"><value>Aucune clé pour l'instant. Cliquez sur « Nouvelle clé » pour ajouter votre premier client.</value></data>
+  <data name="keystore.load_error" xml:space="preserve"><value>Impossible de charger les clés.</value></data>
+  <data name="keystore.col.customer" xml:space="preserve"><value>Client</value></data>
+  <data name="keystore.col.contact" xml:space="preserve"><value>E-mail / domaine</value></data>
+  <data name="keystore.col.type" xml:space="preserve"><value>Type</value></data>
+  <data name="keystore.col.valid_until" xml:space="preserve"><value>Valable jusqu'au</value></data>
+  <data name="keystore.col.status" xml:space="preserve"><value>Statut</value></data>
+  <data name="keystore.col.owner" xml:space="preserve"><value>Propriétaire</value></data>
+  <data name="keystore.status.active" xml:space="preserve"><value>Actif</value></data>
+  <data name="keystore.status.expired" xml:space="preserve"><value>Expiré</value></data>
+  <data name="keystore.status.upcoming" xml:space="preserve"><value>Pas encore actif</value></data>
+  <data name="keystore.action.reveal" xml:space="preserve"><value>Afficher</value></data>
+  <data name="keystore.action.edit" xml:space="preserve"><value>Modifier</value></data>
+  <data name="keystore.action.delete" xml:space="preserve"><value>Supprimer</value></data>
+  <data name="keystore.reveal_error" xml:space="preserve"><value>Impossible de récupérer la clé.</value></data>
+  <data name="keystore.field.customer_name" xml:space="preserve"><value>Nom du client</value></data>
+  <data name="keystore.field.customer_email" xml:space="preserve"><value>E-mail du client</value></data>
+  <data name="keystore.field.customer_domain" xml:space="preserve"><value>Domaine e-mail</value></data>
+  <data name="keystore.field.contact_hint" xml:space="preserve"><value>Indiquez un e-mail exact pour une personne, ou un domaine (p. ex. « acme.com ») pour toute adresse @acme.com. Au moins un est requis.</value></data>
+  <data name="keystore.field.key_type" xml:space="preserve"><value>Type de clé</value></data>
+  <data name="keystore.field.key_type_placeholder" xml:space="preserve"><value>p. ex. Essai, Version complète, Abonnement</value></data>
+  <data name="keystore.field.key_value" xml:space="preserve"><value>Valeur de la clé</value></data>
+  <data name="keystore.field.key_value_unchanged" xml:space="preserve"><value>Laisser vide pour conserver la clé actuelle</value></data>
+  <data name="keystore.field.valid_from" xml:space="preserve"><value>Valable à partir du</value></data>
+  <data name="keystore.field.valid_until" xml:space="preserve"><value>Valable jusqu'au</value></data>
+  <data name="keystore.field.notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="keystore.error.name_required" xml:space="preserve"><value>Veuillez saisir un nom de client.</value></data>
+  <data name="keystore.error.contact_required" xml:space="preserve"><value>Veuillez saisir un e-mail ou un domaine.</value></data>
+  <data name="keystore.error.type_required" xml:space="preserve"><value>Veuillez saisir un type de clé.</value></data>
+  <data name="keystore.error.value_required" xml:space="preserve"><value>Veuillez saisir une valeur de clé.</value></data>
+  <data name="keystore.save_error" xml:space="preserve"><value>Impossible d'enregistrer.</value></data>
+  <data name="keystore.confirm_delete" xml:space="preserve"><value>Supprimer cette clé ?</value></data>
+  <data name="keystore.confirm_bulk_delete" xml:space="preserve"><value>Supprimer les clés sélectionnées ?</value></data>
+  <data name="keystore.delete_error" xml:space="preserve"><value>Impossible de supprimer.</value></data>
 </root>
