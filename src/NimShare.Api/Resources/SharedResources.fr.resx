@@ -1641,4 +1641,8 @@ Merci d'utiliser NimShare.</value></data>
   <data name="links.uploads.lede"><value>Liens permettant à quelqu'un de vous envoyer des fichiers (demandes d'envoi).</value></data>
   <data name="links.uploads.target_folder"><value>Dossier cible</value></data>
   <data name="links.uploads.count"><value>Envois</value></data>
+  <data name="upload.landing.drop_hint"><value>Glissez des fichiers ici, ou cliquez pour choisir</value></data>
+  <data name="upload.landing.pick_first"><value>Choisissez d'abord un fichier.</value></data>
+  <data name="upload.landing.uploading"><value>Envoi en cours</value></data>
+  <data name="upload.landing.done"><value>Terminé — merci !</value></data>
 </root>

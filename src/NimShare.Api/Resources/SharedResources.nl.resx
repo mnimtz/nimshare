@@ -1640,4 +1640,8 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="links.uploads.lede"><value>Links waarmee iemand je bestanden kan sturen (upload-verzoeken).</value></data>
   <data name="links.uploads.target_folder"><value>Doelmap</value></data>
   <data name="links.uploads.count"><value>Uploads</value></data>
+  <data name="upload.landing.drop_hint"><value>Sleep bestanden hierheen, of klik om te kiezen</value></data>
+  <data name="upload.landing.pick_first"><value>Kies eerst een bestand.</value></data>
+  <data name="upload.landing.uploading"><value>Bezig met uploaden</value></data>
+  <data name="upload.landing.done"><value>Klaar — bedankt!</value></data>
 </root>

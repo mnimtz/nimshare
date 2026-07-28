@@ -1641,4 +1641,8 @@ Gracias por usar NimShare.</value></data>
   <data name="links.uploads.lede"><value>Enlaces con los que alguien puede enviarte archivos (solicitudes de subida).</value></data>
   <data name="links.uploads.target_folder"><value>Carpeta de destino</value></data>
   <data name="links.uploads.count"><value>Subidas</value></data>
+  <data name="upload.landing.drop_hint"><value>Arrastra los archivos aquí, o haz clic para elegir</value></data>
+  <data name="upload.landing.pick_first"><value>Primero selecciona un archivo.</value></data>
+  <data name="upload.landing.uploading"><value>Subiendo</value></data>
+  <data name="upload.landing.done"><value>¡Listo, gracias!</value></data>
 </root>

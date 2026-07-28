@@ -1643,4 +1643,8 @@ Thanks for using NimShare.</value></data>
   <data name="links.uploads.lede"><value>Links that let someone send you files (reverse-share).</value></data>
   <data name="links.uploads.target_folder"><value>Target folder</value></data>
   <data name="links.uploads.count"><value>Uploads</value></data>
+  <data name="upload.landing.drop_hint"><value>Drag files here, or click to choose</value></data>
+  <data name="upload.landing.pick_first"><value>Pick a file first.</value></data>
+  <data name="upload.landing.uploading"><value>Uploading</value></data>
+  <data name="upload.landing.done"><value>Done — thanks!</value></data>
 </root>

@@ -17,9 +17,17 @@
         {
             <div class="card" style="background:var(--tw-gray-100)">@Html.Raw(Model.MessageHtml)</div>
         }
+        @* v1.11.30: Drag&Drop-Zone zusätzlich zum klassischen Datei-Dialog —
+           Marcus's Wunsch. Unterstützt mehrere Dateien (der Link kann ja
+           MaxUploads>1 erlauben); jede wird nacheinander hochgeladen. *@
         <div class="field" style="margin-top:var(--sp-6)">
             <label for="file">@T["upload.landing.pick_file"]</label>
-            <input type="file" id="file" name="file"/>
+            <div id="ur-dropzone" class="ur-dropzone" tabindex="0" role="button" aria-label="@T["upload.landing.drop_hint"]">
+                <div class="ur-dropzone-icon">📤</div>
+                <div id="ur-dropzone-text">@T["upload.landing.drop_hint"]</div>
+                <input type="file" id="file" name="file" multiple style="display:none"/>
+            </div>
+            <ul id="ur-file-list" class="helper" style="margin-top:8px;list-style:none;padding:0"></ul>
         </div>
         @if (Model.HasPassword)
         {
@@ -32,30 +40,98 @@
         <div id="upload-status" class="helper"></div>
     </div>
 </div>
+<style>
+    .ur-dropzone {
+        border: 2px dashed var(--tw-gray-300);
+        border-radius: var(--r);
+        padding: var(--sp-6) var(--sp-4);
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+    }
+    .ur-dropzone:hover, .ur-dropzone:focus-visible { border-color: var(--tw-accent); outline: none; }
+    .ur-dropzone.drag-over { border-color: var(--tw-accent); background: rgba(0, 160, 251, .06); }
+    .ur-dropzone-icon { font-size: 2rem; margin-bottom: 4px; }
+    #ur-file-list li { padding: 2px 0; }
+</style>
 <script>
     const slug = @Json.Serialize(Model.Slug);
     const btn = document.getElementById('upload-btn');
     const status = document.getElementById('upload-status');
-    btn.addEventListener('click', async () => {
-        const f = document.getElementById('file').files[0];
-        if (!f) { status.textContent = 'Pick a file first.'; return; }
-        const pw = document.getElementById('password')?.value;
-        btn.disabled = true; status.textContent = 'Requesting upload slot…';
+    const fileInput = document.getElementById('file');
+    const dropzone = document.getElementById('ur-dropzone');
+    const fileList = document.getElementById('ur-file-list');
+    let selectedFiles = [];
+
+    function renderFileList() {
+        fileList.innerHTML = '';
+        selectedFiles.forEach(f => {
+            const li = document.createElement('li');
+            li.textContent = `📄 ${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`;
+            fileList.appendChild(li);
+        });
+    }
+    function setFiles(fileArrayLike) {
+        selectedFiles = Array.from(fileArrayLike);
+        renderFileList();
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', () => setFiles(fileInput.files));
+
+    ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation(); dropzone.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+        e.preventDefault(); e.stopPropagation();
+        if (ev === 'dragleave' && e.target !== dropzone) return;
+        dropzone.classList.remove('drag-over');
+    }));
+    dropzone.addEventListener('drop', e => {
+        if (e.dataTransfer?.files?.length) setFiles(e.dataTransfer.files);
+    });
+
+    async function uploadOne(f, pw) {
         const init = await fetch(`/u/${slug}/init`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: f.name, sizeBytes: f.size, contentType: f.type, password: pw })
         });
-        if (!init.ok) { status.textContent = 'Rejected: ' + init.status; btn.disabled = false; return; }
+        if (!init.ok) throw new Error('Rejected: ' + init.status);
         const { fileId, uploadUrl } = await init.json();
-        status.textContent = 'Uploading…';
         const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'x-ms-blob-type': 'BlockBlob' }, body: f });
-        if (!put.ok) { status.textContent = 'Upload failed'; btn.disabled = false; return; }
-        await fetch(`/u/${slug}/complete`, {
+        if (!put.ok) throw new Error('Upload failed');
+        // v1.11.30: BUGFIX — der Response von /complete wurde bisher gar nicht
+        // geprüft, "Done" erschien also selbst wenn der Server hier scheiterte
+        // (Datei blieb dann für immer im Status "Pending", unsichtbar).
+        const complete = await fetch(`/u/${slug}/complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileId })
         });
-        status.textContent = 'Done — thanks!';
+        if (!complete.ok) throw new Error('Could not finalise: ' + complete.status);
+    }
+
+    btn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) { status.textContent = @Json.Serialize(T["upload.landing.pick_first"].Value); return; }
+        const pw = document.getElementById('password')?.value;
+        btn.disabled = true;
+        let done = 0;
+        try {
+            for (const f of selectedFiles) {
+                status.textContent = selectedFiles.length > 1
+                    ? `${@Json.Serialize(T["upload.landing.uploading"].Value)} (${done + 1}/${selectedFiles.length})…`
+                    : @Json.Serialize(T["upload.landing.uploading"].Value) + '…';
+                await uploadOne(f, pw);
+                done++;
+            }
+            status.textContent = @Json.Serialize(T["upload.landing.done"].Value);
+            selectedFiles = [];
+            renderFileList();
+        } catch (err) {
+            status.textContent = (done > 0 ? `${done}/${selectedFiles.length} — ` : '') + (err.message || String(err));
+            btn.disabled = false;
+        }
     });
 </script>
