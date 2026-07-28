@@ -1630,4 +1630,7 @@ Thanks for using NimShare.</value></data>
   <data name="share.keystore.mode_hint"><value>The visitor identifies with their email address; the matching key from your Key-Store is shown to them automatically. Mutually exclusive with the fixed serial number above.</value></data>
   <data name="share.keystore.doc_url_label"><value>Documentation link (optional)</value></data>
   <data name="share.keystore.doc_url_hint"><value>Shown as a button next to the revealed key on the landing page.</value></data>
+  <data name="keystore.field.key_value_serial"><value>Serial number</value></data>
+  <data name="keystore.field.key_value_product"><value>Product code</value></data>
+  <data name="keystore.error.value_parts_required"><value>Please fill in both parts, or leave both empty to keep the current key.</value></data>
 </root>

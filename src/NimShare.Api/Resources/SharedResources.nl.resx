@@ -1627,4 +1627,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.keystore.mode_hint"><value>De bezoeker identificeert zich met zijn e-mailadres; de bijpassende sleutel uit jouw Key-Store wordt automatisch getoond. Sluit elkaar uit met het vaste serienummer hierboven.</value></data>
   <data name="share.keystore.doc_url_label"><value>Link naar documentatie (optioneel)</value></data>
   <data name="share.keystore.doc_url_hint"><value>Wordt getoond als knop naast de onthulde sleutel op de landingspagina.</value></data>
+  <data name="keystore.field.key_value_serial"><value>Serienummer</value></data>
+  <data name="keystore.field.key_value_product"><value>Productcode</value></data>
+  <data name="keystore.error.value_parts_required"><value>Vul beide delen in, of laat beide leeg om de huidige sleutel te behouden.</value></data>
 </root>

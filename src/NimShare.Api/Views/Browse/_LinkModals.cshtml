@@ -91,6 +91,11 @@
                 <div id="shareSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
             </div>
         </div>
+        @* v1.11.24: bewusst nur 2 Spalten statt 3 (Passwort/Max/Ablauf) —
+           3× flex:1 in einer Reihe wrappte je nach Modal-Breite unterschiedlich,
+           sodass "Ablaufdatum" mal allein auf voller Breite "ausriss". Fest
+           2-spaltig + Ablaufdatum als eigene Zeile ist deterministisch und
+           bricht nie mehr unvorhersehbar um. *@
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
                 <label>@T["upload.password"]</label>
@@ -100,10 +105,10 @@
                 <label>@T["upload.max_downloads"]</label>
                 <input type="number" id="shareMax" min="1"/>
             </div>
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.expires_at"]</label>
-                <input type="datetime-local" id="shareExp"/>
-            </div>
+        </div>
+        <div class="field">
+            <label>@T["upload.expires_at"]</label>
+            <input type="datetime-local" id="shareExp"/>
         </div>
         <div class="field">
             <label>@T["upload.message"]</label>
@@ -222,6 +227,8 @@
                 <div id="urSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
             </div>
         </div>
+        @* v1.11.24: siehe Share-Modal — deterministisch 2-spaltig statt 3×
+           flex:1 (das "Ablaufdatum" riss sonst je nach Breite mal allein aus). *@
         <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
             <div class="field" style="flex:1;min-width:180px">
                 <label>@T["upload.password"]</label>
@@ -231,10 +238,10 @@
                 <label>@T["modal.upload_request.max_uploads"]</label>
                 <input type="number" id="urMax" min="1"/>
             </div>
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.expires_at"]</label>
-                <input type="datetime-local" id="urExp"/>
-            </div>
+        </div>
+        <div class="field">
+            <label>@T["upload.expires_at"]</label>
+            <input type="datetime-local" id="urExp"/>
         </div>
         <div class="field">
             <label>@T["upload.message"]</label>

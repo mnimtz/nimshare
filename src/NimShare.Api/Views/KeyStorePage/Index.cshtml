@@ -63,25 +63,31 @@
             </div>
         </div>
         <div class="helper">@T["keystore.field.contact_hint"]</div>
-        <div class="row" style="gap:var(--sp-3);margin-top:8px">
+
+        <div class="field" style="margin-top:8px">
+            <label>@T["keystore.field.key_type"]</label>
+            <input type="text" id="ksKeyType" list="ksKeyTypeList" placeholder="@T["keystore.field.key_type_placeholder"]" required autocomplete="off"/>
+            <datalist id="ksKeyTypeList"></datalist>
+        </div>
+
+        <div id="ksKeyValueSingleWrap" class="field" style="margin-top:8px">
+            <label>@T["keystore.field.key_value"]</label>
+            <input type="text" id="ksKeyValue" class="mono" placeholder="AV09Z-K13-8FXD-BAVZ-XT" autocomplete="off"/>
+        </div>
+        <div id="ksKeyValueClsWrap" class="row" style="gap:var(--sp-3);margin-top:8px;display:none">
             <div class="field" style="flex:1">
-                <label>@T["keystore.field.key_type"]</label>
-                <input type="text" id="ksKeyType" placeholder="@T["keystore.field.key_type_placeholder"]" required/>
+                <label>@T["keystore.field.key_value_serial"]</label>
+                <input type="text" id="ksKeyValueSerial" class="mono" placeholder="LW13976" autocomplete="off"/>
             </div>
             <div class="field" style="flex:1">
-                <label>@T["keystore.field.key_value"]</label>
-                <input type="text" id="ksKeyValue" class="mono" placeholder="AV09Z-K13-2G9D-98MT-81"/>
+                <label>@T["keystore.field.key_value_product"]</label>
+                <input type="text" id="ksKeyValueProduct" class="mono" placeholder="729093F57" autocomplete="off"/>
             </div>
         </div>
-        <div class="row" style="gap:var(--sp-3);margin-top:8px">
-            <div class="field" style="flex:1">
-                <label>@T["keystore.field.valid_from"]</label>
-                <input type="date" id="ksValidFrom"/>
-            </div>
-            <div class="field" style="flex:1">
-                <label>@T["keystore.field.valid_until"]</label>
-                <input type="date" id="ksValidUntil"/>
-            </div>
+
+        <div class="field" style="margin-top:8px;max-width:220px">
+            <label>@T["keystore.field.valid_until"]</label>
+            <input type="date" id="ksValidUntil"/>
         </div>
         <div class="field" style="margin-top:8px">
             <label>@T["keystore.field.notes"]</label>
@@ -99,6 +105,46 @@
 let ksRows = [];
 let ksSelected = new Set();
 const KS_IS_ADMIN = @Json.Serialize(isAdmin);
+
+// v1.11.24: Key-Typ als "Combo" — 4 Standardtypen + vom Browser gemerkte
+// eigene Typen (localStorage, pro Gerät/Browser — kein Server-Feld nötig).
+const KS_DEFAULT_TYPES = ['Evaluation-CLS', 'Evaluation-OnPrem', 'NFR-OnPrem', 'NFR-CLS'];
+const KS_CUSTOM_TYPES_KEY = 'nimshare.keystore.customTypes';
+
+function ksCustomTypes() {
+    try { return JSON.parse(localStorage.getItem(KS_CUSTOM_TYPES_KEY) || '[]'); } catch { return []; }
+}
+function ksRememberType(type) {
+    if (!type) return;
+    const all = KS_DEFAULT_TYPES.map(t => t.toLowerCase());
+    const custom = ksCustomTypes();
+    if (all.includes(type.toLowerCase()) || custom.some(t => t.toLowerCase() === type.toLowerCase())) return;
+    custom.push(type);
+    localStorage.setItem(KS_CUSTOM_TYPES_KEY, JSON.stringify(custom));
+    ksRenderTypeList();
+}
+function ksRenderTypeList() {
+    const dl = document.getElementById('ksKeyTypeList');
+    dl.innerHTML = '';
+    [...KS_DEFAULT_TYPES, ...ksCustomTypes()].forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        dl.appendChild(opt);
+    });
+}
+ksRenderTypeList();
+
+// "-CLS"-Typen brauchen zwei Werte (Seriennummer + Produktcode), alle
+// anderen (z.B. "-OnPrem") einen einzelnen Key-String.
+function ksIsClsType(type) {
+    return /cls/i.test(type || '');
+}
+function ksUpdateKeyValueMode() {
+    const cls = ksIsClsType(document.getElementById('ksKeyType').value);
+    document.getElementById('ksKeyValueSingleWrap').style.display = cls ? 'none' : '';
+    document.getElementById('ksKeyValueClsWrap').style.display = cls ? 'flex' : 'none';
+}
+document.getElementById('ksKeyType').addEventListener('input', ksUpdateKeyValueMode);
 
 async function ksApi(method, path, body) {
     const r = await fetch(path, {
@@ -210,16 +256,22 @@ function ksOpenCreate() {
     document.getElementById('ksCustomerDomain').value = '';
     document.getElementById('ksKeyType').value = '';
     document.getElementById('ksKeyValue').value = '';
-    document.getElementById('ksValidFrom').value = '';
+    document.getElementById('ksKeyValue').placeholder = 'AV09Z-K13-8FXD-BAVZ-XT';
+    document.getElementById('ksKeyValueSerial').value = '';
+    document.getElementById('ksKeyValueSerial').placeholder = 'LW13976';
+    document.getElementById('ksKeyValueProduct').value = '';
+    document.getElementById('ksKeyValueProduct').placeholder = '729093F57';
     document.getElementById('ksValidUntil').value = '';
     document.getElementById('ksNotes').value = '';
     document.getElementById('ksModalError').style.display = 'none';
+    ksUpdateKeyValueMode();
     document.getElementById('ksModal').classList.add('open');
 }
 
 async function ksOpenEdit(id) {
     const row = ksRows.find(r => r.id === id);
     if (!row) return;
+    const unchanged = @Json.Serialize(T["keystore.field.key_value_unchanged"].Value);
     document.getElementById('ksModalTitle').textContent = @Json.Serialize(T["keystore.edit"].Value);
     document.getElementById('ksId').value = row.id;
     document.getElementById('ksCustomerName').value = row.customerName;
@@ -227,11 +279,15 @@ async function ksOpenEdit(id) {
     document.getElementById('ksCustomerDomain').value = row.customerEmailDomain || '';
     document.getElementById('ksKeyType').value = row.keyType;
     document.getElementById('ksKeyValue').value = '';
-    document.getElementById('ksKeyValue').placeholder = @Json.Serialize(T["keystore.field.key_value_unchanged"].Value);
-    document.getElementById('ksValidFrom').value = row.validFrom ? row.validFrom.substring(0, 10) : '';
+    document.getElementById('ksKeyValue').placeholder = unchanged;
+    document.getElementById('ksKeyValueSerial').value = '';
+    document.getElementById('ksKeyValueSerial').placeholder = unchanged;
+    document.getElementById('ksKeyValueProduct').value = '';
+    document.getElementById('ksKeyValueProduct').placeholder = unchanged;
     document.getElementById('ksValidUntil').value = row.validUntil ? row.validUntil.substring(0, 10) : '';
     document.getElementById('ksNotes').value = row.notes || '';
     document.getElementById('ksModalError').style.display = 'none';
+    ksUpdateKeyValueMode();
     document.getElementById('ksModal').classList.add('open');
 }
 
@@ -247,7 +303,26 @@ async function ksSave() {
     const email = document.getElementById('ksCustomerEmail').value.trim();
     const domain = document.getElementById('ksCustomerDomain').value.trim();
     const keyType = document.getElementById('ksKeyType').value.trim();
-    const keyValue = document.getElementById('ksKeyValue').value.trim();
+
+    // v1.11.24: "-CLS"-Typen bestehen aus zwei Teilen (Seriennummer +
+    // Produktcode), alle anderen aus einem einzelnen Key-String — die zwei
+    // Teile werden für Speicherung/Anzeige zu einem String kombiniert (kein
+    // eigenes Server-Feld, um das bestehende KeyValueEncrypted nicht
+    // aufzuspalten).
+    let keyValue = '';
+    if (ksIsClsType(keyType)) {
+        const serial = document.getElementById('ksKeyValueSerial').value.trim();
+        const product = document.getElementById('ksKeyValueProduct').value.trim();
+        if (serial && product) keyValue = serial + ' / ' + product;
+        else if (serial || product) {
+            err.textContent = @Json.Serialize(T["keystore.error.value_parts_required"].Value);
+            err.style.display = 'block';
+            return;
+        }
+    } else {
+        keyValue = document.getElementById('ksKeyValue').value.trim();
+    }
+
     if (!name) { err.textContent = @Json.Serialize(T["keystore.error.name_required"].Value); err.style.display = 'block'; return; }
     if (!email && !domain) { err.textContent = @Json.Serialize(T["keystore.error.contact_required"].Value); err.style.display = 'block'; return; }
     if (!keyType) { err.textContent = @Json.Serialize(T["keystore.error.type_required"].Value); err.style.display = 'block'; return; }
@@ -258,7 +333,6 @@ async function ksSave() {
         customerEmail: email || null,
         customerEmailDomain: domain || null,
         keyType,
-        validFrom: document.getElementById('ksValidFrom').value ? new Date(document.getElementById('ksValidFrom').value).toISOString() : null,
         validUntil: document.getElementById('ksValidUntil').value ? new Date(document.getElementById('ksValidUntil').value).toISOString() : null,
         notes: document.getElementById('ksNotes').value.trim() || null,
     };
@@ -274,6 +348,7 @@ async function ksSave() {
         err.textContent = msg; err.style.display = 'block';
         return;
     }
+    ksRememberType(keyType);
     ksCloseModal();
     await ksLoad();
 }

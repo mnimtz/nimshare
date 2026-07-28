@@ -1632,4 +1632,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.keystore.mode_hint"><value>Der Besucher identifiziert sich mit seiner E-Mail-Adresse; der passende Schlüssel aus deinem Key-Store wird ihm automatisch angezeigt. Schließt sich mit der festen Seriennummer oben aus.</value></data>
   <data name="share.keystore.doc_url_label"><value>Link zur Dokumentation (optional)</value></data>
   <data name="share.keystore.doc_url_hint"><value>Wird als Button neben dem angezeigten Schlüssel auf der Landing-Seite gezeigt.</value></data>
+  <data name="keystore.field.key_value_serial"><value>Seriennummer</value></data>
+  <data name="keystore.field.key_value_product"><value>Produktcode</value></data>
+  <data name="keystore.error.value_parts_required"><value>Bitte beide Teile ausfüllen, oder beide leer lassen um den aktuellen Schlüssel zu behalten.</value></data>
 </root>
