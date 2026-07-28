@@ -21,6 +21,13 @@
     var maxY = Math.Max(1, buckets.Max(b => Math.Max(b.Landings, Math.Max(b.Downloads, b.PasswordFails))));
     var target = Model.File?.Name ?? Model.Folder?.Name ?? "—";
     var isActive = !Model.IsRevoked && (Model.ExpiresAt is null || Model.ExpiresAt > DateTimeOffset.UtcNow);
+    // v1.11.41 — Marcus's Report: Zugriffszeiten in der Tabelle standen 2h
+    // "falsch" da — e.At ist UTC (ShareLinkAccess.At), wurde aber ohne
+    // Zeitzonen-Konversion direkt gerendert. Instanz ist auf Tungsten/DE
+    // ausgerichtet (Datumsformat "dd.MM." ist bereits deutsch), also fix auf
+    // Europe/Berlin statt Browser-/Viewer-Zeitzone — konsistent einfacher
+    // als ein Server-Side-Rendering-Problem client-seitig zu lösen.
+    var berlinTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
     var landingUrl = Context.Request.PublicUrl($"/s/{Model.Slug}");
 
     string DeviceIcon(string d) => d switch
@@ -355,7 +362,7 @@
                             ? (!string.IsNullOrEmpty(e.CountryCode) ? $"{e.City}, {e.CountryCode}" : e.City)
                             : (e.CountryCode ?? "—");
                         <tr>
-                            <td class="muted">@e.At.ToString("dd.MM. HH:mm:ss")</td>
+                            <td class="muted">@TimeZoneInfo.ConvertTime(e.At, berlinTz).ToString("dd.MM. HH:mm:ss")</td>
                             <td><span class="chip @badge">@KindLabel(e.Kind)</span></td>
                             <td>@loc</td>
                             <td>@(string.IsNullOrEmpty(e.DeviceType) || e.DeviceType == "Unknown" ? "—" : e.DeviceType)</td>

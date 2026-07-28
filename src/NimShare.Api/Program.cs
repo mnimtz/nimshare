@@ -369,16 +369,19 @@ builder.Services.AddSingleton<IIpHashService, IpHashService>();
 // v1.11.15: Default war "Null" (kein externer Call) und der Opt-in-Key
 // "NimShare:GeoIp:Provider=IpApiCo" wurde nie gesetzt — Marcus sah deshalb
 // Länder/Städte/Herkunfts-ISP im Report seit Tag 1 komplett leer, obwohl
-// das Feature längst gebaut war. Jetzt umgekehrt: ipapi.co (HTTPS, kein
-// Key, 1000 req/Tag, IP verlässt den Server nur kurzzeitig, wird nicht
-// gespeichert — DSGVO-neutral, siehe GeoIpService-Doku) ist der Default;
-// explizit "NimShare:GeoIp:Provider=Disabled" setzen zum Abschalten.
+// das Feature längst gebaut war. Jetzt umgekehrt: Default ist aktiv (HTTPS,
+// kein Key, IP verlässt den Server nur kurzzeitig, wird nicht gespeichert
+// — DSGVO-neutral, siehe GeoIpService-Doku); explizit
+// "NimShare:GeoIp:Provider=Disabled" setzen zum Abschalten.
+// v1.11.41: Provider ipapi.co → ipwho.is gewechselt — ipapi.co's Gratis-
+// Tier lehnte praktisch jeden Request mit HTTP 200 + Error-JSON ab
+// (verifiziert), weshalb Land/Stadt trotz aktivem Feature leer blieben.
 {
     var geoProvider = builder.Configuration["NimShare:GeoIp:Provider"];
     if (string.Equals(geoProvider, "Disabled", StringComparison.OrdinalIgnoreCase))
         builder.Services.AddSingleton<IGeoIpService, NullGeoIpService>();
     else
-        builder.Services.AddSingleton<IGeoIpService, IpApiCoGeoIpService>();
+        builder.Services.AddSingleton<IGeoIpService, IpWhoIsGeoIpService>();
 }
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
