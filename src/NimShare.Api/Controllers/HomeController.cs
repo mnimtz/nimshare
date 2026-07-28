@@ -80,11 +80,18 @@ public class HomeController : Controller
         //   Gruppen: eigene Links auf Group-Scope-Dateien (Teilbereich
         //           dazwischen — technisch privat weil nur Gruppen-Mitglieder
         //           können, aber nicht dein-persönliches).
+        // v1.11.22: Admins sehen ALLE Links (jeder Owner), nicht nur die
+        // eigenen + Public-Scope — Marcus's Bestätigung, dass das die
+        // erwartete Semantik ist (Owner-Spalte in der View war dafür schon
+        // vorbereitet, nur die Query filterte bislang genau wie bei
+        // normalen Usern).
+        var isAdmin = user.Role == UserRole.Admin;
         var all = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
             .Include(l => l.Owner)
-            .Where(l => l.OwnerId == user.Id
+            .Where(l => isAdmin
+                     || l.OwnerId == user.Id
                      || (l.File != null && l.File.Scope == FileScope.Public)
                      || (l.Folder != null && l.Folder.Scope == FileScope.Public)
                      || l.IsPublic)
@@ -100,10 +107,10 @@ public class HomeController : Controller
             || (l.Folder != null && l.Folder.Scope == FileScope.Group);
 
         var privateLinks = all
-            .Where(l => l.OwnerId == user.Id && !IsPublicScope(l) && !IsGroupScope(l))
+            .Where(l => (isAdmin || l.OwnerId == user.Id) && !IsPublicScope(l) && !IsGroupScope(l))
             .ToList();
         var groupLinks = all
-            .Where(l => l.OwnerId == user.Id && IsGroupScope(l))
+            .Where(l => (isAdmin || l.OwnerId == user.Id) && IsGroupScope(l))
             .ToList();
         var publicLinks = all
             .Where(l => IsPublicScope(l))

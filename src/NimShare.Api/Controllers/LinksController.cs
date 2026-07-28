@@ -368,12 +368,16 @@ public class LinksController : ControllerBase
         // zusätzlich alle Public-Scope-Links (auch von anderen Ownern) sowie
         // die eigenen Group-Scope-Links separat. Damit iOS dieselbe
         // Gesamtmenge sieht, matcht die Query jetzt HomeController.Links 1:1.
+        // v1.11.22: Admin-Bypass ergänzt (siehe HomeController.Links) — Admins
+        // sehen jeden Link, unabhängig von Owner/Scope.
+        var isAdmin = user.Role == UserRole.Admin;
         var rows = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
             .Include(l => l.SigningCertificate)
             .Include(l => l.Owner)
-            .Where(l => l.OwnerId == user.Id
+            .Where(l => isAdmin
+                     || l.OwnerId == user.Id
                      || (l.File != null && l.File.Scope == FileScope.Public)
                      || (l.Folder != null && l.Folder.Scope == FileScope.Public)
                      || l.IsPublic)
@@ -390,9 +394,11 @@ public class LinksController : ControllerBase
         // v1.11.18: analog List() — auch Detail-Abruf für fremde Public-
         // Scope-Links erlauben (read-only; Update/Delete bleiben Owner/Admin
         // over die eigenen Guards weiter unten in Update()/Delete() geschützt).
+        // v1.11.22: Admin-Bypass ergänzt (siehe List()).
         var link = await _db.ShareLinks
             .Include(l => l.File).Include(l => l.Folder).Include(l => l.SigningCertificate).Include(l => l.Owner)
-            .SingleOrDefaultAsync(l => l.Id == id && (l.OwnerId == user.Id
+            .SingleOrDefaultAsync(l => l.Id == id && (user.Role == UserRole.Admin
+                     || l.OwnerId == user.Id
                      || (l.File != null && l.File.Scope == FileScope.Public)
                      || (l.Folder != null && l.Folder.Scope == FileScope.Public)
                      || l.IsPublic), ct);
