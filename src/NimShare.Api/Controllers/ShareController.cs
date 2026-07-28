@@ -366,7 +366,7 @@ public class ShareController : Controller
     [HttpPost("{slug}/gate/email")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GateEmail(string slug, string? email,
-        [FromServices] INotificationService notify, CancellationToken ct)
+        [FromServices] INotificationService notify, [FromServices] ILogger<ShareController> log, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null) return View("NotFound");
@@ -388,12 +388,25 @@ public class ShareController : Controller
             // verlängert). Jetzt explizit gespeichert + geprüft.
             HttpContext.Session.SetString($"gate.{link.Slug}.otp.at", DateTimeOffset.UtcNow.ToString("O"));
             HttpContext.Session.Remove($"gate.{link.Slug}.otp.attempts");
+            // v1.11.21: Review-Fund — der Versand wurde bisher blind
+            // geschluckt: bei einem Gateway-Fehler (Resend down, falsches
+            // SMTP-Passwort, …) zeigte die Seite trotzdem "Code gesendet" —
+            // der Besucher wartete auf eine Mail, die nie rausging, ohne
+            // jeden Hinweis. GatewayBackedNotificationService.SendShareLinkAsync
+            // protokolliert den Versuch bereits in EmailDeliveryLog (sichtbar
+            // unter /diagnostics) UND wirft bei Fehlschlag — wir zeigen den
+            // Fehler jetzt auch dem Besucher, statt ihn zu verstecken.
             try
             {
                 await notify.SendShareLinkAsync(e, "NimShare", "Dein Zugangs-Code",
                     $"Dein Zugangs-Code für den Download: {otp}\n\nGültig für 10 Minuten.", ct);
             }
-            catch { /* still show the OTP prompt — an admin can look at server logs */ }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "OTP-Mail-Versand für Link {Slug} an {Email} fehlgeschlagen", link.Slug, e);
+                return View("Gate", new GateViewModel(slug, true, otpSent: false,
+                    error: "Der Code konnte nicht per E-Mail versendet werden. Bitte später erneut versuchen oder den Link-Ersteller kontaktieren."));
+            }
             return View("Gate", new GateViewModel(slug, true, otpSent: true, error: null));
         }
         HttpContext.Session.SetString($"gate.{link.Slug}", "ok");
