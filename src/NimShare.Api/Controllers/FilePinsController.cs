@@ -11,8 +11,10 @@ namespace NimShare.Api.Controllers;
 /// <summary>
 /// Personal-scope shortcuts to any file the caller can read. Doesn't
 /// duplicate the blob — a pin is just a small row that surfaces the target
-/// file in the caller's personal browser and lets them create their own
-/// branded share link on top of it (see ShareController.ResolveThemeAsync).
+/// file in the caller's personal browser for quick access. v1.11.33: a
+/// share link created from a pin no longer carries the pinner's own landing
+/// branding — template selection is strictly by the file's own scope (see
+/// ShareController.ResolveThemeAsync), same as any other share of that file.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "ApiUser")]

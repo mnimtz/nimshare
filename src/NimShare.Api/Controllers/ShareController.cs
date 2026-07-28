@@ -104,16 +104,10 @@ public class ShareController : Controller
                 _iphash.Hash(ip0), ip0,
                 Request.Headers.UserAgent, Request.Headers.Referer,
                 lf0.Country, lf0.City, lf0.Device, lf0.Isp, timezone: null, ct);
-            // Folder shares now honour the same template-resolution as file
-            // shares: link creator's personal template ALWAYS wins first, then
-            // the folder-owner's (Personal-scope only), else Global. Passing
-            // Guid.Empty as fileOwnerId forces the (linkOwner != fileOwner)
-            // guard so the link creator's brand is checked even for Public
-            // folders where OwnerUserId is null (v1.10.7 — previously
-            // Public/Group folder shares fell through to Global-only lookup
-            // and looked un-themed if no admin-global template existed).
+            // v1.11.33: Folder shares nutzen dieselbe strikt scope-basierte
+            // Template-Auflösung wie File-Shares (siehe ResolveThemeAsync).
             var folderTheme = await ResolveThemeAsync(folder.Scope,
-                folder.OwnerUserId ?? Guid.Empty, link.OwnerId, ct);
+                folder.OwnerUserId ?? Guid.Empty, ct);
             // v1.10.178: Aufnahmeorte für die Album-Landing-Karte. Nur Fotos
             // mit EXIF-GPS werden aufgenommen; leere Liste = keine Karte.
             var isGalleryView = link.DisplayAsGallery || folder.Kind == FolderKind.Gallery;
@@ -203,7 +197,7 @@ public class ShareController : Controller
             Request.Headers.UserAgent, Request.Headers.Referer,
             lf1.Country, lf1.City, lf1.Device, lf1.Isp, timezone: null, ct);
 
-        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, link.OwnerId, ct);
+        var theme = await ResolveThemeAsync(link.File.Scope, link.File.OwnerId, ct);
         return View("Landing", new LandingViewModel(
             link.Slug,
             link.File.Name,
@@ -259,37 +253,29 @@ public class ShareController : Controller
     }
 
     /// <summary>
-    /// Pick the applicable landing-template snapshot. Preference order:
-    /// (1) LINK CREATOR's personal template — lets user B publish a Public
-    ///     file under their own branding without duplicating the blob (v1.10.2
-    ///     "A" fix per user request). This unlocks the reuse-Public-in-Personal
-    ///     use case with zero storage cost.
-    /// (2) File-scope template — Personal → file-owner's personal template;
-    ///     Public/Group → global admin template. Historical fallback that
-    ///     still matches direct-owner-shares.
+    /// Pick the applicable landing-template snapshot — strictly by the
+    /// SHARED CONTENT's scope, same principle as ResolveOwnerAvatar's
+    /// Public/Personal split. Personal-scope file/folder → the owner's
+    /// personal template; Public/Group → the Global admin template.
+    /// v1.11.33 — Marcus's Bug-Report: ein Public-Ordner-Share zeigte den
+    /// Subtitle "Privater Bereich" aus seinem PERSÖNLICHEN Template, weil
+    /// eine frühere Fassung (v1.10.2/v1.10.7) IMMER zuerst das Template des
+    /// Link-Erstellers bevorzugte — auch für Public/Group-Content. Marcus's
+    /// klare Ansage: Sichtbarkeit richtet sich strikt nach dem SCOPE des
+    /// geteilten Inhalts, exakt wie beim Avatar (ShowAvatarOnPublicShares
+    /// vs. ShowAvatarOnPersonalShares) — kein Creator-Override mehr, auch
+    /// nicht für den "Public-Datei mit eigenem Branding weiterteilen"-Case.
     /// A missing template returns an empty theme so the view falls back to
     /// the built-in NimShare look.
     /// </summary>
     private async Task<LandingTheme> ResolveThemeAsync(
-        NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, Guid linkOwnerId, CancellationToken ct)
+        NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, CancellationToken ct)
     {
-        NimShare.Core.Entities.LandingTemplate? t = null;
-        // Only look for the link-creator's template if they are NOT the file
-        // owner (otherwise it's the same lookup as path 2's Personal branch,
-        // saved a DB round-trip).
-        if (linkOwnerId != fileOwnerId)
-        {
-            t = await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == linkOwnerId, ct);
-        }
-        if (t is null)
-        {
-            t = scope == NimShare.Core.Entities.FileScope.Personal
-                ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                    x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
-                : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
-                    x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
-        }
+        var t = scope == NimShare.Core.Entities.FileScope.Personal
+            ? await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
+            : await _db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
         return new LandingTheme(
             t?.Title, t?.Subtitle, t?.BodyMarkdown, t?.FooterText,
             t?.PrimaryColor, t?.LogoUrl, t?.HeroUrl);
