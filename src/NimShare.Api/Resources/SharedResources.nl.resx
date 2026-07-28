@@ -1636,4 +1636,8 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Licentiesleutel per e-mail verzonden</value></data>
   <data name="upload.date_subfolders_label"><value>Sorteren in datum-submappen</value></data>
   <data name="upload.date_subfolders_hint"><value>Elke upload komt ook in een submap met de datum als naam (bijv. 2026-07-28), zodat je later makkelijker terugvindt wat wanneer binnenkwam.</value></data>
+  <data name="links.uploads.section"><value>Uploads</value></data>
+  <data name="links.uploads.lede"><value>Links waarmee iemand je bestanden kan sturen (upload-verzoeken).</value></data>
+  <data name="links.uploads.target_folder"><value>Doelmap</value></data>
+  <data name="links.uploads.count"><value>Uploads</value></data>
 </root>

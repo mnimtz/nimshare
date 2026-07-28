@@ -1639,4 +1639,8 @@ Thanks for using NimShare.</value></data>
   <data name="report.access_kind.keystore_emailed"><value>License key emailed</value></data>
   <data name="upload.date_subfolders_label"><value>Sort into date subfolders</value></data>
   <data name="upload.date_subfolders_hint"><value>Each upload lands in an extra subfolder named by date (e.g. 2026-07-28), so you can find them again more easily later.</value></data>
+  <data name="links.uploads.section"><value>Uploads</value></data>
+  <data name="links.uploads.lede"><value>Links that let someone send you files (reverse-share).</value></data>
+  <data name="links.uploads.target_folder"><value>Target folder</value></data>
+  <data name="links.uploads.count"><value>Uploads</value></data>
 </root>

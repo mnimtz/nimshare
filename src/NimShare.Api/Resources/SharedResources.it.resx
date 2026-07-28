@@ -1637,4 +1637,8 @@ Grazie per usare NimShare.</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Chiave di licenza inviata via email</value></data>
   <data name="upload.date_subfolders_label"><value>Ordina in sottocartelle per data</value></data>
   <data name="upload.date_subfolders_hint"><value>Ogni caricamento finisce anche in una sottocartella con il nome della data (es. 2026-07-28), per ritrovarlo più facilmente in seguito.</value></data>
+  <data name="links.uploads.section"><value>Caricamenti</value></data>
+  <data name="links.uploads.lede"><value>Link che permettono a qualcuno di inviarti file (richieste di caricamento).</value></data>
+  <data name="links.uploads.target_folder"><value>Cartella di destinazione</value></data>
+  <data name="links.uploads.count"><value>Caricamenti</value></data>
 </root>

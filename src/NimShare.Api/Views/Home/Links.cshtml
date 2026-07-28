@@ -6,6 +6,7 @@
     var groupLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["GroupLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var subdomainLinks = (List<NimShare.Core.Entities.ShareLink>)(ViewData["SubdomainLinks"] ?? new List<NimShare.Core.Entities.ShareLink>());
     var subdomainBase = ViewData["SubdomainBase"] as string;
+    var uploadLinks = (List<NimShare.Core.Entities.UploadRequestLink>)(ViewData["UploadLinks"] ?? new List<NimShare.Core.Entities.UploadRequestLink>());
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
     var currentUserId = (Guid)(ViewData["CurrentUserId"] ?? Guid.Empty);
 }
@@ -90,6 +91,60 @@ else
                         <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
                     }
                     <button class="btn btn-ghost btn-sm" data-delete="@l.Id">@T["links.action.delete"]</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@* v1.11.29 — Marcus's Report: Upload-Anfrage-Links (reverse-share, /u/{slug})
+   tauchten auf /links komplett fehlend auf — nur ShareLinks wurden gezeigt.
+   Eigene Sektion, gleiche Sichtbarkeit wie "Privat" (eigene + Admin alles). *@
+@if (uploadLinks.Any())
+{
+    <h2 style="margin-top:32px">📤 @T["links.uploads.section"]</h2>
+    <p class="muted" style="margin-bottom:8px">@T["links.uploads.lede"]</p>
+    <table class="table table-cards-mobile">
+        <thead>
+            <tr>
+                <th>@T["links.slug"]</th>
+                <th>@T["links.uploads.target_folder"]</th>
+                @if (isAdmin)
+                {
+                    <th>@T["links.public.by"]</th>
+                }
+                <th>@T["links.uploads.count"]</th>
+                <th>@T["links.state"]</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var l in uploadLinks)
+        {
+            var canManageUpload = isAdmin || l.OwnerId == currentUserId;
+            var now = DateTimeOffset.UtcNow;
+            var uState = l.IsRevoked
+                ? ("chip-critical", @T["links.revoked"].Value)
+                : (l.ExpiresAt is not null && l.ExpiresAt <= now) || (l.MaxUploads is not null && l.UploadCount >= l.MaxUploads)
+                    ? ("chip-warn", @T["links.expired"].Value)
+                    : ("chip-ok", @T["links.active"].Value);
+            <tr>
+                <td data-th="@T["links.slug"]"><a href="/u/@l.Slug" class="mono" target="_blank">@l.Slug</a></td>
+                <td data-th="@T["links.uploads.target_folder"]">📁 @l.TargetFolder</td>
+                @if (isAdmin)
+                {
+                    <td class="muted" data-th="@T["links.public.by"]">@l.Owner?.DisplayName</td>
+                }
+                <td data-th="@T["links.uploads.count"]">@l.UploadCount @(l.MaxUploads is int m5 ? $" / {m5}" : "")</td>
+                <td data-th="@T["links.state"]"><span class="chip @uState.Item1">@uState.Item2</span></td>
+                <td>
+                    <a class="btn btn-secondary btn-sm" href="/u/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
+                    <button class="btn btn-ghost btn-sm" data-copy="/u/@l.Slug">@T["links.action.copy"]</button>
+                    @if (canManageUpload)
+                    {
+                        <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" data-delete-upload="@l.Id">@T["links.action.delete"]</button>
+                    }
                 </td>
             </tr>
         }
@@ -328,6 +383,15 @@ document.querySelectorAll('[data-delete]').forEach(b => {
     b.addEventListener('click', async () => {
         if (!await nimConfirm(@Json.Serialize(T["links.confirm.delete"].Value), { danger: true })) return;
         const r = await api('DELETE', `/api/v1/links/${b.dataset.delete}`);
+        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
+    });
+});
+// v1.11.29: eigener Handler für die neue Uploads-Sektion — anderer API-Pfad
+// (/api/v1/upload-requests statt /api/v1/links).
+document.querySelectorAll('[data-delete-upload]').forEach(b => {
+    b.addEventListener('click', async () => {
+        if (!await nimConfirm(@Json.Serialize(T["links.confirm.delete"].Value), { danger: true })) return;
+        const r = await api('DELETE', `/api/v1/upload-requests/${b.dataset.deleteUpload}`);
         if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });

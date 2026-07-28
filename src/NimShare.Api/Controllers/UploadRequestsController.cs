@@ -135,7 +135,10 @@ public class UploadRequestsController : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.UploadRequests.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        // v1.11.29: Admin-Bypass ergänzt, analog LinksController.Delete().
+        var link = user.Role == UserRole.Admin
+            ? await _db.UploadRequests.SingleOrDefaultAsync(l => l.Id == id, ct)
+            : await _db.UploadRequests.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
         if (link is null) return NotFound();
         _db.UploadRequests.Remove(link);
         await _db.SaveChangesAsync(ct);

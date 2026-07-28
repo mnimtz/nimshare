@@ -1637,4 +1637,8 @@ Merci d'utiliser NimShare.</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Clé de licence envoyée par e-mail</value></data>
   <data name="upload.date_subfolders_label"><value>Classer dans des sous-dossiers par date</value></data>
   <data name="upload.date_subfolders_hint"><value>Chaque fichier envoyé atterrit en plus dans un sous-dossier nommé par date (p. ex. 2026-07-28), pour le retrouver plus facilement ensuite.</value></data>
+  <data name="links.uploads.section"><value>Envois</value></data>
+  <data name="links.uploads.lede"><value>Liens permettant à quelqu'un de vous envoyer des fichiers (demandes d'envoi).</value></data>
+  <data name="links.uploads.target_folder"><value>Dossier cible</value></data>
+  <data name="links.uploads.count"><value>Envois</value></data>
 </root>

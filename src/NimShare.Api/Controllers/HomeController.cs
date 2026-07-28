@@ -135,6 +135,16 @@ public class HomeController : Controller
         ViewData["SubdomainLinks"] = subdomainLinks;
         ViewData["SubdomainBase"] = sdSettings is { Enabled: true } ? sdSettings.BaseDomain : null;
 
+        // v1.11.29 — Marcus's Report: Upload-Anfrage-Links tauchten auf /links
+        // nirgends auf (nur ShareLinks wurden abgefragt). Eigene Sektion,
+        // gleiche Sichtbarkeit wie "Privat" (eigene + Admin sieht alle).
+        var uploadLinks = await _db.UploadRequests
+            .Include(l => l.Owner)
+            .Where(l => isAdmin || l.OwnerId == user.Id)
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(ct);
+        ViewData["UploadLinks"] = uploadLinks;
+
         ViewData["PublicLinks"] = publicLinks;
         ViewData["GroupLinks"] = groupLinks;
         ViewData["IsAdmin"] = user.Role == UserRole.Admin;

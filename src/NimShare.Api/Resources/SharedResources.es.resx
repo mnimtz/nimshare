@@ -1637,4 +1637,8 @@ Gracias por usar NimShare.</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Clave de licencia enviada por correo</value></data>
   <data name="upload.date_subfolders_label"><value>Organizar en subcarpetas por fecha</value></data>
   <data name="upload.date_subfolders_hint"><value>Cada archivo subido se guarda además en una subcarpeta con el nombre de la fecha (p. ej. 2026-07-28), para que puedas encontrarlo más fácilmente después.</value></data>
+  <data name="links.uploads.section"><value>Subidas</value></data>
+  <data name="links.uploads.lede"><value>Enlaces con los que alguien puede enviarte archivos (solicitudes de subida).</value></data>
+  <data name="links.uploads.target_folder"><value>Carpeta de destino</value></data>
+  <data name="links.uploads.count"><value>Subidas</value></data>
 </root>
