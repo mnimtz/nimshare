@@ -727,6 +727,10 @@ async function createUploadRequest() {
         expiresAt: document.getElementById('urExp').value ? new Date(document.getElementById('urExp').value).toISOString() : null,
         message: document.getElementById('urMsg').value || null,
         targetFolder: 'Received',
+        // v1.11.32: BUGFIX — der Ordner, aus dem das Modal geöffnet wurde,
+        // wurde bislang nie an den Server geschickt; Uploads landeten immer
+        // unter Personal statt im tatsächlich gewählten Ordner.
+        targetFolderId: currentUploadReqFolder || null,
         useDateSubfolders: document.getElementById('urDateSubfolders').checked,
         notifyOnUpload: true,
         signingCertificateId: document.getElementById('urCert').value || null,

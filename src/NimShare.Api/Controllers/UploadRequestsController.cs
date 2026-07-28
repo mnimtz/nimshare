@@ -33,6 +33,11 @@ public class UploadRequestsController : ControllerBase
         string? Message,
         string? TargetFolder,
         bool NotifyOnUpload,
+        // v1.11.32: der Ordner, aus dem die Anfrage erstellt wurde (Browse-
+        // Kontextmenü "📥 Anfrage" liefert den immer mit). Ohne dieses Feld
+        // landeten Uploads bislang IMMER unter Personal-Root statt im
+        // tatsächlich gewählten Ordner — egal ob Public/Group/Personal.
+        Guid? TargetFolderId = null,
         // v1.11.28: Uploads landen zusätzlich in einem yyyy-MM-dd-Unterordner
         // unter TargetFolder — Default an, damit man später leichter findet
         // was wann reinkam.
@@ -83,6 +88,23 @@ public class UploadRequestsController : ControllerBase
             if (owned) certId = cid;
         }
 
+        // v1.11.32: BUGFIX — der Ordner, aus dem "📥 Anfrage" im Browse
+        // aufgerufen wurde, wurde bisher komplett ignoriert; jede Anfrage
+        // bekam serverseitig das feste Label "Received" und Uploads landeten
+        // (nach v1.11.28) immer unter dem Personal-Root des Owners, egal ob
+        // der Link eigentlich auf einen Public- oder Group-Ordner zielte.
+        Guid? targetFolderId = null;
+        var targetFolderLabel = string.IsNullOrWhiteSpace(req.TargetFolder) ? "Received" : req.TargetFolder!;
+        if (req.TargetFolderId is Guid tfid)
+        {
+            var folderSvc = HttpContext.RequestServices.GetRequiredService<IFolderService>();
+            var targetFolder = await _db.Folders.FindAsync(new object[] { tfid }, ct);
+            if (targetFolder is null || !await folderSvc.CanWriteAsync(targetFolder, user, ct))
+                return Problem(statusCode: 403, title: "You don't have write access to that folder.");
+            targetFolderId = targetFolder.Id;
+            targetFolderLabel = targetFolder.Name;
+        }
+
         var link = new UploadRequestLink
         {
             OwnerId = user.Id,
@@ -91,7 +113,8 @@ public class UploadRequestsController : ControllerBase
             ExpiresAt = req.ExpiresAt,
             MaxUploads = req.MaxUploads,
             Message = req.Message,
-            TargetFolder = string.IsNullOrWhiteSpace(req.TargetFolder) ? "Received" : req.TargetFolder!,
+            TargetFolder = targetFolderLabel,
+            TargetFolderId = targetFolderId,
             UseDateSubfolders = req.UseDateSubfolders,
             NotifyOnUpload = req.NotifyOnUpload,
             RecurringDaysOfWeek = string.IsNullOrWhiteSpace(req.RecurringDaysOfWeek) ? null : req.RecurringDaysOfWeek!.Trim(),
