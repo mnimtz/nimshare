@@ -68,6 +68,18 @@ Stand: v1.9.0 · Signaturen (inkl. Reassign + Zertifikate) + Azure-SQL-Wizard + 
 - **Realtime-WebSocket-Notifications**
 - **Server-side Virus-Scanning-Hook**
 
+## Ideen (Backlog, ungeplant — Feature-Brainstorm 2026-07-29)
+
+Noch nicht spezifiziert, nicht angreifen bis freigegeben.
+
+- **Link-Unfurl mit AI-Preview-Card** — wenn ein NimShare-Link in Slack/Teams/WhatsApp gepostet wird, soll die Vorschau ein hübsches Open-Graph-Bild + KI-Summary zeigen statt nur "nimshare.com". Technisch: OG-Meta-Tags auf der `/s/{slug}`-Landing (dynamisch pro Link: Dateiname/Ordner-Inhalt, evtl. Thumbnail als `og:image`, KI-Summary als `og:description` — AI-Gateway existiert schon für Summaries).
+- **Kommentar/Reaktion/Feedback auf der Link-Landing** — Form noch offen, Marcus fragte explizit nach Ideen. Optionen (nicht entschieden):
+  1. Emoji-Reaktionsleiste (👍❤️😀), anonym, aggregierte Zählung für den Owner sichtbar — leichtgewichtig, kein Freitext-Moderationsrisiko.
+  2. Gästebuch-Kommentare (Name + Text), öffentlich auf der Landing sichtbar — mehr Aufwand (Moderation/Spam-Schutz nötig).
+  3. Private Notiz an den Owner (kein öffentlicher Thread) — kommt per Push/E-Mail an, ähnlich wie "Nachricht an Absender". Kein Moderationsrisiko, aber weniger sichtbar für andere Besucher.
+  4. Kombi aus 1+3: Emoji öffentlich leicht, Freitext optional privat an Owner.
+  - Berührt auch die offene Frage aus der Gallery-Idee unten ("Kommentare pro Bild? Reactions?") — evtl. dasselbe Baustein-Set für beide Fälle nutzen.
+
 ## Kleinigkeiten (irgendwann)
 
 - File-Versions Retention Job (KeepVersions automatisch prunen)
