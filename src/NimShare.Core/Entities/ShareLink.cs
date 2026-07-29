@@ -148,6 +148,9 @@ public class ShareLink
 
     public ICollection<ShareLinkAccess> Accesses { get; set; } = new List<ShareLinkAccess>();
 
+    /// <summary>v1.11.52 — dezente Emoji-Reaktionen auf der Landing.</summary>
+    public ICollection<ShareLinkReaction> Reactions { get; set; } = new List<ShareLinkReaction>();
+
     /// <summary>True if the link is currently usable — not revoked, not expired, cap not reached.</summary>
     public bool IsActive(DateTimeOffset now)
         => !IsRevoked

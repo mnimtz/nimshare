@@ -233,6 +233,15 @@ public class GatewayBackedNotificationService : INotificationService
         catch (Exception ex) { _log.LogWarning(ex, "notify gallery upload failed"); }
     }
 
+    public async Task NotifyFeedbackAsync(ShareLink link, string message, string? fromEmail, CancellationToken ct = default)
+    {
+        var from = string.IsNullOrWhiteSpace(fromEmail) ? "anonym" : fromEmail;
+        var subject = $"[NimShare] Feedback zu deinem Link '{link.Slug}'";
+        var body = $"Hallo {link.Owner.DisplayName},\n\njemand hat auf der Landing-Seite deines Links '{link.Slug}' Feedback hinterlassen:\n\nVon: {from}\n\n{message}\n\nZeit (UTC): {DateTimeOffset.UtcNow:u}\n\n— NimShare";
+        try { await _gateway.SendAsync(link.Owner.Email, subject, body, ct); }
+        catch (Exception ex) { _log.LogWarning(ex, "notify feedback failed"); }
+    }
+
     public async Task SendShareLinkAsync(string toEmail, string fromName, string subject, string body, CancellationToken ct = default)
     {
         try

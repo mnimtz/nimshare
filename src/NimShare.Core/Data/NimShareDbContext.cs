@@ -12,6 +12,7 @@ public class NimShareDbContext : DbContext
     public DbSet<StorageFile> Files => Set<StorageFile>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareLinkAccess> ShareLinkAccesses => Set<ShareLinkAccess>();
+    public DbSet<ShareLinkReaction> ShareLinkReactions => Set<ShareLinkReaction>();
     public DbSet<LinkPrivacySettings> LinkPrivacySettings => Set<LinkPrivacySettings>();
     public DbSet<CustomDomain> CustomDomains => Set<CustomDomain>();
     public DbSet<UploadRequestLink> UploadRequests => Set<UploadRequestLink>();
@@ -541,6 +542,14 @@ public class NimShareDbContext : DbContext
             // v1.11.14: ASN/Org-String aus der GeoIP-Auflösung.
             e.Property(x => x.Isp).HasMaxLength(200);
             e.HasOne(x => x.ShareLink).WithMany(l => l.Accesses).HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ShareLinkReaction>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.ShareLinkId);
+            e.Property(x => x.Emoji).HasMaxLength(16).IsRequired();
+            e.HasOne(x => x.ShareLink).WithMany(l => l.Reactions).HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<CustomDomain>(e =>

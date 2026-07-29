@@ -1,0 +1,94 @@
+@model string
+@* v1.11.52 — Marcus's Wunsch: dezente, immer sichtbare Emoji-Reaktionsleiste
+   + optionale private Feedback-Notiz an den Absender. Landing + FolderLanding
+   teilen sich diese Partial (Model-String = Slug), analog _TimezoneBeacon.
+   Keine Freitext-Reaktionen (nur die 4 festen Emojis vom Server validiert),
+   keine öffentliche Kommentar-Liste — Feedback geht ausschließlich per
+   E-Mail an den Link-Owner, kein neuer Moderationsaufwand. *@
+<div style="margin-top:28px;padding-top:16px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;align-items:center;gap:10px">
+    <div id="reactionBar" style="display:flex;gap:6px"></div>
+    <button type="button" id="feedbackToggle" class="btn btn-ghost btn-sm" style="color:var(--tw-gray-500,#6b7280)"
+            onclick="document.getElementById('feedbackForm').style.display='flex';this.style.display='none'">
+        💬 @T["feedback.toggle_label"]
+    </button>
+    <div id="feedbackForm" style="display:none;flex-direction:column;gap:8px;width:100%;max-width:420px">
+        <textarea id="feedbackMsg" rows="3" maxlength="2000" placeholder="@T["feedback.placeholder"]"
+                  style="width:100%;resize:vertical;font-family:inherit"></textarea>
+        <input type="email" id="feedbackEmail" placeholder="@T["feedback.email_placeholder"]"/>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="btn btn-primary btn-sm" onclick="sendLinkFeedback()">@T["feedback.send"]</button>
+            <span id="feedbackStatus" class="muted" style="font-size:.85rem"></span>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    const slug = @Json.Serialize(Model);
+    const emojiSet = ['👍', '❤️', '🎉', '😀'];
+    const bar = document.getElementById('reactionBar');
+
+    function render(counts, mine) {
+        bar.innerHTML = '';
+        emojiSet.forEach(e => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = 'border:1px solid var(--border-subtle);border-radius:20px;padding:4px 10px;'
+                + 'background:' + (mine === e ? 'rgba(0,40,84,0.1)' : 'transparent') + ';cursor:pointer;font-size:.95rem;'
+                + 'display:flex;align-items:center;gap:5px;transition:transform .1s';
+            btn.onmouseenter = () => btn.style.transform = 'scale(1.08)';
+            btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+            btn.innerHTML = e + '<span style="font-size:.78rem;color:var(--tw-gray-500,#6b7280)">' + (counts[e] || 0) + '</span>';
+            btn.addEventListener('click', () => react(e));
+            bar.appendChild(btn);
+        });
+    }
+
+    async function loadReactions() {
+        try {
+            const r = await fetch('/s/' + slug + '/reactions', { credentials: 'same-origin' });
+            if (!r.ok) return;
+            const d = await r.json();
+            render(d.counts || {}, d.mine || null);
+        } catch {}
+    }
+
+    async function react(emoji) {
+        try {
+            const r = await fetch('/s/' + slug + '/react', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ emoji: emoji }),
+            });
+            if (!r.ok) return;
+            const d = await r.json();
+            render(d.counts || {}, d.mine || null);
+        } catch {}
+    }
+
+    window.sendLinkFeedback = async function () {
+        const msg = document.getElementById('feedbackMsg').value.trim();
+        const status = document.getElementById('feedbackStatus');
+        if (!msg) return;
+        const email = document.getElementById('feedbackEmail').value.trim();
+        try {
+            const r = await fetch('/s/' + slug + '/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message: msg, fromEmail: email || null }),
+            });
+            if (!r.ok) { status.textContent = @Json.Serialize(T["feedback.error"].Value); return; }
+            document.getElementById('feedbackForm').style.display = 'none';
+            status.textContent = '';
+            const done = document.createElement('span');
+            done.className = 'muted';
+            done.style.fontSize = '.85rem';
+            done.textContent = @Json.Serialize(T["feedback.sent"].Value);
+            document.getElementById('feedbackToggle').replaceWith(done);
+        } catch { status.textContent = @Json.Serialize(T["feedback.error"].Value); }
+    };
+
+    loadReactions();
+})();
+</script>

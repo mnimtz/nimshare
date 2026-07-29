@@ -33,6 +33,12 @@ public interface INotificationService
     /// einen Album-Link mit AllowUploads=true eine Datei hochgeladen hat.
     /// Best-effort; wenn NotifyOnAccess des Links false ist, no-op.</summary>
     Task NotifyGalleryUploadAsync(ShareLink link, StorageFile file, CancellationToken ct = default);
+
+    /// <summary>v1.11.52 — Feedback-Notiz eines Besuchers von der Link-Landing
+    /// an den Link-Owner. Bewusst UNGATED von NotifyOnAccess — das ist eine
+    /// explizite Besucher-Aktion (nicht der passive Download-Log), der Owner
+    /// soll sie immer bekommen.</summary>
+    Task NotifyFeedbackAsync(ShareLink link, string message, string? fromEmail, CancellationToken ct = default);
 }
 
 public class SmtpNotificationService : INotificationService
@@ -93,6 +99,22 @@ public class SmtpNotificationService : INotificationService
             request.TargetFolder,
             DateTimeOffset.UtcNow.ToString("u")].Value;
         return SendAsync(request.Owner.Email, subject, body, ct);
+    }
+
+    public Task NotifyFeedbackAsync(ShareLink link, string message, string? fromEmail, CancellationToken ct = default)
+    {
+        if (!_options.Enabled) return Task.CompletedTask;
+        using var _ = WithCulture(link.Owner.PreferredCulture);
+        var t = _localizerFactory.Create(typeof(SharedResources));
+        var from = string.IsNullOrWhiteSpace(fromEmail) ? t["email.feedback.anonymous"].Value : fromEmail;
+        var subject = t["email.feedback.subject", link.Slug].Value;
+        var body = t["email.feedback.body",
+            link.Owner.DisplayName,
+            link.Slug,
+            from,
+            message,
+            DateTimeOffset.UtcNow.ToString("u")].Value;
+        return SendAsync(link.Owner.Email, subject, body, ct);
     }
 
     private static CultureScope WithCulture(string cultureName)

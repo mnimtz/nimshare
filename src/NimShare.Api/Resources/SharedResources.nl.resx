@@ -97,6 +97,15 @@
   <data name="og.protected_description"><value>Deze share is beveiligd met een wachtwoord of toegangsbeperking.</value></data>
   <data name="og.file_description"><value>Gedeeld via NimShare — een zelf-gehost platform voor bestandsdeling.</value></data>
   <data name="og.folder_description"><value>{0} bestanden gedeeld via NimShare.</value></data>
+  <data name="feedback.toggle_label"><value>Feedback voor de afzender</value></data>
+  <data name="feedback.placeholder"><value>Jouw bericht aan de afzender...</value></data>
+  <data name="feedback.email_placeholder"><value>Jouw e-mail (optioneel)</value></data>
+  <data name="feedback.send"><value>Versturen</value></data>
+  <data name="feedback.sent"><value>Bedankt, je bericht is onderweg!</value></data>
+  <data name="feedback.error"><value>Versturen mislukt — probeer het opnieuw.</value></data>
+  <data name="email.feedback.subject"><value>Feedback over je link '{0}'</value></data>
+  <data name="email.feedback.body"><value>Hallo {0},&#10;&#10;iemand heeft feedback achtergelaten op de landingspagina van je link '{1}':&#10;&#10;Van: {2}&#10;&#10;{3}&#10;&#10;Tijd (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.feedback.anonymous"><value>anoniem</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Actief</value></data>
   <data name="links.revoked"><value>Ingetrokken</value></data>

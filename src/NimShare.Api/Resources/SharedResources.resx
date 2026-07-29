@@ -252,6 +252,15 @@
   <data name="og.protected_description"><value>This share is password- or access-protected.</value></data>
   <data name="og.file_description"><value>Shared via NimShare — a self-hosted file-sharing platform.</value></data>
   <data name="og.folder_description"><value>{0} files shared via NimShare.</value></data>
+  <data name="feedback.toggle_label"><value>Feedback for the sender</value></data>
+  <data name="feedback.placeholder"><value>Your message to the sender...</value></data>
+  <data name="feedback.email_placeholder"><value>Your email (optional)</value></data>
+  <data name="feedback.send"><value>Send</value></data>
+  <data name="feedback.sent"><value>Thanks, your message is on its way!</value></data>
+  <data name="feedback.error"><value>Failed to send — please try again.</value></data>
+  <data name="email.feedback.subject"><value>Feedback on your link '{0}'</value></data>
+  <data name="email.feedback.body"><value>Hello {0},&#10;&#10;Someone left feedback on the landing page of your link '{1}':&#10;&#10;From: {2}&#10;&#10;{3}&#10;&#10;Time (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.feedback.anonymous"><value>anonymous</value></data>
   <data name="links.state"><value>State</value></data>
   <data name="links.active"><value>Active</value></data>
   <data name="links.revoked"><value>Revoked</value></data>

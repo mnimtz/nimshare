@@ -73,12 +73,7 @@ Stand: v1.9.0 · Signaturen (inkl. Reassign + Zertifikate) + Azure-SQL-Wizard + 
 Noch nicht spezifiziert, nicht angreifen bis freigegeben.
 
 - ~~**Link-Unfurl mit AI-Preview-Card**~~ **✅ erledigt v1.11.51** — OG/Twitter-Meta-Tags auf `/s/{slug}` (Datei-/Ordner-Landing). Passwortgeschützte/eingeschränkte Links zeigen NUR die generische Branding-Karte (Marcus's Entscheidung) — Crawler-Bots rufen kalt ohne Session/Passwort ab, ein reichhaltiges Preview würde den Schutz für Metadaten umgehen. Ungeschützte Links: Dateiname/Ordnername als Titel, KI-Summary (bereits gecacht auf StorageFile.AiSummary) oder Message als Beschreibung, Bild-Thumbnail (1600er, wiederverwendet die bestehende Thumb-Pipeline) bzw. Owner/Template-Logo als Fallback als `og:image`.
-- **Kommentar/Reaktion/Feedback auf der Link-Landing** — Form noch offen, Marcus fragte explizit nach Ideen. Optionen (nicht entschieden):
-  1. Emoji-Reaktionsleiste (👍❤️😀), anonym, aggregierte Zählung für den Owner sichtbar — leichtgewichtig, kein Freitext-Moderationsrisiko.
-  2. Gästebuch-Kommentare (Name + Text), öffentlich auf der Landing sichtbar — mehr Aufwand (Moderation/Spam-Schutz nötig).
-  3. Private Notiz an den Owner (kein öffentlicher Thread) — kommt per Push/E-Mail an, ähnlich wie "Nachricht an Absender". Kein Moderationsrisiko, aber weniger sichtbar für andere Besucher.
-  4. Kombi aus 1+3: Emoji öffentlich leicht, Freitext optional privat an Owner.
-  - Berührt auch die offene Frage aus der Gallery-Idee unten ("Kommentare pro Bild? Reactions?") — evtl. dasselbe Baustein-Set für beide Fälle nutzen.
+- ~~**Kommentar/Reaktion/Feedback auf der Link-Landing**~~ **✅ erledigt v1.11.52** — Kombi aus Option 1+3 (Marcus's Wahl): dezente, immer sichtbare Emoji-Leiste (👍❤️🎉😀, anonym, Session-Dedupe, Toggle) unten auf Landing + FolderLanding, plus optionales privates Feedback-Textfeld, das per E-Mail direkt an den Link-Owner geht (kein öffentlicher Thread, keine Moderation nötig). Bleibt als offener Baustein für die Gallery-Idee unten relevant, falls dort Kommentare pro Bild gewünscht sind.
 - **6-stelliger Pairing-Code statt Link** — analog Send Anywhere. Feste Subdomain (z.B. `go.nimshare.com` o.ä.), auf der man nur den 6-stelligen Code eintippt statt einen vollen Link zu kopieren/teilen. Löst dort denselben Link/Datei-Zugriff ein. Fragen offen: Code kurzlebig (analog Send Anywhere ~10 Min) oder gleiche Laufzeit wie der zugrundeliegende Link? Code zusätzlich zum normalen `/s/{slug}`-Link (Owner sieht beides) oder eigener Link-Typ? Kollisionsraum bei 6 Stellen numerisch (~1 Mio Codes) — TTL/Rotation nötig damit er nicht knapp wird.
 
 ## Kleinigkeiten (irgendwann)

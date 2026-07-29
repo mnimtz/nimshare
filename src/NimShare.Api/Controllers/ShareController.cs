@@ -351,6 +351,83 @@ public class ShareController : Controller
         return NoContent();
     }
 
+    // v1.11.52 — dezente, immer sichtbare Emoji-Reaktionsleiste auf der
+    // Landing. Anonym (keine Besucher-Identität gespeichert) — nur eines
+    // dieser vier festen Emojis, kein Freitext, also kein Spam-/XSS-Vektor.
+    // Dedupe pro Besucher läuft über die Session (analog gate.{slug}), nicht
+    // über die DB — ein Reload zählt nicht doppelt, ein erneuter Klick auf
+    // dasselbe Emoji nimmt die Reaktion zurück (Toggle).
+    internal static readonly string[] AllowedReactionEmojis = { "👍", "❤️", "🎉", "😀" };
+
+    public record ReactionCounts(Dictionary<string, int> Counts, string? Mine);
+
+    [HttpGet("{slug}/reactions")]
+    public async Task<IActionResult> Reactions(string slug, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return NotFound();
+        var counts = await _db.ShareLinkReactions
+            .Where(r => r.ShareLinkId == link.Id)
+            .GroupBy(r => r.Emoji)
+            .Select(g => new { Emoji = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Emoji, x => x.Count, ct);
+        foreach (var e in AllowedReactionEmojis) counts.TryAdd(e, 0);
+        var mine = HttpContext.Session.GetString($"reactionEmoji.{slug}");
+        return Ok(new ReactionCounts(counts, mine));
+    }
+
+    public record ReactRequest(string Emoji);
+
+    [HttpPost("{slug}/react")]
+    public async Task<IActionResult> React(string slug, [FromBody] ReactRequest req, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return NotFound();
+        if (req?.Emoji is null || !AllowedReactionEmojis.Contains(req.Emoji))
+            return Problem(statusCode: 422, title: "Unknown reaction.");
+
+        var idKey = $"reactionId.{slug}";
+        var emojiKey = $"reactionEmoji.{slug}";
+        var previousId = HttpContext.Session.GetString(idKey);
+        if (previousId is not null && Guid.TryParse(previousId, out var prevGuid))
+        {
+            var previous = await _db.ShareLinkReactions.FindAsync(new object[] { prevGuid }, ct);
+            if (previous is not null) _db.ShareLinkReactions.Remove(previous);
+        }
+        // Nochmaliger Klick auf dasselbe Emoji nimmt die Reaktion zurück.
+        if (HttpContext.Session.GetString(emojiKey) == req.Emoji)
+        {
+            await _db.SaveChangesAsync(ct);
+            HttpContext.Session.Remove(idKey);
+            HttpContext.Session.Remove(emojiKey);
+            return await Reactions(slug, ct);
+        }
+        var reaction = new ShareLinkReaction { ShareLinkId = link.Id, Emoji = req.Emoji };
+        _db.ShareLinkReactions.Add(reaction);
+        await _db.SaveChangesAsync(ct);
+        HttpContext.Session.SetString(idKey, reaction.Id.ToString());
+        HttpContext.Session.SetString(emojiKey, req.Emoji);
+        return await Reactions(slug, ct);
+    }
+
+    // v1.11.52 — private Feedback-Notiz an den Link-Owner (kein öffentlicher
+    // Thread, keine Moderation nötig — geht nur per E-Mail an den Owner).
+    public record FeedbackRequest(string Message, string? FromEmail);
+
+    [HttpPost("{slug}/feedback")]
+    public async Task<IActionResult> Feedback(string slug, [FromBody] FeedbackRequest req, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return NotFound();
+        var message = (req?.Message ?? "").Trim();
+        if (string.IsNullOrEmpty(message)) return Problem(statusCode: 422, title: "Message required.");
+        if (message.Length > 2000) message = message[..2000];
+        var fromEmail = string.IsNullOrWhiteSpace(req?.FromEmail) ? null : req!.FromEmail!.Trim();
+        if (fromEmail is { Length: > 200 }) fromEmail = fromEmail[..200];
+        await _notify.NotifyFeedbackAsync(link, message, fromEmail, ct);
+        return NoContent();
+    }
+
     // v1.10.153: Public download des Absender-Zertifikats (Stufe 1). Der
     // Empfänger klickt auf der Landing „Zertifikat herunterladen" und
     // vergleicht Fingerprint bzw. importiert es in seinen Trust-Store.

@@ -204,6 +204,15 @@
   <data name="og.protected_description"><value>Ce partage est protégé par mot de passe ou par accès restreint.</value></data>
   <data name="og.file_description"><value>Partagé via NimShare — une plateforme de partage de fichiers auto-hébergée.</value></data>
   <data name="og.folder_description"><value>{0} fichiers partagés via NimShare.</value></data>
+  <data name="feedback.toggle_label"><value>Retour à l'expéditeur</value></data>
+  <data name="feedback.placeholder"><value>Votre message à l'expéditeur...</value></data>
+  <data name="feedback.email_placeholder"><value>Votre e-mail (facultatif)</value></data>
+  <data name="feedback.send"><value>Envoyer</value></data>
+  <data name="feedback.sent"><value>Merci, votre message est en route !</value></data>
+  <data name="feedback.error"><value>Échec de l'envoi — veuillez réessayer.</value></data>
+  <data name="email.feedback.subject"><value>Retour sur votre lien '{0}'</value></data>
+  <data name="email.feedback.body"><value>Bonjour {0},&#10;&#10;Quelqu'un a laissé un commentaire sur la page de votre lien '{1}' :&#10;&#10;De : {2}&#10;&#10;{3}&#10;&#10;Heure (UTC) : {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.feedback.anonymous"><value>anonyme</value></data>
   <data name="links.state"><value>État</value></data>
   <data name="links.active"><value>Actif</value></data>
   <data name="links.revoked"><value>Révoqué</value></data>

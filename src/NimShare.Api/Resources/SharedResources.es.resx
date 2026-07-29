@@ -204,6 +204,15 @@
   <data name="og.protected_description"><value>Este recurso compartido está protegido por contraseña o acceso restringido.</value></data>
   <data name="og.file_description"><value>Compartido a través de NimShare — una plataforma de compartición de archivos autoalojada.</value></data>
   <data name="og.folder_description"><value>{0} archivos compartidos a través de NimShare.</value></data>
+  <data name="feedback.toggle_label"><value>Comentario para el remitente</value></data>
+  <data name="feedback.placeholder"><value>Tu mensaje para el remitente...</value></data>
+  <data name="feedback.email_placeholder"><value>Tu correo electrónico (opcional)</value></data>
+  <data name="feedback.send"><value>Enviar</value></data>
+  <data name="feedback.sent"><value>¡Gracias, tu mensaje está en camino!</value></data>
+  <data name="feedback.error"><value>Error al enviar — inténtalo de nuevo.</value></data>
+  <data name="email.feedback.subject"><value>Comentario sobre tu enlace '{0}'</value></data>
+  <data name="email.feedback.body"><value>Hola {0},&#10;&#10;alguien dejó un comentario en la página de tu enlace '{1}':&#10;&#10;De: {2}&#10;&#10;{3}&#10;&#10;Hora (UTC): {4}&#10;&#10;— NimShare</value></data>
+  <data name="email.feedback.anonymous"><value>anónimo</value></data>
   <data name="links.state"><value>Estado</value></data>
   <data name="links.active"><value>Activo</value></data>
   <data name="links.revoked"><value>Revocado</value></data>
