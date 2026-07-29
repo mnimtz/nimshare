@@ -1,6 +1,6 @@
 # NimShare
 
-**Self-hosted, brand-styled file sharing on Azure — with signatures, AI, and a native iOS app.** Upload once, share via personalised links with expiry, password, download limits, custom domains, QR codes and file-request (upload) links. Multi-user with fine-grained permissions, native iOS app, EFIGS+NL localised, and AI features that actually help (chat with your files, smart tags, semantic search, humorous greetings).
+**Self-hosted, brand-styled file sharing on Azure — with signatures, license-key delivery, AI, and a native iOS app.** Upload once, share via personalised links with expiry, password, download limits, subdomains, custom domains, QR codes and file-request (upload) links. Multi-user with fine-grained permissions, native iOS app, EFIGS+NL localised, and AI features that actually help (chat with your files, smart tags, semantic search, humorous greetings).
 
 Built on **ASP.NET Core 8 + Azure App Service + Azure Blob Storage**. Deploy in one click.
 
@@ -30,8 +30,12 @@ NimShare grew from a link-sharing MVP into a full file-collaboration platform. H
 - **Branded landing page** with optional message, preview, and AI auto-summary.
 - **QR code** auto-generated for every link.
 - **One-click revoke** without deleting the file.
-- **Access statistics** per link — hits, downloads, referrers, country + city, device type, IP hashes.
+- **Access statistics** per link — hits, downloads, referrers, country + city, device type, timezone, IP hashes, peak-hour heatmap.
 - **Public links** admin-curated, visible to all users under **Meine Links**.
+- **Subdomain links** — once a base domain is configured (**Settings → Domains**), any link is also reachable at `https://{slug}.yourdomain.com`, with optional automatic wildcard-DNS provisioning via a Cloudflare API token.
+- **Serial number reveal** — attach a fixed license/serial code to a link; released to the visitor only after the same password / email-allowlist + one-time-passcode gate other links use.
+- **Sender-identity badge** — attach one of your certificates to a link; the landing shows a discreet "✓ Signed by …" badge with a details popover and a public `.cer` download (a visual trust indicator, not a cryptographic signature of the payload).
+- **Emergency direct-download** — for password-less links, generate short-lived (48 h) direct Azure Blob links per file that bypass nimshare.com entirely, for recipients whose corporate proxy blocks the app's domain but trusts Microsoft's.
 
 ### Reverse-share (upload requests)
 - Generate a public link that lets **someone else send you a file** — no account on their side.
@@ -53,6 +57,12 @@ NimShare grew from a link-sharing MVP into a full file-collaboration platform. H
 - **File versioning** — every replace keeps the previous version, restorable.
 - **File locking** + **OnlyOffice** integration for concurrent editing.
 
+### Photo & media galleries
+- Folders can be typed as photo/video **albums**; independently, any folder share link can render as a **grid + lightbox gallery** instead of a plain file list.
+- **GPS map** on the landing page, derived from EXIF data (owner-controlled opt-out toggle per link).
+- Thumbnail generation runs on a **persistent background worker queue** — one job per file builds both preview sizes and extracts GPS in a single blob read, reliable even on low-CPU hosts.
+- **AI-generated tags** on uploads (gallery included), shown in the visitor's own language.
+
 ### Permissions ("Windows-ACL for public folders")
 - A public folder can be marked **private** — only creator, admin, and explicitly-granted users see it.
 - **Direct-shares** grant read/write to individual users or entire groups.
@@ -67,6 +77,17 @@ NimShare grew from a link-sharing MVP into a full file-collaboration platform. H
 - **Bring-your-own certificate** (PKCS#12 upload) for cryptographic signing, or platform-managed certificates.
 - **Signature audit log** with forensic fields (country, city, device, timezone, IP hash).
 - Full **REST API** for signature requests; native iOS Requester + Signer flows.
+
+### Trust & certificates
+- Every instance runs its own self-signed **Root CA**; personal signing certificates issued in-app are signed by it (bring-your-own PKCS#12 works too, without the CA).
+- Recipients download/import the CA certificate **once** (`/nimshare-root.cer`) and every future sender badge on the instance then validates without security prompts.
+- Certificate lists flag **expired / expiring** certificates for the owner.
+
+### License management (Key-Store)
+- A per-user CRM for customer license keys: name, email (or an email-domain wildcard), a free-text key type, an encrypted key value, and an optional validity window.
+- Put a share link into **Key-Store mode** — the visitor enters their email, and the matching key (by exact address or domain) is revealed automatically. Matching is scoped to the link owner's own customers.
+- Attach **documentation** per key type — uploaded PDFs and/or external links — shown as extra buttons next to the revealed key.
+- **AI-drafted email templates** for sending a key to a customer, locale-matched to the language the visitor viewed the page in; optional PDF attachments on send.
 
 ### AI features (opt-in, provider-agnostic)
 Bring your own key for **Gemini, OpenAI or Anthropic**, or leave the AI Gateway disabled.
