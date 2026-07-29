@@ -34,6 +34,7 @@
   <data name="login.sign_in"><value>Aanmelden</value></data>
   <data name="login.remember_me"><value>Aangemeld blijven</value></data>
   <data name="login.or"><value>of</value></data>
+  <data name="login.request_account"><value>Geen account? Account aanvragen</value></data>
 
   <data name="password.title"><value>Wachtwoord wijzigen</value></data>
   <data name="password.lede"><value>Voer je huidige wachtwoord in en kies een nieuw.</value></data>
@@ -242,6 +243,10 @@
   <data name="users.invite.language"><value>Taal</value></data>
   <data name="users.invite.send"><value>Uitnodiging versturen</value></data>
   <data name="users.invite.confirm_revoke"><value>Uitnodiging voor {0} intrekken?</value></data>
+  <data name="users.requests.title"><value>Accountaanvragen</value></data>
+  <data name="users.requests.received"><value>Ontvangen</value></data>
+  <data name="users.requests.approve"><value>Goedkeuren</value></data>
+  <data name="users.requests.confirm_reject"><value>Accountaanvraag van {0} afwijzen?</value></data>
   <data name="users.create_new.lede"><value>Liever zelf een wachtwoord instellen? Gebruik het klassieke formulier hieronder.</value></data>
 
   <data name="invite.accept.title"><value>Stel je wachtwoord in</value></data>
@@ -587,6 +592,20 @@ Open de link:
   <data name="invite.email.cta"><value>Wachtwoord instellen &amp; inloggen</value></data>
   <data name="invite.email.expiry_note"><value>Deze link verloopt op {0}.</value></data>
   <data name="notice.invite_sent"><value>Uitnodiging verzonden naar {0}.</value></data>
+  <data name="request_account.title"><value>Account aanvragen</value></data>
+  <data name="request_account.lede"><value>Vertel ons wie je bent — een beheerder beoordeelt je aanvraag.</value></data>
+  <data name="request_account.message"><value>Bericht (optioneel)</value></data>
+  <data name="request_account.message.placeholder"><value>Waarvoor wil je NimShare gebruiken?</value></data>
+  <data name="request_account.submit"><value>Aanvraag versturen</value></data>
+  <data name="request_account.back_to_login"><value>Terug naar inloggen</value></data>
+  <data name="request_account.sent.title"><value>Aanvraag verstuurd</value></data>
+  <data name="request_account.sent.body"><value>Bedankt! Een beheerder beoordeelt je aanvraag en neemt contact op zodra deze is goedgekeurd.</value></data>
+  <data name="notice.request_approved"><value>Goedgekeurd — er is een uitnodiging verstuurd naar {0}.</value></data>
+  <data name="notice.request_rejected"><value>Aanvraag van {0} afgewezen.</value></data>
+  <data name="account_request.email.subject"><value>Nieuwe accountaanvraag van {0}</value></data>
+  <data name="account_request.email.body"><value>Hallo,&#10;&#10;{0} ({1}) heeft een account aangevraagd op NimShare.&#10;&#10;Bericht: {2}&#10;&#10;Bekijk de aanvraag hier:&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) heeft een account aangevraagd op NimShare.&lt;br/&gt;&lt;br/&gt;Bericht: {2}</value></data>
+  <data name="account_request.email.cta"><value>Aanvraag bekijken</value></data>
   <data name="notice.password_reset_sent"><value>Resetlink verzonden naar {0}.</value></data>
   <data name="notice.group_created"><value>Groep aangemaakt.</value></data>
   <data name="notice.group_updated"><value>Groep bijgewerkt.</value></data>
@@ -596,6 +615,8 @@ Open de link:
   <data name="notice.member_role_updated"><value>Rol bijgewerkt.</value></data>
   <data name="err.invalid_email"><value>Ongeldig e-mailadres.</value></data>
   <data name="err.user_exists"><value>Er bestaat al een gebruiker met dit e-mailadres.</value></data>
+  <data name="err.invalid_request"><value>Voer een geldig e-mailadres en je naam in.</value></data>
+  <data name="err.request_not_found"><value>Aanvraag niet gevonden.</value></data>
   <data name="err.cannot_disable_self"><value>Je kunt jezelf niet deactiveren.</value></data>
   <data name="err.cannot_delete_self"><value>Je kunt jezelf niet verwijderen.</value></data>
   <data name="err.last_admin"><value>De laatste actieve beheerder kan niet worden verwijderd of gedegradeerd.</value></data>

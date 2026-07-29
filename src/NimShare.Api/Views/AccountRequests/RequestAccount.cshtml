@@ -1,0 +1,42 @@
+@model NimShare.Api.Controllers.RequestAccountViewModel
+@{
+    ViewData["Title"] = T["request_account.title"];
+    Layout = "_Layout";
+}
+<div class="landing-shell">
+    <div class="landing-card" style="max-width: 480px">
+        <div style="text-align:center;margin-bottom:var(--sp-4)">
+            <img src="~/img/logo-400.png" srcset="/img/logo-400.png 1x, /img/logo-800.png 2x"
+                 alt="NimShare" style="max-width:280px;width:100%;height:auto;margin:0 auto"/>
+        </div>
+        <h1 style="text-align:center">@T["request_account.title"]</h1>
+        <p class="lede" style="text-align:center">@T["request_account.lede"]</p>
+
+        <form method="post" class="stack" style="margin-top: var(--sp-6)">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="helper" style="color:var(--status-critical)"></div>
+            <div class="field">
+                <label for="Email">@T["auth.email"]</label>
+                <input type="email" name="Email" id="Email" required autocomplete="email" value="@Model.Email"/>
+            </div>
+            <div class="field">
+                <label for="DisplayName">@T["auth.display_name"]</label>
+                <input type="text" name="DisplayName" id="DisplayName" required autocomplete="name" value="@Model.DisplayName"/>
+            </div>
+            <div class="field">
+                <label for="Message">@T["request_account.message"]</label>
+                <textarea name="Message" id="Message" rows="3" placeholder="@T["request_account.message.placeholder"]">@Model.Message</textarea>
+            </div>
+            @* Honeypot — hidden from real visitors, bots often fill every field. *@
+            <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+                <label for="Website">Website</label>
+                <input type="text" name="Website" id="Website" tabindex="-1" autocomplete="off"/>
+            </div>
+            <button type="submit" class="btn btn-primary">@T["request_account.submit"]</button>
+        </form>
+
+        <div style="margin-top:var(--sp-6);text-align:center">
+            <a href="/login" class="muted" style="font-size:.85rem">@T["request_account.back_to_login"]</a>
+        </div>
+    </div>
+</div>

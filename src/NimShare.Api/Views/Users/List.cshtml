@@ -3,6 +3,7 @@
     ViewData["Title"] = T["users.title"]; Layout = "_AppShell";
     var groups = (List<NimShare.Core.Entities.Group>)(ViewData["Groups"] ?? new List<NimShare.Core.Entities.Group>());
     var invites = (List<NimShare.Core.Entities.Invitation>)(ViewData["Invitations"] ?? new List<NimShare.Core.Entities.Invitation>());
+    var requests = (List<NimShare.Core.Entities.AccountRequest>)(ViewData["AccountRequests"] ?? new List<NimShare.Core.Entities.AccountRequest>());
     var now = DateTimeOffset.UtcNow;
     (string cls, string label, string icon) InviteStatus(NimShare.Core.Entities.Invitation i) {
         if (i.UsedAt is not null) return ("chip-ok", "Angenommen", "✓");
@@ -25,6 +26,55 @@
 @if (TempData["Error"] is string err)
 {
     <div class="card" style="border-left:3px solid var(--status-critical);background:rgba(220,38,38,.06)">@err</div>
+}
+
+@* v1.11.54: Kontoanfragen von der Login-Seite ("Konto beantragen"). Bewusst
+   auffällig über der Einladungs-Karte — hier wartet jemand auf Antwort. *@
+@if (requests.Any())
+{
+    <div class="card" style="border-left:3px solid var(--tw-accent)">
+        <h2 class="card-title">@T["users.requests.title"] (@requests.Count)</h2>
+        <div style="overflow-x:auto">
+        <table class="table" style="margin:0;font-size:.88rem">
+            <thead>
+                <tr>
+                    <th>@T["auth.email"]</th>
+                    <th>@T["auth.display_name"]</th>
+                    <th>@T["request_account.message"]</th>
+                    <th>@T["users.requests.received"]</th>
+                    <th style="text-align:right">@T["users.actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var r in requests)
+            {
+                <tr>
+                    <td><code>@r.Email</code></td>
+                    <td>@r.DisplayName</td>
+                    <td class="muted" style="max-width:260px;white-space:normal">@r.Message</td>
+                    <td style="white-space:nowrap">@r.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</td>
+                    <td style="text-align:right;white-space:nowrap">
+                        <form method="post" action="/settings/users/requests/@r.Id/approve" style="display:inline-flex;gap:4px;align-items:center">
+                            @Html.AntiForgeryToken()
+                            <select name="role" style="padding:4px 6px;font-size:.8rem">
+                                <option value="User">@T["users.role.user"]</option>
+                                <option value="Admin">@T["users.role.admin"]</option>
+                            </select>
+                            <input type="hidden" name="language" value="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"/>
+                            <button type="submit" class="btn btn-primary btn-sm">✓ @T["users.requests.approve"]</button>
+                        </form>
+                        <form method="post" action="/settings/users/requests/@r.Id/reject" style="display:inline"
+                              data-confirm="@string.Format(T["users.requests.confirm_reject"].Value, r.Email)">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--status-critical)">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        </div>
+    </div>
 }
 
 <div class="card">

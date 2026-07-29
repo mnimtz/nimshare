@@ -59,6 +59,13 @@ public class UsersController : Controller
             .Take(200)
             .ToListAsync(ct);
         ViewData["Invitations"] = invites;
+        // v1.11.54: Kontoanfragen von der Login-Seite — nur offene, damit die
+        // Karte nicht mit alten Entscheidungen zuwächst.
+        var accountRequests = await _db.AccountRequests
+            .Where(r => r.Status == AccountRequestStatus.Pending)
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync(ct);
+        ViewData["AccountRequests"] = accountRequests;
         return View(users);
     }
 

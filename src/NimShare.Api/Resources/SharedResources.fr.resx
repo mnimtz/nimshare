@@ -30,6 +30,7 @@
   <data name="login.sign_in"><value>Se connecter</value></data>
   <data name="login.remember_me"><value>Rester connecté</value></data>
   <data name="login.or"><value>ou</value></data>
+  <data name="login.request_account"><value>Pas de compte ? Demander un compte</value></data>
 
   <data name="password.title"><value>Changer votre mot de passe</value></data>
   <data name="password.lede"><value>Entrez votre mot de passe actuel et choisissez-en un nouveau.</value></data>
@@ -122,6 +123,10 @@
   <data name="users.invite.language"><value>Langue</value></data>
   <data name="users.invite.send"><value>Envoyer l'invitation</value></data>
   <data name="users.invite.confirm_revoke"><value>Révoquer l&apos;invitation pour {0} ?</value></data>
+  <data name="users.requests.title"><value>Demandes de compte</value></data>
+  <data name="users.requests.received"><value>Reçue</value></data>
+  <data name="users.requests.approve"><value>Approuver</value></data>
+  <data name="users.requests.confirm_reject"><value>Refuser la demande de compte de {0} ?</value></data>
   <data name="users.create_new.lede"><value>Vous préférez définir le mot de passe vous-même ? Utilisez le formulaire classique ci-dessous.</value></data>
 
   <data name="invite.accept.title"><value>Définissez votre mot de passe</value></data>
@@ -588,6 +593,20 @@ Ouvrez le lien :
   <data name="invite.email.cta"><value>Définir le mot de passe et se connecter</value></data>
   <data name="invite.email.expiry_note"><value>Ce lien expire le {0}.</value></data>
   <data name="notice.invite_sent"><value>Invitation envoyée à {0}.</value></data>
+  <data name="request_account.title"><value>Demander un compte</value></data>
+  <data name="request_account.lede"><value>Dites-nous qui vous êtes, un administrateur examinera votre demande.</value></data>
+  <data name="request_account.message"><value>Message (optionnel)</value></data>
+  <data name="request_account.message.placeholder"><value>À quoi souhaitez-vous utiliser NimShare ?</value></data>
+  <data name="request_account.submit"><value>Envoyer la demande</value></data>
+  <data name="request_account.back_to_login"><value>Retour à la connexion</value></data>
+  <data name="request_account.sent.title"><value>Demande envoyée</value></data>
+  <data name="request_account.sent.body"><value>Merci ! Un administrateur examinera votre demande et vous contactera si elle est approuvée.</value></data>
+  <data name="notice.request_approved"><value>Approuvée — une invitation a été envoyée à {0}.</value></data>
+  <data name="notice.request_rejected"><value>Demande de {0} refusée.</value></data>
+  <data name="account_request.email.subject"><value>Nouvelle demande de compte de {0}</value></data>
+  <data name="account_request.email.body"><value>Bonjour,&#10;&#10;{0} ({1}) a demandé un compte sur NimShare.&#10;&#10;Message : {2}&#10;&#10;Examiner la demande ici :&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) a demandé un compte sur NimShare.&lt;br/&gt;&lt;br/&gt;Message : {2}</value></data>
+  <data name="account_request.email.cta"><value>Examiner la demande</value></data>
   <data name="notice.password_reset_sent"><value>Lien de réinitialisation du mot de passe envoyé à {0}.</value></data>
   <data name="notice.group_created"><value>Groupe créé.</value></data>
   <data name="notice.group_updated"><value>Groupe mis à jour.</value></data>
@@ -597,6 +616,8 @@ Ouvrez le lien :
   <data name="notice.member_role_updated"><value>Rôle mis à jour.</value></data>
   <data name="err.invalid_email"><value>Adresse e-mail invalide.</value></data>
   <data name="err.user_exists"><value>Un utilisateur avec cet e-mail existe déjà.</value></data>
+  <data name="err.invalid_request"><value>Veuillez saisir une adresse e-mail valide et votre nom.</value></data>
+  <data name="err.request_not_found"><value>Demande introuvable.</value></data>
   <data name="err.cannot_disable_self"><value>Vous ne pouvez pas vous désactiver vous-même.</value></data>
   <data name="err.cannot_delete_self"><value>Vous ne pouvez pas vous supprimer vous-même.</value></data>
   <data name="err.last_admin"><value>Impossible de retirer ou de rétrograder le dernier administrateur actif.</value></data>

@@ -58,6 +58,8 @@ public class NimShareDbContext : DbContext
     public DbSet<ConnectorProviderSettings> ConnectorProviderSettings => Set<ConnectorProviderSettings>();
     // v1.11.0: Subdomain-Sharing-Konfiguration (Singleton-Row).
     public DbSet<SubdomainShareSettings> SubdomainShareSettings => Set<SubdomainShareSettings>();
+    // v1.11.54: Visitor-initiierte Kontoanfragen von der Login-Seite.
+    public DbSet<AccountRequest> AccountRequests => Set<AccountRequest>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -224,6 +226,17 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
             e.Property(x => x.Language).HasMaxLength(5).IsRequired();
+        });
+
+        b.Entity<AccountRequest>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Email);
+            e.HasIndex(x => x.Status);
+            e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Message).HasMaxLength(2000);
+            e.HasOne(x => x.DecidedBy).WithMany().HasForeignKey(x => x.DecidedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<EmailGatewaySettings>(e =>

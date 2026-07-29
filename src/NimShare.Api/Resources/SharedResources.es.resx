@@ -30,6 +30,7 @@
   <data name="login.sign_in"><value>Iniciar sesión</value></data>
   <data name="login.remember_me"><value>Mantenerme conectado</value></data>
   <data name="login.or"><value>o</value></data>
+  <data name="login.request_account"><value>¿Sin cuenta? Solicita una</value></data>
 
   <data name="password.title"><value>Cambiar tu contraseña</value></data>
   <data name="password.lede"><value>Introduce tu contraseña actual y elige una nueva.</value></data>
@@ -122,6 +123,10 @@
   <data name="users.invite.language"><value>Idioma</value></data>
   <data name="users.invite.send"><value>Enviar invitación</value></data>
   <data name="users.invite.confirm_revoke"><value>¿Revocar la invitación para {0}?</value></data>
+  <data name="users.requests.title"><value>Solicitudes de cuenta</value></data>
+  <data name="users.requests.received"><value>Recibida</value></data>
+  <data name="users.requests.approve"><value>Aprobar</value></data>
+  <data name="users.requests.confirm_reject"><value>¿Rechazar la solicitud de cuenta de {0}?</value></data>
   <data name="users.create_new.lede"><value>¿Prefieres establecer tú la contraseña? Usa el formulario clásico de abajo.</value></data>
 
   <data name="invite.accept.title"><value>Establece tu contraseña</value></data>
@@ -588,6 +593,20 @@ Abre el enlace:
   <data name="invite.email.cta"><value>Establecer contraseña e iniciar sesión</value></data>
   <data name="invite.email.expiry_note"><value>Este enlace caduca el {0}.</value></data>
   <data name="notice.invite_sent"><value>Invitación enviada a {0}.</value></data>
+  <data name="request_account.title"><value>Solicitar una cuenta</value></data>
+  <data name="request_account.lede"><value>Cuéntanos quién eres — un administrador revisará tu solicitud.</value></data>
+  <data name="request_account.message"><value>Mensaje (opcional)</value></data>
+  <data name="request_account.message.placeholder"><value>¿Para qué te gustaría usar NimShare?</value></data>
+  <data name="request_account.submit"><value>Enviar solicitud</value></data>
+  <data name="request_account.back_to_login"><value>Volver al inicio de sesión</value></data>
+  <data name="request_account.sent.title"><value>Solicitud enviada</value></data>
+  <data name="request_account.sent.body"><value>¡Gracias! Un administrador revisará tu solicitud y te responderá si es aprobada.</value></data>
+  <data name="notice.request_approved"><value>Aprobada — se envió una invitación a {0}.</value></data>
+  <data name="notice.request_rejected"><value>Solicitud de {0} rechazada.</value></data>
+  <data name="account_request.email.subject"><value>Nueva solicitud de cuenta de {0}</value></data>
+  <data name="account_request.email.body"><value>Hola,&#10;&#10;{0} ({1}) solicitó una cuenta en NimShare.&#10;&#10;Mensaje: {2}&#10;&#10;Revisa la solicitud aquí:&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) solicitó una cuenta en NimShare.&lt;br/&gt;&lt;br/&gt;Mensaje: {2}</value></data>
+  <data name="account_request.email.cta"><value>Revisar solicitud</value></data>
   <data name="notice.password_reset_sent"><value>Enlace para restablecer la contraseña enviado a {0}.</value></data>
   <data name="notice.group_created"><value>Grupo creado.</value></data>
   <data name="notice.group_updated"><value>Grupo actualizado.</value></data>
@@ -597,6 +616,8 @@ Abre el enlace:
   <data name="notice.member_role_updated"><value>Rol actualizado.</value></data>
   <data name="err.invalid_email"><value>Dirección de correo no válida.</value></data>
   <data name="err.user_exists"><value>Ya existe un usuario con ese correo.</value></data>
+  <data name="err.invalid_request"><value>Introduce una dirección de correo válida y tu nombre.</value></data>
+  <data name="err.request_not_found"><value>Solicitud no encontrada.</value></data>
   <data name="err.cannot_disable_self"><value>No puedes deshabilitarte a ti mismo.</value></data>
   <data name="err.cannot_delete_self"><value>No puedes eliminarte a ti mismo.</value></data>
   <data name="err.last_admin"><value>No puedes eliminar ni degradar al último administrador activo.</value></data>

@@ -30,6 +30,7 @@
   <data name="login.sign_in"><value>Sign in</value></data>
   <data name="login.remember_me"><value>Keep me signed in</value></data>
   <data name="login.or"><value>or</value></data>
+  <data name="login.request_account"><value>Don't have an account? Request one</value></data>
 
   <data name="password.title"><value>Change your password</value></data>
   <data name="password.lede"><value>Enter your current password and choose a new one.</value></data>
@@ -170,6 +171,10 @@
   <data name="users.invite.language"><value>Language</value></data>
   <data name="users.invite.send"><value>Send invite</value></data>
   <data name="users.invite.confirm_revoke"><value>Revoke the invitation for {0}?</value></data>
+  <data name="users.requests.title"><value>Account requests</value></data>
+  <data name="users.requests.received"><value>Received</value></data>
+  <data name="users.requests.approve"><value>Approve</value></data>
+  <data name="users.requests.confirm_reject"><value>Decline the account request from {0}?</value></data>
   <data name="users.create_new.lede"><value>Prefer to set a password yourself and share it out-of-band? Use the classic create form instead.</value></data>
 
   <data name="invite.accept.title"><value>Set your password</value></data>
@@ -589,6 +594,20 @@ Open the link:
   <data name="invite.email.cta"><value>Set password &amp; sign in</value></data>
   <data name="invite.email.expiry_note"><value>This link expires on {0}.</value></data>
   <data name="notice.invite_sent"><value>Invite sent to {0}.</value></data>
+  <data name="request_account.title"><value>Request an account</value></data>
+  <data name="request_account.lede"><value>Tell us who you are and an admin will review your request.</value></data>
+  <data name="request_account.message"><value>Message (optional)</value></data>
+  <data name="request_account.message.placeholder"><value>What would you like to use NimShare for?</value></data>
+  <data name="request_account.submit"><value>Send request</value></data>
+  <data name="request_account.back_to_login"><value>Back to sign in</value></data>
+  <data name="request_account.sent.title"><value>Request sent</value></data>
+  <data name="request_account.sent.body"><value>Thanks! An admin will review your request and get back to you if it's approved.</value></data>
+  <data name="notice.request_approved"><value>Approved — an invite was sent to {0}.</value></data>
+  <data name="notice.request_rejected"><value>Request from {0} declined.</value></data>
+  <data name="account_request.email.subject"><value>New account request from {0}</value></data>
+  <data name="account_request.email.body"><value>Hello,&#10;&#10;{0} ({1}) requested an account on NimShare.&#10;&#10;Message: {2}&#10;&#10;Review the request here:&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) requested an account on NimShare.&lt;br/&gt;&lt;br/&gt;Message: {2}</value></data>
+  <data name="account_request.email.cta"><value>Review request</value></data>
   <data name="notice.password_reset_sent"><value>Password reset link sent to {0}.</value></data>
   <data name="notice.group_created"><value>Group created.</value></data>
   <data name="notice.group_updated"><value>Group updated.</value></data>
@@ -598,6 +617,8 @@ Open the link:
   <data name="notice.member_role_updated"><value>Role updated.</value></data>
   <data name="err.invalid_email"><value>Invalid email address.</value></data>
   <data name="err.user_exists"><value>A user with that email already exists.</value></data>
+  <data name="err.invalid_request"><value>Please enter a valid email address and your name.</value></data>
+  <data name="err.request_not_found"><value>Request not found.</value></data>
   <data name="err.cannot_disable_self"><value>You cannot disable yourself.</value></data>
   <data name="err.cannot_delete_self"><value>You cannot delete yourself.</value></data>
   <data name="err.last_admin"><value>Cannot remove or demote the last active admin.</value></data>

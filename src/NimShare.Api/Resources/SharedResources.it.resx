@@ -30,6 +30,7 @@
   <data name="login.sign_in"><value>Accedi</value></data>
   <data name="login.remember_me"><value>Mantieni l'accesso</value></data>
   <data name="login.or"><value>o</value></data>
+  <data name="login.request_account"><value>Nessun account? Richiedine uno</value></data>
 
   <data name="password.title"><value>Cambia password</value></data>
   <data name="password.lede"><value>Inserisci la password attuale e scegline una nuova.</value></data>
@@ -122,6 +123,10 @@
   <data name="users.invite.language"><value>Lingua</value></data>
   <data name="users.invite.send"><value>Invia invito</value></data>
   <data name="users.invite.confirm_revoke"><value>Revocare l&apos;invito per {0}?</value></data>
+  <data name="users.requests.title"><value>Richieste di account</value></data>
+  <data name="users.requests.received"><value>Ricevuta</value></data>
+  <data name="users.requests.approve"><value>Approva</value></data>
+  <data name="users.requests.confirm_reject"><value>Rifiutare la richiesta di account di {0}?</value></data>
   <data name="users.create_new.lede"><value>Preferisci impostare tu la password? Usa il modulo classico qui sotto.</value></data>
 
   <data name="invite.accept.title"><value>Imposta la tua password</value></data>
@@ -588,6 +593,20 @@ Apri il link:
   <data name="invite.email.cta"><value>Imposta la password e accedi</value></data>
   <data name="invite.email.expiry_note"><value>Questo link scade il {0}.</value></data>
   <data name="notice.invite_sent"><value>Invito inviato a {0}.</value></data>
+  <data name="request_account.title"><value>Richiedi un account</value></data>
+  <data name="request_account.lede"><value>Dicci chi sei, un amministratore esaminerà la tua richiesta.</value></data>
+  <data name="request_account.message"><value>Messaggio (facoltativo)</value></data>
+  <data name="request_account.message.placeholder"><value>Per cosa vorresti usare NimShare?</value></data>
+  <data name="request_account.submit"><value>Invia richiesta</value></data>
+  <data name="request_account.back_to_login"><value>Torna al login</value></data>
+  <data name="request_account.sent.title"><value>Richiesta inviata</value></data>
+  <data name="request_account.sent.body"><value>Grazie! Un amministratore esaminerà la tua richiesta e ti risponderà se approvata.</value></data>
+  <data name="notice.request_approved"><value>Approvata — un invito è stato inviato a {0}.</value></data>
+  <data name="notice.request_rejected"><value>Richiesta di {0} rifiutata.</value></data>
+  <data name="account_request.email.subject"><value>Nuova richiesta di account da {0}</value></data>
+  <data name="account_request.email.body"><value>Ciao,&#10;&#10;{0} ({1}) ha richiesto un account su NimShare.&#10;&#10;Messaggio: {2}&#10;&#10;Esamina la richiesta qui:&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) ha richiesto un account su NimShare.&lt;br/&gt;&lt;br/&gt;Messaggio: {2}</value></data>
+  <data name="account_request.email.cta"><value>Esamina richiesta</value></data>
   <data name="notice.password_reset_sent"><value>Link di reset password inviato a {0}.</value></data>
   <data name="notice.group_created"><value>Gruppo creato.</value></data>
   <data name="notice.group_updated"><value>Gruppo aggiornato.</value></data>
@@ -597,6 +616,8 @@ Apri il link:
   <data name="notice.member_role_updated"><value>Ruolo aggiornato.</value></data>
   <data name="err.invalid_email"><value>Indirizzo email non valido.</value></data>
   <data name="err.user_exists"><value>Esiste già un utente con questa email.</value></data>
+  <data name="err.invalid_request"><value>Inserisci un indirizzo email valido e il tuo nome.</value></data>
+  <data name="err.request_not_found"><value>Richiesta non trovata.</value></data>
   <data name="err.cannot_disable_self"><value>Non puoi disabilitare te stesso.</value></data>
   <data name="err.cannot_delete_self"><value>Non puoi eliminare te stesso.</value></data>
   <data name="err.last_admin"><value>Impossibile rimuovere o retrocedere l'ultimo amministratore attivo.</value></data>

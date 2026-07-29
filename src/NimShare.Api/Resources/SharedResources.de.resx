@@ -30,6 +30,7 @@
   <data name="login.sign_in"><value>Anmelden</value></data>
   <data name="login.remember_me"><value>Angemeldet bleiben</value></data>
   <data name="login.or"><value>oder</value></data>
+  <data name="login.request_account"><value>Kein Konto? Konto beantragen</value></data>
 
   <data name="password.title"><value>Passwort ändern</value></data>
   <data name="password.lede"><value>Aktuelles Passwort eingeben und ein neues wählen.</value></data>
@@ -170,6 +171,10 @@
   <data name="users.invite.language"><value>Sprache</value></data>
   <data name="users.invite.send"><value>Einladung senden</value></data>
   <data name="users.invite.confirm_revoke"><value>Einladung an {0} widerrufen?</value></data>
+  <data name="users.requests.title"><value>Kontoanfragen</value></data>
+  <data name="users.requests.received"><value>Eingegangen</value></data>
+  <data name="users.requests.approve"><value>Genehmigen</value></data>
+  <data name="users.requests.confirm_reject"><value>Kontoanfrage von {0} ablehnen?</value></data>
   <data name="users.create_new.lede"><value>Lieber Passwort selbst setzen und außerhalb weitergeben? Nutze das klassische Anlegen-Formular unten.</value></data>
 
   <data name="invite.accept.title"><value>Passwort festlegen</value></data>
@@ -589,6 +594,20 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="invite.email.cta"><value>Passwort setzen &amp; anmelden</value></data>
   <data name="invite.email.expiry_note"><value>Dieser Link läuft am {0} ab.</value></data>
   <data name="notice.invite_sent"><value>Einladung an {0} versendet.</value></data>
+  <data name="request_account.title"><value>Konto beantragen</value></data>
+  <data name="request_account.lede"><value>Sag uns, wer du bist — ein Admin prüft deine Anfrage.</value></data>
+  <data name="request_account.message"><value>Nachricht (optional)</value></data>
+  <data name="request_account.message.placeholder"><value>Wofür möchtest du NimShare nutzen?</value></data>
+  <data name="request_account.submit"><value>Anfrage senden</value></data>
+  <data name="request_account.back_to_login"><value>Zurück zur Anmeldung</value></data>
+  <data name="request_account.sent.title"><value>Anfrage gesendet</value></data>
+  <data name="request_account.sent.body"><value>Danke! Ein Admin prüft deine Anfrage und meldet sich, sobald sie genehmigt wurde.</value></data>
+  <data name="notice.request_approved"><value>Genehmigt — eine Einladung wurde an {0} gesendet.</value></data>
+  <data name="notice.request_rejected"><value>Anfrage von {0} abgelehnt.</value></data>
+  <data name="account_request.email.subject"><value>Neue Kontoanfrage von {0}</value></data>
+  <data name="account_request.email.body"><value>Hallo,&#10;&#10;{0} ({1}) hat ein Konto bei NimShare beantragt.&#10;&#10;Nachricht: {2}&#10;&#10;Anfrage hier prüfen:&#10;{3}&#10;&#10;— NimShare</value></data>
+  <data name="account_request.email.intro"><value>{0} ({1}) hat ein Konto bei NimShare beantragt.&lt;br/&gt;&lt;br/&gt;Nachricht: {2}</value></data>
+  <data name="account_request.email.cta"><value>Anfrage prüfen</value></data>
   <data name="notice.password_reset_sent"><value>Reset-Link an {0} gesendet.</value></data>
   <data name="notice.group_created"><value>Gruppe erstellt.</value></data>
   <data name="notice.group_updated"><value>Gruppe aktualisiert.</value></data>
@@ -598,6 +617,8 @@ du bist als Nächste:r an der Reihe. Bitte {1} das Dokument '{2}'.
   <data name="notice.member_role_updated"><value>Rolle aktualisiert.</value></data>
   <data name="err.invalid_email"><value>Ungültige E-Mail-Adresse.</value></data>
   <data name="err.user_exists"><value>Es existiert bereits ein Benutzer mit dieser E-Mail-Adresse.</value></data>
+  <data name="err.invalid_request"><value>Bitte eine gültige E-Mail-Adresse und deinen Namen angeben.</value></data>
+  <data name="err.request_not_found"><value>Anfrage nicht gefunden.</value></data>
   <data name="err.cannot_disable_self"><value>Du kannst dich nicht selbst deaktivieren.</value></data>
   <data name="err.cannot_delete_self"><value>Du kannst dich nicht selbst löschen.</value></data>
   <data name="err.last_admin"><value>Der letzte aktive Administrator kann nicht entfernt oder herabgestuft werden.</value></data>
