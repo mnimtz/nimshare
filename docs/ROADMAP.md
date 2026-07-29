@@ -80,7 +80,6 @@ Stand: v1.9.0 · Signaturen (inkl. Reassign + Zertifikate) + Azure-SQL-Wizard + 
 
 - **AI-Suite**: Summary + Vision + Chat (RAG) + Draft-Emails + Risk-Detection + Semantic Search + OCR
 - **Signaturen** mit Reassign + Zertifikate + KI-drafted Templates + Adressbuch
-- **DB-Wahl im laufenden Betrieb** (SQLite → Azure SQL Wizard)
 - **Native iOS-App**
 - **Landing-Templates** pro User + global
 - **Direct-Share** mit Ordner-Vererbung

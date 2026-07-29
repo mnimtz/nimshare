@@ -5,14 +5,9 @@ using NimShare.Core.Data;
 namespace NimShare.Api;
 
 /// <summary>
-/// Design-time factory used by <c>dotnet ef migrations add</c> for the
-/// **Sqlite** provider. Migrations land in <c>src/NimShare.Api/Migrations</c>.
-///
-/// SqlServer migrations live in a separate class library
-/// (<c>src/NimShare.Migrations.SqlServer</c>) — use its own DesignTime
-/// factory: <c>dotnet ef migrations add MyMig --project src/NimShare.Migrations.SqlServer --startup-project src/NimShare.Api</c>.
-/// Runtime EF picks the correct <see cref="MigrationsAssembly"/> in Program.cs
-/// based on the configured provider.
+/// Design-time factory used by <c>dotnet ef migrations add</c>. NimShare is
+/// Sqlite-only (v1.11.48 — Azure SQL support removed); migrations land in
+/// <c>src/NimShare.Core/Migrations</c>.
 /// </summary>
 public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<NimShareDbContext>
 {

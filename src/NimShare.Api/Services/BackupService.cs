@@ -6,9 +6,9 @@ using NimShare.Core.Data;
 namespace NimShare.Api.Services;
 
 /// <summary>
-/// v1.10.116 — Vollständiges DB-Backup/Restore für Admins. Provider-agnostisch
-/// (Sqlite + SqlServer), da über die EF-Metadaten und nicht über DB-Dumps.
-/// Serialisiert JEDE Entität mit ihren SKALAR-Feldern (keine Navigationen →
+/// v1.10.116 — Vollständiges DB-Backup/Restore für Admins, über die
+/// EF-Metadaten und nicht über DB-Dumps. Serialisiert JEDE Entität mit
+/// ihren SKALAR-Feldern (keine Navigationen →
 /// keine Zyklen) zu JSON. Der Blob-Inhalt (Datei-Bytes im Storage) ist NICHT
 /// Teil des Backups — die StorageFile-Zeilen samt BlobPath schon, ein Restore
 /// zeigt also wieder auf dieselben Blobs.
@@ -96,14 +96,11 @@ public class BackupService : IBackupService
         => ImportAsync(json, actingAdminEmail: null, ct);
 
     /// <summary>
-    /// v1.10.145 — Restore-Kern mit drei Härtungen aus dem Audit:
-    /// (1) SqlServer-Identity-Spalten (ShareLinkAccesses/SignatureAudits) über
-    ///     SET IDENTITY_INSERT ON umgehen, sonst „Cannot insert explicit value
-    ///     for identity column" → Restore konnte auf Produktion NIE laufen;
-    /// (2) Self-Lockout-Schutz: wenn die E-Mail des aktuell handelnden Admins
+    /// v1.10.145 — Restore-Kern mit zwei Härtungen aus dem Audit:
+    /// (1) Self-Lockout-Schutz: wenn die E-Mail des aktuell handelnden Admins
     ///     im Backup FEHLT, wird der Restore VOR dem Wipe abgebrochen — nach
     ///     dem DB-Umzug-Schreck genau die Absicherung, die wir brauchten;
-    /// (3) Aufrufer kann echte InnerException-Kette entfalten (siehe Controller).
+    /// (2) Aufrufer kann echte InnerException-Kette entfalten (siehe Controller).
     /// </summary>
     public async Task<(int Tables, int Rows)> ImportAsync(string json, string? actingAdminEmail, CancellationToken ct = default)
     {
@@ -134,20 +131,7 @@ public class BackupService : IBackupService
                     $"Dein Admin-Konto ({actingAdminEmail}) ist im Backup nicht enthalten. Restore würde dich aussperren — abgebrochen.");
         }
 
-        var isSqlServer = _db.Database.IsSqlServer();
-        // Identity-Tabellen ermitteln (Property mit ValueGenerated == OnAdd auf
-        // integralem PK) — deckt heute ShareLinkAccesses + SignatureAudits ab,
-        // arbeitet aber generisch für alle künftigen.
-        var identityTables = ordered
-            .Where(t => t.FindPrimaryKey()?.Properties.All(p =>
-                p.ValueGenerated == Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.OnAdd
-                && (p.ClrType == typeof(long) || p.ClrType == typeof(int))) == true)
-            .Select(t => t.GetTableName())
-            .Where(n => !string.IsNullOrEmpty(n))
-            .Select(n => n!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        // Provider-übergreifend transaktional. Kinder zuerst löschen (reverse),
+        // Transaktional. Kinder zuerst löschen (reverse),
         // dann Eltern-zuerst wieder einfügen.
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
@@ -172,15 +156,6 @@ public class BackupService : IBackupService
             var props = et.GetProperties().ToList();
             tableCount++;
 
-            // (1) IDENTITY_INSERT für SqlServer-Identity-Tabellen einschalten,
-            // damit explizite Id-Werte aus dem Backup akzeptiert werden.
-            var tableName = et.GetTableName();
-            var needsIdentityInsert = isSqlServer && !string.IsNullOrEmpty(tableName)
-                                      && identityTables.Contains(tableName!)
-                                      && rowsEl.GetArrayLength() > 0;
-            if (needsIdentityInsert)
-                await _db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] ON", ct);
-
             foreach (var rowEl in rowsEl.EnumerateArray())
             {
                 var entity = Activator.CreateInstance(clr)!;
@@ -199,9 +174,6 @@ public class BackupService : IBackupService
             }
             // Batchweise speichern, damit große Backups nicht den Change-Tracker sprengen.
             await _db.SaveChangesAsync(ct);
-
-            if (needsIdentityInsert)
-                await _db.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT [{tableName}] OFF", ct);
         }
 
         await tx.CommitAsync(ct);

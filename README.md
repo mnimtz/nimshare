@@ -170,13 +170,13 @@ Follows the [Tungsten Automation Brand Book](https://tungstenautomation.com/): p
                        └──────────────────────────────┘
 
     ┌──────────────────┐   ┌──────────────────┐   ┌────────────────┐
-    │  SQLite (default)│   │  App Insights +  │   │  AI Provider   │
-    │  or Azure SQL    │   │  Log Analytics   │   │  (Gemini/OpenAI│
-    │  (metadata)      │   │                  │   │   /Anthropic)  │
+    │      SQLite      │   │  App Insights +  │   │  AI Provider   │
+    │  (Azure Files,   │   │  Log Analytics   │   │  (Gemini/OpenAI│
+    │   metadata)      │   │                  │   │   /Anthropic)  │
     └──────────────────┘   └──────────────────┘   └────────────────┘
 ```
 
-- **Provider-agnostic EF Core** — same code path against SQLite (Azure Files mount) or Azure SQL. Handwritten migrations for both providers.
+- **SQLite only** — one clean, always-consistent metadata store on an Azure Files mount, fully covered by Backup/Restore. (No Azure SQL option — removed in v1.11.48 to eliminate an unused, unmaintained code path.)
 - **API-first**: every feature has an `/api/v1/*` JSON twin; the iOS app and the Razor MVC UI both use the same endpoints.
 - **Streamed uploads/downloads** direct browser/app ↔ Blob Storage via short-lived SAS — mobile data plans aren't burned tunneling through the server.
 - **Custom-domain middleware** looks up the incoming host to pick per-tenant branding for share landings.
@@ -261,8 +261,7 @@ The default server URL is `https://nimshare.com`; each user can change it in **P
 
 - App Service `B1`: ~10 EUR/month
 - Storage account (100 GB Blob + 5 GB File share): ~2 EUR/month
-- Optional Azure SQL Basic: ~5 EUR/month (recommended for heavier workloads)
-- **Total: ~12–17 EUR/month** at personal-use volumes
+- **Total: ~12 EUR/month** at personal-use volumes
 
 See [`docs/COSTS.md`](docs/COSTS.md).
 
@@ -310,7 +309,6 @@ Notable public (unauthenticated) endpoints:
 ```
 src/
   NimShare.Core/                # entities, DbContext, migrations (SQLite)
-  NimShare.Migrations.SqlServer/# handwritten SqlServer migrations
   NimShare.Api/                 # ASP.NET Core app (MVC + Web API + Razor)
     Controllers/                # /api/v1/*, /settings/*, share/upload landings
     Services/                   # AiProvider, BlobStorage, FileAccess, Backup, …

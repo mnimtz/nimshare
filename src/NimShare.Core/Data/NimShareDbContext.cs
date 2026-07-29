@@ -63,8 +63,7 @@ public class NimShareDbContext : DbContext
         base.OnModelCreating(b);
 
         // Sqlite does not support ORDER BY on DateTimeOffset — apply a value
-        // converter that stores them as long ticks so queries work in both
-        // Sqlite (dev) and SQL Server (prod).
+        // converter that stores them as long ticks instead.
         if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
             var converter = new ValueConverter<DateTimeOffset, long>(

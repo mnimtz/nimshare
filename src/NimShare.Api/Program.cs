@@ -22,23 +22,21 @@ builder.Services.Configure<IpHashOptions>(builder.Configuration.GetSection(IpHas
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 // ── Database ───────────────────────────────────────────────────────────────
-// The persistent DB config file (written by /settings/database) takes
-// precedence over env-var / appsettings.json. That's what lets an admin flip
-// the app from Sqlite to Azure SQL without a redeploy: they save the config,
-// we restart, and Program.cs picks the new provider up here.
-var dbConfigStore = new DbConfigStore(builder.Configuration);
-builder.Services.AddSingleton(dbConfigStore);
-var persistedDbConfig = dbConfigStore.Load();
-var dbProvider = persistedDbConfig?.Provider
-                 ?? builder.Configuration["Database:Provider"]
-                 ?? "Sqlite";
-var connString = persistedDbConfig?.ConnectionString
-                 ?? builder.Configuration.GetConnectionString("Default")
+// v1.11.48 — Marcus: Azure SQL komplett raus. NimShare läuft ausschließlich
+// gegen SQLite — eine einzige, immer gültige Quelle der Wahrheit, die vom
+// Backup/Restore vollständig mitgesichert wird. Der frühere Runtime-Provider-
+// Switch (Settings → Datenbank) hatte zwei echte Probleme: (1) eine
+// erreichbare, aber nie im Menü verlinkte Seite, deren SqlServer-Migrations-
+// Satz seit V189 nicht mehr nachgezogen wurde — ein Wechsel hätte auf ein
+// unvollständiges Schema migriert; (2) genau dieser Mechanismus hat Marcus
+// einmal ausgesperrt (Wizard schaltete auf eine leere Azure-SQL-DB trotz
+// fehlgeschlagenem Daten-Copy). Kein Grund mehr, dieses Risiko am Leben zu
+// halten, wenn Azure SQL ohnehin nie produktiv genutzt wird.
+var connString = builder.Configuration.GetConnectionString("Default")
                  ?? "Data Source=nimshare.db";
 
 // When Sqlite points at a mounted volume like /data/nimshare.db, make sure
 // the directory exists — Azure Files creates the share, but not sub-paths.
-if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 {
     var dataSourceStart = connString.IndexOf("Data Source=", StringComparison.OrdinalIgnoreCase);
     if (dataSourceStart >= 0)
@@ -55,44 +53,27 @@ if (string.Equals(dbProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 }
 builder.Services.AddDbContext<NimShareDbContext>(o =>
 {
-    if (string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+    // Sqlite on Azure Files (SMB mount) sees transient "unable to open
+    // database file" errors when the mount is remounted or throttled. Two
+    // guards: (1) enable WAL + a 15 s busy_timeout so brief locks don't
+    // fault, (2) SqliteRecoveryMiddleware clears the pool + retries GETs.
+    //
+    // MigrationsAssembly is NimShare.Core because the migration .cs
+    // files physically live under src/NimShare.Core/Migrations/ and get
+    // compiled into NimShare.Core.dll (the SDK-style project auto-
+    // includes any .cs under the project folder). The old
+    // MigrationsAssembly("NimShare.Api") was WRONG — EF loaded Api.dll,
+    // found zero Migration subclasses, MigrateAsync did nothing, and
+    // every schema-change migration since V177 silently never ran. That
+    // pattern was the source of the recurring "no such column" 500s;
+    // the RepairSqliteMissingColumnsAsync helper below is a belt-and-
+    // braces catch-up for deployed DBs that missed columns during that
+    // window.
+    o.UseSqlite(connString, b =>
     {
-        // SqlServer migrations live in a dedicated assembly (kept separate so
-        // provider-specific SQL — nvarchar / IX names / etc. — doesn't collide
-        // with the Sqlite migration set that ships in NimShare.Api itself).
-        o.UseSqlServer(connString, b =>
-        {
-            b.MigrationsAssembly("NimShare.Migrations.SqlServer");
-            b.CommandTimeout(45);
-            // Built-in transient-error retry — the SqlServer provider knows
-            // its own error codes (deadlocks, throttling, connection resets).
-            b.EnableRetryOnFailure(maxRetryCount: 4, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
-        });
-    }
-    else
-    {
-        // Sqlite on Azure Files (SMB mount) sees transient "unable to open
-        // database file" errors when the mount is remounted or throttled. Two
-        // guards: (1) enable WAL + a 15 s busy_timeout so brief locks don't
-        // fault, (2) SqliteRecoveryMiddleware clears the pool + retries GETs.
-        //
-        // MigrationsAssembly is NimShare.Core because the migration .cs
-        // files physically live under src/NimShare.Core/Migrations/ and get
-        // compiled into NimShare.Core.dll (the SDK-style project auto-
-        // includes any .cs under the project folder). The old
-        // MigrationsAssembly("NimShare.Api") was WRONG — EF loaded Api.dll,
-        // found zero Migration subclasses, MigrateAsync did nothing, and
-        // every schema-change migration since V177 silently never ran. That
-        // pattern was the source of the recurring "no such column" 500s;
-        // the RepairSqliteMissingColumnsAsync helper below is a belt-and-
-        // braces catch-up for deployed DBs that missed columns during that
-        // window.
-        o.UseSqlite(connString, b =>
-        {
-            b.MigrationsAssembly("NimShare.Core");
-            b.CommandTimeout(45);
-        });
-    }
+        b.MigrationsAssembly("NimShare.Core");
+        b.CommandTimeout(45);
+    });
 });
 
 // ── Auth ───────────────────────────────────────────────────────────────────
@@ -353,7 +334,6 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── App services ───────────────────────────────────────────────────────────
-builder.Services.AddScoped<IDbMigrationService, DbMigrationService>();
 // v1.10.179: BlobStorageService MUSS Singleton sein. Als Scoped kreiert jeder
 // Request einen neuen BlobServiceClient + HttpClient → Azure App Service Linux
 // hat 128 SNAT-Ports pro Instanz mit 240s idle-timeout → unter Last blockieren
@@ -498,7 +478,6 @@ if (!app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
-    var isSqlServer = string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase);
     // Migrate with retry — on Azure Files, the SMB mount can be momentarily
     // unavailable at cold start, which used to abort the whole boot with
     // "unable to open database file". Six attempts on 2 s cadence ≈ 12 s of
@@ -507,33 +486,15 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            // Both providers now have a proper migration set — SqlServer's
-            // lives in NimShare.Migrations.SqlServer, Sqlite's in
-            // NimShare.Core/Migrations. MigrateAsync is idempotent and
-            // handles schema evolution correctly on both sides.
-            if (isSqlServer)
-            {
-                // Rescue path for admins who flipped to Azure SQL on
-                // v1.8.0-v1.8.4 (which used EnsureCreatedAsync, no history
-                // table). The tables exist but __EFMigrationsHistory is
-                // empty — MigrateAsync would re-play InitialSqlServer and
-                // die on "object already exists". If we detect that state,
-                // baseline-stamp the history row so MigrateAsync sees "up
-                // to date".
-                await BaselineSqlServerIfNeededAsync(db, scope.ServiceProvider);
-            }
-            else
-            {
-                // Rescue path 1: catch-up any columns that never made it in
-                // during the "MigrationsAssembly was wrong" era. Idempotent.
-                await RepairSqliteMissingColumnsAsync(db, scope.ServiceProvider);
-                // Rescue path 2: baseline-stamp __EFMigrationsHistory when
-                // it's empty on an already-populated schema. Without this,
-                // MigrateAsync now (with the corrected MigrationsAssembly)
-                // sees every V17x/V18x as "pending" and crashes on the first
-                // CREATE TABLE / ADD COLUMN whose target already exists.
-                await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
-            }
+            // Rescue path 1: catch-up any columns that never made it in
+            // during the "MigrationsAssembly was wrong" era. Idempotent.
+            await RepairSqliteMissingColumnsAsync(db, scope.ServiceProvider);
+            // Rescue path 2: baseline-stamp __EFMigrationsHistory when
+            // it's empty on an already-populated schema. Without this,
+            // MigrateAsync now (with the corrected MigrationsAssembly)
+            // sees every V17x/V18x as "pending" and crashes on the first
+            // CREATE TABLE / ADD COLUMN whose target already exists.
+            await BaselineSqliteIfNeededAsync(db, scope.ServiceProvider);
             // v1.10.108: MUSS vor MigrateAsync laufen. DBs, die v1.10.106
             // sahen, haben Folders.IsPrivate bereits per Rescue-ALTER —
             // aber KEINEN V184-History-Eintrag (die Migration war damals
@@ -541,7 +502,7 @@ using (var scope = app.Services.CreateScope())
             // MigrateAsync V184 erneut anwenden → "duplicate column name"
             // → Migration-Loop bricht ab und JEDE künftige Migration
             // (V185+) bliebe für immer liegen.
-            await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
+            await EnsureFolderIsPrivateColumnAsync(db);
             // v1.10.160: Vor MigrateAsync die pending-Liste loggen — damit
             // die Historie „welche Migration hat gerade wann/wo geklemmt?"
             // im Container-Log nachvollziehbar bleibt. Der bisher stille
@@ -559,7 +520,7 @@ using (var scope = app.Services.CreateScope())
             // Damit erledigen sich die drei bisherigen ad-hoc Rescue-Pfade
             // (Folders.IsPrivate/LinkEntries/InstanceCas) systematisch für
             // alle künftigen Migrations desselben Musters.
-            await PreStampAlreadyAppliedMigrationsAsync(db, isSqlServer);
+            await PreStampAlreadyAppliedMigrationsAsync(db);
             await db.Database.MigrateAsync();
             var pendingAfter = (await db.Database.GetPendingMigrationsAsync()).ToList();
             if (pendingAfter.Count > 0)
@@ -607,14 +568,14 @@ using (var scope = app.Services.CreateScope())
     try
     {
         Console.Error.WriteLine("[STARTUP] Running EnsureForensicColumnsAsync…");
-        await EnsureForensicColumnsAsync(db, isSqlServer);
+        await EnsureForensicColumnsAsync(db);
         Console.Error.WriteLine("[STARTUP] EnsureForensicColumnsAsync done.");
         // v1.10.106: Rescue für Folders.IsPrivate. In v1.10.104 landete die
         // V184-Migration ohne [DbContext]/[Migration]-Attribute im Repo —
         // MigrateAsync hat sie beim Assembly-Scan uebersprungen, Column
         // fehlt in prod-DBs. Idempotent, laeuft ab jetzt bei jedem Start.
         Console.Error.WriteLine("[STARTUP] Running EnsureFolderIsPrivateColumnAsync…");
-        await EnsureFolderIsPrivateColumnAsync(db, isSqlServer);
+        await EnsureFolderIsPrivateColumnAsync(db);
         Console.Error.WriteLine("[STARTUP] EnsureFolderIsPrivateColumnAsync done.");
         // v1.10.121: Rescue für die LinkEntries-Tabelle (Linksammlung, V185).
         // Auf DBs, bei denen der MigrateAsync-Loop wegen eines V184-Replays
@@ -623,7 +584,7 @@ using (var scope = app.Services.CreateScope())
         // CREATE TABLE IF NOT EXISTS + History-Stamp, läuft ab jetzt bei
         // jedem Start und ausserhalb des Retry-Loops.
         Console.Error.WriteLine("[STARTUP] Running EnsureLinkEntriesTableAsync…");
-        await EnsureLinkEntriesTableAsync(db, isSqlServer);
+        await EnsureLinkEntriesTableAsync(db);
         Console.Error.WriteLine("[STARTUP] EnsureLinkEntriesTableAsync done.");
         // v1.10.155: Rescue für die InstanceCas-Tabelle (Instance-Root-CA, V186).
         // Analog zu V185 — auf Bestands-DBs, die V186 nicht angewandt bekommen
@@ -631,14 +592,14 @@ using (var scope = app.Services.CreateScope())
         // fehlt InstanceCas → jeder Cert-Generate-Aufruf crasht mit
         // „no such table: InstanceCas". Idempotent + History-Stamp.
         Console.Error.WriteLine("[STARTUP] Running EnsureInstanceCasTableAsync…");
-        await EnsureInstanceCasTableAsync(db, isSqlServer);
+        await EnsureInstanceCasTableAsync(db);
         Console.Error.WriteLine("[STARTUP] EnsureInstanceCasTableAsync done.");
         // v1.10.166: Rescue für Folders.Kind + ShareLinks.AllowUploads (V189).
         // Beide sind NOT NULL DEFAULT 0 → EnsureForensicColumnsAsync taugt
         // dafür nicht (NULL-only), also parallele Standalone-Routine. Analog
         // zu EnsureFolderIsPrivateColumnAsync — idempotent.
         Console.Error.WriteLine("[STARTUP] Running EnsureGalleryColumnsAsync…");
-        await EnsureGalleryColumnsAsync(db, isSqlServer);
+        await EnsureGalleryColumnsAsync(db);
         Console.Error.WriteLine("[STARTUP] EnsureGalleryColumnsAsync done.");
     }
     catch (Exception ex)
@@ -667,16 +628,13 @@ using (var scope = app.Services.CreateScope())
     // which stops "upload complete" from freezing the /browse pages. 15 s
     // busy_timeout absorbs brief lock contention (each connection retries
     // automatically before surfacing SQLITE_BUSY). Best-effort — never fatal.
-    if (!isSqlServer)
+    try
     {
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15000; PRAGMA synchronous=NORMAL;");
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine("[STARTUP] Could not set WAL / busy_timeout PRAGMAs: " + ex.Message);
-        }
+        await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15000; PRAGMA synchronous=NORMAL;");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("[STARTUP] Could not set WAL / busy_timeout PRAGMAs: " + ex.Message);
     }
 }
 
@@ -758,10 +716,8 @@ else
 {
     app.UseExceptionHandler("/error");
     // Sits just inside the exception handler so transient Sqlite failures get
-    // one automatic retry before the 503 page ever appears. Sqlite-only —
-    // SqlServer has its own EnableRetryOnFailure execution strategy.
-    if (!string.Equals(dbProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
-        app.UseMiddleware<SqliteRecoveryMiddleware>();
+    // one automatic retry before the 503 page ever appears.
+    app.UseMiddleware<SqliteRecoveryMiddleware>();
     app.UseHsts();
 }
 
@@ -827,16 +783,6 @@ app.MapGet("/health", (HttpContext ctx) =>
 
 app.Run();
 
-/// <summary>
-/// Rescue for v1.8.0-v1.8.4 upgraders: those versions provisioned Azure SQL
-/// with EnsureCreatedAsync, so every table exists but __EFMigrationsHistory
-/// is empty. v1.8.5 introduced real migrations, and MigrateAsync on that
-/// state re-plays InitialSqlServer → dies on "object already exists" and
-/// bricks the upgrade. Detect the mismatch (Users table exists AND history
-/// row is missing) and INSERT the InitialSqlServer row so MigrateAsync sees
-/// "up to date". Fresh installs skip the branch because Users doesn't exist
-/// yet. Safe to leave in indefinitely — the fingerprint check is cheap.
-/// </summary>
 // v1.10.44 — idempotenter Column-Backfill für die v1.10.42 forensischen
 // Felder. Der eigentliche Weg wäre die V182_ForensicFields Migration —
 // die aber wegen der partial-class-ohne-Designer-Auslassung von EF Core
@@ -846,90 +792,70 @@ app.Run();
 //   SignatureAudits: Country, City, DeviceType, Timezone
 //   ShareLinkAccesses: City, DeviceType, Timezone (CountryCode war schon da)
 // Bei einer bereits sauber migrierten DB macht die Funktion nichts.
-static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlServer)
+static async Task EnsureForensicColumnsAsync(NimShareDbContext db)
 {
-    // Spezifikation: (Tabelle, Spalte, SQLite-Typ, SqlServer-Typ)
-    var wanted = new (string Table, string Column, string SqliteType, string SqlServerType)[]
+    // Spezifikation: (Tabelle, Spalte, SQLite-Typ)
+    var wanted = new (string Table, string Column, string SqliteType)[]
     {
-        ("SignatureAudits", "Country", "TEXT", "nvarchar(2)"),
-        ("SignatureAudits", "City", "TEXT", "nvarchar(80)"),
-        ("SignatureAudits", "DeviceType", "TEXT", "nvarchar(20)"),
-        ("SignatureAudits", "Timezone", "TEXT", "nvarchar(60)"),
-        ("ShareLinkAccesses", "City", "TEXT", "nvarchar(80)"),
-        ("ShareLinkAccesses", "DeviceType", "TEXT", "nvarchar(20)"),
-        ("ShareLinkAccesses", "Timezone", "TEXT", "nvarchar(60)"),
+        ("SignatureAudits", "Country", "TEXT"),
+        ("SignatureAudits", "City", "TEXT"),
+        ("SignatureAudits", "DeviceType", "TEXT"),
+        ("SignatureAudits", "Timezone", "TEXT"),
+        ("ShareLinkAccesses", "City", "TEXT"),
+        ("ShareLinkAccesses", "DeviceType", "TEXT"),
+        ("ShareLinkAccesses", "Timezone", "TEXT"),
         // v1.10.50: Per-User Timezone-Preference
-        ("Users", "PreferredTimezone", "TEXT", "nvarchar(60)"),
+        ("Users", "PreferredTimezone", "TEXT"),
         // v1.10.77: optionale Klartext-IP für Signatur-Forensik (DSGVO
         // Art. 6(1)(f), Admin-toggle Signatures:StoreFullIp=true).
-        ("SignatureParticipants", "IpAddress", "TEXT", "nvarchar(45)"),
-        ("SignatureAudits", "IpAddress", "TEXT", "nvarchar(45)"),
+        ("SignatureParticipants", "IpAddress", "TEXT"),
+        ("SignatureAudits", "IpAddress", "TEXT"),
         // v1.10.156: optionale Klartext-IP für Link-Report-Auswertung.
         // Nur befüllt wenn ShareLinks:StoreFullIp=true (Art. 6(1)(f)).
-        ("ShareLinkAccesses", "IpAddress", "TEXT", "nvarchar(45)"),
+        ("ShareLinkAccesses", "IpAddress", "TEXT"),
         // v1.10.117: optionale Status-Seiten-URL für die KI-Begrüssung.
-        ("AiGateways", "StatusPageUrl", "TEXT", "nvarchar(1000)"),
+        ("AiGateways", "StatusPageUrl", "TEXT"),
         // v1.10.118: Produkt-Filter für die Status-Begrüssung.
-        ("AiGateways", "StatusPageProducts", "TEXT", "nvarchar(1000)"),
+        ("AiGateways", "StatusPageProducts", "TEXT"),
         // v1.10.139: „Letzter Login" (DateTimeOffset? → SQLite long/INTEGER via
-        // globalem Converter, SqlServer datetimeoffset).
-        ("Users", "LastLoginAt", "INTEGER", "datetimeoffset"),
+        // globalem Converter).
+        ("Users", "LastLoginAt", "INTEGER"),
         // v1.10.165: Apple-5.1.1(i)-Consent für AI-Verarbeitung.
-        ("Users", "AiConsentedAt", "INTEGER", "datetimeoffset"),
+        ("Users", "AiConsentedAt", "INTEGER"),
         // v1.10.146: Optionales Absender-Zertifikat für Share- und Upload-Links.
-        ("ShareLinks", "SigningCertificateId", "TEXT", "uniqueidentifier"),
-        ("UploadRequests", "SigningCertificateId", "TEXT", "uniqueidentifier"),
+        ("ShareLinks", "SigningCertificateId", "TEXT"),
+        ("UploadRequests", "SigningCertificateId", "TEXT"),
         // v1.10.178: EXIF-GPS-Koordinaten pro Foto für die Album-Landing-Karte.
         // Beide nullable — Fotos ohne GPS bleiben leer, kein Backfill nötig.
-        ("Files", "Latitude", "REAL", "float"),
-        ("Files", "Longitude", "REAL", "float"),
+        ("Files", "Latitude", "REAL"),
+        ("Files", "Longitude", "REAL"),
     };
     foreach (var w in wanted)
     {
         try
         {
             bool exists;
-            if (isSqlServer)
+            var connStr = db.Database.GetConnectionString();
+            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+            await cn.OpenAsync();
+            using var cmd = cn.CreateCommand();
+            cmd.CommandText = $"PRAGMA table_info(\"{w.Table}\")";
+            exists = false;
+            using (var rdr = await cmd.ExecuteReaderAsync())
             {
-                var connStr = db.Database.GetConnectionString();
-                using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
-                await cn.OpenAsync();
-                using var cmd = cn.CreateCommand();
-                cmd.CommandText = $"SELECT COL_LENGTH('{w.Table}', '{w.Column}')";
-                var res = await cmd.ExecuteScalarAsync();
-                exists = res is not null && res != DBNull.Value;
-                if (!exists)
+                while (await rdr.ReadAsync())
                 {
-                    using var alter = cn.CreateCommand();
-                    alter.CommandText = $"ALTER TABLE [{w.Table}] ADD [{w.Column}] {w.SqlServerType} NULL";
-                    await alter.ExecuteNonQueryAsync();
-                    Console.Error.WriteLine($"[STARTUP] Added missing column {w.Table}.{w.Column} (SqlServer).");
+                    var name = rdr.GetString(1);
+                    if (string.Equals(name, w.Column, StringComparison.OrdinalIgnoreCase))
+                    { exists = true; break; }
                 }
             }
-            else
+            if (!exists)
             {
-                var connStr = db.Database.GetConnectionString();
-                using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
-                await cn.OpenAsync();
-                using var cmd = cn.CreateCommand();
-                cmd.CommandText = $"PRAGMA table_info(\"{w.Table}\")";
-                exists = false;
-                using (var rdr = await cmd.ExecuteReaderAsync())
-                {
-                    while (await rdr.ReadAsync())
-                    {
-                        var name = rdr.GetString(1);
-                        if (string.Equals(name, w.Column, StringComparison.OrdinalIgnoreCase))
-                        { exists = true; break; }
-                    }
-                }
-                if (!exists)
-                {
-                    using var alter = cn.CreateCommand();
-                    alter.CommandText = $"ALTER TABLE \"{w.Table}\" ADD COLUMN \"{w.Column}\" {w.SqliteType} NULL";
-                    await alter.ExecuteNonQueryAsync();
-                    Console.Error.WriteLine($"[STARTUP] Added missing column {w.Table}.{w.Column} (SQLite).");
-                }
+                using var alter = cn.CreateCommand();
+                alter.CommandText = $"ALTER TABLE \"{w.Table}\" ADD COLUMN \"{w.Column}\" {w.SqliteType} NULL";
+                await alter.ExecuteNonQueryAsync();
+                Console.Error.WriteLine($"[STARTUP] Added missing column {w.Table}.{w.Column} (SQLite).");
             }
         }
         catch (Exception ex)
@@ -949,7 +875,7 @@ static async Task EnsureForensicColumnsAsync(NimShareDbContext db, bool isSqlSer
 // f.IsPrivate". Idempotent: legt die Spalte an, wenn sie fehlt, sonst
 // no-op. Anders als EnsureForensicColumnsAsync ist IsPrivate NOT NULL
 // DEFAULT 0 (bool), deshalb eigene Routine mit eigenem DDL-Suffix.
-static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool isSqlServer)
+static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db)
 {
     // v1.10.108: Läuft VOR MigrateAsync. Zwei Aufgaben:
     //  (1) Column nachlegen, falls sie fehlt (DBs, die v1.10.104/105 ohne
@@ -964,74 +890,42 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
     const string V184 = "20260721145510_V184_FolderIsPrivate";
     try
     {
-        if (isSqlServer)
+        var connStr = db.Database.GetConnectionString();
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+        await cn.OpenAsync();
+        using var check = cn.CreateCommand();
+        check.CommandText = "PRAGMA table_info(\"Folders\")";
+        var exists = false;
+        using (var rdr = await check.ExecuteReaderAsync())
         {
-            var connStr = db.Database.GetConnectionString();
-            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
-            await cn.OpenAsync();
-            using var check = cn.CreateCommand();
-            check.CommandText = "SELECT COL_LENGTH('Folders', 'IsPrivate')";
-            var res = await check.ExecuteScalarAsync();
-            var exists = res is not null && res != DBNull.Value;
-            if (!exists)
+            while (await rdr.ReadAsync())
             {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE [Folders] ADD [IsPrivate] bit NOT NULL DEFAULT (0)";
-                await alter.ExecuteNonQueryAsync();
-                exists = true;
-                Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SqlServer).");
-            }
-            if (exists)
-            {
-                using var stamp = cn.CreateCommand();
-                stamp.CommandText =
-                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
-                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
-                stamp.Parameters.AddWithValue("@mid", V184);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V184 (SqlServer).");
+                if (string.Equals(rdr.GetString(1), "IsPrivate", StringComparison.OrdinalIgnoreCase))
+                { exists = true; break; }
             }
         }
-        else
+        if (!exists)
         {
-            var connStr = db.Database.GetConnectionString();
-            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
-            await cn.OpenAsync();
-            using var check = cn.CreateCommand();
-            check.CommandText = "PRAGMA table_info(\"Folders\")";
-            var exists = false;
-            using (var rdr = await check.ExecuteReaderAsync())
-            {
-                while (await rdr.ReadAsync())
-                {
-                    if (string.Equals(rdr.GetString(1), "IsPrivate", StringComparison.OrdinalIgnoreCase))
-                    { exists = true; break; }
-                }
-            }
-            if (!exists)
-            {
-                // Auf frischen DBs gibt es die Folders-Tabelle noch nicht —
-                // dann wirft ALTER, der catch unten schluckt, MigrateAsync
-                // übernimmt. Auf Bestands-DBs legt das die Column nach.
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"IsPrivate\" INTEGER NOT NULL DEFAULT 0";
-                await alter.ExecuteNonQueryAsync();
-                exists = true;
-                Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SQLite).");
-            }
-            if (exists)
-            {
-                using var stamp = cn.CreateCommand();
-                stamp.CommandText =
-                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
-                    "SELECT $mid, '8.0.10' " +
-                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
-                stamp.Parameters.AddWithValue("$mid", V184);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V184 (SQLite).");
-            }
+            // Auf frischen DBs gibt es die Folders-Tabelle noch nicht —
+            // dann wirft ALTER, der catch unten schluckt, MigrateAsync
+            // übernimmt. Auf Bestands-DBs legt das die Column nach.
+            using var alter = cn.CreateCommand();
+            alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"IsPrivate\" INTEGER NOT NULL DEFAULT 0";
+            await alter.ExecuteNonQueryAsync();
+            exists = true;
+            Console.Error.WriteLine("[STARTUP] Added Folders.IsPrivate (SQLite).");
+        }
+        if (exists)
+        {
+            using var stamp = cn.CreateCommand();
+            stamp.CommandText =
+                "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                "SELECT $mid, '8.0.10' " +
+                "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+            stamp.Parameters.AddWithValue("$mid", V184);
+            var stamped = await stamp.ExecuteNonQueryAsync();
+            if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V184 (SQLite).");
         }
     }
     catch (Exception ex)
@@ -1046,112 +940,58 @@ static async Task EnsureFolderIsPrivateColumnAsync(NimShareDbContext db, bool is
 // stempelt V189 in __EFMigrationsHistory sobald beide da sind. Analog zu
 // EnsureFolderIsPrivateColumnAsync für den Fall dass MigrateAsync V189 nicht
 // anwendet.
-static async Task EnsureGalleryColumnsAsync(NimShareDbContext db, bool isSqlServer)
+static async Task EnsureGalleryColumnsAsync(NimShareDbContext db)
 {
     const string V189 = "20260725100000_V189_FolderGalleryMode";
     try
     {
         var connStr = db.Database.GetConnectionString();
-        if (isSqlServer)
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+        await cn.OpenAsync();
+        var kindExists = await ColHasSqliteAsync(cn, "Folders", "Kind");
+        if (!kindExists)
         {
-            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
-            await cn.OpenAsync();
-            var kindExists = await ColHasSqlServerAsync(cn, "Folders", "Kind");
-            if (!kindExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE [Folders] ADD [Kind] int NOT NULL DEFAULT (0)";
-                await alter.ExecuteNonQueryAsync();
-                kindExists = true;
-                Console.Error.WriteLine("[STARTUP] Added Folders.Kind (SqlServer).");
-            }
-            var allowExists = await ColHasSqlServerAsync(cn, "ShareLinks", "AllowUploads");
-            if (!allowExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE [ShareLinks] ADD [AllowUploads] bit NOT NULL DEFAULT (0)";
-                await alter.ExecuteNonQueryAsync();
-                allowExists = true;
-                Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SqlServer).");
-            }
-            var dispExists = await ColHasSqlServerAsync(cn, "ShareLinks", "DisplayAsGallery");
-            if (!dispExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE [ShareLinks] ADD [DisplayAsGallery] bit NOT NULL DEFAULT (0)";
-                await alter.ExecuteNonQueryAsync();
-                dispExists = true;
-                Console.Error.WriteLine("[STARTUP] Added ShareLinks.DisplayAsGallery (SqlServer).");
-            }
-            if (kindExists && allowExists && dispExists)
-            {
-                using var stamp = cn.CreateCommand();
-                stamp.CommandText =
-                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
-                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
-                stamp.Parameters.AddWithValue("@mid", V189);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V189 (SqlServer).");
-            }
+            using var alter = cn.CreateCommand();
+            alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"Kind\" INTEGER NOT NULL DEFAULT 0";
+            await alter.ExecuteNonQueryAsync();
+            kindExists = true;
+            Console.Error.WriteLine("[STARTUP] Added Folders.Kind (SQLite).");
         }
-        else
+        var allowExists = await ColHasSqliteAsync(cn, "ShareLinks", "AllowUploads");
+        if (!allowExists)
         {
-            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
-            await cn.OpenAsync();
-            var kindExists = await ColHasSqliteAsync(cn, "Folders", "Kind");
-            if (!kindExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE \"Folders\" ADD COLUMN \"Kind\" INTEGER NOT NULL DEFAULT 0";
-                await alter.ExecuteNonQueryAsync();
-                kindExists = true;
-                Console.Error.WriteLine("[STARTUP] Added Folders.Kind (SQLite).");
-            }
-            var allowExists = await ColHasSqliteAsync(cn, "ShareLinks", "AllowUploads");
-            if (!allowExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"AllowUploads\" INTEGER NOT NULL DEFAULT 0";
-                await alter.ExecuteNonQueryAsync();
-                allowExists = true;
-                Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SQLite).");
-            }
-            var dispExists = await ColHasSqliteAsync(cn, "ShareLinks", "DisplayAsGallery");
-            if (!dispExists)
-            {
-                using var alter = cn.CreateCommand();
-                alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"DisplayAsGallery\" INTEGER NOT NULL DEFAULT 0";
-                await alter.ExecuteNonQueryAsync();
-                dispExists = true;
-                Console.Error.WriteLine("[STARTUP] Added ShareLinks.DisplayAsGallery (SQLite).");
-            }
-            if (kindExists && allowExists && dispExists)
-            {
-                using var stamp = cn.CreateCommand();
-                stamp.CommandText =
-                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
-                    "SELECT $mid, '8.0.10' " +
-                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
-                stamp.Parameters.AddWithValue("$mid", V189);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V189 (SQLite).");
-            }
+            using var alter = cn.CreateCommand();
+            alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"AllowUploads\" INTEGER NOT NULL DEFAULT 0";
+            await alter.ExecuteNonQueryAsync();
+            allowExists = true;
+            Console.Error.WriteLine("[STARTUP] Added ShareLinks.AllowUploads (SQLite).");
+        }
+        var dispExists = await ColHasSqliteAsync(cn, "ShareLinks", "DisplayAsGallery");
+        if (!dispExists)
+        {
+            using var alter = cn.CreateCommand();
+            alter.CommandText = "ALTER TABLE \"ShareLinks\" ADD COLUMN \"DisplayAsGallery\" INTEGER NOT NULL DEFAULT 0";
+            await alter.ExecuteNonQueryAsync();
+            dispExists = true;
+            Console.Error.WriteLine("[STARTUP] Added ShareLinks.DisplayAsGallery (SQLite).");
+        }
+        if (kindExists && allowExists && dispExists)
+        {
+            using var stamp = cn.CreateCommand();
+            stamp.CommandText =
+                "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                "SELECT $mid, '8.0.10' " +
+                "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+            stamp.Parameters.AddWithValue("$mid", V189);
+            var stamped = await stamp.ExecuteNonQueryAsync();
+            if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V189 (SQLite).");
         }
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine("[STARTUP] EnsureGalleryColumnsAsync failed: " + ex.Message);
     }
-}
-
-static async Task<bool> ColHasSqlServerAsync(Microsoft.Data.SqlClient.SqlConnection cn, string table, string col)
-{
-    using var cmd = cn.CreateCommand();
-    cmd.CommandText = $"SELECT COL_LENGTH('{table}', '{col}')";
-    var res = await cmd.ExecuteScalarAsync();
-    return res is not null && res != DBNull.Value;
 }
 
 static async Task<bool> ColHasSqliteAsync(Microsoft.Data.Sqlite.SqliteConnection cn, string table, string col)
@@ -1172,87 +1012,44 @@ static async Task<bool> ColHasSqliteAsync(Microsoft.Data.Sqlite.SqliteConnection
 // V185 dadurch nie ausführen konnte → „no such table: LinkEntries". CREATE
 // TABLE IF NOT EXISTS ist idempotent; auf frischen DBs, die V185 regulär via
 // MigrateAsync bekommen, ist die Tabelle bereits da und der Aufruf ein No-op.
-static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db, bool isSqlServer)
+static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db)
 {
     const string V185 = "20260722120000_V185_LinkEntries";
     try
     {
         var connStr = db.Database.GetConnectionString();
-        if (isSqlServer)
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+        await cn.OpenAsync();
+        using (var create = cn.CreateCommand())
         {
-            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
-            await cn.OpenAsync();
-            using (var create = cn.CreateCommand())
-            {
-                create.CommandText =
-                    "IF OBJECT_ID(N'[LinkEntries]', N'U') IS NULL " +
-                    "CREATE TABLE [LinkEntries] (" +
-                    "[Id] uniqueidentifier NOT NULL CONSTRAINT [PK_LinkEntries] PRIMARY KEY, " +
-                    "[Title] nvarchar(200) NOT NULL, " +
-                    "[Url] nvarchar(2000) NOT NULL, " +
-                    "[Description] nvarchar(500) NULL, " +
-                    "[Emoji] nvarchar(8) NULL, " +
-                    "[SortOrder] int NOT NULL, " +
-                    "[CreatedByUserId] uniqueidentifier NOT NULL, " +
-                    "[CreatedAt] bigint NOT NULL, " +
-                    "[UpdatedAt] bigint NOT NULL)";
-                await create.ExecuteNonQueryAsync();
-            }
-            using (var idx = cn.CreateCommand())
-            {
-                idx.CommandText =
-                    "IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'LinkEntries') " +
-                    "AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_LinkEntries_SortOrder' " +
-                    "AND object_id = OBJECT_ID('LinkEntries')) " +
-                    "CREATE INDEX [IX_LinkEntries_SortOrder] ON [LinkEntries] ([SortOrder])";
-                await idx.ExecuteNonQueryAsync();
-            }
-            using (var stamp = cn.CreateCommand())
-            {
-                stamp.CommandText =
-                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
-                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
-                stamp.Parameters.AddWithValue("@mid", V185);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V185 (SqlServer).");
-            }
+            create.CommandText =
+                "CREATE TABLE IF NOT EXISTS \"LinkEntries\" (" +
+                "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_LinkEntries\" PRIMARY KEY, " +
+                "\"Title\" TEXT NOT NULL, " +
+                "\"Url\" TEXT NOT NULL, " +
+                "\"Description\" TEXT NULL, " +
+                "\"Emoji\" TEXT NULL, " +
+                "\"SortOrder\" INTEGER NOT NULL, " +
+                "\"CreatedByUserId\" TEXT NOT NULL, " +
+                "\"CreatedAt\" INTEGER NOT NULL, " +
+                "\"UpdatedAt\" INTEGER NOT NULL)";
+            await create.ExecuteNonQueryAsync();
         }
-        else
+        using (var idx = cn.CreateCommand())
         {
-            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
-            await cn.OpenAsync();
-            using (var create = cn.CreateCommand())
-            {
-                create.CommandText =
-                    "CREATE TABLE IF NOT EXISTS \"LinkEntries\" (" +
-                    "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_LinkEntries\" PRIMARY KEY, " +
-                    "\"Title\" TEXT NOT NULL, " +
-                    "\"Url\" TEXT NOT NULL, " +
-                    "\"Description\" TEXT NULL, " +
-                    "\"Emoji\" TEXT NULL, " +
-                    "\"SortOrder\" INTEGER NOT NULL, " +
-                    "\"CreatedByUserId\" TEXT NOT NULL, " +
-                    "\"CreatedAt\" INTEGER NOT NULL, " +
-                    "\"UpdatedAt\" INTEGER NOT NULL)";
-                await create.ExecuteNonQueryAsync();
-            }
-            using (var idx = cn.CreateCommand())
-            {
-                idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_LinkEntries_SortOrder\" ON \"LinkEntries\" (\"SortOrder\")";
-                await idx.ExecuteNonQueryAsync();
-            }
-            using (var stamp = cn.CreateCommand())
-            {
-                stamp.CommandText =
-                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
-                    "SELECT $mid, '8.0.10' " +
-                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
-                stamp.Parameters.AddWithValue("$mid", V185);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V185 (SQLite).");
-            }
+            idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_LinkEntries_SortOrder\" ON \"LinkEntries\" (\"SortOrder\")";
+            await idx.ExecuteNonQueryAsync();
+        }
+        using (var stamp = cn.CreateCommand())
+        {
+            stamp.CommandText =
+                "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                "SELECT $mid, '8.0.10' " +
+                "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+            stamp.Parameters.AddWithValue("$mid", V185);
+            var stamped = await stamp.ExecuteNonQueryAsync();
+            if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V185 (SQLite).");
         }
     }
     catch (Exception ex)
@@ -1273,7 +1070,7 @@ static async Task EnsureLinkEntriesTableAsync(NimShareDbContext db, bool isSqlSe
 //       schon → stempeln.
 // Alles darüber hinaus (mehrere Tabellen, ForeignKey-Adds, Data-Seeds)
 // wird nicht angerührt; MigrateAsync bekommt seine Chance wie bisher.
-static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bool isSqlServer)
+static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db)
 {
     try
     {
@@ -1311,11 +1108,11 @@ static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bo
                 bool allTablesPresent = true;
                 foreach (var ct in creates)
                 {
-                    if (!await TableExistsAsync(db, ct.Name, isSqlServer)) { allTablesPresent = false; break; }
+                    if (!await TableExistsAsync(db, ct.Name)) { allTablesPresent = false; break; }
                 }
                 if (allTablesPresent)
                 {
-                    await StampMigrationAsync(db, migId, isSqlServer);
+                    await StampMigrationAsync(db, migId);
                     var tableList = string.Join(", ", creates.Select(c => c.Name));
                     Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → Tabellen {tableList} existieren bereits, gestempelt.");
                     continue;
@@ -1330,11 +1127,11 @@ static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bo
                 bool allPresent = true;
                 foreach (var ac in addCols)
                 {
-                    if (!await ColumnExistsAsync(db, ac.Table, ac.Name, isSqlServer)) { allPresent = false; break; }
+                    if (!await ColumnExistsAsync(db, ac.Table, ac.Name)) { allPresent = false; break; }
                 }
                 if (allPresent)
                 {
-                    await StampMigrationAsync(db, migId, isSqlServer);
+                    await StampMigrationAsync(db, migId);
                     Console.Error.WriteLine($"[STARTUP] PreStamp: {migId} → alle {addCols.Count} Spalten existieren bereits, gestempelt.");
                 }
             }
@@ -1348,85 +1145,45 @@ static async Task PreStampAlreadyAppliedMigrationsAsync(NimShareDbContext db, bo
     }
 }
 
-static async Task<bool> TableExistsAsync(NimShareDbContext db, string table, bool isSqlServer)
+static async Task<bool> TableExistsAsync(NimShareDbContext db, string table)
 {
     var conn = db.Database.GetConnectionString();
-    if (isSqlServer)
-    {
-        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText = "SELECT CASE WHEN OBJECT_ID(@t, 'U') IS NULL THEN 0 ELSE 1 END";
-        cmd.Parameters.AddWithValue("@t", $"[{table}]");
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) == 1;
-    }
-    else
-    {
-        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=$t";
-        cmd.Parameters.AddWithValue("$t", table);
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
-    }
+    using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+    await cn.OpenAsync();
+    using var cmd = cn.CreateCommand();
+    cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=$t";
+    cmd.Parameters.AddWithValue("$t", table);
+    return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
 }
 
-static async Task<bool> ColumnExistsAsync(NimShareDbContext db, string table, string column, bool isSqlServer)
+static async Task<bool> ColumnExistsAsync(NimShareDbContext db, string table, string column)
 {
     var conn = db.Database.GetConnectionString();
-    if (isSqlServer)
+    using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+    await cn.OpenAsync();
+    using var cmd = cn.CreateCommand();
+    cmd.CommandText = $"PRAGMA table_info(\"{table.Replace("\"", "\"\"")}\")";
+    using var rdr = await cmd.ExecuteReaderAsync();
+    while (await rdr.ReadAsync())
     {
-        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText = "SELECT CASE WHEN COL_LENGTH(@t, @c) IS NULL THEN 0 ELSE 1 END";
-        cmd.Parameters.AddWithValue("@t", table);
-        cmd.Parameters.AddWithValue("@c", column);
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) == 1;
+        if (string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return true;
     }
-    else
-    {
-        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText = $"PRAGMA table_info(\"{table.Replace("\"", "\"\"")}\")";
-        using var rdr = await cmd.ExecuteReaderAsync();
-        while (await rdr.ReadAsync())
-        {
-            if (string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return true;
-        }
-        return false;
-    }
+    return false;
 }
 
-static async Task StampMigrationAsync(NimShareDbContext db, string migId, bool isSqlServer)
+static async Task StampMigrationAsync(NimShareDbContext db, string migId)
 {
     var conn = db.Database.GetConnectionString();
-    if (isSqlServer)
-    {
-        using var cn = new Microsoft.Data.SqlClient.SqlConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText =
-            "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
-            "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
-            "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
-        cmd.Parameters.AddWithValue("@mid", migId);
-        await cmd.ExecuteNonQueryAsync();
-    }
-    else
-    {
-        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
-        await cn.OpenAsync();
-        using var cmd = cn.CreateCommand();
-        cmd.CommandText =
-            "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
-            "SELECT $mid, '8.0.10' " +
-            "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
-            "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
-        cmd.Parameters.AddWithValue("$mid", migId);
-        await cmd.ExecuteNonQueryAsync();
-    }
+    using var cn = new Microsoft.Data.Sqlite.SqliteConnection(conn);
+    await cn.OpenAsync();
+    using var cmd = cn.CreateCommand();
+    cmd.CommandText =
+        "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+        "SELECT $mid, '8.0.10' " +
+        "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+        "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+    cmd.Parameters.AddWithValue("$mid", migId);
+    await cmd.ExecuteNonQueryAsync();
 }
 
 // v1.10.155: Legt die InstanceCas-Tabelle an (Instance-Root-CA, Migration
@@ -1435,87 +1192,44 @@ static async Task StampMigrationAsync(NimShareDbContext db, string migId, bool i
 // DBs, die den v1.10.153-Deploy erlebt haben, aber V186 nicht angewandt
 // bekommen haben (der wahrscheinlichste Grund: silent MigrateAsync-Abbruch
 // nach einem früheren Migration-Retry).
-static async Task EnsureInstanceCasTableAsync(NimShareDbContext db, bool isSqlServer)
+static async Task EnsureInstanceCasTableAsync(NimShareDbContext db)
 {
     const string V186 = "20260724100000_V186_InstanceCa";
     try
     {
         var connStr = db.Database.GetConnectionString();
-        if (isSqlServer)
+        using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
+        await cn.OpenAsync();
+        using (var create = cn.CreateCommand())
         {
-            using var cn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
-            await cn.OpenAsync();
-            using (var create = cn.CreateCommand())
-            {
-                create.CommandText =
-                    "IF OBJECT_ID(N'[InstanceCas]', N'U') IS NULL " +
-                    "CREATE TABLE [InstanceCas] (" +
-                    "[Id] uniqueidentifier NOT NULL CONSTRAINT [PK_InstanceCas] PRIMARY KEY, " +
-                    "[Name] nvarchar(200) NOT NULL, " +
-                    "[SubjectDn] nvarchar(400) NOT NULL, " +
-                    "[NotBefore] datetimeoffset NOT NULL, " +
-                    "[NotAfter] datetimeoffset NOT NULL, " +
-                    "[Thumbprint] nvarchar(64) NOT NULL, " +
-                    "[PfxDataEncrypted] varbinary(max) NOT NULL, " +
-                    "[IsActive] bit NOT NULL, " +
-                    "[CreatedAt] datetimeoffset NOT NULL)";
-                await create.ExecuteNonQueryAsync();
-            }
-            using (var idx = cn.CreateCommand())
-            {
-                idx.CommandText =
-                    "IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'InstanceCas') " +
-                    "AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InstanceCas_IsActive_NotAfter' " +
-                    "AND object_id = OBJECT_ID('InstanceCas')) " +
-                    "CREATE INDEX [IX_InstanceCas_IsActive_NotAfter] ON [InstanceCas] ([IsActive], [NotAfter])";
-                await idx.ExecuteNonQueryAsync();
-            }
-            using (var stamp = cn.CreateCommand())
-            {
-                stamp.CommandText =
-                    "IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = @mid) " +
-                    "INSERT INTO [__EFMigrationsHistory] ([MigrationId],[ProductVersion]) VALUES (@mid, '8.0.10')";
-                stamp.Parameters.AddWithValue("@mid", V186);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V186 (SqlServer).");
-            }
+            create.CommandText =
+                "CREATE TABLE IF NOT EXISTS \"InstanceCas\" (" +
+                "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_InstanceCas\" PRIMARY KEY, " +
+                "\"Name\" TEXT NOT NULL, " +
+                "\"SubjectDn\" TEXT NOT NULL, " +
+                "\"NotBefore\" INTEGER NOT NULL, " +
+                "\"NotAfter\" INTEGER NOT NULL, " +
+                "\"Thumbprint\" TEXT NOT NULL, " +
+                "\"PfxDataEncrypted\" BLOB NOT NULL, " +
+                "\"IsActive\" INTEGER NOT NULL, " +
+                "\"CreatedAt\" INTEGER NOT NULL)";
+            await create.ExecuteNonQueryAsync();
         }
-        else
+        using (var idx = cn.CreateCommand())
         {
-            using var cn = new Microsoft.Data.Sqlite.SqliteConnection(connStr);
-            await cn.OpenAsync();
-            using (var create = cn.CreateCommand())
-            {
-                create.CommandText =
-                    "CREATE TABLE IF NOT EXISTS \"InstanceCas\" (" +
-                    "\"Id\" TEXT NOT NULL CONSTRAINT \"PK_InstanceCas\" PRIMARY KEY, " +
-                    "\"Name\" TEXT NOT NULL, " +
-                    "\"SubjectDn\" TEXT NOT NULL, " +
-                    "\"NotBefore\" INTEGER NOT NULL, " +
-                    "\"NotAfter\" INTEGER NOT NULL, " +
-                    "\"Thumbprint\" TEXT NOT NULL, " +
-                    "\"PfxDataEncrypted\" BLOB NOT NULL, " +
-                    "\"IsActive\" INTEGER NOT NULL, " +
-                    "\"CreatedAt\" INTEGER NOT NULL)";
-                await create.ExecuteNonQueryAsync();
-            }
-            using (var idx = cn.CreateCommand())
-            {
-                idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_InstanceCas_IsActive_NotAfter\" ON \"InstanceCas\" (\"IsActive\", \"NotAfter\")";
-                await idx.ExecuteNonQueryAsync();
-            }
-            using (var stamp = cn.CreateCommand())
-            {
-                stamp.CommandText =
-                    "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
-                    "SELECT $mid, '8.0.10' " +
-                    "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
-                    "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
-                stamp.Parameters.AddWithValue("$mid", V186);
-                var stamped = await stamp.ExecuteNonQueryAsync();
-                if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V186 (SQLite).");
-            }
+            idx.CommandText = "CREATE INDEX IF NOT EXISTS \"IX_InstanceCas_IsActive_NotAfter\" ON \"InstanceCas\" (\"IsActive\", \"NotAfter\")";
+            await idx.ExecuteNonQueryAsync();
+        }
+        using (var stamp = cn.CreateCommand())
+        {
+            stamp.CommandText =
+                "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\",\"ProductVersion\") " +
+                "SELECT $mid, '8.0.10' " +
+                "WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory') " +
+                "AND NOT EXISTS (SELECT 1 FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $mid)";
+            stamp.Parameters.AddWithValue("$mid", V186);
+            var stamped = await stamp.ExecuteNonQueryAsync();
+            if (stamped > 0) Console.Error.WriteLine("[STARTUP] Baseline-stamped V186 (SQLite).");
         }
     }
     catch (Exception ex)
@@ -1554,67 +1268,6 @@ static async Task RepairDuplicateFolderRootsAsync(NimShareDbContext db)
     {
         await db.SaveChangesAsync();
         Console.Error.WriteLine($"[STARTUP] Re-parented {moved} legacy duplicate root folder(s) under their official scope-root.");
-    }
-}
-
-static async Task BaselineSqlServerIfNeededAsync(NimShareDbContext db, IServiceProvider services)
-{
-    try
-    {
-        // Does the schema look already populated?
-        var conn = db.Database.GetDbConnection();
-        await conn.OpenAsync();
-        bool usersExists = false;
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "SELECT COUNT(1) FROM sys.tables WHERE name = 'Users'";
-            usersExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
-        }
-        if (!usersExists) return; // fresh DB — regular MigrateAsync will apply everything
-        // Is __EFMigrationsHistory present?
-        bool historyExists;
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "SELECT COUNT(1) FROM sys.tables WHERE name = '__EFMigrationsHistory'";
-            historyExists = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0) > 0;
-        }
-        if (!historyExists)
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"CREATE TABLE [__EFMigrationsHistory] (
-                [MigrationId] nvarchar(150) NOT NULL,
-                [ProductVersion] nvarchar(32) NOT NULL,
-                CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
-            )";
-            await cmd.ExecuteNonQueryAsync();
-        }
-        // Already stamped? Nothing to do.
-        long stamped;
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "SELECT COUNT(1) FROM [__EFMigrationsHistory]";
-            stamped = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0);
-        }
-        if (stamped > 0) return;
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (@id, @v)";
-            // v1.10.108: Die ID muss EXAKT der echten Migration entsprechen
-            // (20260720042650, nicht 20260719180245 — Tippfehler aus v1.8.5).
-            // Mit der falschen ID sah MigrateAsync Initial weiter als pending
-            // und crashte auf "object already exists".
-            var p1 = cmd.CreateParameter(); p1.ParameterName = "@id"; p1.Value = "20260720042650_InitialSqlServer"; cmd.Parameters.Add(p1);
-            var p2 = cmd.CreateParameter(); p2.ParameterName = "@v"; p2.Value = "8.0.10"; cmd.Parameters.Add(p2);
-            await cmd.ExecuteNonQueryAsync();
-        }
-        var logger = services.GetService<ILoggerFactory>()?.CreateLogger("Startup");
-        logger?.LogWarning("SqlServer __EFMigrationsHistory was empty on an already-populated schema. Baseline-stamped InitialSqlServer so MigrateAsync can proceed. This is the v1.8.0-1.8.4 → v1.8.5 upgrade path.");
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine("[STARTUP] Baseline-stamp for SqlServer failed: " + ex.Message);
-        // Fall through — MigrateAsync will either succeed on a fresh DB or
-        // fail loudly, which is the pre-fix behaviour.
     }
 }
 
@@ -1875,8 +1528,7 @@ static async Task RepairSqliteMissingColumnsAsync(NimShareDbContext db, IService
 }
 
 /// <summary>
-/// Sqlite counterpart to the SqlServer baseline stamper. On any instance
-/// where the Users table exists but <c>__EFMigrationsHistory</c> is empty
+/// On any instance where the Users table exists but <c>__EFMigrationsHistory</c> is empty
 /// (the case for every deployed DB from v1.7 through v1.10.0, because
 /// MigrationsAssembly pointed at NimShare.Api which contained ZERO Migration
 /// subclasses), stamp every migration currently known to the model as

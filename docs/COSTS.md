@@ -21,5 +21,4 @@ The metadata DB is SQLite persisted on the mounted Azure Files share — no sepa
   - Custom domains per user with free App Service Managed Certificates
   - Deployment slots for staging
   - ~ 60 EUR/month
-- **Swap SQLite for Azure SQL** if you go past ~5 concurrent writers or want multi-region replication. Set `Database__Provider=SqlServer` and point `ConnectionStrings__Default` at your Azure SQL instance.
 - **Add Application Insights** — set `APPLICATIONINSIGHTS_CONNECTION_STRING`; auto-instruments requests/deps/exceptions.
