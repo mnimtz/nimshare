@@ -23,6 +23,14 @@ public interface ISignaturePdfService
 
 public class SignaturePdfService : ISignaturePdfService
 {
+    // v1.11.47: siehe LiberationPdfFontResolver.cs — ohne diese Registrierung
+    // rendert PdfSharpCore "Arial"/"Courier New" auf Linux als falschen
+    // Ersatz-Font. Static Constructor läuft genau einmal, unabhängig von DI.
+    static SignaturePdfService()
+    {
+        PdfSharpCore.Fonts.GlobalFontSettings.FontResolver ??= new LiberationPdfFontResolver();
+    }
+
     public Task<byte[]> RenderFinalAsync(SignatureRequest req, byte[] sourcePdf,
         Dictionary<Guid, byte[]> sigImages,
         IReadOnlyList<SignatureAudit>? audits = null,
@@ -103,9 +111,14 @@ public class SignaturePdfService : ISignaturePdfService
     }
 
     // ── Audit-Seiten-Renderer ────────────────────────────────────────────
-    // Ein einfacher „Cursor Y wandert nach unten, bei Bedarf neue Seite"-
-    // Layouter. Reicht für den MVP-Audit-Bericht; für richtige Typografie
-    // wäre QuestPDF der bessere Weg.
+    // v1.11.47 — Marcus's Report: der Bericht sah "unfertig" aus, mit
+    // überlappenden Zeilen und schlechten Zeilenumbrüchen. Root Cause #1
+    // war der fehlende Font-Resolver (siehe static ctor oben); Root Cause
+    // #2 war, dass DrawString in PdfSharpCore NICHT automatisch umbricht —
+    // jeder lange Wert (E-Mail, User-Agent, der Disclaimer-Absatz) wurde
+    // als EINE Zeile gezeichnet und lief über den Rand bzw. unter die
+    // nächste Zeile. Fix: WrapText/DrawWrapped unten + durchgängig
+    // content-abhängige Zeilenhöhen statt fixer Konstanten.
     private static void RenderAuditPages(PdfDocument doc, SignatureRequest req,
         IReadOnlyList<SignatureAudit> audits)
     {
@@ -116,14 +129,17 @@ public class SignaturePdfService : ISignaturePdfService
         var monoFont  = new XFont("Courier New", 8.5, XFontStyle.Regular);
         var muted     = new XFont("Arial", 8, XFontStyle.Regular);
 
-        var lightGray = new XSolidBrush(XColor.FromArgb(245, 245, 247));
-        var accent    = new XSolidBrush(XColor.FromArgb(0, 29, 61)); // Tungsten navy
-        var okGreen   = new XSolidBrush(XColor.FromArgb(42, 127, 42));
-        var warnRed   = new XSolidBrush(XColor.FromArgb(200, 40, 40));
+        var lightGray  = new XSolidBrush(XColor.FromArgb(246, 247, 249));
+        var cardBorder = new XPen(XColor.FromArgb(224, 227, 232), 0.75);
+        var accent     = new XSolidBrush(XColor.FromArgb(0, 29, 61)); // Tungsten navy
+        var accentLine = new XPen(XColor.FromArgb(0, 29, 61), 1.2);
+        var okGreen    = new XSolidBrush(XColor.FromArgb(42, 127, 42));
+        var warnRed    = new XSolidBrush(XColor.FromArgb(200, 40, 40));
 
         const double marginX = 40;
         const double topY = 50;
-        const double bottomY = 800;
+        const double bottomY = 790;
+        const double lineH = 13;
 
         var (page, g) = NewPage(doc);
         double y = topY;
@@ -159,14 +175,70 @@ public class SignaturePdfService : ISignaturePdfService
             }
         }
 
+        // Bricht Text manuell um — PdfSharpCore's DrawString tut das NICHT
+        // von selbst, egal ob man ein XRect übergibt (das clippt nur).
+        List<string> WrapText(string text, XFont font, double maxWidth)
+        {
+            if (string.IsNullOrEmpty(text)) return new List<string> { "" };
+            var words = text.Split(' ');
+            var lines = new List<string>();
+            var cur = "";
+            foreach (var w in words)
+            {
+                var trial = cur.Length == 0 ? w : cur + " " + w;
+                if (g.MeasureString(trial, font).Width > maxWidth && cur.Length > 0)
+                {
+                    lines.Add(cur);
+                    cur = w;
+                }
+                else
+                {
+                    cur = trial;
+                }
+                // Ein einzelnes Wort (z.B. eine lange URL/Hash ohne
+                // Leerzeichen) breiter als maxWidth: hart am Zeichen umbrechen
+                // statt endlos über den Rand zu laufen.
+                while (g.MeasureString(cur, font).Width > maxWidth && cur.Contains(' ') == false && cur.Length > 1)
+                {
+                    var cut = cur.Length - 1;
+                    while (cut > 1 && g.MeasureString(cur[..cut], font).Width > maxWidth) cut--;
+                    lines.Add(cur[..cut]);
+                    cur = cur[cut..];
+                }
+            }
+            if (cur.Length > 0) lines.Add(cur);
+            return lines.Count == 0 ? new List<string> { "" } : lines;
+        }
+
+        // Zeichnet umgebrochenen Text ab (x, topOfBlock) und gibt die
+        // tatsächlich verbrauchte Höhe zurück, damit der Aufrufer y korrekt
+        // weiterschieben kann (statt einer geschätzten Konstante).
+        double DrawWrapped(string text, XFont font, XBrush brush, double x, double topOfBlock,
+            double maxWidth, double rowLineH, int maxLines = int.MaxValue)
+        {
+            var lines = WrapText(text, font, maxWidth);
+            if (lines.Count > maxLines)
+            {
+                lines = lines.Take(maxLines).ToList();
+                lines[^1] = lines[^1].TrimEnd() + " …";
+            }
+            var yy = topOfBlock;
+            foreach (var line in lines)
+            {
+                g.DrawString(line, font, brush, new XPoint(x, yy));
+                yy += rowLineH;
+            }
+            return yy - topOfBlock;
+        }
+
         // ── Titel-Header ─────────────────────────────────────────────
-        g.DrawRectangle(accent, marginX, y - 5, pageWidth - 2 * marginX, 44);
+        g.DrawRectangle(accent, marginX, y - 5, pageWidth - 2 * marginX, 46);
         g.DrawString("SIGNATURE AUDIT REPORT", titleFont, XBrushes.White,
-            new XRect(marginX + 12, y + 4, pageWidth - 2 * marginX - 24, 22), XStringFormats.CenterLeft);
-        g.DrawString("NimShare · Signature Workflow · Full Forensic Trail",
+            new XRect(marginX + 14, y + 3, pageWidth - 2 * marginX - 28, 24), XStringFormats.CenterLeft);
+        g.DrawString("NimShare  ·  Signature Workflow  ·  Full Forensic Trail",
             muted, XBrushes.White,
-            new XRect(marginX + 12, y + 24, pageWidth - 2 * marginX - 24, 14), XStringFormats.CenterLeft);
-        y += 56;
+            new XRect(marginX + 14, y + 26, pageWidth - 2 * marginX - 28, 14), XStringFormats.CenterLeft);
+        y += 60;
 
         // ── Status-Zeile ─────────────────────────────────────────────
         var statusText = req.Status.ToString().ToUpperInvariant();
@@ -177,57 +249,83 @@ public class SignaturePdfService : ISignaturePdfService
             _ => (XSolidBrush)XBrushes.Gray,
         };
         g.DrawString("Status:", boldBody, XBrushes.Black, new XPoint(marginX, y));
-        g.DrawString(statusText, boldBody, statusColor, new XPoint(marginX + 60, y));
+        g.DrawString(statusText, boldBody, statusColor, new XPoint(marginX + 46, y));
         var reportGen = $"Report generated: {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss 'UTC'}";
         var rgSize = g.MeasureString(reportGen, muted);
         g.DrawString(reportGen, muted, XBrushes.Gray,
             new XPoint(pageWidth - marginX - rgSize.Width, y));
-        y += 22;
+        y += 12;
+        g.DrawLine(new XPen(XColor.FromArgb(224, 227, 232), 0.75), marginX, y, pageWidth - marginX, y);
+        y += 16;
 
         // ── Metadaten-Karte ──────────────────────────────────────────
-        void KV(string k, string v, bool mono = false)
-        {
-            CheckPage(14);
-            g.DrawString(k, boldBody, XBrushes.Black, new XPoint(marginX + 6, y));
-            g.DrawString(v ?? "—", mono ? monoFont : bodyFont, XBrushes.Black,
-                new XRect(marginX + 170, y - 2, pageWidth - marginX * 2 - 176, 16), XStringFormats.CenterLeft);
-            y += 14;
-        }
+        // v1.11.47: statt einer fest verdrahteten Box-Höhe wird die Karte
+        // in zwei Durchgängen gebaut — erst die Zeilenhöhen messen (inkl.
+        // Umbruch bei langen Werten wie dem Initiator), dann Box + Inhalt
+        // mit der tatsächlich benötigten Höhe zeichnen. Löst sowohl den
+        // alten "Participants beginnt im Kasten"-Bug als auch die neue
+        // Ursache dafür (variable Zeilenzahl durch Umbruch).
+        const double labelColW = 132;
+        double valueColX = marginX + 20 + labelColW;
+        double valueColW = pageWidth - 2 * marginX - 32 - labelColW;
 
-        // Bug-Fix v1.11.7: die Box hatte eine FESTE Höhe (172), aber die
-        // Anzahl KV-Zeilen ist variabel (Sent/Deadline/Completed sind
-        // optional) — bei weniger Zeilen als das Maximum blieb "y" nach der
-        // Schleife deutlich über dem unteren Rand der Box, und "Participants"
-        // startete dann mitten IN der Box statt darunter. Marcus's Report:
-        // "Participants beginnt im grauen Kasten". Fix: y nach der Schleife
-        // hart auf den bekannten Box-Boden setzen statt content-abhängig
-        // weiterlaufen zu lassen.
-        const double metaBoxHeight = 172;
-        var metaBoxTop = y - 2;
+        var initiatorName = req.Initiator?.DisplayName;
+        var initiatorEmail = req.Initiator?.Email;
+        var initiatorLine = string.IsNullOrWhiteSpace(initiatorName)
+            ? (initiatorEmail ?? "—")
+            : $"{initiatorName} <{initiatorEmail}>";
+
+        var metaRows = new List<(string Label, string Value, bool Mono)>
+        {
+            ("Request ID",      req.Id.ToString(), true),
+            ("Title",           string.IsNullOrWhiteSpace(req.Title) ? "—" : req.Title, false),
+            ("Source document", req.SourceFile?.Name ?? "—", false),
+            ("Initiator",       initiatorLine, false),
+            ("Delivery order",  req.DeliveryOrder.ToString(), false),
+            ("Created (UTC)",   req.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"), false),
+        };
+        if (req.SentAt.HasValue)      metaRows.Add(("Sent (UTC)",      req.SentAt.Value.ToString("yyyy-MM-dd HH:mm:ss"), false));
+        if (req.Deadline.HasValue)    metaRows.Add(("Deadline (UTC)",  req.Deadline.Value.ToString("yyyy-MM-dd HH:mm:ss"), false));
+        if (req.CompletedAt.HasValue) metaRows.Add(("Completed (UTC)", req.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"), false));
+
+        double RowHeight(string v, bool mono) =>
+            Math.Max(lineH, WrapText(v, mono ? monoFont : bodyFont, valueColW).Count * lineH) + 3;
+
+        var metaContentH = metaRows.Sum(r => RowHeight(r.Value, r.Mono));
+        var metaBoxHeight = 26 + metaContentH + 10;
+        CheckPage(metaBoxHeight + 8);
+
+        var metaBoxTop = y;
         g.DrawRectangle(lightGray, marginX, metaBoxTop, pageWidth - 2 * marginX, metaBoxHeight);
-        g.DrawString("Request metadata", h2Font, accent, new XPoint(marginX + 6, y + 10));
-        y += 20;
-        KV("Request ID",       req.Id.ToString(), mono: true);
-        KV("Title",            req.Title ?? "");
-        KV("Source document",  req.SourceFile?.Name ?? "—");
-        KV("Initiator",        $"{req.Initiator?.DisplayName} <{req.Initiator?.Email}>");
-        KV("Delivery order",   req.DeliveryOrder.ToString());
-        KV("Created (UTC)",    req.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
-        if (req.SentAt.HasValue)      KV("Sent (UTC)",      req.SentAt.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-        if (req.Deadline.HasValue)    KV("Deadline (UTC)",  req.Deadline.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-        if (req.CompletedAt.HasValue) KV("Completed (UTC)", req.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-        y = metaBoxTop + metaBoxHeight + 16;
+        g.DrawRectangle(cardBorder, marginX, metaBoxTop, pageWidth - 2 * marginX, metaBoxHeight);
+        g.DrawString("Request metadata", h2Font, accent, new XPoint(marginX + 12, metaBoxTop + 18));
+        y = metaBoxTop + 32;
+        foreach (var row in metaRows)
+        {
+            var rh = RowHeight(row.Value, row.Mono);
+            g.DrawString(row.Label, boldBody, XBrushes.Black, new XPoint(marginX + 20, y));
+            DrawWrapped(row.Value, row.Mono ? monoFont : bodyFont, XBrushes.Black,
+                valueColX, y, valueColW, lineH);
+            y += rh;
+        }
+        y = metaBoxTop + metaBoxHeight + 22;
 
         // ── Participants ─────────────────────────────────────────────
-        CheckPage(30);
+        CheckPage(26);
         g.DrawString("Participants", h2Font, accent, new XPoint(marginX, y));
-        y += 18;
+        y += 16;
+        g.DrawLine(accentLine, marginX, y, marginX + 22, y);
+        y += 14;
 
         foreach (var p in req.Participants.OrderBy(x => x.Order))
         {
-            CheckPage(72);
-            var boxTop = y;
-            // Statuspunkt links
+            // Vorab abschätzen wie viele Zusatzzeilen dieser Teilnehmer
+            // braucht, damit CheckPage die Karte nicht mittendrin abschneidet.
+            var uaLineCount = !string.IsNullOrEmpty(p.UserAgent)
+                ? WrapText($"UA: {p.UserAgent}", monoFont, pageWidth - 2 * marginX - 14).Count
+                : 0;
+            CheckPage(60 + uaLineCount * 11);
+
             var pStat = p.Status switch
             {
                 SignatureParticipantStatus.Signed => okGreen,
@@ -235,46 +333,53 @@ public class SignaturePdfService : ISignaturePdfService
                 SignatureParticipantStatus.Viewed => (XSolidBrush)XBrushes.Orange,
                 _ => (XSolidBrush)XBrushes.LightGray,
             };
+            // v1.11.47 HOTFIX: alle Zeilen dieser Karte zeichnen jetzt exakt
+            // AN y (kein "+8"/"+9"-Baseline-Offset mehr), und y wird nach
+            // jeder Zeile um genau die Zeilenhöhe weitergeschoben — inkl.
+            // der über DrawWrapped gezeichneten Zeilen. Vorher mischten sich
+            // zwei Konventionen (manuelle Offsets vs. DrawWrapped ohne
+            // Offset), wodurch IP/Hash- und UA-Zeile übereinander landeten.
             g.DrawEllipse(pStat, marginX, y + 3, 8, 8);
             g.DrawString($"#{p.Order + 1}  {p.Name}", boldBody, XBrushes.Black,
-                new XPoint(marginX + 14, y + 10));
+                new XPoint(marginX + 16, y));
             var roleLbl = p.Role == SignatureParticipantRole.Signer ? "Signer" : "Viewer";
-            var statusLbl = p.Status.ToString();
-            var right = $"{roleLbl} · {statusLbl}";
+            var right = $"{roleLbl}  ·  {p.Status}";
             var rSize = g.MeasureString(right, muted);
             g.DrawString(right, muted, XBrushes.Gray,
-                new XPoint(pageWidth - marginX - rSize.Width, y + 10));
+                new XPoint(pageWidth - marginX - rSize.Width, y));
+            y += 16;
+            g.DrawString(p.Email, monoFont, XBrushes.Gray, new XPoint(marginX + 16, y));
             y += 14;
-            g.DrawString(p.Email, monoFont, XBrushes.Gray, new XPoint(marginX + 14, y + 10));
-            y += 14;
-            if (p.ViewedAt.HasValue)
-                g.DrawString($"Viewed: {p.ViewedAt.Value:yyyy-MM-dd HH:mm:ss 'UTC'}",
-                    muted, XBrushes.Gray, new XPoint(marginX + 14, y + 10));
-            if (p.SignedAt.HasValue)
-                g.DrawString($"Signed: {p.SignedAt.Value:yyyy-MM-dd HH:mm:ss 'UTC'}",
-                    muted, XBrushes.Black, new XPoint(marginX + 200, y + 10));
-            y += 12;
+
+            if (p.ViewedAt.HasValue || p.SignedAt.HasValue)
+            {
+                if (p.ViewedAt.HasValue)
+                    g.DrawString($"Viewed  {p.ViewedAt.Value:yyyy-MM-dd HH:mm:ss 'UTC'}",
+                        muted, XBrushes.Gray, new XPoint(marginX + 16, y));
+                if (p.SignedAt.HasValue)
+                    g.DrawString($"Signed  {p.SignedAt.Value:yyyy-MM-dd HH:mm:ss 'UTC'}",
+                        muted, okGreen, new XPoint(marginX + 220, y));
+                y += 13;
+            }
             var ipLine = !string.IsNullOrEmpty(p.IpAddress)
-                ? $"IP: {p.IpAddress}   Hash: {Truncate(p.IpHash, 24)}…"
-                : (!string.IsNullOrEmpty(p.IpHash) ? $"IP hash: {p.IpHash}" : "IP: —");
-            g.DrawString(ipLine, monoFont, XBrushes.Black, new XPoint(marginX + 14, y + 10));
-            y += 12;
+                ? $"IP {p.IpAddress}    Hash {Truncate(p.IpHash, 24)}"
+                : (!string.IsNullOrEmpty(p.IpHash) ? $"IP-hash {p.IpHash}" : "IP —");
+            g.DrawString(ipLine, monoFont, XBrushes.Black, new XPoint(marginX + 16, y));
+            y += 13;
             if (!string.IsNullOrEmpty(p.UserAgent))
             {
-                g.DrawString($"UA: {Truncate(p.UserAgent, 110)}", monoFont, XBrushes.Gray,
-                    new XPoint(marginX + 14, y + 10));
-                y += 12;
+                y += DrawWrapped($"UA  {p.UserAgent}", monoFont, XBrushes.Gray,
+                    marginX + 16, y, pageWidth - 2 * marginX - 22, 11, maxLines: 2);
             }
             if (!string.IsNullOrEmpty(p.DeclinedReason))
             {
-                g.DrawString($"Declined reason: {Truncate(p.DeclinedReason, 100)}",
-                    muted, warnRed, new XPoint(marginX + 14, y + 10));
-                y += 12;
+                y += DrawWrapped($"Declined reason: {p.DeclinedReason}", muted, warnRed,
+                    marginX + 16, y + 2, pageWidth - 2 * marginX - 22, 11);
             }
-            // horizontale Trennlinie
-            g.DrawLine(new XPen(XColor.FromArgb(220, 220, 225), 0.6),
-                marginX, y + 4, pageWidth - marginX, y + 4);
-            y += 12;
+            y += 6;
+            g.DrawLine(new XPen(XColor.FromArgb(224, 227, 232), 0.6),
+                marginX, y, pageWidth - marginX, y);
+            y += 14;
         }
 
         // ── Fields-Summary ──────────────────────────────────────────
@@ -282,22 +387,41 @@ public class SignaturePdfService : ISignaturePdfService
         {
             CheckPage(30);
             g.DrawString($"Fields ({req.Fields.Count})", h2Font, accent, new XPoint(marginX, y));
-            y += 18;
+            y += 16;
+            g.DrawLine(accentLine, marginX, y, marginX + 22, y);
+            y += 14;
+
+            // Feste Spalten-X-Positionen statt String-Padding — Padding
+            // richtet sich nur in echten Monospace-Fonts sauber aus, und
+            // war hier ohnehin bislang von der falschen Font-Substitution
+            // betroffen. Kopfzeile + Spalten machen daraus eine echte
+            // Tabelle statt einer einzigen kryptischen Zeile pro Feld.
+            double colPage = marginX + 6, colType = marginX + 46, colWho = marginX + 130, colVal = marginX + 300;
+            g.DrawString("Page", muted, XBrushes.Gray, new XPoint(colPage, y));
+            g.DrawString("Type", muted, XBrushes.Gray, new XPoint(colType, y));
+            g.DrawString("Participant", muted, XBrushes.Gray, new XPoint(colWho, y));
+            g.DrawString("Value", muted, XBrushes.Gray, new XPoint(colVal, y));
+            y += 10;
+            g.DrawLine(new XPen(XColor.FromArgb(224, 227, 232), 0.6), marginX, y, pageWidth - marginX, y);
+            y += 12;
+
             foreach (var f in req.Fields.OrderBy(f => f.Page).ThenBy(f => f.Y))
             {
-                CheckPage(14);
+                CheckPage(15);
                 var pName = req.Participants.FirstOrDefault(p => p.Id == f.ParticipantId)?.Name ?? "?";
                 var val = f.Type switch
                 {
                     SignatureFieldType.Signature => string.IsNullOrEmpty(f.SignatureImagePath) ? "(unsigned)" : "(handwritten)",
-                    SignatureFieldType.Checkbox => f.Value == "true" ? "[x]" : "[ ]",
-                    _ => Truncate(f.Value ?? "—", 60),
+                    SignatureFieldType.Checkbox => f.Value == "true" ? "[x] checked" : "[ ] unchecked",
+                    _ => Truncate(f.Value ?? "—", 46),
                 };
-                var line = $"p.{f.Page}  {f.Type,-10}  {Truncate(pName, 22),-24}  {val}";
-                g.DrawString(line, monoFont, XBrushes.Black, new XPoint(marginX + 6, y + 10));
-                y += 12;
+                g.DrawString($"p.{f.Page}", bodyFont, XBrushes.Black, new XPoint(colPage, y + 9));
+                g.DrawString(f.Type.ToString(), bodyFont, XBrushes.Black, new XPoint(colType, y + 9));
+                g.DrawString(Truncate(pName, 26), bodyFont, XBrushes.Black, new XPoint(colWho, y + 9));
+                g.DrawString(val, bodyFont, XBrushes.Black, new XPoint(colVal, y + 9));
+                y += 15;
             }
-            y += 6;
+            y += 8;
         }
 
         // ── Event-Timeline ──────────────────────────────────────────
@@ -305,18 +429,28 @@ public class SignaturePdfService : ISignaturePdfService
         // statt "Event timeline" direkt unter Fields anzuhängen.
         ForcePage();
         g.DrawString($"Event timeline ({audits.Count})", h2Font, accent, new XPoint(marginX, y));
-        y += 18;
+        y += 16;
+        g.DrawLine(accentLine, marginX, y, marginX + 22, y);
+        y += 14;
 
         if (audits.Count == 0)
         {
-            g.DrawString("No events recorded.", muted, XBrushes.Gray, new XPoint(marginX + 6, y + 10));
+            g.DrawString("No events recorded.", muted, XBrushes.Gray, new XPoint(marginX + 6, y + 9));
             y += 14;
         }
         else
         {
             foreach (var a in audits)
             {
-                CheckPage(60);
+                var uaLineCount = !string.IsNullOrEmpty(a.UserAgent)
+                    ? WrapText($"UA  {a.UserAgent}", monoFont, pageWidth - 2 * marginX - 16).Count
+                    : 0;
+                var noteLineCount = !string.IsNullOrEmpty(a.Note)
+                    ? WrapText($"Note: {a.Note}", muted, pageWidth - 2 * marginX - 16).Count
+                    : 0;
+                CheckPage(40 + uaLineCount * 11 + noteLineCount * 11);
+
+                var rowTop = y;
                 var pName = a.ParticipantId is Guid pid
                     ? req.Participants.FirstOrDefault(p => p.Id == pid)?.Name ?? "?"
                     : "system";
@@ -327,58 +461,64 @@ public class SignaturePdfService : ISignaturePdfService
                     SignatureAuditKind.Declined or SignatureAuditKind.Cancelled => warnRed,
                     _ => (XSolidBrush)XBrushes.Gray,
                 };
-                // linke Farbleiste
-                g.DrawRectangle(evtColor, marginX, y, 3, 44);
-                g.DrawString(kindLabel, boldBody, evtColor, new XPoint(marginX + 10, y + 10));
-                g.DrawString(pName, bodyFont, XBrushes.Black, new XPoint(marginX + 100, y + 10));
+                // v1.11.47 HOTFIX: siehe Participants-Block oben — auch hier
+                // zeichnet jede Zeile exakt AN y, kein Mix aus "+9"-Offset
+                // und offsetlosem DrawWrapped mehr (verursachte die
+                // "INVITED"/"Note: ..."-Überlappung).
+                g.DrawString(kindLabel, boldBody, evtColor, new XPoint(marginX + 10, y));
+                g.DrawString(pName, bodyFont, XBrushes.Black, new XPoint(marginX + 108, y));
                 var when = a.At.ToString("yyyy-MM-dd HH:mm:ss 'UTC'");
                 var wSize = g.MeasureString(when, monoFont);
                 g.DrawString(when, monoFont, XBrushes.Gray,
-                    new XPoint(pageWidth - marginX - wSize.Width, y + 10));
-                y += 14;
+                    new XPoint(pageWidth - marginX - wSize.Width, y));
+                y += 15;
 
-                // Zweite Zeile: IP/Location/Device/TZ
+                // Zweite Zeile: IP/Location/Device/TZ. Kein Emoji-Pin mehr —
+                // Liberation-Fonts haben keine (Farb-)Emoji-Glyphen, das
+                // Symbol wäre als leere/kaputte Box gerendert worden.
                 var meta = new List<string>();
                 if (!string.IsNullOrEmpty(a.IpAddress)) meta.Add($"IP {a.IpAddress}");
-                else if (!string.IsNullOrEmpty(a.IpHash)) meta.Add($"IP-hash {Truncate(a.IpHash, 16)}…");
+                else if (!string.IsNullOrEmpty(a.IpHash)) meta.Add($"IP-hash {Truncate(a.IpHash, 16)}");
                 if (!string.IsNullOrEmpty(a.City) || !string.IsNullOrEmpty(a.Country))
-                    meta.Add($"📍 {a.City}{(string.IsNullOrEmpty(a.City) || string.IsNullOrEmpty(a.Country) ? "" : ", ")}{a.Country}");
+                    meta.Add($"Location: {a.City}{(string.IsNullOrEmpty(a.City) || string.IsNullOrEmpty(a.Country) ? "" : ", ")}{a.Country}");
                 if (!string.IsNullOrEmpty(a.DeviceType) && a.DeviceType != "Unknown")
                     meta.Add($"Device: {a.DeviceType}");
                 if (!string.IsNullOrEmpty(a.Timezone)) meta.Add($"TZ: {a.Timezone}");
                 if (meta.Count > 0)
                 {
-                    g.DrawString(string.Join("   ", meta), monoFont, XBrushes.Black,
-                        new XPoint(marginX + 10, y + 10));
-                    y += 12;
+                    y += DrawWrapped(string.Join("    ", meta), monoFont, XBrushes.Black,
+                        marginX + 10, y, pageWidth - 2 * marginX - 16, 12);
                 }
-                // Dritte Zeile: UA
                 if (!string.IsNullOrEmpty(a.UserAgent))
                 {
-                    g.DrawString($"UA: {Truncate(a.UserAgent, 110)}", monoFont, XBrushes.Gray,
-                        new XPoint(marginX + 10, y + 10));
-                    y += 12;
+                    y += DrawWrapped($"UA  {a.UserAgent}", monoFont, XBrushes.Gray,
+                        marginX + 10, y, pageWidth - 2 * marginX - 16, 11, maxLines: 2);
                 }
                 if (!string.IsNullOrEmpty(a.Note))
                 {
-                    g.DrawString($"Note: {Truncate(a.Note, 110)}", muted, XBrushes.Black,
-                        new XPoint(marginX + 10, y + 10));
-                    y += 12;
+                    y += DrawWrapped($"Note: {a.Note}", muted, XBrushes.Black,
+                        marginX + 10, y, pageWidth - 2 * marginX - 16, 11);
                 }
-                y += 4;
+                // Linke Farbleiste über die komplette, tatsächlich
+                // verbrauchte Höhe dieses Events (statt einer festen
+                // 44pt-Konstante, die bei mehrzeiligem UA/Note zu kurz war).
+                g.DrawRectangle(evtColor, marginX, rowTop, 3, y - rowTop - 3);
+                y += 7;
             }
         }
 
         // ── Footer + Beweiskraft-Hinweis ───────────────────────────
-        y += 8;
-        CheckPage(40);
+        y += 10;
         var disclaimer = "This audit trail is an authoritative snapshot generated at PDF finalization. " +
             "It reflects all recorded workflow events for this request including timestamps, IP data " +
             "(where enabled), device fingerprinting hints and geographic origin (where a GeoIP provider " +
             "is configured). The full PDF is also cryptographically signed (PAdES-B, SHA-256) by the " +
             "initiator's certificate when available.";
-        g.DrawString(disclaimer, muted, XBrushes.Gray,
-            new XRect(marginX, y, pageWidth - 2 * marginX, 60), XStringFormats.TopLeft);
+        var disclaimerH = WrapText(disclaimer, muted, pageWidth - 2 * marginX).Count * 11 + 6;
+        CheckPage(disclaimerH + 10);
+        g.DrawLine(new XPen(XColor.FromArgb(224, 227, 232), 0.6), marginX, y, pageWidth - marginX, y);
+        y += 10;
+        DrawWrapped(disclaimer, muted, XBrushes.Gray, marginX, y, pageWidth - 2 * marginX, 11);
         DrawFooter(g, page, pageNo);
     }
 

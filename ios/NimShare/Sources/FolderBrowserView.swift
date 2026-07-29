@@ -270,7 +270,21 @@ struct FolderBrowserView: View {
         )) {
             TextField("Ordnername", text: $newFolderName)
             Button("Abbrechen", role: .cancel) { newFolderParent = nil }
-            Button("Anlegen") { Task { await performCreateFolder() } }
+            // v1.11.47 FIX: Marcus's Report "Test-Ordner erscheint niemals,
+            // kein Fehler" — der Tap auf "Anlegen" löst GLEICHZEITIG den
+            // Button-Callback UND SwiftUI's automatisches Alert-Dismiss aus
+            // (das newFolderParent via der isPresented-Binding auf nil
+            // setzt). Der Task{}-Block las newFolderParent bisher erst beim
+            // tatsächlichen Start — je nach Scheduling-Reihenfolge konnte
+            // das schon nil sein, der guard in performCreateFolder() gab
+            // dann still auf (kein Ordner, kein Fehler). Fix: Werte HIER,
+            // synchron im Tap-Callback, in lokale Konstanten einfangen,
+            // bevor irgendein Dismiss-Timing sie zurücksetzen kann.
+            Button("Anlegen") {
+                let parent = newFolderParent
+                let name = newFolderName
+                Task { await performCreateFolder(parent: parent, name: name) }
+            }
         } message: {
             Text("Name für den neuen Unterordner")
         }
@@ -697,10 +711,13 @@ struct FolderBrowserView: View {
             await load()
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
-    private func performCreateFolder() async {
-        guard let api = auth.api, let parent = newFolderParent else { return }
-        let name = newFolderName.trimmingCharacters(in: .whitespaces)
-        newFolderParent = nil
+    // v1.11.47: parent/name werden jetzt vom Aufrufer (dem "Anlegen"-Button)
+    // übergeben statt hier erneut aus @State gelesen — siehe Kommentar am
+    // Button. @State kann zwischen Tap und Task-Start bereits zurückgesetzt
+    // worden sein.
+    private func performCreateFolder(parent: UUID?, name rawName: String) async {
+        guard let api = auth.api, let parent else { return }
+        let name = rawName.trimmingCharacters(in: .whitespaces)
         if name.isEmpty { return }
         busy = true; defer { busy = false }
         do {

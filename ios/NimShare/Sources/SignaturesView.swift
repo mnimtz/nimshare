@@ -269,19 +269,20 @@ struct NewSignatureRequestSheet: View {
                 TextField("Titel (Standard: Dateiname)", text: $title)
                 TextField("Nachricht an die Empfänger", text: $message, axis: .vertical).lineLimit(2...5)
                 // v1.10.88: Email-Template-Picker — Parität zum Web-Wizard.
-                // Zeigt die persönlichen Templates mit Kind=SignatureInvite;
-                // Auswahl übernimmt Subject → Titel, Body → Nachricht.
+                // v1.11.47 FIX: übernahm bisher fälschlich Subject/Body der
+                // Email-Vorlage in Titel/Nachricht — die aber auf der
+                // Signatur-Landing dem UNTERZEICHNER angezeigt werden, nicht
+                // Teil der Einladungs-Mail sind (Marcus's Report: "SUBJECT:
+                // ..." + Platzhalter-Tokens wie {{recipient.name}} tauchten
+                // komplett falsch auf der Landing auf). Web macht es richtig
+                // (NewRequest.cshtml): die Vorlage ist rein für den Mail-
+                // Versand (siehe send()/POST .../send?templateId=), Titel/
+                // Nachricht bleiben eigene freie Felder.
                 if !emailTemplates.isEmpty {
-                    Picker("Vorlage laden", selection: $pickedTemplateId) {
-                        Text("— keine —").tag(UUID?.none)
+                    Picker("Einladungs-Email-Vorlage", selection: $pickedTemplateId) {
+                        Text("— Standard —").tag(UUID?.none)
                         ForEach(emailTemplates) { t in
                             Text(t.name).tag(Optional(t.id))
-                        }
-                    }
-                    .onChange(of: pickedTemplateId) { _, new in
-                        if let id = new, let t = emailTemplates.first(where: { $0.id == id }) {
-                            if title.isEmpty { title = t.subject }
-                            if message.isEmpty { message = t.bodyMarkdown }
                         }
                     }
                 }
@@ -447,7 +448,7 @@ struct NewSignatureRequestSheet: View {
         guard let api = auth.api, let rid = requestId else { return }
         busy = true; error = nil; defer { busy = false }
         do {
-            _ = try await api.sendSignatureRequest(rid)
+            _ = try await api.sendSignatureRequest(rid, templateId: pickedTemplateId)
             onDone()
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }

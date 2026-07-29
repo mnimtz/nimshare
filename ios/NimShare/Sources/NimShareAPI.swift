@@ -244,8 +244,14 @@ final class NimShareAPI: ObservableObject {
         _ = try await perform(req)
     }
 
-    func sendSignatureRequest(_ id: UUID) async throws -> SignatureRequestDto {
-        let req = request("POST", "api/v1/signatures/\(id)/send")
+    // v1.11.47: templateId optional — wählt die Email-Vorlage (Betreff/Text
+    // der Einladungs-Mail), analog Web's /send?templateId=. Bewusst getrennt
+    // von SignatureRequest.Title/Message (das ist der Text, den der
+    // Unterzeichner auf der Landing sieht, nicht der Mail-Inhalt).
+    func sendSignatureRequest(_ id: UUID, templateId: UUID? = nil) async throws -> SignatureRequestDto {
+        var query: [URLQueryItem] = []
+        if let templateId { query.append(.init(name: "templateId", value: templateId.uuidString)) }
+        let req = request("POST", "api/v1/signatures/\(id)/send", query: query)
         let (data, _) = try await perform(req)
         return try decode(SignatureRequestDto.self, data)
     }
