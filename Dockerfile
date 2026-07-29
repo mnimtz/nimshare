@@ -22,7 +22,6 @@ COPY NimShare.sln ./
 COPY VERSION ./
 COPY src/NimShare.Api/NimShare.Api.csproj src/NimShare.Api/
 COPY src/NimShare.Core/NimShare.Core.csproj src/NimShare.Core/
-COPY src/NimShare.Migrations.SqlServer/NimShare.Migrations.SqlServer.csproj src/NimShare.Migrations.SqlServer/
 RUN dotnet restore src/NimShare.Api/NimShare.Api.csproj
 
 # Now the source tree.
@@ -59,7 +58,6 @@ RUN chown -R ${APP_UID}:${APP_UID} /app
 # App Service reads WEBSITES_PORT; the ASP.NET Core listener follows ASPNETCORE_URLS.
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
-    Database__Provider=Sqlite \
     ConnectionStrings__Default="Data Source=/data/nimshare.db;Cache=Shared" \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_gcServer=1

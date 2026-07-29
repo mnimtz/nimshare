@@ -145,7 +145,6 @@
             { "name": "DOCKER_ENABLE_CI", "value": "true" },
             { "name": "ASPNETCORE_ENVIRONMENT", "value": "Production" },
             { "name": "ASPNETCORE_FORWARDEDHEADERS_ENABLED", "value": "true" },
-            { "name": "Database__Provider", "value": "Sqlite" },
             { "name": "ConnectionStrings__Default", "value": "Data Source=/data/nimshare.db;Cache=Shared" },
             { "name": "Storage__ContainerName", "value": "files" },
             { "name": "Storage__UseManagedIdentity", "value": "true" },
