@@ -1657,6 +1657,14 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="keystore.documents.col.type"><value>Type</value></data>
   <data name="keystore.documents.col.key_types"><value>Key-typen</value></data>
   <data name="keystore.documents.empty"><value>Nog geen documenten.</value></data>
+  <data name="keystore.documents.section_files"><value>Bestanden</value></data>
+  <data name="keystore.documents.section_links"><value>Links</value></data>
+  <data name="keystore.documents.lede_files"><value>PDF's gekoppeld aan sleuteltypen — worden getoond als downloadknop op de landingspagina van de ontvanger.</value></data>
+  <data name="keystore.documents.lede_links"><value>Externe links gekoppeld aan sleuteltypen — worden getoond als knop op de landingspagina van de ontvanger.</value></data>
+  <data name="keystore.documents.new_file"><value>+ Nieuw bestand</value></data>
+  <data name="keystore.documents.new_link"><value>+ Nieuwe link</value></data>
+  <data name="keystore.documents.empty_files"><value>Nog geen bestanden.</value></data>
+  <data name="keystore.documents.empty_links"><value>Nog geen links.</value></data>
   <data name="keystore.documents.field.label"><value>Label (knoptekst)</value></data>
   <data name="keystore.documents.field.kind"><value>Soort</value></data>
   <data name="keystore.documents.field.file"><value>Bestand (PDF)</value></data>

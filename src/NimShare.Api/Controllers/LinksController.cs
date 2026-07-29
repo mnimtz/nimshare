@@ -86,9 +86,11 @@ public class LinksController : ControllerBase
         string? SerialNumber = null,
         // v1.11.22: Lizenzschlüssel-Modus (Key-Store-Lookup per Besucher-
         // Email) — schließt sich mit SerialNumber gegenseitig aus, siehe
-        // ShareLink.KeyStoreMode-Doku. Optionaler Doku-Link daneben.
+        // ShareLink.KeyStoreMode-Doku.
+        // v1.11.44: DocumentationUrl → DocumentationEnabled (reines Ein/Aus,
+        // kein fester URL-Wert mehr — siehe ShareLink-Doku).
         bool KeyStoreMode = false,
-        string? DocumentationUrl = null);
+        bool DocumentationEnabled = false);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -122,9 +124,10 @@ public class LinksController : ControllerBase
         // v1.11.18: Seriennummer optional pro Link — nie im Klartext im DTO,
         // nur ob eine hinterlegt ist (Landing entschlüsselt on-demand).
         bool HasSerialNumber = false,
-        // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
+        // v1.11.22: Lizenzschlüssel-Modus. v1.11.44: DocumentationEnabled
+        // statt DocumentationUrl — reines Ein/Aus-Flag.
         bool KeyStoreMode = false,
-        string? DocumentationUrl = null);
+        bool DocumentationEnabled = false);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -210,12 +213,6 @@ public class LinksController : ControllerBase
         // crashen lassen konnte.
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
-        // v1.11.22: Doku-Link muss eine echte absolute http(s)-URL sein —
-        // sonst würde der Landing-Link auf einen kaputten href zeigen.
-        if (!string.IsNullOrWhiteSpace(req.DocumentationUrl)
-            && !(Uri.TryCreate(req.DocumentationUrl, UriKind.Absolute, out var docUri)
-                 && (docUri.Scheme == Uri.UriSchemeHttp || docUri.Scheme == Uri.UriSchemeHttps)))
-            return Problem(statusCode: 422, title: "Documentation URL must be a valid http(s) link.");
 
         StorageFile? file = null;
         NimShare.Core.Entities.Folder? folder = null;
@@ -307,7 +304,7 @@ public class LinksController : ControllerBase
             SerialNumberEncrypted = (!req.KeyStoreMode && !string.IsNullOrWhiteSpace(req.SerialNumber))
                 ? _serialProtector.Protect(req.SerialNumber.Trim()) : null,
             KeyStoreMode = req.KeyStoreMode,
-            DocumentationUrl = string.IsNullOrWhiteSpace(req.DocumentationUrl) ? null : req.DocumentationUrl.Trim(),
+            DocumentationEnabled = req.DocumentationEnabled,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);
@@ -601,7 +598,8 @@ public class LinksController : ControllerBase
         string? SerialNumber = null,
         // v1.11.22: analog. null = unverändert lassen.
         bool? KeyStoreMode = null,
-        string? DocumentationUrl = null);
+        // v1.11.44: DocumentationEnabled statt DocumentationUrl.
+        bool? DocumentationEnabled = null);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -616,11 +614,6 @@ public class LinksController : ControllerBase
         // v1.11.19: siehe Create() — gleiche Längenprüfung vor Protect().
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
-        // v1.11.22: siehe Create() — gleiche URL-Validierung.
-        if (!string.IsNullOrWhiteSpace(req.DocumentationUrl)
-            && !(Uri.TryCreate(req.DocumentationUrl, UriKind.Absolute, out var docUri2)
-                 && (docUri2.Scheme == Uri.UriSchemeHttp || docUri2.Scheme == Uri.UriSchemeHttps)))
-            return Problem(statusCode: 422, title: "Documentation URL must be a valid http(s) link.");
         if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
         if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
         if (req.Message is not null) link.Message = req.Message;
@@ -638,8 +631,7 @@ public class LinksController : ControllerBase
             link.SerialNumberEncrypted = string.IsNullOrWhiteSpace(req.SerialNumber)
                 ? null : _serialProtector.Protect(req.SerialNumber.Trim());
         if (req.KeyStoreMode is not null) link.KeyStoreMode = req.KeyStoreMode.Value;
-        if (req.DocumentationUrl is not null)
-            link.DocumentationUrl = string.IsNullOrWhiteSpace(req.DocumentationUrl) ? null : req.DocumentationUrl.Trim();
+        if (req.DocumentationEnabled is not null) link.DocumentationEnabled = req.DocumentationEnabled.Value;
         // v1.11.22: gegenseitiger Ausschluss auch beim Update erzwingen.
         if (link.KeyStoreMode) link.SerialNumberEncrypted = null;
         await _db.SaveChangesAsync(ct);
@@ -769,7 +761,7 @@ public class LinksController : ControllerBase
     // Adresse schicken lassen).
     public record KeyStoreLookupRequest(string Email, string? Password);
     public record KeyStoreDocLinkDto(string Label, string Url, bool IsFile);
-    public record KeyStoreLookupResponse(string KeyValue, string KeyType, string? DocumentationUrl,
+    public record KeyStoreLookupResponse(string KeyValue, string KeyType,
         DateTimeOffset? ValidUntil, IReadOnlyList<KeyStoreDocLinkDto> Documents);
 
     private async Task<KeyStoreEntry?> FindKeyStoreMatchAsync(Guid ownerId, string email, CancellationToken ct)
@@ -789,13 +781,13 @@ public class LinksController : ControllerBase
 
     /// <summary>v1.11.37 — Marcus: Doku-Dokumente (PDFs/feste Links wie der
     /// "Tenant"-Login) erscheinen NUR, wenn die "Dokumentation"-Checkbox beim
-    /// Link aktiviert wurde (link.DocumentationUrl gesetzt) UND ihre Key-Typ-
+    /// Link aktiviert wurde (link.DocumentationEnabled) UND ihre Key-Typ-
     /// Auswahl exakt zum beim Reveal ermittelten KeyStoreEntry.KeyType passt.
     /// File-Dokumente bekommen eine kurzlebige Download-SAS statt eines
     /// dauerhaften öffentlichen Links.</summary>
     private async Task<List<KeyStoreDocLinkDto>> FindMatchingDocumentsAsync(ShareLink link, string keyType, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(link.DocumentationUrl)) return new();
+        if (!link.DocumentationEnabled) return new();
         var docs = await _db.KeyStoreDocuments.Where(d => d.OwnerUserId == link.OwnerId).ToListAsync(ct);
         return docs.Where(d => d.AppliesTo(keyType)).Select(d => new KeyStoreDocLinkDto(
             d.Label,
@@ -840,7 +832,7 @@ public class LinksController : ControllerBase
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         await access.LogAsync(link, ShareLinkAccessKind.KeyStoreRevealed, iphash.Hash(ip),
             Request.Headers.UserAgent, Request.Headers.Referer, ct);
-        return Ok(new KeyStoreLookupResponse(plain, match.KeyType, link.DocumentationUrl, match.ValidUntil, documents));
+        return Ok(new KeyStoreLookupResponse(plain, match.KeyType, match.ValidUntil, documents));
     }
 
     [AllowAnonymous]
@@ -909,8 +901,6 @@ public class LinksController : ControllerBase
                 plain,
             });
         }
-        if (!string.IsNullOrWhiteSpace(link.DocumentationUrl))
-            body += $"\n\n{_l["email.keystore.doc_line", link.DocumentationUrl].Value}";
         if (documents.Count > 0)
         {
             body += $"\n\n{_l["email.keystore.documents_heading"].Value}";
@@ -1009,7 +999,7 @@ public class LinksController : ControllerBase
             OwnerName: l.OwnerId != currentUserId ? l.Owner?.DisplayName : null,
             HasSerialNumber: l.SerialNumberEncrypted != null,
             KeyStoreMode: l.KeyStoreMode,
-            DocumentationUrl: l.DocumentationUrl);
+            DocumentationEnabled: l.DocumentationEnabled);
     }
 
     /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>

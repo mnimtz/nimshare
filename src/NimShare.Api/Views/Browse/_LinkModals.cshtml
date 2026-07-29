@@ -140,17 +140,17 @@
             </div>
             <label style="font-weight:400;display:block;margin-top:10px"><input type="checkbox" id="shareKeyStoreMode" onchange="onShareKeyStoreModeChange()"/> @T["share.keystore.mode_label"]</label>
             <div class="helper" style="margin-top:2px">@T["share.keystore.mode_hint"]</div>
-            @* v1.11.26: Marcus's Wunsch — kein Freitext-URL-Feld mehr, sondern
-               eine Checkbox, die einen festen PowerPDF-Doku-Link an-/ausschaltet
-               (SHARE_DOC_URL_FIXED unten). Der Wert landet weiterhin im generischen
-               ShareLink.DocumentationUrl-Feld — nur die UI ist jetzt fix statt frei. *@
+            @* v1.11.44: Marcus's Wunsch — kein fester hartkodierter Doku-Link
+               mehr. Die Checkbox ist jetzt ein reines Ein/Aus für die
+               flexiblen Key-Store-Dokumente (PDFs/Links, verwaltet unter
+               Lizenzverwaltung → Dokumentation, passend zum jeweiligen
+               Key-Typ). Kein URL-Feld mehr nötig. *@
             <div class="field" id="shareDocUrlWrap" style="display:none;margin-top:8px">
                 <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-                    <input type="checkbox" id="shareDocUrlEnabled" onchange="onShareDocUrlToggle()"/>
+                    <input type="checkbox" id="shareDocUrlEnabled"/>
                     <span>@T["share.keystore.doc_url_label"]</span>
                 </label>
                 <div class="helper">@T["share.keystore.doc_url_hint"]</div>
-                <input type="hidden" id="shareDocumentationUrl"/>
             </div>
         </details>
         @* v1.10.146: Absender-Zertifikat-Picker (lädt eigene Zertifikate). *@
@@ -589,20 +589,10 @@ function onShareKeyStoreModeChange() {
     if (serialWrap) serialWrap.style.display = on ? 'none' : '';
     if (docWrap) docWrap.style.display = on ? '' : 'none';
     if (on) document.getElementById('shareSerialNumber').value = '';
-    else {
-        document.getElementById('shareDocUrlEnabled').checked = false;
-        onShareDocUrlToggle();
-    }
-}
-// v1.11.26: Marcus wollte keinen Freitext-Link mehr — die Checkbox schaltet
-// einen festen PowerPDF-Doku-Link an/aus (statt einer beliebigen URL).
-const SHARE_DOC_URL_FIXED = 'https://docshield.tungstenautomation.com/Portal/Products/en_US/PowerPDF/2025.3-jlrwz2ja2j/PowerPDF.htm';
-function onShareDocUrlToggle() {
-    const on = document.getElementById('shareDocUrlEnabled').checked;
-    document.getElementById('shareDocumentationUrl').value = on ? SHARE_DOC_URL_FIXED : '';
+    else document.getElementById('shareDocUrlEnabled').checked = false;
 }
 function resetShareModal() {
-    ['shareSlug','sharePw','shareMax','shareExp','shareMsg','shareSerialNumber','shareAllowedEmails','shareDocumentationUrl'].forEach(id => document.getElementById(id).value = '');
+    ['shareSlug','sharePw','shareMax','shareExp','shareMsg','shareSerialNumber','shareAllowedEmails'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('shareNotify').checked = false;
     document.getElementById('shareOtp').checked = false;
     document.getElementById('shareKeyStoreMode').checked = false;
@@ -678,9 +668,10 @@ async function createShareLink() {
         subdomainSlug: readSubdomainSlug('share'),
         // v1.11.18: optionale Seriennummer/Lizenzcode.
         serialNumber: document.getElementById('shareSerialNumber').value.trim() || null,
-        // v1.11.22: Key-Store-Modus + optionaler Doku-Link (nur relevant wenn aktiv).
+        // v1.11.22: Key-Store-Modus. v1.11.44: DocumentationEnabled ist ein
+        // reines Ein/Aus für die flexiblen Key-Store-Dokumente.
         keyStoreMode: !!document.getElementById('shareKeyStoreMode')?.checked,
-        documentationUrl: document.getElementById('shareDocumentationUrl').value.trim() || null,
+        documentationEnabled: !!document.getElementById('shareDocUrlEnabled')?.checked,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

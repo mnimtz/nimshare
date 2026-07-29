@@ -1660,6 +1660,14 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.documents.col.type"><value>Type</value></data>
   <data name="keystore.documents.col.key_types"><value>Key types</value></data>
   <data name="keystore.documents.empty"><value>No documents yet.</value></data>
+  <data name="keystore.documents.section_files"><value>Files</value></data>
+  <data name="keystore.documents.section_links"><value>Links</value></data>
+  <data name="keystore.documents.lede_files"><value>PDFs bound to key types — shown as a download button on the recipient's landing page.</value></data>
+  <data name="keystore.documents.lede_links"><value>External links bound to key types — shown as a button on the recipient's landing page.</value></data>
+  <data name="keystore.documents.new_file"><value>+ New file</value></data>
+  <data name="keystore.documents.new_link"><value>+ New link</value></data>
+  <data name="keystore.documents.empty_files"><value>No files yet.</value></data>
+  <data name="keystore.documents.empty_links"><value>No links yet.</value></data>
   <data name="keystore.documents.field.label"><value>Label (button caption)</value></data>
   <data name="keystore.documents.field.kind"><value>Kind</value></data>
   <data name="keystore.documents.field.file"><value>File (PDF)</value></data>

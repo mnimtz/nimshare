@@ -172,8 +172,7 @@ public class ShareController : Controller
                 FolderId: folder.Id,
                 GeoPoints: geo,
                 HasSerialNumber: link.SerialNumberEncrypted != null,
-                KeyStoreMode: link.KeyStoreMode,
-                DocumentationUrl: link.DocumentationUrl));
+                KeyStoreMode: link.KeyStoreMode));
         }
 
         if (link.File is null || link.File.Status != StorageFileStatus.Ready)
@@ -213,8 +212,7 @@ public class ShareController : Controller
             ResolveOwnerAvatar(link.Owner),
             BuildLandingSigner(link.SigningCertificate),
             HasSerialNumber: link.SerialNumberEncrypted != null,
-            KeyStoreMode: link.KeyStoreMode,
-            DocumentationUrl: link.DocumentationUrl));
+            KeyStoreMode: link.KeyStoreMode));
     }
 
     // v1.10.146: Zertifikats-Infos für Landing-Badge extrahieren.
@@ -952,9 +950,9 @@ public record FolderLandingViewModel(
     // fälschlich auf File-Links beschränkt, obwohl das Share-Modal das Feld
     // für beide Link-Typen anbietet).
     bool HasSerialNumber = false,
-    // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
-    bool KeyStoreMode = false,
-    string? DocumentationUrl = null);
+    // v1.11.22: Lizenzschlüssel-Modus (Dokumente kommen dynamisch aus dem
+    // Key-Store-Reveal, nicht mehr aus einem festen DTO-Feld — v1.11.44).
+    bool KeyStoreMode = false);
 // v1.10.191: Thumb400/Thumb1600 = direkte SAS-URLs auf den Blob-Cache, wenn
 // die Thumbs fertig sind (ThumbsReadyAt gesetzt). Null = pending (Platz-
 // halter + Polling) oder kein Bild / Passwort-Link.
@@ -991,9 +989,8 @@ public record LandingViewModel(
     // nur ob eine hinterlegt ist — Wert wird erst nach Klick per fetch von
     // /api/v1/links/public/{slug}/serial/reveal nachgeladen.
     bool HasSerialNumber = false,
-    // v1.11.22: Lizenzschlüssel-Modus + Doku-Link.
-    bool KeyStoreMode = false,
-    string? DocumentationUrl = null);
+    // v1.11.22: Lizenzschlüssel-Modus (v1.11.44: Dokumente dynamisch, siehe oben).
+    bool KeyStoreMode = false);
 
 /// <summary>v1.10.146 — Absender-Zertifikats-Info für die Landing.</summary>
 public record LandingSignerInfo(

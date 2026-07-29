@@ -1658,6 +1658,14 @@ Gracias por usar NimShare.</value></data>
   <data name="keystore.documents.col.type"><value>Tipo</value></data>
   <data name="keystore.documents.col.key_types"><value>Tipos de clave</value></data>
   <data name="keystore.documents.empty"><value>Todavía no hay documentos.</value></data>
+  <data name="keystore.documents.section_files"><value>Archivos</value></data>
+  <data name="keystore.documents.section_links"><value>Enlaces</value></data>
+  <data name="keystore.documents.lede_files"><value>PDF vinculados a tipos de clave — se muestran como botón de descarga en la página del destinatario.</value></data>
+  <data name="keystore.documents.lede_links"><value>Enlaces externos vinculados a tipos de clave — se muestran como botón en la página del destinatario.</value></data>
+  <data name="keystore.documents.new_file"><value>+ Nuevo archivo</value></data>
+  <data name="keystore.documents.new_link"><value>+ Nuevo enlace</value></data>
+  <data name="keystore.documents.empty_files"><value>Todavía no hay archivos.</value></data>
+  <data name="keystore.documents.empty_links"><value>Todavía no hay enlaces.</value></data>
   <data name="keystore.documents.field.label"><value>Etiqueta (texto del botón)</value></data>
   <data name="keystore.documents.field.kind"><value>Tipo</value></data>
   <data name="keystore.documents.field.file"><value>Archivo (PDF)</value></data>

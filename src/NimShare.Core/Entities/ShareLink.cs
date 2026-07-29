@@ -124,11 +124,16 @@ public class ShareLink
     public bool KeyStoreMode { get; set; }
 
     /// <summary>
-    /// v1.11.22 — Optionaler Doku-Link, hübsch auf der Landing neben der
-    /// Seriennummer/dem Lizenzschlüssel angezeigt (Marcus: Produkt-
-    /// Dokumentation für Software-Downloads).
+    /// v1.11.22 — Schaltet die Dokumentation (PDFs/Links aus dem Key-Store,
+    /// passend zum aufgedeckten Key-Typ) auf der Landing neben der
+    /// Seriennummer/dem Lizenzschlüssel frei.
+    /// v1.11.44 — vorher trug dieses Feld selbst einen festen, hartkodierten
+    /// URL-Wert (SHARE_DOC_URL_FIXED) — Marcus's Wunsch: raus damit, reines
+    /// Ein/Aus-Flag, die eigentlichen Dokumente kommen jetzt ausschließlich
+    /// flexibel aus KeyStoreDocument (siehe LinksController.
+    /// FindMatchingDocumentsAsync).
     /// </summary>
-    public string? DocumentationUrl { get; set; }
+    public bool DocumentationEnabled { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastAccessAt { get; set; }
