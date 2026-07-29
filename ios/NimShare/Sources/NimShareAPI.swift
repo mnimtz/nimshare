@@ -1219,10 +1219,38 @@ final class NimShareAPI: ObservableObject {
         let bytesFreed: Int64?
         let blobDeleteFailures: Int?
     }
+    private struct ProblemDetailsDto: Decodable { let title: String?; let detail: String? }
+
+    /// v1.11.55: geht bewusst NICHT über die geteilte perform()-Helper —
+    /// die mappt jeden 401 blind auf ApiError.notAuthorized ("Not signed
+    /// in.") und verwirft den Body. Bei diesem Endpoint kann ein 401 aber
+    /// auch "Bestätigungspasswort falsch" bedeuten (server-seitig als
+    /// ProblemDetails mit `detail` zurückgegeben) — DeleteAccountView zeigte
+    /// dafür bisher fälschlich "Not signed in.", obwohl die Session gültig
+    /// war und der User nur einen Tippfehler im Passwort hatte.
     func deleteMyAccount(password: String?) async throws -> DeleteAccountResult {
-        let body = try Self.jsonEncoder.encode(DeleteAccountBody(password: password))
-        let req = request("DELETE", "api/v1/me", body: body, contentType: "application/json")
-        let (data, _) = try await perform(req)
+        let bodyData = try Self.jsonEncoder.encode(DeleteAccountBody(password: password))
+        let req = request("DELETE", "api/v1/me", body: bodyData, contentType: "application/json")
+        let (data, resp): (Data, HTTPURLResponse)
+        do {
+            guard let (d, r) = try? await URLSession.shared.data(for: req),
+                  let http = r as? HTTPURLResponse else {
+                throw ApiError.network("No HTTP response")
+            }
+            (data, resp) = (d, http)
+        } catch is CancellationError { throw CancellationError() }
+        catch let u as URLError where u.code == .cancelled { throw CancellationError() }
+        if resp.statusCode == 401 {
+            if let problem = try? Self.jsonDecoder.decode(ProblemDetailsDto.self, from: data),
+               let detail = problem.detail {
+                throw ApiError.http(401, detail)
+            }
+            throw ApiError.notAuthorized
+        }
+        if resp.statusCode == 404 { throw ApiError.notFound }
+        if !(200..<300).contains(resp.statusCode) {
+            throw ApiError.http(resp.statusCode, String(data: data, encoding: .utf8))
+        }
         return try decode(DeleteAccountResult.self, data)
     }
 

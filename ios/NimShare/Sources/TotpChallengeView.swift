@@ -57,6 +57,10 @@ struct TotpChallengeView: View {
     }
 
     private func submit() async {
+        // v1.11.55: onChange(of: code) mutiert `code` selbst beim Truncaten
+        // (Paste/Autofill mit >6 Zeichen) — SwiftUI feuert onChange dafür
+        // ein zweites Mal, was submit() zweimal parallel auslösen konnte.
+        guard !busy else { return }
         busy = true; error = nil
         defer { busy = false }
         do {

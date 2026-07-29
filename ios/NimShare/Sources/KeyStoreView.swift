@@ -17,6 +17,7 @@ struct KeyStoreView: View {
     @State private var editEntry: NimShareAPI.KeyStoreEntryDto?
     @State private var revealedValue: String?
     @State private var revealError: String?
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -66,7 +67,18 @@ struct KeyStoreView: View {
                     }
                 }
                 .searchable(text: $searchText, prompt: "Kunde, Email, Typ")
-                .onChange(of: searchText) { _, _ in Task { await load() } }
+                // v1.11.55: undebounced Suche konnte bei Netz-Jitter Ergebnisse
+                // eines älteren, kürzeren Suchbegriffs über die des aktuellen
+                // schreiben (Out-of-Order-Response) — jetzt wie PermissionsSheet
+                // debounced + der vorherige In-Flight-Task wird gecancelt.
+                .onChange(of: searchText) { _, _ in
+                    searchTask?.cancel()
+                    searchTask = Task {
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        if Task.isCancelled { return }
+                        await load()
+                    }
+                }
             }
         }
         .navigationTitle("Key-Store")

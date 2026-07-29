@@ -259,7 +259,15 @@ struct FolderBrowserView: View {
         )) {
             TextField("Name", text: $renameText)
             Button("Abbrechen", role: .cancel) { renaming = nil }
-            Button("OK") { Task { await performRename() } }
+            // v1.11.55: gleicher Race wie beim "Anlegen"-Button (v1.11.47) —
+            // der Tap löst gleichzeitig den Button-Callback UND SwiftUI's
+            // Alert-Dismiss aus (setzt renaming via isPresented-Binding auf
+            // nil). Werte HIER synchron einfangen statt erst im Task zu lesen.
+            Button("OK") {
+                let target = renaming
+                let newName = renameText
+                Task { await performRename(target: target, newName: newName) }
+            }
         } message: {
             Text(renaming.map { "Neuer Name für \"\($0.current)\"" } ?? "")
         }
@@ -699,10 +707,9 @@ struct FolderBrowserView: View {
             await load()
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
-    private func performRename() async {
-        guard let api = auth.api, let r = renaming else { return }
-        let newName = renameText.trimmingCharacters(in: .whitespaces)
-        renaming = nil
+    private func performRename(target: (kind: String, id: UUID, current: String)?, newName rawName: String) async {
+        guard let api = auth.api, let r = target else { return }
+        let newName = rawName.trimmingCharacters(in: .whitespaces)
         if newName.isEmpty || newName == r.current { return }
         busy = true; defer { busy = false }
         do {

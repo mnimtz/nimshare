@@ -24,11 +24,21 @@ final class AuthStore: ObservableObject {
     /// Von Feature-Views vor jedem AI-Aufruf zu prüfen. true = geht schon, false = Sheet zeigen.
     var aiReady: Bool { aiConsented == true }
 
+    // v1.11.55: ProfileView's Toggle startet bei jedem Flip einen eigenen,
+    // unabhängigen Task ohne Sequenzierung. Bei schnellem Doppel-Tap konnte
+    // die ältere Server-Antwort NACH der neueren zurückkommen und
+    // aiConsented auf den veralteten Wert zurücksetzen. Generation-Token:
+    // nur die zuletzt gestartete Anfrage darf noch schreiben.
+    private var aiConsentGeneration = 0
+
     /// Wird von AiConsentSheet aufgerufen mit true/false. Persistiert server-seitig.
     func setAiConsent(_ granted: Bool) async {
         guard let api else { return }
+        aiConsentGeneration += 1
+        let myGeneration = aiConsentGeneration
         do {
             let dto = try await api.setAiConsent(granted)
+            guard myGeneration == aiConsentGeneration else { return }
             aiConsented = dto.consented
         } catch {
             // v1.10.171: Bei Netzwerk-Fehler den zuletzt bekannten Server-Zustand
@@ -52,8 +62,16 @@ final class AuthStore: ObservableObject {
     /// zweiten Gerät widerrufener Consent hier lokal spiegelt und das
     /// Consent-Sheet automatisch aufgeht statt einer rohen 403-Fehlermeldung.
     func handleServerErrorForAiConsent(_ error: Error) -> Bool {
+        // v1.11.55: die alte "http 403"-Substring-Prüfung matchte nie —
+        // String(describing:) auf ApiError.http(403, ...) liefert "http(403, ...)"
+        // ohne Leerzeichen. Jeder rohe 403 auf einem AI-Endpoint (nicht nur der
+        // spezifische ai_consent_required-Body) soll das Consent-Sheet öffnen.
+        if case .http(403, _) = error as? ApiError {
+            aiConsented = false
+            return true
+        }
         let s = String(describing: error).lowercased()
-        if s.contains("ai_consent_required") || s.contains("http 403") {
+        if s.contains("ai_consent_required") {
             aiConsented = false
             return true
         }
@@ -145,7 +163,12 @@ final class AuthStore: ObservableObject {
         let result = try await api.login(email: email, password: password)
         switch result {
         case .success(let resp):
-            Keychain.set(resp.token, forKey: tokenKey)
+            // v1.11.55: nicht mehr blind auf "signedIn" gehen, wenn der Token
+            // gar nicht im Keychain landet — sonst wirkt der Login erfolgreich,
+            // ist aber beim nächsten App-Start spurlos wieder ausgeloggt.
+            guard Keychain.set(resp.token, forKey: tokenKey) else {
+                throw ApiError.network("Could not save your session securely. Please try again.")
+            }
             api.setToken(resp.token)
             user = resp.user
             if rememberCredentials { lastEmail = email }
@@ -163,7 +186,9 @@ final class AuthStore: ObservableObject {
     func completeTotpLogin(code: String) async throws {
         guard let api, let ch = pendingTotpChallenge else { throw ApiError.network("No challenge in flight") }
         let resp = try await api.loginTotp(challengeToken: ch, code: code)
-        Keychain.set(resp.token, forKey: tokenKey)
+        guard Keychain.set(resp.token, forKey: tokenKey) else {
+            throw ApiError.network("Could not save your session securely. Please try again.")
+        }
         api.setToken(resp.token)
         user = resp.user
         // v1.10.149: erst hier persistieren — respektiert rememberCredentials.

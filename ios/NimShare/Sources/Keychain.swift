@@ -5,9 +5,15 @@ import Security
 enum Keychain {
     private static let service = "email.nimtz.nimshare"
 
-    static func set(_ value: String, forKey key: String) {
+    /// v1.11.55: gibt jetzt zurück, ob der Token wirklich persistiert wurde —
+    /// vorher wurde der OSStatus von SecItemAdd verworfen, und ein Login
+    /// konnte als "erfolgreich" durchgehen, obwohl der Token beim nächsten
+    /// App-Start (Keychain.get liefert nil) schon wieder weg war: stiller
+    /// Logout ohne jede Fehlermeldung.
+    @discardableResult
+    static func set(_ value: String, forKey key: String) -> Bool {
         remove(forKey: key)
-        guard let data = value.data(using: .utf8) else { return }
+        guard let data = value.data(using: .utf8) else { return false }
         let q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -15,7 +21,7 @@ enum Keychain {
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
-        SecItemAdd(q as CFDictionary, nil)
+        return SecItemAdd(q as CFDictionary, nil) == errSecSuccess
     }
 
     static func get(_ key: String) -> String? {

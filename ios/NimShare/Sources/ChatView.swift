@@ -217,12 +217,24 @@ struct ChatView: View {
             // liefert (z.B. Consent auf anderem Gerät widerrufen), spiegeln
             // wir das lokal und öffnen das Consent-Sheet statt einer rohen
             // HTTP-Fehlermeldung.
-            if auth.handleServerErrorForAiConsent(e) { showAiConsent = true }
+            if auth.handleServerErrorForAiConsent(e) { reopenConsentAndKeepQuestion(q) }
             else { error = e.localizedDescription }
         } catch let ex {
-            if auth.handleServerErrorForAiConsent(ex) { showAiConsent = true }
+            if auth.handleServerErrorForAiConsent(ex) { reopenConsentAndKeepQuestion(q) }
             else { error = ex.localizedDescription }
         }
+    }
+
+    /// v1.11.55: anders als beim Erstversuch (Zeile ~203, wo `input`/`messages`
+    /// noch unberührt sind) ist die User-Bubble hier schon angehängt, bevor
+    /// der 403 kam (Consent währenddessen auf anderem Gerät widerrufen) —
+    /// ohne pendingQuestion ging die Frage nach Re-Consent spurlos verloren.
+    /// Die schon angehängte Bubble wird entfernt, damit der Resend über
+    /// AiConsentSheet.onDecided sie nicht doppelt anhängt.
+    private func reopenConsentAndKeepQuestion(_ q: String) {
+        if messages.last?.role == .user, messages.last?.text == q { messages.removeLast() }
+        pendingQuestion = q
+        showAiConsent = true
     }
 }
 

@@ -55,7 +55,7 @@ actor ThumbLoader {
 
     private let cache = NSCache<NSUUID, UIImage>()
     private var failed: Set<UUID> = []
-    private var inflight: [UUID: Task<UIImage?, Never>] = [:]
+    private var inflight: [UUID: Task<FetchResult, Never>] = [:]
     private let session: URLSession
 
     init() {
@@ -65,26 +65,44 @@ actor ThumbLoader {
         cache.countLimit = 400
     }
 
+    private enum FetchResult {
+        case image(UIImage)
+        /// Server said 404 (or a 2xx body that isn't a decodable image) — this
+        /// fileId genuinely has no thumb, safe to negative-cache.
+        case permanentMiss
+        /// Timeout, dropped connection, 5xx, etc. — say nothing about whether
+        /// a thumb exists; must retry on next scroll-into-view instead of
+        /// being cached as a permanent failure forever.
+        case transientFailure
+    }
+
     func image(for fileId: UUID, request: URLRequest) async -> UIImage? {
         if let hit = cache.object(forKey: fileId as NSUUID) { return hit }
         if failed.contains(fileId) { return nil }
-        if let running = inflight[fileId] { return await running.value }
-        let task = Task<UIImage?, Never> { [session] in
+        if let running = inflight[fileId] {
+            if case .image(let img) = await running.value { return img }
+            return nil
+        }
+        let task = Task<FetchResult, Never> { [session] in
             guard let (data, resp) = try? await session.data(for: request),
-                  let http = resp as? HTTPURLResponse,
-                  http.statusCode == 200,
-                  let img = UIImage(data: data) else { return nil }
-            return img
+                  let http = resp as? HTTPURLResponse else { return .transientFailure }
+            if http.statusCode == 200, let img = UIImage(data: data) { return .image(img) }
+            if http.statusCode == 404 { return .permanentMiss }
+            return .transientFailure
         }
         inflight[fileId] = task
-        let img = await task.value
+        let result = await task.value
         inflight[fileId] = nil
-        if let img {
+        switch result {
+        case .image(let img):
             cache.setObject(img, forKey: fileId as NSUUID)
-        } else if !Task.isCancelled {
-            failed.insert(fileId)
+            return img
+        case .permanentMiss:
+            if !Task.isCancelled { failed.insert(fileId) }
+            return nil
+        case .transientFailure:
+            return nil
         }
-        return img
     }
 }
 

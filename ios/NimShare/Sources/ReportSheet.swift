@@ -25,6 +25,7 @@ struct ReportSheet: View {
     @State private var sending = false
     @State private var done = false
     @State private var error: String?
+    @State private var blockFailed = false
 
     var body: some View {
         NavigationStack {
@@ -81,6 +82,13 @@ struct ReportSheet: View {
                         Text("Meldung ist eingegangen.")
                         Text("Ein Admin sichtet den Report zeitnah.")
                             .font(.caption).foregroundStyle(.secondary)
+                        // v1.11.55: "auch blockieren" lief bisher über try? —
+                        // schlug es fehl, sah der User trotzdem nur den grünen
+                        // Haken und glaubte sich fälschlich geschützt.
+                        if blockFailed {
+                            Text("Blockieren ist fehlgeschlagen — bitte manuell nachholen.")
+                                .font(.caption).foregroundStyle(Theme.warnRed)
+                        }
                     }
                     .padding(32).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
@@ -99,7 +107,8 @@ struct ReportSheet: View {
                 subjectLabel: subjectLabel,
                 subjectOwnerUserId: subjectOwnerUserId)
             if alsoBlock, let ownerId = subjectOwnerUserId {
-                try? await api.blockUser(ownerId, reason: reason.germanLabel)
+                do { try await api.blockUser(ownerId, reason: reason.germanLabel) }
+                catch { blockFailed = true }
             }
             done = true
             try? await Task.sleep(nanoseconds: 1_500_000_000)

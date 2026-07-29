@@ -87,6 +87,10 @@ struct DeleteAccountView: View {
             // Server ist durch, lokale Session weg, zurück auf Login.
             auth.signOut()
             dismiss()
+        } catch ApiError.http(401, let detail?) {
+            // v1.11.55: wrong confirmation password — show the server's
+            // actual reason instead of the generic "HTTP 401: ..." prefix.
+            error = detail
         } catch let ex {
             error = ex.localizedDescription
         }

@@ -32,6 +32,16 @@ struct GreetingBanner: View {
                         message = nil; salutation = nil
                         await initialLoad()
                     }
+                } else if new == false {
+                    // v1.11.55: umgekehrter Fall fehlte — nach Widerruf (z.B.
+                    // im Profil, während der Banner im Hintergrund weiterlebt)
+                    // blieb die zuvor geladene KI-Begrüssung stehen und
+                    // widersprach damit ProfileView's Zusage "Widerrufen
+                    // deaktiviert diese Funktionen sofort".
+                    Task {
+                        message = nil; salutation = nil
+                        await load(lat: nil, lon: nil)
+                    }
                 }
             }
     }

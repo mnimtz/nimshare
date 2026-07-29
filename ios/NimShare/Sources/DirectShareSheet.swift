@@ -241,6 +241,14 @@ struct DirectShareSheet: View {
             justGranted = true
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             await loadShares()
+            // v1.11.55: justGranted wurde nie zurückgesetzt — der grüne
+            // "Freigabe hinzugefügt"-Banner blieb für den Rest der Sheet-
+            // Lebensdauer stehen, auch nach späteren Widerrufen/Fehlern.
+            // Als transiente Bestätigung nach kurzer Zeit selbst ausblenden.
+            Task {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                justGranted = false
+            }
         } catch is CancellationError { /* Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }
     }

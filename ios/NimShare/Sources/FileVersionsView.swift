@@ -17,6 +17,14 @@ struct FileVersionsView: View {
         Group {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if items.isEmpty && error != nil {
+                // v1.11.55: bei einem echten Ladefehler zeigte diese Ansicht
+                // vorher trotzdem "Diese Datei hat nur eine Version" — eine
+                // falsche Tatsachenbehauptung, obwohl schlicht der Request
+                // fehlgeschlagen ist (der Fehler landete nur im separaten Alert).
+                ContentUnavailableView("Fehler beim Laden",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error ?? ""))
             } else if items.isEmpty {
                 ContentUnavailableView("Keine Versionen",
                     systemImage: "clock.arrow.circlepath",
