@@ -79,6 +79,7 @@ Noch nicht spezifiziert, nicht angreifen bis freigegeben.
   3. Private Notiz an den Owner (kein öffentlicher Thread) — kommt per Push/E-Mail an, ähnlich wie "Nachricht an Absender". Kein Moderationsrisiko, aber weniger sichtbar für andere Besucher.
   4. Kombi aus 1+3: Emoji öffentlich leicht, Freitext optional privat an Owner.
   - Berührt auch die offene Frage aus der Gallery-Idee unten ("Kommentare pro Bild? Reactions?") — evtl. dasselbe Baustein-Set für beide Fälle nutzen.
+- **6-stelliger Pairing-Code statt Link** — analog Send Anywhere. Feste Subdomain (z.B. `go.nimshare.com` o.ä.), auf der man nur den 6-stelligen Code eintippt statt einen vollen Link zu kopieren/teilen. Löst dort denselben Link/Datei-Zugriff ein. Fragen offen: Code kurzlebig (analog Send Anywhere ~10 Min) oder gleiche Laufzeit wie der zugrundeliegende Link? Code zusätzlich zum normalen `/s/{slug}`-Link (Owner sieht beides) oder eigener Link-Typ? Kollisionsraum bei 6 Stellen numerisch (~1 Mio Codes) — TTL/Rotation nötig damit er nicht knapp wird.
 
 ## Kleinigkeiten (irgendwann)
 
