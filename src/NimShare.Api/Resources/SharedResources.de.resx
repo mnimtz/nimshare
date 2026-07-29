@@ -248,6 +248,10 @@
   <data name="links.expiry_default_hint"><value>Standardmäßig 8 Wochen ab Erstellung, wenn leer gelassen.</value></data>
   <data name="links.permanent_label"><value>Dauerhaft (läuft nie ab)</value></data>
   <data name="links.search.placeholder"><value>Suchen…</value></data>
+  <data name="og.protected_title"><value>🔒 Geschützte NimShare-Freigabe</value></data>
+  <data name="og.protected_description"><value>Diese Freigabe ist passwort- oder zugriffsgeschützt.</value></data>
+  <data name="og.file_description"><value>Geteilt über NimShare — eine selbst gehostete File-Sharing-Plattform.</value></data>
+  <data name="og.folder_description"><value>{0} Dateien geteilt über NimShare.</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Aktiv</value></data>
   <data name="links.revoked"><value>Widerrufen</value></data>

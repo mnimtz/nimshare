@@ -13,6 +13,40 @@
     <link rel="icon" type="image/png" sizes="192x192" href="~/img/icon-192.png"/>
     <link rel="apple-touch-icon" sizes="192x192" href="~/img/icon-192.png"/>
     <meta name="theme-color" content="#002854"/>
+    @* v1.11.51 — Link-Unfurl: nur gesetzt wenn der Controller explizit OG-
+       Tags will (ShareController.Landing/FolderLanding) — alle anderen
+       Seiten (Dashboard, Settings, ...) bleiben unverändert ohne Preview-Card. *@
+    @if (ViewData["OgTitle"] is string ogTitle)
+    {
+        var ogDescription = ViewData["OgDescription"] as string;
+        var ogImage = ViewData["OgImage"] as string;
+        var ogUrl = ViewData["OgUrl"] as string;
+        <meta property="og:type" content="website"/>
+        <meta property="og:site_name" content="@T["brand.product_name"]"/>
+        <meta property="og:title" content="@ogTitle"/>
+        if (!string.IsNullOrEmpty(ogDescription))
+        {
+            <meta property="og:description" content="@ogDescription"/>
+        }
+        if (!string.IsNullOrEmpty(ogImage))
+        {
+            <meta property="og:image" content="@ogImage"/>
+        }
+        if (!string.IsNullOrEmpty(ogUrl))
+        {
+            <meta property="og:url" content="@ogUrl"/>
+        }
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:title" content="@ogTitle"/>
+        if (!string.IsNullOrEmpty(ogDescription))
+        {
+            <meta name="twitter:description" content="@ogDescription"/>
+        }
+        if (!string.IsNullOrEmpty(ogImage))
+        {
+            <meta name="twitter:image" content="@ogImage"/>
+        }
+    }
 </head>
 <body>
 @RenderBody()

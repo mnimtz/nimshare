@@ -200,6 +200,10 @@
   <data name="links.expiry_default_hint"><value>Per impostazione predefinita 8 settimane dalla creazione se lasciato vuoto.</value></data>
   <data name="links.permanent_label"><value>Permanente (non scade mai)</value></data>
   <data name="links.search.placeholder"><value>Cerca…</value></data>
+  <data name="og.protected_title"><value>🔒 Condivisione NimShare protetta</value></data>
+  <data name="og.protected_description"><value>Questa condivisione è protetta da password o accesso limitato.</value></data>
+  <data name="og.file_description"><value>Condiviso tramite NimShare — una piattaforma di file sharing self-hosted.</value></data>
+  <data name="og.folder_description"><value>{0} file condivisi tramite NimShare.</value></data>
   <data name="links.state"><value>Stato</value></data>
   <data name="links.active"><value>Attivo</value></data>
   <data name="links.revoked"><value>Revocato</value></data>

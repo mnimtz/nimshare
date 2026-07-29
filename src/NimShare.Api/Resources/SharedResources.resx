@@ -248,6 +248,10 @@
   <data name="links.expiry_default_hint"><value>Defaults to 8 weeks from creation if left empty.</value></data>
   <data name="links.permanent_label"><value>Permanent (never expires)</value></data>
   <data name="links.search.placeholder"><value>Search…</value></data>
+  <data name="og.protected_title"><value>🔒 Protected NimShare share</value></data>
+  <data name="og.protected_description"><value>This share is password- or access-protected.</value></data>
+  <data name="og.file_description"><value>Shared via NimShare — a self-hosted file-sharing platform.</value></data>
+  <data name="og.folder_description"><value>{0} files shared via NimShare.</value></data>
   <data name="links.state"><value>State</value></data>
   <data name="links.active"><value>Active</value></data>
   <data name="links.revoked"><value>Revoked</value></data>

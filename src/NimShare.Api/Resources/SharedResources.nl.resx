@@ -93,6 +93,10 @@
   <data name="links.expiry_default_hint"><value>Standaard 8 weken vanaf aanmaak als leeg gelaten.</value></data>
   <data name="links.permanent_label"><value>Permanent (verloopt nooit)</value></data>
   <data name="links.search.placeholder"><value>Zoeken…</value></data>
+  <data name="og.protected_title"><value>🔒 Beveiligde NimShare-share</value></data>
+  <data name="og.protected_description"><value>Deze share is beveiligd met een wachtwoord of toegangsbeperking.</value></data>
+  <data name="og.file_description"><value>Gedeeld via NimShare — een zelf-gehost platform voor bestandsdeling.</value></data>
+  <data name="og.folder_description"><value>{0} bestanden gedeeld via NimShare.</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Actief</value></data>
   <data name="links.revoked"><value>Ingetrokken</value></data>

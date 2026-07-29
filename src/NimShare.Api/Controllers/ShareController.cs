@@ -77,6 +77,34 @@ public class ShareController : Controller
         => string.IsNullOrWhiteSpace(link.AllowedEmails)
            || HttpContext.Session.GetString($"gate.{link.Slug}") == "ok";
 
+    // v1.11.51 — Link-Unfurl: Open-Graph/Twitter-Meta-Tags für /s/{slug},
+    // damit Slack/Teams/WhatsApp beim Posten eine Vorschau-Karte zeigen statt
+    // der nackten URL. WICHTIG: Crawler-Bots rufen die Landing kalt ab (keine
+    // Session, kein Passwort) — bei passwortgeschützten Links daher NUR die
+    // generische Branding-Karte, nie Dateiname/Bild/KI-Summary (sonst würde
+    // der Schutz für Metadaten quasi umgangen). Das Owner/Template-Logo ist
+    // unkritisch (gleich für alle Links dieses Scopes, keine Datei-Info) und
+    // wird deshalb auch bei geschützten Links als Bild verwendet.
+    private void SetOgTags(bool isProtected, string title, string? richDescription, string? richImage, LandingTheme theme)
+    {
+        var img = !isProtected && !string.IsNullOrWhiteSpace(richImage)
+            ? richImage
+            : (!string.IsNullOrWhiteSpace(theme.LogoUrl) ? theme.LogoUrl : AbsoluteUrl("/img/logo-800.png"));
+        ViewData["OgTitle"] = isProtected ? _t["og.protected_title"].Value : title;
+        ViewData["OgDescription"] = isProtected ? _t["og.protected_description"].Value : richDescription;
+        ViewData["OgImage"] = img;
+        ViewData["OgUrl"] = AbsoluteUrl(Request.Path.Value ?? "");
+    }
+
+    private string AbsoluteUrl(string path) => $"{Request.Scheme}://{Request.Host}{path}";
+
+    private static string? TruncateForOg(string? s, int max = 200)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        var t = s.Trim();
+        return t.Length <= max ? t : t[..max].TrimEnd() + "…";
+    }
+
     [HttpGet("{slug}")]
     public async Task<IActionResult> Landing(string slug, [FromServices] NimShare.Core.Data.NimShareDbContext db,
         [FromServices] IFolderService folderSvc,
@@ -158,6 +186,11 @@ public class ShareController : Controller
                 landingFiles.Add(new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType, t400, t1600, thumbFailed));
             }
             _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
+            var isProtectedFolder = link.PasswordHash is not null;
+            SetOgTags(isProtectedFolder, folder.Name,
+                !isProtectedFolder ? (TruncateForOg(link.Message) ?? _t["og.folder_description", landingFiles.Count].Value) : null,
+                !isProtectedFolder ? landingFiles.FirstOrDefault(f => f.Thumb1600 != null)?.Thumb1600 : null,
+                folderTheme);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
                 link.PasswordHash is not null, link.Owner.DisplayName,
@@ -197,6 +230,18 @@ public class ShareController : Controller
             lf1.Country, lf1.City, lf1.Device, lf1.Isp, timezone: null, ct);
 
         var theme = await ResolveThemeAsync(db, link.File.Scope, link.File.OwnerId, ct);
+        var isProtectedFile = link.PasswordHash is not null;
+        string? ogFileImage = null;
+        if (!isProtectedFile && thumbs.IsImage(link.File.ContentType))
+        {
+            if (link.File.ThumbsReadyAt is not null)
+                ogFileImage = thumbs.CreateThumbSas(link.File.Id, 1600, ThumbSasTtl(link.ExpiresAt)).ToString();
+            else
+                thumbs.Enqueue(link.File.Id, link.File.BlobPath, link.File.ContentType);
+        }
+        SetOgTags(isProtectedFile, link.File.Name,
+            !isProtectedFile ? (TruncateForOg(link.File.AiSummary) ?? TruncateForOg(link.Message) ?? _t["og.file_description"].Value) : null,
+            ogFileImage, theme);
         return View("Landing", new LandingViewModel(
             link.Slug,
             link.File.Name,

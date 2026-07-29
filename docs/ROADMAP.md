@@ -72,7 +72,7 @@ Stand: v1.9.0 · Signaturen (inkl. Reassign + Zertifikate) + Azure-SQL-Wizard + 
 
 Noch nicht spezifiziert, nicht angreifen bis freigegeben.
 
-- **Link-Unfurl mit AI-Preview-Card** — wenn ein NimShare-Link in Slack/Teams/WhatsApp gepostet wird, soll die Vorschau ein hübsches Open-Graph-Bild + KI-Summary zeigen statt nur "nimshare.com". Technisch: OG-Meta-Tags auf der `/s/{slug}`-Landing (dynamisch pro Link: Dateiname/Ordner-Inhalt, evtl. Thumbnail als `og:image`, KI-Summary als `og:description` — AI-Gateway existiert schon für Summaries).
+- ~~**Link-Unfurl mit AI-Preview-Card**~~ **✅ erledigt v1.11.51** — OG/Twitter-Meta-Tags auf `/s/{slug}` (Datei-/Ordner-Landing). Passwortgeschützte/eingeschränkte Links zeigen NUR die generische Branding-Karte (Marcus's Entscheidung) — Crawler-Bots rufen kalt ohne Session/Passwort ab, ein reichhaltiges Preview würde den Schutz für Metadaten umgehen. Ungeschützte Links: Dateiname/Ordnername als Titel, KI-Summary (bereits gecacht auf StorageFile.AiSummary) oder Message als Beschreibung, Bild-Thumbnail (1600er, wiederverwendet die bestehende Thumb-Pipeline) bzw. Owner/Template-Logo als Fallback als `og:image`.
 - **Kommentar/Reaktion/Feedback auf der Link-Landing** — Form noch offen, Marcus fragte explizit nach Ideen. Optionen (nicht entschieden):
   1. Emoji-Reaktionsleiste (👍❤️😀), anonym, aggregierte Zählung für den Owner sichtbar — leichtgewichtig, kein Freitext-Moderationsrisiko.
   2. Gästebuch-Kommentare (Name + Text), öffentlich auf der Landing sichtbar — mehr Aufwand (Moderation/Spam-Schutz nötig).
