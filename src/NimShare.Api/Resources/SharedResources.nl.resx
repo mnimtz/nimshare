@@ -106,6 +106,9 @@
   <data name="email.feedback.subject"><value>Feedback over je link '{0}'</value></data>
   <data name="email.feedback.body"><value>Hallo {0},&#10;&#10;iemand heeft feedback achtergelaten op de landingspagina van je link '{1}':&#10;&#10;Van: {2}&#10;&#10;{3}&#10;&#10;Tijd (UTC): {4}&#10;&#10;— NimShare</value></data>
   <data name="email.feedback.anonymous"><value>anoniem</value></data>
+  <data name="dashboard.ios_app.title"><value>NimShare altijd bij de hand</value></data>
+  <data name="dashboard.ios_app.hint"><value>Haal de iOS-app om onderweg te delen.</value></data>
+  <data name="dashboard.ios_app.cta"><value>Bekijk in de App Store</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Actief</value></data>
   <data name="links.revoked"><value>Ingetrokken</value></data>

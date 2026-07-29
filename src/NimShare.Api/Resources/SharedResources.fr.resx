@@ -213,6 +213,9 @@
   <data name="email.feedback.subject"><value>Retour sur votre lien '{0}'</value></data>
   <data name="email.feedback.body"><value>Bonjour {0},&#10;&#10;Quelqu'un a laissé un commentaire sur la page de votre lien '{1}' :&#10;&#10;De : {2}&#10;&#10;{3}&#10;&#10;Heure (UTC) : {4}&#10;&#10;— NimShare</value></data>
   <data name="email.feedback.anonymous"><value>anonyme</value></data>
+  <data name="dashboard.ios_app.title"><value>NimShare, où que vous soyez</value></data>
+  <data name="dashboard.ios_app.hint"><value>Téléchargez l'app iOS pour partager en déplacement.</value></data>
+  <data name="dashboard.ios_app.cta"><value>Voir sur l'App Store</value></data>
   <data name="links.state"><value>État</value></data>
   <data name="links.active"><value>Actif</value></data>
   <data name="links.revoked"><value>Révoqué</value></data>
