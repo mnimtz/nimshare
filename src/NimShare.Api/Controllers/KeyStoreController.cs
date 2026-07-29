@@ -380,4 +380,10 @@ public class KeyStorePageController : Controller
 {
     [HttpGet("/keystore")]
     public IActionResult Index() => View();
+
+    // v1.11.43 — eigener Nav-Punkt für Dokumentation (Marcus's Wunsch,
+    // analog Signaturen: Übersicht/Email-Vorlagen/Adressbuch als getrennte
+    // Unterseiten statt alles auf einer Seite).
+    [HttpGet("/keystore/documents")]
+    public IActionResult Documents() => View();
 }

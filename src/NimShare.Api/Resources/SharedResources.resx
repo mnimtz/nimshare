@@ -1573,8 +1573,8 @@ Thanks for using NimShare.</value></data>
   <data name="profile.ai.toggle_hint"><value>Your queries and relevant text excerpts of your files are sent to the provider above. Passwords, certificates, and other files are NOT sent.</value></data>
   <data name="profile.ai.revoke_hint"><value>You can revoke your consent here at any time.</value></data>
   <data name="profile.ai.privacy_link"><value>Privacy policy</value></data>
-  <data name="nav.keystore" xml:space="preserve"><value>Key Store</value></data>
-  <data name="keystore.title" xml:space="preserve"><value>Key Store</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>License management</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>License management</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Manage your customers and their license keys — link a share link to a key so recipients see the right one automatically.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Search customer, email, domain, type…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>New key</value></data>

@@ -127,10 +127,32 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
-            @* v1.11.22: Key-Store — Marcus's Anfrage, für alle User sichtbar
-               (nicht nur Admins). Owner-Scoping passiert serverseitig im
-               Controller (eigene Einträge, Admins sehen alle). *@
-            <a href="/keystore"  class="@Exact("/keystore")">🔑 @T["nav.keystore"]</a>
+            @* v1.11.22: Key-Store/Lizenzverwaltung — Marcus's Anfrage, für
+               alle User sichtbar (nicht nur Admins). Owner-Scoping passiert
+               serverseitig im Controller (eigene Einträge, Admins sehen
+               alle). v1.11.43: eigener Nav-Punkt statt in Profil versteckt,
+               plus Unterseiten (Übersicht/Dokumentation/Email-Vorlage) analog
+               Signaturen. *@
+            @{
+                var lvOpen = currentPath.StartsWith("/keystore", StringComparison.OrdinalIgnoreCase);
+            }
+            <div class="nav-group @(lvOpen ? "" : "collapsed")" onclick="if(!event.target.closest('a'))this.classList.toggle('collapsed')">
+                <div class="nav-group-head">
+                    <span>🔑 @T["nav.keystore"]</span>
+                    <span class="chevron">▾</span>
+                </div>
+                <div class="nav-group-body">
+                    <a href="/keystore" class="nav-sub @(currentPath.Equals("/keystore", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">📋</span>@T["nav.sig.overview"]
+                    </a>
+                    <a href="/keystore/documents" class="nav-sub @(currentPath.StartsWith("/keystore/documents", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">📄</span>@T["keystore.documents.section"]
+                    </a>
+                    <a href="/keystore/templates" class="nav-sub @(currentPath.StartsWith("/keystore/templates", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">✉</span>@T["keystore.templates.title"]
+                    </a>
+                </div>
+            </div>
 
             @{
                 // v1.10.153: Zertifikate aus Signatur-Gruppe rausgezogen zum

@@ -1570,8 +1570,8 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="profile.ai.toggle_hint"><value>Je verzoeken en relevante tekstfragmenten uit je bestanden worden naar de bovengenoemde aanbieder gestuurd. Wachtwoorden, certificaten en andere bestanden worden NIET verstuurd.</value></data>
   <data name="profile.ai.revoke_hint"><value>Je kunt je toestemming hier op elk moment intrekken.</value></data>
   <data name="profile.ai.privacy_link"><value>Privacybeleid</value></data>
-  <data name="nav.keystore" xml:space="preserve"><value>Sleutelbeheer</value></data>
-  <data name="keystore.title" xml:space="preserve"><value>Sleutelbeheer</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>Licentiebeheer</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>Licentiebeheer</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Beheer je klanten en hun licentiesleutels — koppel een deellink aan een sleutel zodat ontvangers automatisch de juiste zien.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Zoek klant, e-mail, domein, type…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Nieuwe sleutel</value></data>

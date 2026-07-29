@@ -1575,8 +1575,8 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="profile.ai.toggle_hint"><value>Deine Anfragen und relevante Text-Ausschnitte deiner Dateien gehen an den oben genannten Anbieter. Passwörter, Zertifikate und andere Dateien werden NICHT gesendet.</value></data>
   <data name="profile.ai.revoke_hint"><value>Du kannst deine Zustimmung jederzeit hier widerrufen.</value></data>
   <data name="profile.ai.privacy_link"><value>Datenschutzerklärung</value></data>
-  <data name="nav.keystore" xml:space="preserve"><value>Key-Store</value></data>
-  <data name="keystore.title" xml:space="preserve"><value>Key-Store</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>Lizenzverwaltung</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>Lizenzverwaltung</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Verwalte deine Kunden und deren Lizenzschlüssel — verknüpfe einen Freigabelink mit einem Schlüssel, damit Empfänger automatisch den richtigen sehen.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Kunde, E-Mail, Domain, Typ suchen…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Neuer Schlüssel</value></data>

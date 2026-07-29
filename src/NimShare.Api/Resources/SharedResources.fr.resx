@@ -1571,8 +1571,8 @@ Merci d'utiliser NimShare.</value></data>
   <data name="profile.ai.toggle_hint"><value>Vos requêtes et les extraits de texte pertinents de vos fichiers sont envoyés au fournisseur ci-dessus. Les mots de passe, certificats et autres fichiers ne sont PAS envoyés.</value></data>
   <data name="profile.ai.revoke_hint"><value>Vous pouvez révoquer votre consentement ici à tout moment.</value></data>
   <data name="profile.ai.privacy_link"><value>Politique de confidentialité</value></data>
-  <data name="nav.keystore" xml:space="preserve"><value>Coffre de clés</value></data>
-  <data name="keystore.title" xml:space="preserve"><value>Coffre de clés</value></data>
+  <data name="nav.keystore" xml:space="preserve"><value>Gestion des licences</value></data>
+  <data name="keystore.title" xml:space="preserve"><value>Gestion des licences</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Gérez vos clients et leurs clés de licence — associez un lien de partage à une clé pour que les destinataires voient automatiquement la bonne.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Rechercher client, e-mail, domaine, type…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Nouvelle clé</value></data>
