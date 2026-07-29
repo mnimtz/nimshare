@@ -28,6 +28,16 @@ struct SignatureFieldPlacementView: View {
 
     @State private var selectedParticipantId: UUID?
     @State private var selectedType = "Signature"
+    // v1.11.42 — Marcus: "kann ich keine Felder ziehen, die Ansicht der PDF
+    // ist so klein, das man garnichts sehen kann. auch kein zoom möglich."
+    // Root-Cause: PageCanvas hat vorher IMMER "fit beide Dimensionen"
+    // (min(widthRatio,heightRatio)) gerechnet — bei einer sehr hohen Seite
+    // (wie AIDA-Reisemagazin-Export) ergab das eine winzige Breite, in der
+    // ein Rechteck ziehen praktisch unmöglich war. Jetzt: Fit-Breite (wie
+    // jeder normale PDF-Viewer), vertikal scrollbar, plus Pinch-Zoom. Ein
+    // Moden-Umschalter trennt "Platzieren" (1-Finger zieht ein Feld) von
+    // "Verschieben" (1-Finger scrollt) — beide Modi erlauben Pinch-Zoom.
+    @State private var isPlaceMode = true
 
     struct PlacedField: Identifiable {
         let id: UUID
@@ -71,6 +81,16 @@ struct SignatureFieldPlacementView: View {
                 .padding(.bottom, 4)
             }
 
+            if pdf != nil {
+                Picker("Modus", selection: $isPlaceMode) {
+                    Label("Platzieren", systemImage: "plus.square.dashed").tag(true)
+                    Label("Verschieben/Zoom", systemImage: "arrow.up.left.and.arrow.down.right").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 6)
+            }
+
             if loading {
                 ProgressView("PDF wird geladen…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let e = error {
@@ -85,6 +105,7 @@ struct SignatureFieldPlacementView: View {
                             PageCanvas(
                                 page: page,
                                 fields: fields.filter { $0.page == i + 1 },
+                                isPlaceMode: isPlaceMode,
                                 onDraw: { rect in await addField(pageIndex: i, rect: rect) },
                                 onDelete: { field in await deleteField(field) }
                             )
@@ -159,30 +180,44 @@ struct SignatureFieldPlacementView: View {
     }
 }
 
-/// Rendert eine PDF-Seite passgenau (aspect-fit) in den verfügbaren Platz +
-/// transparentes Drag-Overlay. Rechnet Display-Pixel zurück in PDF-Punkte
-/// (Media-Box-Breite/Höhe geteilt durch die tatsächlich gerenderte Größe).
+/// Rendert eine PDF-Seite + transparentes Drag-Overlay. Rechnet Display-
+/// Pixel zurück in PDF-Punkte (Media-Box-Breite/Höhe geteilt durch die
+/// tatsächlich gerenderte Größe).
+///
+/// v1.11.42 — vorher IMMER "fit beide Dimensionen" (min(widthRatio,
+/// heightRatio)): bei einer sehr hohen Seite (z.B. ein als-eine-Seite
+/// exportiertes Reisemagazin) ergab das eine winzige Breite, in der ein
+/// Rechteck ziehen praktisch unmöglich war ("kann ich keine Felder ziehen").
+/// Jetzt: Fit-Breite wie jeder normale PDF-Viewer, vertikal/horizontal
+/// scrollbar + Pinch-Zoom (bisher gar nicht möglich). isPlaceMode trennt
+/// "Platzieren" (1-Finger zieht ein Feld, Scroll aus) von "Verschieben"
+/// (1-Finger scrollt) — Pinch-Zoom ist in beiden Modi aktiv (2 Finger,
+/// kollidiert nie mit der 1-Finger-Zieh-Geste).
 private struct PageCanvas: View {
     let page: PDFPage
     let fields: [SignatureFieldPlacementView.PlacedField]
+    let isPlaceMode: Bool
     let onDraw: (CGRect) async -> Void
     let onDelete: (SignatureFieldPlacementView.PlacedField) async -> Void
 
     @State private var dragStart: CGPoint?
     @State private var dragCurrent: CGPoint?
+    @State private var committedZoom: CGFloat = 1
+    @GestureState private var pinchDelta: CGFloat = 1
+    private let minZoom: CGFloat = 1
+    private let maxZoom: CGFloat = 6
 
     var body: some View {
         GeometryReader { geo in
             let pdfSize = page.bounds(for: .mediaBox).size
-            let fitScale = pdfSize.width > 0 && pdfSize.height > 0
-                ? min(geo.size.width / pdfSize.width, geo.size.height / pdfSize.height)
-                : 1
-            // Display-Pixel pro PDF-Punkt bzw. Kehrwert für die Rückrechnung.
-            let displayWidth = pdfSize.width * fitScale
-            let displayHeight = pdfSize.height * fitScale
-            let pdfPerDisplayPixel = fitScale > 0 ? 1 / fitScale : 1
+            // Fit-Breite statt Fit-beide-Dimensionen — siehe Klassen-Doku.
+            let fitScale = pdfSize.width > 0 ? geo.size.width / pdfSize.width : 1
+            let zoom = min(max(committedZoom * pinchDelta, minZoom), maxZoom)
+            let displayWidth = pdfSize.width * fitScale * zoom
+            let displayHeight = pdfSize.height * fitScale * zoom
+            let pdfPerDisplayPixel = (fitScale * zoom) > 0 ? 1 / (fitScale * zoom) : 1
 
-            ZStack(alignment: .topLeading) {
+            let canvas = ZStack(alignment: .topLeading) {
                 if let img = renderedImage(width: displayWidth, height: displayHeight) {
                     Image(uiImage: img).resizable().frame(width: displayWidth, height: displayHeight)
                 } else {
@@ -210,27 +245,45 @@ private struct PageCanvas: View {
                 }
             }
             .frame(width: displayWidth, height: displayHeight)
-            .position(x: geo.size.width / 2, y: geo.size.height / 2)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 8, coordinateSpace: .local)
-                    .onChanged { v in
-                        if dragStart == nil { dragStart = v.startLocation }
-                        dragCurrent = v.location
+
+            let magnify = MagnificationGesture()
+                .updating($pinchDelta) { value, state, _ in state = value }
+                .onEnded { value in
+                    committedZoom = min(max(committedZoom * value, minZoom), maxZoom)
+                }
+
+            ScrollView([.horizontal, .vertical], showsIndicators: !isPlaceMode) {
+                Group {
+                    if isPlaceMode {
+                        canvas
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 8, coordinateSpace: .local)
+                                    .onChanged { v in
+                                        if dragStart == nil { dragStart = v.startLocation }
+                                        dragCurrent = v.location
+                                    }
+                                    .onEnded { v in
+                                        defer { dragStart = nil; dragCurrent = nil }
+                                        guard let s = dragStart else { return }
+                                        let c = v.location
+                                        let dispRect = CGRect(x: min(s.x, c.x), y: min(s.y, c.y),
+                                                               width: abs(c.x - s.x), height: abs(c.y - s.y))
+                                        guard dispRect.width > 20, dispRect.height > 15 else { return }
+                                        let pdfRect = CGRect(
+                                            x: dispRect.minX * pdfPerDisplayPixel, y: dispRect.minY * pdfPerDisplayPixel,
+                                            width: dispRect.width * pdfPerDisplayPixel, height: dispRect.height * pdfPerDisplayPixel)
+                                        Task { await onDraw(pdfRect) }
+                                    }
+                            )
+                    } else {
+                        canvas
                     }
-                    .onEnded { v in
-                        defer { dragStart = nil; dragCurrent = nil }
-                        guard let s = dragStart else { return }
-                        let c = v.location
-                        let dispRect = CGRect(x: min(s.x, c.x), y: min(s.y, c.y),
-                                               width: abs(c.x - s.x), height: abs(c.y - s.y))
-                        guard dispRect.width > 20, dispRect.height > 15 else { return }
-                        let pdfRect = CGRect(
-                            x: dispRect.minX * pdfPerDisplayPixel, y: dispRect.minY * pdfPerDisplayPixel,
-                            width: dispRect.width * pdfPerDisplayPixel, height: dispRect.height * pdfPerDisplayPixel)
-                        Task { await onDraw(pdfRect) }
-                    }
-            )
+                }
+                .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .top)
+            }
+            .scrollDisabled(isPlaceMode)
+            .simultaneousGesture(magnify)
         }
     }
 

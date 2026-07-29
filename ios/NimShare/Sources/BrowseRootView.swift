@@ -171,7 +171,10 @@ struct BrowseRootView: View {
     private var overviewSpecs: [TileSpec] {
         var t: [TileSpec] = []
         t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: .yellow, dest: { AnyView(FavoritesView()) }))
-        t.append(TileSpec(id: "shared", title: "Freigegeben", subtitle: "für mich", icon: "person.crop.circle.badge.checkmark", tint: Theme.tungstenBlue, dest: { AnyView(SharedWithMeView()) }))
+        // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
+        // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
+        // getauscht (das zieht dafür nach Profil → Dateien um).
+        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.tungstenBlue, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
         t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
         t.append(TileSpec(id: "activity", title: "Aktivität", subtitle: nil, icon: "clock.fill", tint: Theme.tungstenBlue, dest: { AnyView(ActivityView()) }))

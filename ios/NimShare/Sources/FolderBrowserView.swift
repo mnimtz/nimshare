@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct FolderBrowserView: View {
     @EnvironmentObject var auth: AuthStore
@@ -36,6 +37,12 @@ struct FolderBrowserView: View {
     @State private var renameText: String = ""
     @State private var newFolderParent: UUID?
     @State private var newFolderName: String = ""
+    // v1.11.42 — Marcus: "wie lade ich etwas in einen Ordner hoch aus der
+    // app? nirgends find ich dazu was." — es gab tatsächlich KEINEN
+    // direkten Datei-Upload aus dem Browser (nur "Upload anfordern" =
+    // Upload-Request-LINK für andere, kein Upload durch einen selbst).
+    @State private var showFileUpload = false
+    @State private var uploadBusy = false
     @State private var pickerOp: FolderPickerOp?
 
     enum FolderPickerOp: Identifiable {
@@ -129,10 +136,25 @@ struct FolderBrowserView: View {
                             }
                             Divider()
                         }
+                        // v1.11.42: Datei-Upload aus der App heraus — fehlte
+                        // komplett (nur "Upload anfordern" = Link für andere).
+                        Button {
+                            showFileUpload = true
+                        } label: {
+                            Label("Datei hochladen", systemImage: "square.and.arrow.up")
+                        }
                         if let cur = data?.currentFolderId {
                             Button {
-                                newFolderParent = cur
-                                newFolderName = ""
+                                // v1.11.42: SwiftUI schluckt gelegentlich einen
+                                // Alert, dessen isPresented-State im selben
+                                // Transaction-Tick wie das Schließen eines
+                                // Menüs auf true springt (bekannter Menu+Alert-
+                                // Timing-Bug) — Marcus's Report "Neuer Ordner
+                                // tut nichts". Ein Tick versetzt umgeht das.
+                                DispatchQueue.main.async {
+                                    newFolderParent = cur
+                                    newFolderName = ""
+                                }
                             } label: {
                                 Label("Neuer Unterordner", systemImage: "folder.badge.plus")
                             }
@@ -183,6 +205,11 @@ struct FolderBrowserView: View {
         }
         .sheet(isPresented: $showUploadRequest, onDismiss: { uploadReqFolderName = nil }) {
             UploadRequestCreateSheet(targetFolderName: uploadReqFolderName)
+        }
+        // v1.11.42: direkter Datei-Upload aus dem Browser in den aktuell
+        // geöffneten Ordner — beliebiger Dateityp, mehrere auf einmal.
+        .fileImporter(isPresented: $showFileUpload, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            Task { await handleFileUpload(result) }
         }
         // v1.10.72: Bulk-Move/Copy — dasselbe FolderPickerSheet wie
         // Single-Item, aber loopt über die Selection.
@@ -386,8 +413,12 @@ struct FolderBrowserView: View {
             showUploadRequest = true
         } label: { Label("Upload anfordern", systemImage: "tray.and.arrow.down") }
         Button {
-            newFolderParent = f.id
-            newFolderName = ""
+            // v1.11.42: siehe Kommentar bei der Toolbar-Variante — Menu+Alert
+            // Timing-Fix.
+            DispatchQueue.main.async {
+                newFolderParent = f.id
+                newFolderName = ""
+            }
         } label: { Label("Neuer Unterordner", systemImage: "folder.badge.plus") }
         Button {
             renaming = ("folder", f.id, f.name)
@@ -676,6 +707,37 @@ struct FolderBrowserView: View {
             _ = try await api.createFolder(parentId: parent, name: name)
             await load()
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
+    }
+
+    /// v1.11.42 — direkter Upload aus der Dateien-App/iCloud in den gerade
+    /// geöffneten Ordner. Gleiches Streaming-Muster wie SignaturesView's
+    /// PDF-Picker (Security-Scoped-URL → Temp-Datei → `fromFile:`-Upload,
+    /// hält auch große Dateien nicht komplett im RAM).
+    private func handleFileUpload(_ result: Result<[URL], Error>) async {
+        guard let api = auth.api else { return }
+        let urls: [URL]
+        do { urls = try result.get() } catch { return }
+        guard !urls.isEmpty else { return }
+        uploadBusy = true; busy = true
+        defer { uploadBusy = false; busy = false }
+        var ok = 0, fail = 0
+        for src in urls {
+            let didStart = src.startAccessingSecurityScopedResource()
+            defer { if didStart { src.stopAccessingSecurityScopedResource() } }
+            let name = src.lastPathComponent
+            let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "-" + name)
+            do {
+                try FileManager.default.copyItem(at: src, to: tmp)
+                defer { try? FileManager.default.removeItem(at: tmp) }
+                let contentType = UTType(filenameExtension: (name as NSString).pathExtension)?.preferredMIMEType
+                    ?? "application/octet-stream"
+                _ = try await api.uploadFile(name: name, contentType: contentType,
+                                              folderId: data?.currentFolderId, fromFile: tmp)
+                ok += 1
+            } catch { fail += 1 }
+        }
+        if fail > 0 { error = "\(ok) hochgeladen, \(fail) fehlgeschlagen" }
+        await load()
     }
 
     // Datei-Download via preview-url (Content-Disposition=attachment) →

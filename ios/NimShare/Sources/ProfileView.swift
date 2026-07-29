@@ -37,6 +37,12 @@ struct ProfileView: View {
                 NavigationLink { UploadRequestsView() } label: {
                     Label("Upload-Anforderungen", systemImage: "tray.and.arrow.down")
                 }
+                // v1.11.42: hierher getauscht — die Startseiten-Kachel zeigt
+                // jetzt stattdessen Key-Store/"Lizenzverwaltung" (Marcus's
+                // Wunsch, siehe BrowseRootView).
+                NavigationLink { SharedWithMeView() } label: {
+                    Label("Freigegeben für mich", systemImage: "person.crop.circle.badge.checkmark")
+                }
                 NavigationLink { TrashView() } label: {
                     Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
                 }
@@ -48,14 +54,6 @@ struct ProfileView: View {
                 }
                 NavigationLink { ContactsView() } label: {
                     Label("Adressbuch", systemImage: "person.crop.circle.badge.checkmark")
-                }
-            }
-
-            // v1.11.39: iOS-Parität — Key-Store fehlte komplett (siehe
-            // Feature-Audit), Marcus's Wunsch: nachziehen.
-            Section("Vertrieb") {
-                NavigationLink { KeyStoreView() } label: {
-                    Label("Key-Store", systemImage: "key.fill")
                 }
             }
 
