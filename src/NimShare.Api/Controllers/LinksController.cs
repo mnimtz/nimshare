@@ -592,6 +592,55 @@ public class LinksController : ControllerBase
         return Content(_qr.RenderSvg(url), "image/svg+xml; charset=utf-8");
     }
 
+    // v1.11.44 — Marcus's Notfall-Idee: manche Kunden können nimshare.com
+    // gar nicht erreichen (Firmen-Proxy blockt die Domain, z.B. Zscaler
+    // "Miscellaneous or Unknown"-Kategorie). Statt der Landing-Page liefert
+    // dieser Endpoint zeitlich befristete Azure-Blob-SAS-Direktlinks — die
+    // laufen über *.blob.core.windows.net, eine bei Enterprise-Filtern
+    // praktisch immer schon vertraute Microsoft-Domain. Reine Notfall-
+    // Umgehung: gesperrt für passwortgeschützte Links (SAS umgeht den
+    // Passwortschutz komplett), kein Tracking/Reporting auf diesem Pfad.
+    // Bei Ordner-Links nur die oberste Ebene (Marcus's Entscheidung — 90%
+    // der Fälle sind flache 2-3-Datei-Ordner, Unterordner sind selten genug
+    // dass der Sender die Datei sonst einzeln nachreichen kann).
+    public record EmergencyFileDto(Guid Id, string Name, long SizeBytes, string Url);
+    public record EmergencyDownloadResponse(IReadOnlyList<EmergencyFileDto> Files);
+
+    [HttpPost("{id:guid}/emergency-download")]
+    public async Task<IActionResult> EmergencyDownload(Guid id, CancellationToken ct)
+    {
+        var user = await _users.GetOrProvisionAsync(User, ct);
+        var link = user.Role == UserRole.Admin
+            ? await _db.ShareLinks.Include(l => l.File).Include(l => l.Folder)
+                .SingleOrDefaultAsync(l => l.Id == id, ct)
+            : await _db.ShareLinks.Include(l => l.File).Include(l => l.Folder)
+                .SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        if (link is null) return NotFound();
+        if (link.PasswordHash is not null)
+            return Problem(statusCode: 422, title: "Notfall-Download nicht möglich: Link ist passwortgeschützt.");
+
+        var ttl = TimeSpan.FromHours(48);
+        var files = new List<EmergencyFileDto>();
+        if (link.File is { DeletedAt: null } file)
+        {
+            var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType, ttl);
+            files.Add(new EmergencyFileDto(file.Id, file.Name, file.SizeBytes, sas.ToString()));
+        }
+        else if (link.FolderId is not null)
+        {
+            var children = await _db.Files
+                .Where(f => f.FolderId == link.FolderId && f.DeletedAt == null)
+                .OrderBy(f => f.Name)
+                .ToListAsync(ct);
+            foreach (var f in children)
+            {
+                var sas = _blobs.CreateDownloadSas(f.BlobPath, f.Name, f.ContentType, ttl);
+                files.Add(new EmergencyFileDto(f.Id, f.Name, f.SizeBytes, sas.ToString()));
+            }
+        }
+        return Ok(new EmergencyDownloadResponse(files));
+    }
+
     public record UpdateLinkRequest(DateTimeOffset? ExpiresAt, int? MaxDownloads, string? Message, bool? IsRevoked, bool? NotifyOnAccess, bool? IsPublic, string? AllowedEmails, bool? RequireEmailVerify,
         // v1.11.18: analog AllowedEmails — leerer String löscht die Seriennummer,
         // null = unverändert lassen.

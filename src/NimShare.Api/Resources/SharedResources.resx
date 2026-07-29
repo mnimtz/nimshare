@@ -144,6 +144,11 @@
 
   <data name="links.action.copy"><value>Copy URL</value></data>
   <data name="links.action.email"><value>Send by email</value></data>
+  <data name="links.action.emergency"><value>Emergency download</value></data>
+  <data name="links.emergency.hint"><value>Generates a direct download link (bypasses the nimshare.com landing page) — useful when a recipient's company proxy blocks our domain.</value></data>
+  <data name="links.emergency.title"><value>Emergency download</value></data>
+  <data name="links.emergency.lede"><value>Direct Azure links, valid for 48 hours, bypassing the nimshare.com landing page entirely. No password check, no tracking on this path — only share these with the intended recipient. For folders, only top-level files are listed.</value></data>
+  <data name="links.emergency.empty"><value>No files found for this link.</value></data>
   <data name="links.email.to"><value>Send this share link to which email address?</value></data>
   <data name="links.email.message"><value>Optional message to include:</value></data>
   <data name="links.email.sent"><value>Email queued.</value></data>

@@ -96,6 +96,11 @@
 
   <data name="links.action.copy"><value>Copiar URL</value></data>
   <data name="links.action.email"><value>Enviar por correo</value></data>
+  <data name="links.action.emergency"><value>Descarga de emergencia</value></data>
+  <data name="links.emergency.hint"><value>Genera un enlace de descarga directa (evita la página de nimshare.com) — útil cuando el proxy corporativo del destinatario bloquea nuestro dominio.</value></data>
+  <data name="links.emergency.title"><value>Descarga de emergencia</value></data>
+  <data name="links.emergency.lede"><value>Enlaces directos de Azure, válidos durante 48 horas, que evitan por completo la página de nimshare.com. Sin comprobación de contraseña, sin seguimiento en esta vía — compártelos solo con el destinatario previsto. En el caso de carpetas, solo se listan los archivos de nivel superior.</value></data>
+  <data name="links.emergency.empty"><value>No se encontraron archivos para este enlace.</value></data>
   <data name="links.email.to"><value>¿A qué dirección de correo?</value></data>
   <data name="links.email.message"><value>Mensaje opcional:</value></data>
   <data name="links.email.sent"><value>Correo enviado.</value></data>

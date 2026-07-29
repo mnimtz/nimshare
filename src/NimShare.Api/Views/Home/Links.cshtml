@@ -80,6 +80,10 @@ else
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
+                    @if (l.PasswordHash is null)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                    }
                     <button class="btn btn-ghost btn-sm" data-email="@l.Id">@T["links.action.email"]</button>
                     @if (isAdmin)
                     {
@@ -214,6 +218,10 @@ else
                        Delete bleiben bewusst bei canManage (keine neue Löschberechtigung). *@
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy-abs="@sdUrl">@T["links.action.copy"]</button>
+                    @if (l.PasswordHash is null)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                    }
                     @if (canManage)
                     {
                         @if (!l.IsRevoked)
@@ -307,6 +315,10 @@ else
                     <a class="btn btn-secondary btn-sm" href="/s/@l.Slug" target="_blank">↗ @T["links.action.open"]</a>
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
+                    @if (l.PasswordHash is null)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                    }
                     @if (!l.IsRevoked)
                     {
                         <button class="btn btn-ghost btn-sm" data-revoke="@l.Id">@T["links.action.revoke"]</button>
@@ -375,6 +387,10 @@ else
                        auch der Report-Button hier ungated. *@
                     <a class="btn btn-secondary btn-sm" href="/links/@l.Id">📊 @T["links.action.report"]</a>
                     <button class="btn btn-ghost btn-sm" data-copy="@(Url.RouteUrl(new { controller = "Share", action = "Landing", slug = l.Slug }) ?? $"/s/{l.Slug}")">@T["links.action.copy"]</button>
+                    @if (l.PasswordHash is null)
+                    {
+                        <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                    }
                     @if (canManagePublic)
                     {
                         @if (!l.IsRevoked)
@@ -455,6 +471,59 @@ document.querySelectorAll('[data-copy]').forEach(b => {
 document.querySelectorAll('[data-email]').forEach(b => {
     b.addEventListener('click', () => openEmailModal(b.dataset.email));
 });
+// v1.11.45 — Notfall-Download: Marcus's Idee für Kunden, deren Firmen-Proxy
+// nimshare.com blockt (Zscaler etc.). Erzeugt zeitlich befristete Azure-
+// Blob-SAS-Direktlinks (48h) pro Datei — bei Ordnern nur oberste Ebene,
+// bewusst nur für passwortlose Links (SAS umgeht den Passwortschutz).
+document.querySelectorAll('[data-emergency]').forEach(b => {
+    b.addEventListener('click', () => openEmergencyModal(b.dataset.emergency));
+});
+async function openEmergencyModal(linkId) {
+    document.getElementById('modalEmergency').classList.add('open');
+    document.getElementById('emergencyLoading').style.display = 'block';
+    document.getElementById('emergencyError').style.display = 'none';
+    const list = document.getElementById('emergencyList');
+    list.style.display = 'none';
+    list.innerHTML = '';
+    const r = await api('POST', `/api/v1/links/${linkId}/emergency-download`);
+    document.getElementById('emergencyLoading').style.display = 'none';
+    if (!r.ok) {
+        let msg = 'Failed: ' + r.status;
+        try { const p = await r.json(); if (p.title) msg = p.title; } catch {}
+        document.getElementById('emergencyError').textContent = msg;
+        document.getElementById('emergencyError').style.display = 'block';
+        return;
+    }
+    const d = await r.json();
+    if (!d.files || d.files.length === 0) {
+        list.innerHTML = `<p class="muted">${@Json.Serialize(T["links.emergency.empty"].Value)}</p>`;
+    } else {
+        d.files.forEach(f => {
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.style.cssText = 'justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle)';
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = f.name;
+            row.appendChild(nameSpan);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-ghost btn-sm';
+            btn.textContent = @Json.Serialize(T["links.action.copy"].Value);
+            btn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(f.url);
+                    btn.textContent = '✓';
+                    setTimeout(() => btn.textContent = @Json.Serialize(T["links.action.copy"].Value), 1200);
+                } catch {
+                    if (window.nsPrompt) window.nsPrompt('Copy this URL', '', f.url); else prompt('Copy this URL:', f.url);
+                }
+            });
+            row.appendChild(btn);
+            list.appendChild(row);
+        });
+    }
+    list.style.display = 'block';
+}
 async function openEmailModal(linkId) {
     document.getElementById('emailLinkId').value = linkId;
     document.getElementById('emailTo').value = '';
@@ -503,6 +572,20 @@ async function sendEmail() {
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalEmail').classList.remove('open')">@T["modal.cancel"]</button>
             <button type="button" class="btn btn-primary" onclick="sendEmail()">@T["links.email.send"]</button>
+        </div>
+    </div>
+</div>
+
+<!-- Notfall-Download modal — Azure Blob SAS Direktlinks, bypasst nimshare.com -->
+<div class="modal-backdrop" id="modalEmergency" onclick="if(event.target===this)document.getElementById('modalEmergency').classList.remove('open')">
+    <div class="modal-panel">
+        <h2>🆘 @T["links.emergency.title"]</h2>
+        <p class="muted">@T["links.emergency.lede"]</p>
+        <div id="emergencyLoading" class="muted">@T["keystore.loading"]</div>
+        <div id="emergencyError" class="helper" style="display:none;color:var(--status-critical)"></div>
+        <div id="emergencyList" style="display:none"></div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalEmergency').classList.remove('open')">@T["modal.cancel"]</button>
         </div>
     </div>
 </div>

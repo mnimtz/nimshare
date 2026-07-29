@@ -98,6 +98,11 @@
   <data name="links.action.delete"><value>Verwijderen</value></data>
   <data name="links.action.copy"><value>URL kopiëren</value></data>
   <data name="links.action.email"><value>Per e-mail versturen</value></data>
+  <data name="links.action.emergency"><value>Nooddownload</value></data>
+  <data name="links.emergency.hint"><value>Genereert een directe downloadlink (omzeilt de nimshare.com-landingspagina) — handig als de bedrijfsproxy van de ontvanger ons domein blokkeert.</value></data>
+  <data name="links.emergency.title"><value>Nooddownload</value></data>
+  <data name="links.emergency.lede"><value>Directe Azure-links, 48 uur geldig, die de nimshare.com-landingspagina volledig omzeilen. Geen wachtwoordcontrole, geen tracking op dit pad — deel deze alleen met de beoogde ontvanger. Bij mappen worden alleen bestanden op het bovenste niveau vermeld.</value></data>
+  <data name="links.emergency.empty"><value>Geen bestanden gevonden voor deze link.</value></data>
   <data name="links.confirm.revoke"><value>Deze link intrekken? Het bestand blijft; de URL werkt niet meer.</value></data>
   <data name="links.confirm.delete"><value>Deze link definitief verwijderen? Het bestand blijft.</value></data>
   <data name="links.email.to"><value>Naar welk e-mailadres versturen?</value></data>
