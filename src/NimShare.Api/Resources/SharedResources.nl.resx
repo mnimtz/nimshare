@@ -90,6 +90,9 @@
   <data name="links.slug"><value>Slug</value></data>
   <data name="links.downloads"><value>Downloads</value></data>
   <data name="links.expires"><value>Vervalt</value></data>
+  <data name="links.expiry_default_hint"><value>Standaard 8 weken vanaf aanmaak als leeg gelaten.</value></data>
+  <data name="links.permanent_label"><value>Permanent (verloopt nooit)</value></data>
+  <data name="links.search.placeholder"><value>Zoeken…</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Actief</value></data>
   <data name="links.revoked"><value>Ingetrokken</value></data>

@@ -16,6 +16,12 @@ public class UploadRequestLink
     public string? PasswordHash { get; set; }
 
     public DateTimeOffset? ExpiresAt { get; set; }
+
+    /// <summary>v1.11.50 — analog ShareLink.IsPermanent. Recurring-Requests
+    /// (RecurringDaysOfWeek gesetzt) werden vom Cleanup-Job unabhängig davon
+    /// immer verschont, da sie ihren eigenen Lebenszyklus haben.</summary>
+    public bool IsPermanent { get; set; }
+
     public int? MaxUploads { get; set; }
     public int UploadCount { get; set; }
 

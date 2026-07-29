@@ -204,6 +204,9 @@ struct ShareLinkDto: Codable, Identifiable, Hashable {
     let isOwnedByMe: Bool?
     let ownerName: String?
     let hasSerialNumber: Bool?
+    // v1.11.50: explizites "läuft nie ab". Optional für Rückwärtskompatibilität
+    // mit älteren Server-Versionen ohne dieses Feld.
+    let isPermanent: Bool?
 }
 
 // MARK: - Contacts (v1.10.71 iOS parity — Adressbuch)

@@ -605,6 +605,9 @@ final class NimShareAPI: ObservableObject {
         // v1.11.18: optionale Seriennummer/Lizenzcode — Server verschlüsselt,
         // Landing zeigt sie erst nach Klick.
         let serialNumber: String?
+        // v1.11.50: explizites "läuft nie ab" — Default false, damit ein
+        // fehlendes expiresAt serverseitig auf +8 Wochen defaultet.
+        let isPermanent: Bool
 
         // v1.10.169: expliziter init mit Defaults. Swift's synthesized
         // memberwise init verschluckt sich an inline `= nil`-Defaults auf
@@ -615,7 +618,8 @@ final class NimShareAPI: ObservableObject {
              maxDownloads: Int?, expiresAt: Date?, message: String?,
              notifyOnAccess: Bool, signingCertificateId: UUID?,
              displayAsGallery: Bool? = nil, allowUploads: Bool? = nil,
-             subdomainSlug: String? = nil, serialNumber: String? = nil) {
+             subdomainSlug: String? = nil, serialNumber: String? = nil,
+             isPermanent: Bool = false) {
             self.fileId = fileId
             self.folderId = folderId
             self.slug = slug
@@ -629,6 +633,7 @@ final class NimShareAPI: ObservableObject {
             self.allowUploads = allowUploads
             self.subdomainSlug = subdomainSlug
             self.serialNumber = serialNumber
+            self.isPermanent = isPermanent
         }
     }
     /// Create a share link with default options (no password, no expiry, no
@@ -660,6 +665,9 @@ final class NimShareAPI: ObservableObject {
         let signingCertificateId: UUID?
         // v1.11.0: Anforderung zusätzlich als Subdomain freigeben.
         let subdomainSlug: String?
+        // v1.11.50: explizites "läuft nie ab" — Default false, damit ein
+        // fehlendes expiresAt serverseitig auf +8 Wochen defaultet.
+        let isPermanent: Bool
     }
     struct UploadRequestResult: Decodable {
         let id: UUID
@@ -676,7 +684,8 @@ final class NimShareAPI: ObservableObject {
         let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
             slug: nil, password: nil, maxUploads: nil, expiresAt: nil,
             message: message, targetFolder: "Received", notifyOnUpload: true,
-            signingCertificateId: signingCertificateId, subdomainSlug: nil))
+            signingCertificateId: signingCertificateId, subdomainSlug: nil,
+            isPermanent: false))
         let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(UploadRequestResult.self, data)
@@ -1111,13 +1120,15 @@ final class NimShareAPI: ObservableObject {
                              displayAsGallery: Bool? = nil,
                              allowUploads: Bool? = nil,
                              subdomainSlug: String? = nil,
-                             serialNumber: String? = nil) async throws -> ShareLinkDto {
+                             serialNumber: String? = nil,
+                             isPermanent: Bool = false) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
             notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId,
             displayAsGallery: displayAsGallery, allowUploads: allowUploads,
-            subdomainSlug: subdomainSlug, serialNumber: serialNumber))
+            subdomainSlug: subdomainSlug, serialNumber: serialNumber,
+            isPermanent: isPermanent))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)
@@ -1130,11 +1141,13 @@ final class NimShareAPI: ObservableObject {
                                  message: String? = nil, targetFolder: String = "Received",
                                  notifyOnUpload: Bool = true,
                                  signingCertificateId: UUID? = nil,
-                                 subdomainSlug: String? = nil) async throws -> UploadRequestResult {
+                                 subdomainSlug: String? = nil,
+                                 isPermanent: Bool = false) async throws -> UploadRequestResult {
         let body = try Self.jsonEncoder.encode(CreateUploadRequestBody(
             slug: slug, password: password, maxUploads: maxUploads, expiresAt: expiresAt,
             message: message, targetFolder: targetFolder, notifyOnUpload: notifyOnUpload,
-            signingCertificateId: signingCertificateId, subdomainSlug: subdomainSlug))
+            signingCertificateId: signingCertificateId, subdomainSlug: subdomainSlug,
+            isPermanent: isPermanent))
         let req = request("POST", "api/v1/upload-requests", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(UploadRequestResult.self, data)
@@ -1149,6 +1162,8 @@ final class NimShareAPI: ObservableObject {
         let slug: String
         let createdAt: Date
         let expiresAt: Date?
+        // v1.11.50: explizites "läuft nie ab".
+        let isPermanent: Bool
         let maxUploads: Int?
         let uploadCount: Int
         let isRevoked: Bool

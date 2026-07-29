@@ -20,8 +20,10 @@ struct ShareLinkCreateSheet: View {
     @State private var slug = ""
     @State private var password = ""
     @State private var maxDownloadsText = ""
-    @State private var useExpiry = false
-    @State private var expiryDate = Date().addingTimeInterval(60*60*24*7)
+    // v1.11.50: Marcus's Wunsch — Default ist jetzt "läuft in 8 Wochen ab",
+    // "Dauerhaft" muss aktiv angeklickt werden (Web hat dieselbe Umkehr).
+    @State private var isPermanent = false
+    @State private var expiryDate = Date().addingTimeInterval(60*60*24*56)
     @State private var message = ""
     @State private var notifyOnAccess = false
     // v1.11.18: optionale Seriennummer/Lizenzcode — analog Web-Modal.
@@ -103,10 +105,10 @@ struct ShareLinkCreateSheet: View {
             Section("Limits") {
                 TextField("Max. Downloads (leer = unbegrenzt)", text: $maxDownloadsText)
                     .keyboardType(.numberPad)
-                Toggle("Ablaufdatum setzen", isOn: $useExpiry)
-                if useExpiry {
+                if !isPermanent {
                     DatePicker("Läuft ab am", selection: $expiryDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
                 }
+                Toggle("♾️ Dauerhaft (nie ablaufen)", isOn: $isPermanent)
             }
             Section("Nachricht (optional)") {
                 TextField("Kurze Nachricht für den Empfänger", text: $message, axis: .vertical)
@@ -213,14 +215,15 @@ struct ShareLinkCreateSheet: View {
                 slug: slug.isEmpty ? nil : slug,
                 password: password.isEmpty ? nil : password,
                 maxDownloads: maxDl,
-                expiresAt: useExpiry ? expiryDate : nil,
+                expiresAt: isPermanent ? nil : expiryDate,
                 message: message.isEmpty ? nil : message,
                 notifyOnAccess: notifyOnAccess,
                 signingCertificateId: selectedCertId,    // v1.10.146
                 displayAsGallery: isFolderTarget && displayAsGallery ? true : nil,  // v1.10.172
                 allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil,
                 subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug),  // v1.11.0
-                serialNumber: serialNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : serialNumber.trimmingCharacters(in: .whitespaces)  // v1.11.18
+                serialNumber: serialNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : serialNumber.trimmingCharacters(in: .whitespaces),  // v1.11.18
+                isPermanent: isPermanent  // v1.11.50
             )
             result = link
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
@@ -361,8 +364,10 @@ struct UploadRequestCreateSheet: View {
     @State private var slug = ""
     @State private var password = ""
     @State private var maxUploadsText = ""
-    @State private var useExpiry = false
-    @State private var expiryDate = Date().addingTimeInterval(60*60*24*7)
+    // v1.11.50: analog ShareLinkCreateSheet — Default 8 Wochen, "Dauerhaft"
+    // muss aktiv angeklickt werden.
+    @State private var isPermanent = false
+    @State private var expiryDate = Date().addingTimeInterval(60*60*24*56)
     @State private var message = ""
     @State private var notifyOnUpload = true
 
@@ -421,10 +426,10 @@ struct UploadRequestCreateSheet: View {
             Section("Limits") {
                 TextField("Max. Uploads (leer = unbegrenzt)", text: $maxUploadsText)
                     .keyboardType(.numberPad)
-                Toggle("Ablaufdatum setzen", isOn: $useExpiry)
-                if useExpiry {
+                if !isPermanent {
                     DatePicker("Läuft ab am", selection: $expiryDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
                 }
+                Toggle("♾️ Dauerhaft (nie ablaufen)", isOn: $isPermanent)
             }
             Section("Nachricht an den Empfänger") {
                 TextField("Was soll hochgeladen werden?", text: $message, axis: .vertical)
@@ -485,12 +490,13 @@ struct UploadRequestCreateSheet: View {
                 slug: slug.isEmpty ? nil : slug,
                 password: password.isEmpty ? nil : password,
                 maxUploads: Int(maxUploadsText.trimmingCharacters(in: .whitespaces)),
-                expiresAt: useExpiry ? expiryDate : nil,
+                expiresAt: isPermanent ? nil : expiryDate,
                 message: message.isEmpty ? nil : message,
                 targetFolder: (targetFolderName?.isEmpty == false) ? targetFolderName! : "Received",
                 notifyOnUpload: notifyOnUpload,
                 signingCertificateId: selectedCertId,    // v1.10.146
-                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug)  // v1.11.0
+                subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug),  // v1.11.0
+                isPermanent: isPermanent  // v1.11.50
             )
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }

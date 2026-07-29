@@ -245,6 +245,9 @@
   <data name="links.slug"><value>Slug</value></data>
   <data name="links.downloads"><value>Downloads</value></data>
   <data name="links.expires"><value>Expires</value></data>
+  <data name="links.expiry_default_hint"><value>Defaults to 8 weeks from creation if left empty.</value></data>
+  <data name="links.permanent_label"><value>Permanent (never expires)</value></data>
+  <data name="links.search.placeholder"><value>Search…</value></data>
   <data name="links.state"><value>State</value></data>
   <data name="links.active"><value>Active</value></data>
   <data name="links.revoked"><value>Revoked</value></data>

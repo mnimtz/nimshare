@@ -394,6 +394,9 @@ builder.Services.AddSingleton<IWebhookDispatcher, WebhookDispatcher>();
 // It needs to be resolvable from DI as an ActionFilter.
 builder.Services.AddScoped<NimShare.Api.Services.ApiTokenMethodGuard>();
 builder.Services.AddHostedService<RecurringUploadReopenerService>();
+// v1.11.50: räumt abgelaufene, nicht-permanente Links/Upload-Requests
+// stündlich weg — siehe ExpiredLinkCleanupService-Doku.
+builder.Services.AddHostedService<ExpiredLinkCleanupService>();
 
 // Session cookie backs the 2FA setup + login-challenge stashes.
 builder.Services.AddDistributedMemoryCache();

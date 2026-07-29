@@ -109,6 +109,11 @@
         <div class="field">
             <label>@T["upload.expires_at"]</label>
             <input type="datetime-local" id="shareExp"/>
+            <div class="helper">@T["links.expiry_default_hint"]</div>
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                <input type="checkbox" id="sharePermanent" onchange="onPermanentToggle('share')"/>
+                <span>♾️ @T["links.permanent_label"]</span>
+            </label>
         </div>
         <div class="field">
             <label>@T["upload.message"]</label>
@@ -249,6 +254,11 @@
         <div class="field">
             <label>@T["upload.expires_at"]</label>
             <input type="datetime-local" id="urExp"/>
+            <div class="helper">@T["links.expiry_default_hint"]</div>
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                <input type="checkbox" id="urPermanent" onchange="onPermanentToggle('ur')"/>
+                <span>♾️ @T["links.permanent_label"]</span>
+            </label>
         </div>
         <div class="field">
             <label>@T["upload.message"]</label>
@@ -591,8 +601,28 @@ function onShareKeyStoreModeChange() {
     if (on) document.getElementById('shareSerialNumber').value = '';
     else document.getElementById('shareDocUrlEnabled').checked = false;
 }
+// v1.11.50: Marcus's Wunsch — Ablauf-Default 8 Wochen, "Dauerhaft" muss
+// aktiv angeklickt werden. defaultExpiryLocal() liefert einen
+// datetime-local-tauglichen String (lokale Zeitzone, keine Sekunden).
+function defaultExpiryLocal() {
+    const d = new Date(Date.now() + 56 * 24 * 60 * 60 * 1000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+}
+function onPermanentToggle(prefix) {
+    const exp = document.getElementById(prefix + 'Exp');
+    const perm = document.getElementById(prefix + 'Permanent');
+    if (!exp || !perm) return;
+    exp.disabled = perm.checked;
+    if (perm.checked) exp.value = '';
+    else if (!exp.value) exp.value = defaultExpiryLocal();
+}
+
 function resetShareModal() {
     ['shareSlug','sharePw','shareMax','shareExp','shareMsg','shareSerialNumber','shareAllowedEmails'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('sharePermanent').checked = false;
+    document.getElementById('shareExp').disabled = false;
+    document.getElementById('shareExp').value = defaultExpiryLocal();
     document.getElementById('shareNotify').checked = false;
     document.getElementById('shareOtp').checked = false;
     document.getElementById('shareKeyStoreMode').checked = false;
@@ -613,6 +643,9 @@ function resetShareModal() {
 function openUploadRequestModal(folderId) {
     currentUploadReqFolder = folderId;
     ['urSlug','urPw','urMax','urExp','urMsg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('urPermanent').checked = false;
+    document.getElementById('urExp').disabled = false;
+    document.getElementById('urExp').value = defaultExpiryLocal();
     document.getElementById('urDateSubfolders').checked = true;
     const st = document.getElementById('urSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
@@ -672,6 +705,8 @@ async function createShareLink() {
         // reines Ein/Aus für die flexiblen Key-Store-Dokumente.
         keyStoreMode: !!document.getElementById('shareKeyStoreMode')?.checked,
         documentationEnabled: !!document.getElementById('shareDocUrlEnabled')?.checked,
+        // v1.11.50: explizites "läuft nie ab".
+        isPermanent: !!document.getElementById('sharePermanent')?.checked,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;
@@ -727,6 +762,8 @@ async function createUploadRequest() {
         signingCertificateId: document.getElementById('urCert').value || null,
         // v1.11.0: optionaler Subdomain-Slug (null wenn Toggle aus/leer).
         subdomainSlug: readSubdomainSlug('ur'),
+        // v1.11.50: explizites "läuft nie ab".
+        isPermanent: !!document.getElementById('urPermanent')?.checked,
     };
     const r = await fetch('/api/v1/upload-requests', {
         method: 'POST',

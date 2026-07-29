@@ -29,6 +29,11 @@ struct LinksView: View {
     // bzw. Links.cshtml data-email), iOS hatte keine UI dafür.
     @State private var qrLink: ShareLinkDto?
     @State private var emailSheetLink: ShareLinkDto?
+    // v1.11.50: Marcus's Wunsch — Suche über alle Sektionen (Web hat pro
+    // Sektion ein eigenes Feld; .searchable ist der native iOS-Weg und
+    // filtert alle drei Sektionen gleichzeitig, leere Sektionen blenden
+    // sich dann von selbst aus).
+    @State private var searchQuery = ""
 
     var body: some View {
         Group {
@@ -49,14 +54,20 @@ struct LinksView: View {
                     // v1.11.18: bevorzugt scope-basiert (private/group/public);
                     // Fallback auf isPublic für ältere Server-Antworten ohne
                     // das Feld.
-                    let hasScope = links.contains { $0.scope != nil }
+                    let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
+                    let visible = q.isEmpty ? links : links.filter { l in
+                        l.slug.lowercased().contains(q)
+                            || (l.targetName?.lowercased().contains(q) ?? false)
+                            || (l.ownerName?.lowercased().contains(q) ?? false)
+                    }
+                    let hasScope = visible.contains { $0.scope != nil }
                     let privateLinks = hasScope
-                        ? links.filter { $0.scope == "private" || $0.scope == nil }
-                        : links.filter { $0.isPublic != true }
-                    let groupLinks = hasScope ? links.filter { $0.scope == "group" } : []
+                        ? visible.filter { $0.scope == "private" || $0.scope == nil }
+                        : visible.filter { $0.isPublic != true }
+                    let groupLinks = hasScope ? visible.filter { $0.scope == "group" } : []
                     let publicLinks = hasScope
-                        ? links.filter { $0.scope == "public" }
-                        : links.filter { $0.isPublic == true }
+                        ? visible.filter { $0.scope == "public" }
+                        : visible.filter { $0.isPublic == true }
                     if !privateLinks.isEmpty {
                         Section("👤 Privat") {
                             ForEach(privateLinks) { linkRow($0) }
@@ -76,6 +87,7 @@ struct LinksView: View {
             }
         }
         .navigationTitle("Meine Links")
+        .searchable(text: $searchQuery, prompt: "Slug, Datei/Ordner, Owner")
         .task { await load() }
         .refreshable { await load() }
         // v1.10.113: Löschbestätigung.
@@ -256,7 +268,11 @@ struct LinksView: View {
             HStack(spacing: 12) {
                 Text("\(link.downloadCount) Downloads").font(.caption).foregroundStyle(.secondary)
                 if let limit = link.maxDownloads { Text("Limit: \(limit)").font(.caption).foregroundStyle(.secondary) }
-                if let exp = link.expiresAt {
+                // v1.11.50: ♾️ statt Datum, wenn der Link explizit dauerhaft ist.
+                if link.isPermanent == true {
+                    Label("Dauerhaft", systemImage: "infinity")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if let exp = link.expiresAt {
                     Text("Läuft ab: \(exp.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption).foregroundStyle(.secondary)
                 }

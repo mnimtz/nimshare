@@ -29,6 +29,14 @@ public class ShareLink
 
     public DateTimeOffset? ExpiresAt { get; set; }
 
+    /// <summary>
+    /// v1.11.50 — Wenn true, läuft der Link nie ab und wird vom
+    /// ExpiredLinkCleanupService ignoriert, egal was in ExpiresAt steht.
+    /// Muss aktiv gesetzt werden (Default false) — Marcus's Wunsch,
+    /// damit vergessene Links nicht endlos liegen bleiben.
+    /// </summary>
+    public bool IsPermanent { get; set; }
+
     /// <summary>Max downloads; null = unlimited.</summary>
     public int? MaxDownloads { get; set; }
 

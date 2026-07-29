@@ -90,7 +90,11 @@ public class LinksController : ControllerBase
         // v1.11.44: DocumentationUrl → DocumentationEnabled (reines Ein/Aus,
         // kein fester URL-Wert mehr — siehe ShareLink-Doku).
         bool KeyStoreMode = false,
-        bool DocumentationEnabled = false);
+        bool DocumentationEnabled = false,
+        // v1.11.50: explizites "läuft nie ab" — Default false, damit ein
+        // fehlendes ExpiresAt serverseitig auf +8 Wochen defaultet statt
+        // stillschweigend permanent zu werden (siehe Create()).
+        bool IsPermanent = false);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -127,7 +131,9 @@ public class LinksController : ControllerBase
         // v1.11.22: Lizenzschlüssel-Modus. v1.11.44: DocumentationEnabled
         // statt DocumentationUrl — reines Ein/Aus-Flag.
         bool KeyStoreMode = false,
-        bool DocumentationEnabled = false);
+        bool DocumentationEnabled = false,
+        // v1.11.50: Ablauf-Opt-out, siehe CreateLinkRequest.IsPermanent.
+        bool IsPermanent = false);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -272,6 +278,12 @@ public class LinksController : ControllerBase
         var isGalleryLink = displayAsGallery || (folder is not null && folder.Kind == FolderKind.Gallery);
         var allowUploads = req.AllowUploads && folder is not null && isGalleryLink;
 
+        // v1.11.50: Marcus's Wunsch — Links sollen nicht endlos liegen bleiben,
+        // wenn niemand sie später von Hand löscht. Default: 8 Wochen ab
+        // Erstellung, außer der Ersteller wählt explizit "Dauerhaft" oder gibt
+        // ein eigenes Datum vor.
+        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt ?? DateTimeOffset.UtcNow.AddDays(56));
+
         var link = new ShareLink
         {
             FileId = file?.Id,
@@ -279,7 +291,8 @@ public class LinksController : ControllerBase
             OwnerId = user.Id,
             Slug = slug,
             PasswordHash = string.IsNullOrEmpty(req.Password) ? null : _hasher.Hash(req.Password),
-            ExpiresAt = req.ExpiresAt,
+            ExpiresAt = expiresAt,
+            IsPermanent = req.IsPermanent,
             MaxDownloads = req.MaxDownloads,
             Message = req.Message,
             NotifyOnAccess = req.NotifyOnAccess,
@@ -648,7 +661,12 @@ public class LinksController : ControllerBase
         // v1.11.22: analog. null = unverändert lassen.
         bool? KeyStoreMode = null,
         // v1.11.44: DocumentationEnabled statt DocumentationUrl.
-        bool? DocumentationEnabled = null);
+        bool? DocumentationEnabled = null,
+        // v1.11.50: null = unverändert. true → ExpiresAt wird gelöscht
+        // (nie ablaufen); false → falls ExpiresAt dabei auch null ist, wird
+        // wieder auf +8 Wochen ab jetzt gesetzt statt versehentlich permanent
+        // zu bleiben.
+        bool? IsPermanent = null);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -664,6 +682,17 @@ public class LinksController : ControllerBase
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
         if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
+        // v1.11.50: Permanent-Umschalter. true → ExpiresAt raus. false →
+        // wenn dabei kein eigenes ExpiresAt mitkam und der Link bisher
+        // permanent war, auf +8 Wochen ab jetzt zurückfallen (sonst bliebe
+        // ExpiresAt weiter null und der Link liefe trotz "nicht permanent"
+        // nie ab).
+        if (req.IsPermanent is not null)
+        {
+            link.IsPermanent = req.IsPermanent.Value;
+            if (req.IsPermanent.Value) link.ExpiresAt = null;
+            else if (req.ExpiresAt is null && link.ExpiresAt is null) link.ExpiresAt = DateTimeOffset.UtcNow.AddDays(56);
+        }
         if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
         if (req.Message is not null) link.Message = req.Message;
         if (req.IsRevoked is not null) link.IsRevoked = req.IsRevoked.Value;
@@ -1048,7 +1077,8 @@ public class LinksController : ControllerBase
             OwnerName: l.OwnerId != currentUserId ? l.Owner?.DisplayName : null,
             HasSerialNumber: l.SerialNumberEncrypted != null,
             KeyStoreMode: l.KeyStoreMode,
-            DocumentationEnabled: l.DocumentationEnabled);
+            DocumentationEnabled: l.DocumentationEnabled,
+            IsPermanent: l.IsPermanent);
     }
 
     /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>

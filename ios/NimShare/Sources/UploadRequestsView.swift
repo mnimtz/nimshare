@@ -12,6 +12,8 @@ struct UploadRequestsView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var pendingDelete: NimShareAPI.UploadRequestListItemDto?
+    // v1.11.50: Marcus's Wunsch — Suche, analog LinksView.
+    @State private var searchQuery = ""
 
     var body: some View {
         Group {
@@ -29,12 +31,17 @@ struct UploadRequestsView: View {
                     systemImage: "tray.and.arrow.down",
                     description: Text(#"Erstelle eine Upload-Anforderung aus dem Kontext-Menü eines Ordners (Long-Press → „Upload anfordern“)."#))
             } else {
+                let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
+                let visible = q.isEmpty ? items : items.filter { it in
+                    it.slug.lowercased().contains(q) || (it.targetFolder?.lowercased().contains(q) ?? false)
+                }
                 List {
-                    ForEach(items) { row(for: $0) }
+                    ForEach(visible) { row(for: $0) }
                 }
             }
         }
         .navigationTitle("Upload-Anforderungen")
+        .searchable(text: $searchQuery, prompt: "Slug, Zielordner")
         .task { await load() }
         .refreshable { await load() }
         .alert(item: $pendingDelete) { it in
@@ -64,7 +71,11 @@ struct UploadRequestsView: View {
                     Label(target, systemImage: "folder")
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
-                if let exp = it.expiresAt {
+                // v1.11.50: ♾️ statt Datum, wenn die Anfrage explizit dauerhaft ist.
+                if it.isPermanent {
+                    Label("Dauerhaft", systemImage: "infinity")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if let exp = it.expiresAt {
                     Label(exp.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                         .font(.caption).foregroundStyle(.secondary)
                 }

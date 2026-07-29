@@ -245,6 +245,9 @@
   <data name="links.slug"><value>Slug</value></data>
   <data name="links.downloads"><value>Downloads</value></data>
   <data name="links.expires"><value>Läuft ab</value></data>
+  <data name="links.expiry_default_hint"><value>Standardmäßig 8 Wochen ab Erstellung, wenn leer gelassen.</value></data>
+  <data name="links.permanent_label"><value>Dauerhaft (läuft nie ab)</value></data>
+  <data name="links.search.placeholder"><value>Suchen…</value></data>
   <data name="links.state"><value>Status</value></data>
   <data name="links.active"><value>Aktiv</value></data>
   <data name="links.revoked"><value>Widerrufen</value></data>

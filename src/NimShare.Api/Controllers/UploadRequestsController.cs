@@ -47,7 +47,10 @@ public class UploadRequestsController : ControllerBase
         // v1.10.146: optionales Absender-Zertifikat (SigningCertificate.Id).
         Guid? SigningCertificateId = null,
         // v1.11.0: optionaler Subdomain-Slug (https://{slug}.{BaseDomain} → /u/…).
-        string? SubdomainSlug = null);
+        string? SubdomainSlug = null,
+        // v1.11.50: explizites "läuft nie ab" — analog LinksController.
+        // Default false → fehlendes ExpiresAt defaultet auf +8 Wochen.
+        bool IsPermanent = false);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRequest req, CancellationToken ct)
@@ -105,12 +108,16 @@ public class UploadRequestsController : ControllerBase
             targetFolderLabel = targetFolder.Name;
         }
 
+        // v1.11.50: siehe LinksController.Create — gleicher 8-Wochen-Default.
+        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt ?? DateTimeOffset.UtcNow.AddDays(56));
+
         var link = new UploadRequestLink
         {
             OwnerId = user.Id,
             Slug = slug,
             PasswordHash = string.IsNullOrEmpty(req.Password) ? null : _hasher.Hash(req.Password),
-            ExpiresAt = req.ExpiresAt,
+            ExpiresAt = expiresAt,
+            IsPermanent = req.IsPermanent,
             MaxUploads = req.MaxUploads,
             Message = req.Message,
             TargetFolder = targetFolderLabel,
@@ -131,6 +138,7 @@ public class UploadRequestsController : ControllerBase
             link.Slug,
             Url = Request.PublicUrl($"/u/{link.Slug}"),
             link.ExpiresAt,
+            link.IsPermanent,
             link.MaxUploads,
             link.TargetFolder,
             HasPassword = link.PasswordHash is not null,
@@ -148,7 +156,7 @@ public class UploadRequestsController : ControllerBase
             .OrderByDescending(l => l.CreatedAt)
             .Select(l => new
             {
-                l.Id, l.Slug, l.CreatedAt, l.ExpiresAt, l.MaxUploads, l.UploadCount, l.IsRevoked, l.TargetFolder,
+                l.Id, l.Slug, l.CreatedAt, l.ExpiresAt, l.IsPermanent, l.MaxUploads, l.UploadCount, l.IsRevoked, l.TargetFolder,
             })
             .ToListAsync(ct);
         return Ok(items);
