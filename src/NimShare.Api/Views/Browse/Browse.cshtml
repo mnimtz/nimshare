@@ -292,6 +292,11 @@
                                     @* v1.10.94: Direct-Share auch für Files als Hover-Icon *@
                                     <button title="@T["share.direct"]" aria-label="@T["share.direct"]" onclick="event.stopPropagation();openDirectShare({id:this.closest('tr').dataset.id, name:this.closest('tr').dataset.name, kind:'file'})">🤝</button>
                                     @if (canWrite) { <button title="@T["actions.move"]" aria-label="@T["actions.move"]" onclick="event.stopPropagation();openMoveSingle('@f.Id')">↦</button> }
+                                    @* v1.11.60: Rename fehlte für Files komplett (nur Ordner hatten den
+                                       Stift) — Marcus's Hinweis. Gleiche Sichtbarkeit wie Delete daneben,
+                                       Server (CanDeleteAsync) entscheidet die eigentliche Berechtigung. *@
+                                    <button title="@T["actions.rename"]" aria-label="@T["actions.rename"]"
+                                            onclick="event.stopPropagation();nimRenameFile(this.closest('tr').dataset.id, this.closest('tr').dataset.name)">✎</button>
                                     <button title="@T["actions.delete"]" aria-label="@T["actions.delete"]" onclick="event.stopPropagation();deleteFile('@f.Id')">🗑</button>
                                 </div>
                             </td>
@@ -591,6 +596,24 @@ async function nimRenameFolder(id, currentName) {
     else nimAlert('Rename fehlgeschlagen: ' + r.status, { kind: 'error' });
 }
 
+// v1.11.60: Rename fehlte bislang komplett für Dateien (weder Kontextmenü
+// noch Hover-Icon) — nur Ordner hatten nimRenameFolder. Nutzt die bereits
+// vorhandene JSON-API POST /api/v1/files/{id}/rename (FilesController.Rename),
+// keine Antiforgery nötig — wie deleteFile/performMove/performCopy auf
+// dieser Seite.
+async function nimRenameFile(id, currentName) {
+    const newName = window.prompt(@Json.Serialize(T["actions.rename"].Value), currentName);
+    if (!newName || newName === currentName) return;
+    const r = await fetch('/api/v1/files/' + id + '/rename', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
+        body: JSON.stringify({ name: newName }),
+    });
+    if (r.ok) { window.location.reload(); return; }
+    let msg = 'HTTP ' + r.status;
+    try { const d = await r.json(); msg = d.detail || d.title || msg; } catch {}
+    nimAlert('Rename fehlgeschlagen: ' + msg, { kind: 'error' });
+}
+
 // v1.10.96: Fix Marcus's Delete-Bug — vorher warf der Delete bei nicht-leerem
 // Ordner nur eine Fehlermeldung. Jetzt: Content-Count via API holen, dann
 // abhängig davon einstufige oder zweistufige Confirmation.
@@ -816,7 +839,11 @@ document.querySelectorAll('tr.ctx').forEach(tr => {
         showFor('sign',        isSignable);
         showFor('uploadReq',   ctxTarget.kind === 'folder');
         showFor('downloadZip', true);   // v1.10.143: ZIP auch für einzelne Dateien
-        showFor('rename',      ctxTarget.kind === 'folder' && CAN_MANAGE);
+        // v1.11.60: Rename auch für Dateien anbieten — gleiche Sichtbarkeits-
+        // Regel wie Delete (kein Rename auf Pin-Verweis-Zeilen), der Server
+        // (CanDeleteAsync) validiert die eigentliche Berechtigung.
+        showFor('rename',      (ctxTarget.kind === 'folder' && CAN_MANAGE)
+                            || (ctxTarget.kind === 'file' && !ctxTarget.pinned));
         showFor('icon',        ctxTarget.kind === 'folder' && CAN_MANAGE);
         // v1.10.64: Sub-Ordner direkt aus dem Kontext eines anderen Ordners
         // anlegen — spart einen Navigations-Sprung.
@@ -936,7 +963,10 @@ ctxMenu.querySelectorAll('button').forEach(b => {
             if (ctxTarget.kind === 'folder') downloadFolderZip(ctxTarget.id, ctxTarget.name);
             else downloadFileZip(ctxTarget.id, ctxTarget.name);   // v1.10.143
         }
-        if (act === 'rename' && ctxTarget.kind === 'folder') nimRenameFolder(ctxTarget.id, ctxTarget.name);
+        if (act === 'rename') {
+            if (ctxTarget.kind === 'folder') nimRenameFolder(ctxTarget.id, ctxTarget.name);
+            else if (ctxTarget.kind === 'file') nimRenameFile(ctxTarget.id, ctxTarget.name);
+        }
         if (act === 'icon' && ctxTarget.kind === 'folder') openFolderIcon(ctxTarget);
         if (act === 'newSubfolder' && ctxTarget.kind === 'folder') openNewFolderModal(ctxTarget.id);
         // v1.10.110: Ordner-Varianten mitrouten.
