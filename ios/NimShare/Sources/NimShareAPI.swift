@@ -898,6 +898,7 @@ final class NimShareAPI: ObservableObject {
         let path: String?
         let scope: String
         let parentId: UUID?
+        let groupId: UUID?
         let isRoot: Bool?
     }
     func writableFoldersAll() async throws -> [WritableFolderNode] {

@@ -161,6 +161,7 @@
             <span class="count" id="bulkCount">0 @T["bulk.selected"]</span>
             <button onclick="bulkZip()">📦 @T["bulk.download_zip"]</button>
             @if (canWrite) { <button onclick="openMoveModal()">↦ @T["bulk.move"]</button> }
+            <button onclick="openCopyBulkModal()">⧉ @T["bulk.copy"]</button>
             <button onclick="bulkDelete()">🗑 @T["bulk.delete"]</button>
             <button onclick="clearSelection()" style="margin-left:auto">✕ @T["bulk.clear"]</button>
         </div>
@@ -493,15 +494,19 @@
 
 <partial name="_LinkModals" model="@current" />
 
-@* v1.10.67: Move + Copy nutzen jetzt einen echten Ordner-Browser statt
-   einer flachen Dropdown-Liste. Marcus's Feedback: "langes fixes Dropdown
-   an Ordnern - nicht wirklich state of the art". Der Browser zeigt eine
-   Baum-Struktur mit aufklappbaren Ordnern, aktueller Pfad wird prominent
-   angezeigt, Zielordner wird per Klick markiert (highlight). *@
+@* v1.11.59: Move + Copy nutzen jetzt einen echten Live-Ordner-Browser —
+   Bibliotheks-Umschalter (nur Copy), Breadcrumb-Navigation und eine
+   Live-Suche statt eines vorab aufgeklappten Baums. Marcus's Feedback:
+   "unterschiedliche Darstellungen um das Ziel auszuwählen, statisch,
+   kein wirkliches Browse". Beide Modals teilen sich jetzt dieselbe
+   Datenquelle (writable-all) und dieselbe FolderPicker-Logik. *@
 <div class="modal-backdrop" id="modalMove" onclick="if(event.target===this)closeModal('modalMove')">
     <div class="modal-panel folder-picker-panel">
         <h2>@T["move.title"]</h2>
         <p class="muted" id="moveHint"></p>
+        <div class="fp-lib-switch" id="moveLibSwitch" style="display:none"></div>
+        <input type="text" class="fp-search" id="moveSearch" placeholder="@T["folderpicker.search.placeholder"]" oninput="FolderPicker.onSearch('move', this.value)">
+        <div class="fp-crumbs" id="moveCrumbs"></div>
         <div class="folder-picker" id="movePicker" data-mode="move"></div>
         <div class="folder-picker-target">
             <span class="muted">@T["move.target"]:</span>
@@ -518,6 +523,9 @@
     <div class="modal-panel folder-picker-panel">
         <h2>@T["copy.title"]</h2>
         <p class="muted" id="copyHint"></p>
+        <div class="fp-lib-switch" id="copyLibSwitch" style="display:none"></div>
+        <input type="text" class="fp-search" id="copySearch" placeholder="@T["folderpicker.search.placeholder"]" oninput="FolderPicker.onSearch('copy', this.value)">
+        <div class="fp-crumbs" id="copyCrumbs"></div>
         <div class="folder-picker" id="copyPicker" data-mode="copy"></div>
         <div class="folder-picker-target">
             <span class="muted">@T["move.target"]:</span>
@@ -534,6 +542,7 @@
 const FOLDER_ID = @Json.Serialize(current.Id);
 const RETURN_URL = @Json.Serialize(currentUrl);
 const SCOPE = @Json.Serialize(scope.ToString());
+const GROUP_ID = @Json.Serialize(groupId?.ToString());
 const CAN_WRITE = @(canWrite ? "true" : "false");
 const CAN_MANAGE = @(canManage ? "true" : "false");
 
@@ -961,21 +970,24 @@ async function setFolderKind(folderId, kind) {
     }
 }
 
-// ── v1.10.67: Ordner-Browser für Move + Copy ──────────────────
-// Marcus's Feedback zu v1.10.66: das lange fixe Dropdown "nicht wirklich
-// state of the art" — jetzt ein echter Baum-Picker. Beide Modals nutzen
-// dieselbe Render-Logik (openFolderPicker), unterscheiden sich nur in
-// (a) welcher Endpoint für die Ordnerliste (writable-all reserviert für
-// Copy weil cross-scope, writable?scope=… für Move weil same-scope), und
-// (b) welche Action beim Bestätigen läuft.
+// ── v1.11.59: FolderPicker — einheitlicher Live-Ordner-Browser für ────
+// Move + Copy. Marcus's Feedback: "unterschiedliche Darstellungen um das
+// Ziel auszuwählen, statisch, kein wirkliches Browse". Beide Modals
+// teilen sich jetzt dieselbe Datenquelle (writable-all) und dieselbe
+// Navigation: Bibliotheks-Umschalter (nur Copy, cross-scope) →
+// Breadcrumb-Drilldown durch Unterordner → Live-Suche springt direkt
+// zum Treffer. Bestätigt wird immer der gerade geöffnete Ordner.
 let moveIds = [];
 let copyIds = [];
-// v1.10.110: Move/Copy können jetzt auch Ordner betreffen. moveKind/copyKind
+// v1.10.110: Move/Copy können auch Ordner betreffen. moveKind/copyKind
 // steuert, ob performMove/performCopy den Datei- oder den Ordner-Endpoint ruft.
 let moveKind = 'file';
 let copyKind = 'file';
-const pickerState = { move: { target: null, expanded: new Set() },
-                       copy: { target: null, expanded: new Set() } };
+const pickerState = { move: { target: null, items: [], path: [] },
+                       copy: { target: null, items: [], path: [] } };
+const FP_LIB_LABELS = { Personal: @Json.Serialize(T["browse.libraries.mine"].Value), Public: @Json.Serialize(T["browse.libraries.shared"].Value) };
+const FP_EMPTY = @Json.Serialize(T["folderpicker.empty"].Value);
+const FP_NO_RESULTS = @Json.Serialize(T["folderpicker.search.empty"].Value);
 
 async function openMoveModal() {
     moveIds = selectedIds();
@@ -983,158 +995,197 @@ async function openMoveModal() {
     if (!moveIds.length) return;
     const tpl = @Json.Serialize(T["move.hint.multi"].Value);
     document.getElementById('moveHint').textContent = tpl.replace("{n}", moveIds.length);
-    await openFolderPicker('move', /* scoped */ true);
+    await FolderPicker.open('move', /* crossScope */ false);
 }
 async function openMoveSingle(id) {
     moveIds = [id];
     moveKind = 'file';
     document.getElementById('moveHint').textContent = @Json.Serialize(T["move.hint.single"].Value);
-    await openFolderPicker('move', true);
+    await FolderPicker.open('move', false);
 }
 // v1.10.110: Ordner verschieben (same-scope reparent).
 async function openMoveSingleFolder(id) {
     moveIds = [id];
     moveKind = 'folder';
     document.getElementById('moveHint').textContent = @Json.Serialize(T["move.hint.single_folder"].Value);
-    await openFolderPicker('move', true, id);
+    await FolderPicker.open('move', false, id);
 }
 async function openCopySingle(id) {
     copyIds = [id];
     copyKind = 'file';
     document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single"].Value);
-    await openFolderPicker('copy', /* scoped */ false);
+    await FolderPicker.open('copy', /* crossScope */ true);
 }
 // v1.10.110: Ordner kopieren (rekursiv, Ziel scope-übergreifend erlaubt).
 async function openCopySingleFolder(id) {
     copyIds = [id];
     copyKind = 'folder';
     document.getElementById('copyHint').textContent = @Json.Serialize(T["copy.hint.single_folder"].Value);
-    await openFolderPicker('copy', /* scoped */ false, id);
+    await FolderPicker.open('copy', /* crossScope */ true, id);
+}
+// v1.11.59: Bulk-Copy — Toolbar hatte bislang nur Bulk-Move (iOS behandelt
+// Move/Copy bulk-symmetrisch, das gleicht Web jetzt an).
+async function openCopyBulkModal() {
+    copyIds = selectedIds();
+    copyKind = 'file';
+    if (!copyIds.length) return;
+    const tpl = @Json.Serialize(T["copy.hint.multi"].Value);
+    document.getElementById('copyHint').textContent = tpl.replace("{n}", copyIds.length);
+    await FolderPicker.open('copy', true);
 }
 
-/// Renders a fold-out folder tree in modalMove / modalCopy. `scoped`
-/// limits the picker to the CURRENT scope (used by Move — cross-scope
-/// moves are refused by the server anyway); Copy shows all writable
-/// folders across all scopes. `excludeId` (optional) blendet einen Ordner
-/// aus der Auswahl aus — beim Ordner-Move/Copy den Ordner selbst.
-async function openFolderPicker(mode, scoped, excludeId) {
-    pickerState[mode] = { target: null, expanded: new Set() };
-    const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
-    picker.innerHTML = '<div class="muted" style="padding:16px">Lädt…</div>';
-    const modalId = mode === 'move' ? 'modalMove' : 'modalCopy';
-    document.getElementById(modalId).classList.add('open');
-    document.getElementById(mode + 'TargetLabel').textContent = '—';
-    document.getElementById(mode + 'Btn').disabled = true;
+const FolderPicker = {
+    /// `crossScope` false (Move) startet direkt im aktuellen Scope/Group,
+    /// kein Bibliotheks-Umschalter (Cross-Scope-Moves lehnt der Server eh
+    /// ab). `crossScope` true (Copy) zeigt eine Bibliotheks-Umschalter-Leiste
+    /// aus allen in der Antwort vorhandenen beschreibbaren Roots.
+    /// `excludeId` (optional) blendet beim Ordner-Move/Copy den Ordner
+    /// selbst + alle seine Nachfahren aus — in Browse UND Suche.
+    async open(mode, crossScope, excludeId) {
+        const st = pickerState[mode];
+        st.target = null;
+        const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
+        const crumbsEl = document.getElementById(mode + 'Crumbs');
+        const libSwitchEl = document.getElementById(mode + 'LibSwitch');
+        const searchEl = document.getElementById(mode + 'Search');
+        picker.innerHTML = '<div class="muted" style="padding:16px">Lädt…</div>';
+        crumbsEl.innerHTML = '';
+        libSwitchEl.style.display = 'none';
+        libSwitchEl.innerHTML = '';
+        searchEl.value = '';
+        document.getElementById(mode === 'move' ? 'modalMove' : 'modalCopy').classList.add('open');
+        document.getElementById(mode + 'TargetLabel').textContent = '—';
+        document.getElementById(mode + 'Btn').disabled = true;
 
-    let items;
-    if (scoped) {
-        const r = await fetch('/api/v1/folders/writable?scope=' + SCOPE + '&exclude=' + FOLDER_ID, { credentials: 'same-origin' });
-        if (!r.ok) { picker.innerHTML = '<div class="muted">Fehler beim Laden</div>'; return; }
-        // /writable liefert flache Liste OHNE parentId → wir behandeln
-        // sie als flache Liste ohne Baum-Ebenen (kompatibel mit alten
-        // Servern). Der neue writable-all hat parentId.
-        items = (await r.json()).map(x => ({ id: x.id, name: x.path, scope: SCOPE, parentId: null, isRoot: false }));
-    } else {
         const r = await fetch('/api/v1/folders/writable-all', { credentials: 'same-origin' });
-        if (!r.ok) { picker.innerHTML = '<div class="muted">Fehler beim Laden</div>'; return; }
-        items = await r.json();
-    }
-    // v1.10.110: beim Ordner-Move/Copy den Ordner selbst als Ziel ausblenden
-    // (der Server lehnt Zyklus eh mit 409 ab, aber so sieht der User ihn gar
-    // nicht erst). Unterordner filtern wir nicht clientseitig — der Baum
-    // enthält ohnehin nur beschreibbare Ordner, und der Server fängt den
-    // Descendant-Fall ab.
-    if (excludeId) items = items.filter(x => x.id !== excludeId);
-    renderFolderPicker(picker, items, mode);
-}
+        if (!r.ok) { picker.innerHTML = '<div class="muted" style="padding:16px">Fehler beim Laden</div>'; return; }
+        let items = await r.json();
 
-function renderFolderPicker(picker, items, mode) {
-    // Baumaufbau: parentId → children. Roots sind Nodes ohne parentId
-    // (oder deren parentId nicht in items ist — z.B. writable-Fallback).
-    const byId = new Map(items.map(x => [x.id, { ...x, children: [] }]));
-    const roots = [];
-    for (const it of byId.values()) {
-        if (it.parentId && byId.has(it.parentId)) {
-            byId.get(it.parentId).children.push(it);
+        if (excludeId) {
+            const excludeSet = new Set([excludeId]);
+            let grew = true;
+            while (grew) {
+                grew = false;
+                for (const it of items) {
+                    if (it.parentId && excludeSet.has(it.parentId) && !excludeSet.has(it.id)) { excludeSet.add(it.id); grew = true; }
+                }
+            }
+            items = items.filter(x => !excludeSet.has(x.id));
+        }
+
+        if (!crossScope) {
+            items = items.filter(x => x.scope === SCOPE && (SCOPE !== 'Group' || x.groupId === GROUP_ID));
+            st.items = items;
+            const root = items.find(x => x.isRoot);
+            if (!root) { picker.innerHTML = '<div class="muted" style="padding:16px">' + FP_EMPTY + '</div>'; return; }
+            st.path = [root];
         } else {
-            roots.push(it);
-        }
-    }
-    // Innerhalb jeder Ebene alphabetisch, aber Roots nach Scope sortieren.
-    const scopeRank = { Personal: 0, Public: 1, Group: 2 };
-    roots.sort((a, b) => (scopeRank[a.scope] ?? 9) - (scopeRank[b.scope] ?? 9)
-                        || (a.name || '').localeCompare(b.name || ''));
-    function sortChildren(n) { n.children.sort((a, b) => (a.name || '').localeCompare(b.name || '')); n.children.forEach(sortChildren); }
-    roots.forEach(sortChildren);
-
-    picker.innerHTML = '';
-    if (roots.length === 0) {
-        picker.innerHTML = '<div class="muted" style="padding:16px">Keine Zielordner verfügbar.</div>';
-        return;
-    }
-    const state = pickerState[mode];
-    // Roots per Default aufgeklappt.
-    roots.forEach(r => state.expanded.add(r.id));
-
-    function nodeEl(n, depth) {
-        const wrap = document.createElement('div');
-        wrap.className = 'fp-node';
-        const row = document.createElement('div');
-        row.className = 'fp-row';
-        row.style.paddingLeft = (6 + depth * 16) + 'px';
-        row.dataset.id = n.id;
-        const hasKids = n.children.length > 0;
-        const tog = document.createElement('span');
-        tog.className = 'fp-toggle';
-        tog.textContent = hasKids ? (state.expanded.has(n.id) ? '▾' : '▸') : '·';
-        if (hasKids) {
-            tog.style.cursor = 'pointer';
-            tog.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (state.expanded.has(n.id)) state.expanded.delete(n.id);
-                else state.expanded.add(n.id);
-                renderFolderPicker(picker, [...byId.values()], mode);
+            st.items = items;
+            const roots = items.filter(x => x.isRoot);
+            if (!roots.length) { picker.innerHTML = '<div class="muted" style="padding:16px">' + FP_EMPTY + '</div>'; return; }
+            const rank = { Personal: 0, Public: 1, Group: 2 };
+            roots.sort((a, b) => (rank[a.scope] ?? 9) - (rank[b.scope] ?? 9) || (a.name || '').localeCompare(b.name || ''));
+            libSwitchEl.style.display = 'flex';
+            roots.forEach((root, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'fp-lib-tab' + (i === 0 ? ' active' : '');
+                btn.textContent = FP_LIB_LABELS[root.scope] || root.name || root.path;
+                btn.addEventListener('click', () => {
+                    libSwitchEl.querySelectorAll('.fp-lib-tab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    st.path = [root];
+                    this.renderBrowse(mode);
+                });
+                libSwitchEl.appendChild(btn);
             });
+            st.path = [roots[0]];
         }
-        const ico = document.createElement('span');
-        ico.className = 'fp-icon';
-        ico.textContent = n.isRoot
-            ? (n.scope === 'Personal' ? '👤' : n.scope === 'Public' ? '🌍' : '👥')
-            : '📁';
-        const lbl = document.createElement('span');
-        lbl.className = 'fp-label';
-        lbl.textContent = n.name || n.path || '(unbenannt)';
-        row.appendChild(tog);
-        row.appendChild(ico);
-        row.appendChild(lbl);
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', () => {
-            state.target = { id: n.id, name: fullPath(n) };
-            picker.querySelectorAll('.fp-row.selected').forEach(r => r.classList.remove('selected'));
-            row.classList.add('selected');
-            document.getElementById(mode + 'TargetLabel').textContent = fullPath(n);
-            document.getElementById(mode + 'Btn').disabled = false;
+        this.renderBrowse(mode);
+    },
+
+    onSearch(mode, q) {
+        q = (q || '').trim().toLowerCase();
+        if (!q) { this.renderBrowse(mode); return; }
+        const st = pickerState[mode];
+        const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
+        const crumbsEl = document.getElementById(mode + 'Crumbs');
+        crumbsEl.innerHTML = '';
+        const hits = st.items.filter(x => (x.name || '').toLowerCase().includes(q) || (x.path || '').toLowerCase().includes(q))
+                              .sort((a, b) => (a.name || '').localeCompare(b.name || '')).slice(0, 40);
+        picker.innerHTML = '';
+        if (!hits.length) { picker.innerHTML = '<div class="muted" style="padding:16px">' + FP_NO_RESULTS + '</div>'; return; }
+        const byId = new Map(st.items.map(x => [x.id, x]));
+        hits.forEach(n => {
+            const row = document.createElement('div');
+            row.className = 'fp-row fp-row-search';
+            const ico = document.createElement('span'); ico.className = 'fp-icon'; ico.textContent = this.iconFor(n);
+            const text = document.createElement('span'); text.className = 'fp-row-text';
+            const lbl = document.createElement('span'); lbl.className = 'fp-label'; lbl.textContent = n.name || '(unbenannt)';
+            const sub = document.createElement('span'); sub.className = 'fp-sub'; sub.textContent = n.path || '';
+            text.appendChild(lbl); text.appendChild(sub);
+            const chev = document.createElement('span'); chev.className = 'fp-chevron'; chev.textContent = '›';
+            row.appendChild(ico); row.appendChild(text); row.appendChild(chev);
+            row.addEventListener('click', () => {
+                document.getElementById(mode + 'Search').value = '';
+                st.path = this.ancestryOf(n, byId);
+                this.renderBrowse(mode);
+            });
+            picker.appendChild(row);
         });
-        wrap.appendChild(row);
-        if (hasKids && state.expanded.has(n.id)) {
-            const kids = document.createElement('div');
-            kids.className = 'fp-children';
-            n.children.forEach(c => kids.appendChild(nodeEl(c, depth + 1)));
-            wrap.appendChild(kids);
-        }
-        return wrap;
-    }
-    function fullPath(n) {
-        const parts = [n.name || n.path];
+    },
+
+    ancestryOf(n, byId) {
+        const parts = [n];
         let cur = n;
-        while (cur.parentId && byId.has(cur.parentId)) {
-            cur = byId.get(cur.parentId);
-            parts.unshift(cur.name || cur.path);
-        }
-        return parts.join(' / ');
-    }
-    roots.forEach(r => picker.appendChild(nodeEl(r, 0)));
-}
+        while (cur.parentId && byId.has(cur.parentId)) { cur = byId.get(cur.parentId); parts.unshift(cur); }
+        return parts;
+    },
+
+    iconFor(n) {
+        if (n.isRoot) return n.scope === 'Personal' ? '👤' : n.scope === 'Public' ? '🌍' : '👥';
+        return '📁';
+    },
+
+    labelOf(n) { return n.isRoot ? (FP_LIB_LABELS[n.scope] || n.name || n.path) : (n.name || n.path); },
+
+    renderBrowse(mode) {
+        const st = pickerState[mode];
+        const picker = document.getElementById(mode === 'move' ? 'movePicker' : 'copyPicker');
+        const crumbsEl = document.getElementById(mode + 'Crumbs');
+        const current = st.path[st.path.length - 1];
+
+        crumbsEl.innerHTML = '';
+        st.path.forEach((n, i) => {
+            if (i > 0) { const sep = document.createElement('span'); sep.className = 'fp-crumb-sep'; sep.textContent = '›'; crumbsEl.appendChild(sep); }
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fp-crumb';
+            btn.textContent = this.labelOf(n);
+            btn.addEventListener('click', () => { st.path = st.path.slice(0, i + 1); this.renderBrowse(mode); });
+            crumbsEl.appendChild(btn);
+        });
+
+        // Bestätigt wird immer der gerade geöffnete Ordner.
+        st.target = { id: current.id, name: st.path.map(n => this.labelOf(n)).join(' / ') };
+        document.getElementById(mode + 'TargetLabel').textContent = st.target.name;
+        document.getElementById(mode + 'Btn').disabled = false;
+
+        const kids = st.items.filter(x => x.parentId === current.id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        picker.innerHTML = '';
+        if (!kids.length) { picker.innerHTML = '<div class="muted" style="padding:16px">' + FP_EMPTY + '</div>'; return; }
+        kids.forEach(n => {
+            const row = document.createElement('div');
+            row.className = 'fp-row';
+            const ico = document.createElement('span'); ico.className = 'fp-icon'; ico.textContent = '📁';
+            const lbl = document.createElement('span'); lbl.className = 'fp-label'; lbl.textContent = n.name || '(unbenannt)';
+            const chev = document.createElement('span'); chev.className = 'fp-chevron'; chev.textContent = '›';
+            row.appendChild(ico); row.appendChild(lbl); row.appendChild(chev);
+            row.addEventListener('click', () => { st.path = [...st.path, n]; this.renderBrowse(mode); });
+            picker.appendChild(row);
+        });
+    },
+};
 
 async function performMove() {
     const t = pickerState.move.target;

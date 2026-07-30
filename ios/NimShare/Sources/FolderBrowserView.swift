@@ -214,7 +214,8 @@ struct FolderBrowserView: View {
         // v1.10.72: Bulk-Move/Copy — dasselbe FolderPickerSheet wie
         // Single-Item, aber loopt über die Selection.
         .sheet(item: $bulkPickerOp) { op in
-            FolderPickerSheet(title: op == .move ? "\(selection.count) verschieben nach" : "\(selection.count) kopieren nach") { targetId, _ in
+            FolderPickerSheet(title: op == .move ? "\(selection.count) verschieben nach" : "\(selection.count) kopieren nach",
+                               crossScope: op == .copy, currentScope: scope, currentGroupId: groupId) { targetId, _ in
                 Task { await bulkMoveOrCopy(op, targetId: targetId) }
             }
         }
@@ -222,19 +223,23 @@ struct FolderBrowserView: View {
         .sheet(item: $pickerOp) { op in
             switch op {
             case .move(let fid, let name):
-                FolderPickerSheet(title: "\"\(name)\" verschieben nach") { targetId, targetPath in
+                FolderPickerSheet(title: "\"\(name)\" verschieben nach",
+                                   crossScope: false, currentScope: scope, currentGroupId: groupId) { targetId, targetPath in
                     Task { await performMove(fileId: fid, targetId: targetId, targetPath: targetPath) }
                 }
             case .copy(let fid, let name):
-                FolderPickerSheet(title: "\"\(name)\" kopieren nach") { targetId, targetPath in
+                FolderPickerSheet(title: "\"\(name)\" kopieren nach",
+                                   crossScope: true, currentScope: scope, currentGroupId: groupId) { targetId, targetPath in
                     Task { await performCopy(fileId: fid, targetId: targetId, targetPath: targetPath) }
                 }
             case .moveFolder(let fid, let name):
-                FolderPickerSheet(title: "\"\(name)\" verschieben nach") { targetId, targetPath in
+                FolderPickerSheet(title: "\"\(name)\" verschieben nach",
+                                   crossScope: false, currentScope: scope, currentGroupId: groupId, excludeFolderId: fid) { targetId, targetPath in
                     Task { await performMoveFolder(folderId: fid, targetId: targetId, targetPath: targetPath) }
                 }
             case .copyFolder(let fid, let name):
-                FolderPickerSheet(title: "\"\(name)\" kopieren nach") { targetId, targetPath in
+                FolderPickerSheet(title: "\"\(name)\" kopieren nach",
+                                   crossScope: true, currentScope: scope, currentGroupId: groupId, excludeFolderId: fid) { targetId, targetPath in
                     Task { await performCopyFolder(folderId: fid, targetId: targetId, targetPath: targetPath) }
                 }
             }

@@ -676,51 +676,15 @@ public class BrowseController : Controller
     private string SafeReturn(string? url) =>
         !string.IsNullOrEmpty(url) && Url.IsLocalUrl(url) ? url : "/browse";
 
-    /// <summary>Flat list of the current user's writable folders — used by the Move modal.</summary>
-    [Authorize(Policy = "ApiUser")]
-    [HttpGet("/api/v1/folders/writable")]
-    public async Task<IActionResult> WritableFolders(string scope, Guid? exclude, CancellationToken ct)
-    {
-        var me = await _users.GetOrProvisionAsync(User, ct);
-        if (!Enum.TryParse<FileScope>(scope, true, out var s)) return BadRequest();
-
-        IQueryable<Folder> q = _db.Folders.Where(f => f.Scope == s);
-        // Restrict Personal to the caller's OWN folders — even Admin. Cross-owner
-        // moves are refused by FilesController.Move, and listing every user's
-        // private tree in a dropdown would be both huge and confusing.
-        if (s == FileScope.Personal)
-            q = q.Where(f => f.OwnerUserId == me.Id);
-        else if (s == FileScope.Group)
-        {
-            var myGroupIds = _db.GroupMemberships.Where(m => m.UserId == me.Id).Select(m => m.GroupId);
-            q = q.Where(f => myGroupIds.Contains(f.OwnerGroupId!.Value) || me.Role == UserRole.Admin);
-        }
-        var all = await q.OrderBy(f => f.Name).ToListAsync(ct);
-        // v1.10.104: Copy/Move-Dropdown darf verborgene Private-Ordner
-        // nicht anbieten.
-        if (s == FileScope.Public && me.Role != UserRole.Admin)
-        {
-            var hidden = await _access.GetHiddenPublicFolderIdsAsync(me, ct);
-            if (hidden.Count > 0)
-                all = all.Where(f => !hidden.Contains(f.Id)).ToList();
-        }
-        // Build path label per folder by walking up.
-        var byId = all.ToDictionary(f => f.Id);
-        string PathOf(Folder f)
-        {
-            var parts = new List<string> { f.Name };
-            var cur = f;
-            while (cur.ParentFolderId is Guid pid && byId.TryGetValue(pid, out var p)) { parts.Insert(0, p.Name); cur = p; }
-            return string.Join(" / ", parts);
-        }
-        var items = all.Where(f => f.Id != exclude).Select(f => new { id = f.Id, path = PathOf(f) }).ToList();
-        return Ok(items);
-    }
-
     /// <summary>
     /// v1.10.62 — writable-all: alle beschreibbaren Ordner ÜBER alle Scopes
     /// hinweg. Fürs Copy-Modal, das Cross-Scope-Kopien erlaubt (z.B. Datei
     /// aus Group → Public). Rückgabe enthält Scope für Client-side Grouping.
+    /// v1.11.59: jetzt auch die einzige Datenquelle fürs Move-Modal (statt
+    /// des früheren, separaten, parentId-losen /writable-Endpoints) — Move
+    /// filtert clientseitig auf den aktuellen Scope/Group. Damit bekommen
+    /// Move und Copy identisch geformte Daten für den gemeinsamen
+    /// Live-Ordner-Browser (Breadcrumb-Navigation + Suche).
     /// </summary>
     [Authorize(Policy = "ApiUser")]
     [HttpGet("/api/v1/folders/writable-all")]

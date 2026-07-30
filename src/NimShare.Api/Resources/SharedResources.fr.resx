@@ -355,6 +355,7 @@
   <data name="landing_admin.logo.label"><value>Logo (facultatif)</value></data>
   <data name="common.preview"><value>Aperçu</value></data>
   <data name="bulk.move"><value>Déplacer</value></data>
+  <data name="bulk.copy"><value>Copier</value></data>
   <data name="bulk.delete"><value>Supprimer</value></data>
   <data name="bulk.clear"><value>Effacer</value></data>
   <data name="bulk.confirm.delete"><value>Supprimer {n} fichiers ? Cette action est irréversible.</value></data>
@@ -1307,6 +1308,10 @@ Merci d'utiliser NimShare.</value></data>
   <data name="copy.button"><value>Copier</value></data>
   <data name="copy.helper"><value>L'original reste en place. Une nouvelle copie est créée dans le dossier cible.</value></data>
   <data name="copy.hint.single"><value>Choisir le dossier de destination pour la copie.</value></data>
+  <data name="copy.hint.multi"><value>Choisissez où copier {n} fichiers.</value></data>
+  <data name="folderpicker.search.placeholder"><value>Rechercher des dossiers…</value></data>
+  <data name="folderpicker.empty"><value>Aucun dossier de destination disponible.</value></data>
+  <data name="folderpicker.search.empty"><value>Aucun dossier correspondant trouvé.</value></data>
   <data name="copy.done_single"><value>Copié.</value></data>
   <data name="copy.done_many"><value>copié(s).</value></data>
   <data name="landing.video.unsupported" xml:space="preserve"><value>Votre navigateur ne peut pas lire cette vidéo directement.</value></data>

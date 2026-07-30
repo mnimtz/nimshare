@@ -354,6 +354,7 @@
   <data name="landing_admin.logo.label"><value>Logo (optioneel)</value></data>
   <data name="common.preview"><value>Voorbeeld</value></data>
   <data name="bulk.move"><value>Verplaatsen</value></data>
+  <data name="bulk.copy"><value>Kopiëren</value></data>
   <data name="bulk.delete"><value>Verwijderen</value></data>
   <data name="bulk.clear"><value>Wissen</value></data>
   <data name="bulk.confirm.delete"><value>{n} bestanden verwijderen? Dit kan niet ongedaan worden gemaakt.</value></data>
@@ -1306,6 +1307,10 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="copy.button"><value>Kopiëren</value></data>
   <data name="copy.helper"><value>Het origineel blijft waar het is. In de doelmap wordt een nieuwe kopie aangemaakt.</value></data>
   <data name="copy.hint.single"><value>Kies de doelmap voor de kopie.</value></data>
+  <data name="copy.hint.multi"><value>Kies waarheen je {n} bestanden wilt kopiëren.</value></data>
+  <data name="folderpicker.search.placeholder"><value>Mappen zoeken…</value></data>
+  <data name="folderpicker.empty"><value>Geen doelmappen beschikbaar.</value></data>
+  <data name="folderpicker.search.empty"><value>Geen overeenkomende mappen gevonden.</value></data>
   <data name="copy.done_single"><value>Gekopieerd.</value></data>
   <data name="copy.done_many"><value>gekopieerd.</value></data>
   <data name="landing.video.unsupported" xml:space="preserve"><value>Je browser kan deze video niet rechtstreeks afspelen.</value></data>

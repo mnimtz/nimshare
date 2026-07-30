@@ -1355,6 +1355,67 @@ body.nav-open { position: relative; }
     .folder-picker { max-height: 280px; }
 }
 
+/* v1.11.59: echter Live-Browser statt Aufklapp-Baum — Bibliotheks-Umschalter
+   (nur Copy), Breadcrumb-Leiste + Suchfeld über der eigentlichen Liste. */
+.fp-lib-switch { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.fp-lib-tab {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--tw-gray-300, #d0d7de);
+    background: transparent;
+    color: var(--tw-primary, #085a9c);
+    font-size: .82rem;
+    cursor: pointer;
+}
+.fp-lib-tab:hover { background: var(--tw-gray-200, #eef1f5); }
+.fp-lib-tab.active {
+    background: var(--tw-primary, #085a9c);
+    border-color: var(--tw-primary, #085a9c);
+    color: var(--tw-white, #fff);
+    font-weight: 600;
+}
+.fp-search {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--tw-gray-300, #d0d7de);
+    border-radius: 6px;
+    font-size: .9rem;
+}
+.fp-crumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 8px;
+    font-size: .85rem;
+    color: var(--tw-muted-blue, #6b7280);
+}
+.fp-crumb {
+    background: transparent;
+    border: none;
+    color: var(--tw-primary, #085a9c);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: .85rem;
+}
+.fp-crumb:hover { background: var(--tw-gray-200, #eef1f5); text-decoration: underline; }
+.fp-crumb:last-child { color: var(--tw-muted-blue, #6b7280); font-weight: 600; cursor: default; }
+.fp-crumb:last-child:hover { background: transparent; text-decoration: none; }
+.fp-crumb-sep { color: var(--tw-gray-300, #d0d7de); }
+.folder-picker .fp-row.fp-row-search { align-items: flex-start; }
+.folder-picker .fp-row-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.folder-picker .fp-sub {
+    font-size: .75rem;
+    color: var(--tw-muted-blue, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.folder-picker .fp-chevron { margin-left: auto; color: var(--tw-gray-300, #d0d7de); flex-shrink: 0; }
+
 @media (max-width: 780px) {
     .fm-with-tree { grid-template-columns: 1fr; }
     /* v1.10.52: Tree als Bottom-Sheet-Overlay statt komplett weg.
