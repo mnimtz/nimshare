@@ -1732,4 +1732,27 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.templates.title"><value>Email template</value></data>
   <data name="keystore.templates.lede"><value>Customize the text used when a license key is sent by email — with an optional AI suggestion. The email language matches the language the recipient viewed the page in.</value></data>
   <data name="keystore.templates.link"><value>Manage email template</value></data>
+  <data name="keystore.mode.manual"><value>Enter new</value></data>
+  <data name="keystore.mode.pool"><value>Pick from stock</value></data>
+  <data name="keystore.mode.pool_manage_link"><value>Manage stock →</value></data>
+  <data name="keystore.field.pool_select"><value>License from stock</value></data>
+  <data name="keystore.mode.pool_loading"><value>Loading…</value></data>
+  <data name="keystore.mode.pool_empty"><value>— none in stock for this type —</value></data>
+  <data name="keystore.mode.pool_global_tag"><value>Shared</value></data>
+  <data name="keystore.error.pool_selection_required"><value>Please select a license from stock.</value></data>
+  <data name="keystore.licenses.title"><value>Licenses</value></data>
+  <data name="keystore.licenses.lede"><value>Stock license keys ahead of time, then assign one when you create a new customer.</value></data>
+  <data name="keystore.licenses.new"><value>+ New license</value></data>
+  <data name="keystore.licenses.col.added"><value>Added</value></data>
+  <data name="keystore.licenses.col.visibility"><value>Visibility</value></data>
+  <data name="keystore.licenses.col.customer"><value>Assigned to</value></data>
+  <data name="keystore.licenses.status.available"><value>Available</value></data>
+  <data name="keystore.licenses.status.assigned"><value>Used</value></data>
+  <data name="keystore.licenses.visibility.private"><value>Private</value></data>
+  <data name="keystore.licenses.visibility.global"><value>Shared (all users)</value></data>
+  <data name="keystore.licenses.field.is_global"><value>Share with all users</value></data>
+  <data name="keystore.licenses.field.is_global_hint"><value>Admin-only: makes this license available for any user to assign, not just you.</value></data>
+  <data name="keystore.licenses.action.reset"><value>Reset</value></data>
+  <data name="keystore.licenses.confirm_reset"><value>Undo the assignment to "{0}" and make this license available again?</value></data>
+  <data name="keystore.licenses.empty"><value>No licenses in stock yet.</value></data>
 </root>

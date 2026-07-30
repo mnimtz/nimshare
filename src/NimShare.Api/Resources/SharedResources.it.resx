@@ -1730,4 +1730,27 @@ Grazie per usare NimShare.</value></data>
   <data name="keystore.templates.title"><value>Modello di email</value></data>
   <data name="keystore.templates.lede"><value>Personalizza il testo utilizzato quando una chiave di licenza viene inviata via email — con suggerimento IA opzionale. La lingua dell'email corrisponde alla lingua in cui il destinatario ha visto la pagina.</value></data>
   <data name="keystore.templates.link"><value>Gestisci il modello di email</value></data>
+  <data name="keystore.mode.manual"><value>Inserisci nuovo</value></data>
+  <data name="keystore.mode.pool"><value>Scegli dalla scorta</value></data>
+  <data name="keystore.mode.pool_manage_link"><value>Gestisci scorta →</value></data>
+  <data name="keystore.field.pool_select"><value>Licenza dalla scorta</value></data>
+  <data name="keystore.mode.pool_loading"><value>Caricamento…</value></data>
+  <data name="keystore.mode.pool_empty"><value>— nessuna in scorta per questo tipo —</value></data>
+  <data name="keystore.mode.pool_global_tag"><value>Condivisa</value></data>
+  <data name="keystore.error.pool_selection_required"><value>Seleziona una licenza dalla scorta.</value></data>
+  <data name="keystore.licenses.title"><value>Licenze</value></data>
+  <data name="keystore.licenses.lede"><value>Metti in scorta chiavi di licenza in anticipo, poi assegnane una alla creazione di un nuovo cliente.</value></data>
+  <data name="keystore.licenses.new"><value>+ Nuova licenza</value></data>
+  <data name="keystore.licenses.col.added"><value>Aggiunta il</value></data>
+  <data name="keystore.licenses.col.visibility"><value>Visibilità</value></data>
+  <data name="keystore.licenses.col.customer"><value>Assegnata a</value></data>
+  <data name="keystore.licenses.status.available"><value>Disponibile</value></data>
+  <data name="keystore.licenses.status.assigned"><value>Usata</value></data>
+  <data name="keystore.licenses.visibility.private"><value>Privata</value></data>
+  <data name="keystore.licenses.visibility.global"><value>Condivisa (tutti gli utenti)</value></data>
+  <data name="keystore.licenses.field.is_global"><value>Condividi con tutti gli utenti</value></data>
+  <data name="keystore.licenses.field.is_global_hint"><value>Solo admin: rende questa licenza assegnabile da qualsiasi utente, non solo da te.</value></data>
+  <data name="keystore.licenses.action.reset"><value>Ripristina</value></data>
+  <data name="keystore.licenses.confirm_reset"><value>Annullare l'assegnazione a "{0}" e rendere questa licenza di nuovo disponibile?</value></data>
+  <data name="keystore.licenses.empty"><value>Ancora nessuna licenza in scorta.</value></data>
 </root>

@@ -70,6 +70,15 @@
             <datalist id="ksKeyTypeList"></datalist>
         </div>
 
+        <!-- v1.11.56: bei Neuanlage kann statt eines neu getippten Keys ein
+             vorrätiger Lizenzen-Eintrag zugewiesen werden ("Lizenzen"-Seite). -->
+        <div id="ksKeyModeWrap" class="field" style="margin-top:8px;display:none">
+            <div class="row" style="gap:6px">
+                <button type="button" class="btn btn-ghost btn-sm" id="ksKeyModeManualBtn" onclick="ksSetKeyMode('manual')">@T["keystore.mode.manual"]</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="ksKeyModePoolBtn" onclick="ksSetKeyMode('pool')">@T["keystore.mode.pool"]</button>
+            </div>
+        </div>
+
         <div id="ksKeyValueSingleWrap" class="field" style="margin-top:8px">
             <label>@T["keystore.field.key_value"]</label>
             <input type="text" id="ksKeyValue" class="mono" placeholder="AV09Z-K13-8FXD-BAVZ-XT" autocomplete="off"/>
@@ -83,6 +92,11 @@
                 <label>@T["keystore.field.key_value_product"]</label>
                 <input type="text" id="ksKeyValueProduct" class="mono" placeholder="729093F57" autocomplete="off"/>
             </div>
+        </div>
+        <div id="ksPoolWrap" class="field" style="margin-top:8px;display:none">
+            <label>@T["keystore.field.pool_select"]</label>
+            <select id="ksPoolSelect"></select>
+            <div class="helper"><a href="/keystore/licenses">@T["keystore.mode.pool_manage_link"]</a></div>
         </div>
 
         <div class="field" style="margin-top:8px;max-width:220px">
@@ -140,11 +154,51 @@ function ksIsClsType(type) {
     return /cls/i.test(type || '');
 }
 function ksUpdateKeyValueMode() {
+    if (ksKeyMode === 'pool') return;
     const cls = ksIsClsType(document.getElementById('ksKeyType').value);
     document.getElementById('ksKeyValueSingleWrap').style.display = cls ? 'none' : '';
     document.getElementById('ksKeyValueClsWrap').style.display = cls ? 'flex' : 'none';
 }
-document.getElementById('ksKeyType').addEventListener('input', ksUpdateKeyValueMode);
+document.getElementById('ksKeyType').addEventListener('input', () => {
+    ksUpdateKeyValueMode();
+    if (ksKeyMode === 'pool') ksLoadPool();
+});
+
+// v1.11.56: "Neu eingeben" vs. "Aus Vorrat wählen" — nur bei Neuanlage
+// sichtbar (siehe ksOpenCreate/ksOpenEdit).
+let ksKeyMode = 'manual';
+function ksSetKeyMode(mode) {
+    ksKeyMode = mode;
+    document.getElementById('ksKeyModeManualBtn').classList.toggle('btn-primary', mode === 'manual');
+    document.getElementById('ksKeyModePoolBtn').classList.toggle('btn-primary', mode === 'pool');
+    document.getElementById('ksPoolWrap').style.display = mode === 'pool' ? '' : 'none';
+    if (mode === 'pool') {
+        document.getElementById('ksKeyValueSingleWrap').style.display = 'none';
+        document.getElementById('ksKeyValueClsWrap').style.display = 'none';
+        ksLoadPool();
+    } else {
+        ksUpdateKeyValueMode();
+    }
+}
+async function ksLoadPool() {
+    const sel = document.getElementById('ksPoolSelect');
+    const type = document.getElementById('ksKeyType').value.trim();
+    sel.innerHTML = `<option value="">@T["keystore.mode.pool_loading"]</option>`;
+    sel.disabled = true;
+    const r = await ksApi('GET', '/api/v1/keystore/pool' + (type ? '?type=' + encodeURIComponent(type) : ''));
+    if (!r.ok) { sel.innerHTML = `<option value="">@T["keystore.load_error"]</option>`; return; }
+    const rows = await r.json();
+    sel.disabled = false;
+    if (rows.length === 0) {
+        sel.innerHTML = `<option value="">@T["keystore.mode.pool_empty"]</option>`;
+        return;
+    }
+    sel.innerHTML = rows.map(p => {
+        const label = ksFmtDate(p.createdAt) + (p.isGlobal ? ' · ' + @Json.Serialize(T["keystore.mode.pool_global_tag"].Value) : '')
+            + (p.ownerName ? ' · ' + ksEsc(p.ownerName) : '') + (p.notes ? ' — ' + ksEsc(p.notes) : '');
+        return `<option value="${p.id}">${label}</option>`;
+    }).join('');
+}
 
 async function ksApi(method, path, body) {
     const r = await fetch(path, {
@@ -264,7 +318,8 @@ function ksOpenCreate() {
     document.getElementById('ksValidUntil').value = '';
     document.getElementById('ksNotes').value = '';
     document.getElementById('ksModalError').style.display = 'none';
-    ksUpdateKeyValueMode();
+    document.getElementById('ksKeyModeWrap').style.display = '';
+    ksSetKeyMode('manual');
     document.getElementById('ksModal').classList.add('open');
 }
 
@@ -287,6 +342,10 @@ async function ksOpenEdit(id) {
     document.getElementById('ksValidUntil').value = row.validUntil ? row.validUntil.substring(0, 10) : '';
     document.getElementById('ksNotes').value = row.notes || '';
     document.getElementById('ksModalError').style.display = 'none';
+    // Vorrats-Zuweisung ist nur beim Neuanlegen ein Thema — ein bestehender
+    // Kunde hat ja schon einen Key.
+    document.getElementById('ksKeyModeWrap').style.display = 'none';
+    ksKeyMode = 'manual';
     ksUpdateKeyValueMode();
     document.getElementById('ksModal').classList.add('open');
 }
@@ -304,39 +363,48 @@ async function ksSave() {
     const domain = document.getElementById('ksCustomerDomain').value.trim();
     const keyType = document.getElementById('ksKeyType').value.trim();
 
-    // v1.11.24: "-CLS"-Typen bestehen aus zwei Teilen (Seriennummer +
-    // Produktcode), alle anderen aus einem einzelnen Key-String — die zwei
-    // Teile werden für Speicherung/Anzeige zu einem String kombiniert (kein
-    // eigenes Server-Feld, um das bestehende KeyValueEncrypted nicht
-    // aufzuspalten).
-    let keyValue = '';
-    if (ksIsClsType(keyType)) {
-        const serial = document.getElementById('ksKeyValueSerial').value.trim();
-        const product = document.getElementById('ksKeyValueProduct').value.trim();
-        if (serial && product) keyValue = serial + ' / ' + product;
-        else if (serial || product) {
-            err.textContent = @Json.Serialize(T["keystore.error.value_parts_required"].Value);
-            err.style.display = 'block';
-            return;
-        }
-    } else {
-        keyValue = document.getElementById('ksKeyValue').value.trim();
-    }
-
     if (!name) { err.textContent = @Json.Serialize(T["keystore.error.name_required"].Value); err.style.display = 'block'; return; }
     if (!email && !domain) { err.textContent = @Json.Serialize(T["keystore.error.contact_required"].Value); err.style.display = 'block'; return; }
-    if (!keyType) { err.textContent = @Json.Serialize(T["keystore.error.type_required"].Value); err.style.display = 'block'; return; }
-    if (!id && !keyValue) { err.textContent = @Json.Serialize(T["keystore.error.value_required"].Value); err.style.display = 'block'; return; }
 
     const body = {
         customerName: name,
         customerEmail: email || null,
         customerEmailDomain: domain || null,
-        keyType,
         validUntil: document.getElementById('ksValidUntil').value ? new Date(document.getElementById('ksValidUntil').value).toISOString() : null,
         notes: document.getElementById('ksNotes').value.trim() || null,
     };
-    if (keyValue) body.keyValue = keyValue;
+
+    // v1.11.56: aus dem Lizenzen-Vorrat zuweisen statt neu einzutippen.
+    if (!id && ksKeyMode === 'pool') {
+        const poolId = document.getElementById('ksPoolSelect').value;
+        if (!poolId) { err.textContent = @Json.Serialize(T["keystore.error.pool_selection_required"].Value); err.style.display = 'block'; return; }
+        body.keyType = '';
+        body.keyValue = '';
+        body.poolEntryId = poolId;
+    } else {
+        // v1.11.24: "-CLS"-Typen bestehen aus zwei Teilen (Seriennummer +
+        // Produktcode), alle anderen aus einem einzelnen Key-String — die zwei
+        // Teile werden für Speicherung/Anzeige zu einem String kombiniert (kein
+        // eigenes Server-Feld, um das bestehende KeyValueEncrypted nicht
+        // aufzuspalten).
+        let keyValue = '';
+        if (ksIsClsType(keyType)) {
+            const serial = document.getElementById('ksKeyValueSerial').value.trim();
+            const product = document.getElementById('ksKeyValueProduct').value.trim();
+            if (serial && product) keyValue = serial + ' / ' + product;
+            else if (serial || product) {
+                err.textContent = @Json.Serialize(T["keystore.error.value_parts_required"].Value);
+                err.style.display = 'block';
+                return;
+            }
+        } else {
+            keyValue = document.getElementById('ksKeyValue').value.trim();
+        }
+        if (!keyType) { err.textContent = @Json.Serialize(T["keystore.error.type_required"].Value); err.style.display = 'block'; return; }
+        if (!id && !keyValue) { err.textContent = @Json.Serialize(T["keystore.error.value_required"].Value); err.style.display = 'block'; return; }
+        body.keyType = keyType;
+        if (keyValue) body.keyValue = keyValue;
+    }
 
     const btn = document.getElementById('ksSaveBtn');
     btn.disabled = true;

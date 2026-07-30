@@ -1729,4 +1729,27 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="keystore.templates.title"><value>E-mailsjabloon</value></data>
   <data name="keystore.templates.lede"><value>Pas de tekst aan die wordt gebruikt bij het e-mailen van een licentiesleutel — met optionele AI-suggestie. De taal van de e-mail volgt de taal waarin de ontvanger de pagina zag.</value></data>
   <data name="keystore.templates.link"><value>E-mailsjabloon beheren</value></data>
+  <data name="keystore.mode.manual"><value>Nieuwe invoeren</value></data>
+  <data name="keystore.mode.pool"><value>Uit voorraad kiezen</value></data>
+  <data name="keystore.mode.pool_manage_link"><value>Voorraad beheren →</value></data>
+  <data name="keystore.field.pool_select"><value>Licentie uit voorraad</value></data>
+  <data name="keystore.mode.pool_loading"><value>Laden…</value></data>
+  <data name="keystore.mode.pool_empty"><value>— geen op voorraad voor dit type —</value></data>
+  <data name="keystore.mode.pool_global_tag"><value>Gedeeld</value></data>
+  <data name="keystore.error.pool_selection_required"><value>Kies een licentie uit de voorraad.</value></data>
+  <data name="keystore.licenses.title"><value>Licenties</value></data>
+  <data name="keystore.licenses.lede"><value>Leg licentiesleutels vooraf op voorraad en wijs ze toe bij het aanmaken van een nieuwe klant.</value></data>
+  <data name="keystore.licenses.new"><value>+ Nieuwe licentie</value></data>
+  <data name="keystore.licenses.col.added"><value>Toegevoegd op</value></data>
+  <data name="keystore.licenses.col.visibility"><value>Zichtbaarheid</value></data>
+  <data name="keystore.licenses.col.customer"><value>Toegewezen aan</value></data>
+  <data name="keystore.licenses.status.available"><value>Beschikbaar</value></data>
+  <data name="keystore.licenses.status.assigned"><value>Gebruikt</value></data>
+  <data name="keystore.licenses.visibility.private"><value>Privé</value></data>
+  <data name="keystore.licenses.visibility.global"><value>Gedeeld (alle gebruikers)</value></data>
+  <data name="keystore.licenses.field.is_global"><value>Delen met alle gebruikers</value></data>
+  <data name="keystore.licenses.field.is_global_hint"><value>Alleen voor beheerders: maakt deze licentie voor elke gebruiker toewijsbaar, niet alleen voor jou.</value></data>
+  <data name="keystore.licenses.action.reset"><value>Resetten</value></data>
+  <data name="keystore.licenses.confirm_reset"><value>Toewijzing aan "{0}" ongedaan maken en deze licentie weer beschikbaar maken?</value></data>
+  <data name="keystore.licenses.empty"><value>Nog geen licenties op voorraad.</value></data>
 </root>

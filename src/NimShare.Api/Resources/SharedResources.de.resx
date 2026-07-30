@@ -1734,4 +1734,27 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.templates.title"><value>Email-Vorlage</value></data>
   <data name="keystore.templates.lede"><value>Passe den Text an, der beim Versand eines Lizenzschlüssels per Email verwendet wird — mit optionalem KI-Vorschlag. Die Sprache der Mail richtet sich nach der Sprache, in der der Empfänger die Seite gesehen hat.</value></data>
   <data name="keystore.templates.link"><value>Email-Vorlage verwalten</value></data>
+  <data name="keystore.mode.manual"><value>Neu eingeben</value></data>
+  <data name="keystore.mode.pool"><value>Aus Vorrat wählen</value></data>
+  <data name="keystore.mode.pool_manage_link"><value>Vorrat verwalten →</value></data>
+  <data name="keystore.field.pool_select"><value>Lizenz aus Vorrat</value></data>
+  <data name="keystore.mode.pool_loading"><value>Lädt…</value></data>
+  <data name="keystore.mode.pool_empty"><value>— keine im Vorrat für diesen Typ —</value></data>
+  <data name="keystore.mode.pool_global_tag"><value>Geteilt</value></data>
+  <data name="keystore.error.pool_selection_required"><value>Bitte eine Lizenz aus dem Vorrat auswählen.</value></data>
+  <data name="keystore.licenses.title"><value>Lizenzen</value></data>
+  <data name="keystore.licenses.lede"><value>Lizenzschlüssel vorab einlagern und bei der Anlage eines neuen Kunden direkt zuweisen.</value></data>
+  <data name="keystore.licenses.new"><value>+ Neue Lizenz</value></data>
+  <data name="keystore.licenses.col.added"><value>Hinzugefügt am</value></data>
+  <data name="keystore.licenses.col.visibility"><value>Sichtbarkeit</value></data>
+  <data name="keystore.licenses.col.customer"><value>Zugewiesen an</value></data>
+  <data name="keystore.licenses.status.available"><value>Verfügbar</value></data>
+  <data name="keystore.licenses.status.assigned"><value>Verbraucht</value></data>
+  <data name="keystore.licenses.visibility.private"><value>Privat</value></data>
+  <data name="keystore.licenses.visibility.global"><value>Geteilt (alle Nutzer)</value></data>
+  <data name="keystore.licenses.field.is_global"><value>Für alle Nutzer freigeben</value></data>
+  <data name="keystore.licenses.field.is_global_hint"><value>Nur für Admins: macht diese Lizenz für jeden Nutzer entnehmbar, nicht nur für dich.</value></data>
+  <data name="keystore.licenses.action.reset"><value>Zurücksetzen</value></data>
+  <data name="keystore.licenses.confirm_reset"><value>Zuordnung zu "{0}" aufheben und Lizenz wieder verfügbar machen?</value></data>
+  <data name="keystore.licenses.empty"><value>Noch keine Lizenzen im Vorrat.</value></data>
 </root>

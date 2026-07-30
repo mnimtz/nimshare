@@ -1,0 +1,257 @@
+@{
+    ViewData["Title"] = T["keystore.licenses.title"].Value;
+    Layout = "_AppShell";
+    var isAdmin = User.IsInRole("Admin");
+}
+<div class="workspace-inner" style="max-width:1100px;margin:0 auto">
+    <div class="page-head">
+        <a href="/keystore" class="muted" style="text-decoration:none;display:block;margin-bottom:6px">← @T["keystore.title"]</a>
+        <h1>🔖 @T["keystore.licenses.title"]</h1>
+        <p class="muted">@T["keystore.licenses.lede"]</p>
+    </div>
+
+    <div class="row" style="margin:12px 0">
+        <button class="btn btn-primary" onclick="klOpenCreate()">+ @T["keystore.licenses.new"]</button>
+    </div>
+
+    <div id="klLoading" class="muted">@T["keystore.loading"]</div>
+    <div id="klEmpty" class="card" style="display:none"><p class="muted">@T["keystore.licenses.empty"]</p></div>
+
+    <table class="table table-cards-mobile" id="klTable" style="display:none">
+        <thead>
+            <tr>
+                <th>@T["keystore.col.type"]</th>
+                <th>@T["keystore.licenses.col.added"]</th>
+                <th>@T["keystore.licenses.col.visibility"]</th>
+                <th>@T["keystore.col.status"]</th>
+                <th>@T["keystore.licenses.col.customer"]</th>
+                @if (isAdmin)
+                {
+                    <th>@T["keystore.col.owner"]</th>
+                }
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="klBody"></tbody>
+    </table>
+</div>
+
+<!-- Create modal -->
+<div class="modal-backdrop" id="klModal" onclick="if(event.target===this)klCloseModal()">
+    <div class="modal-panel" style="max-width:480px">
+        <h2>@T["keystore.licenses.new"]</h2>
+        <div class="field">
+            <label>@T["keystore.field.key_type"]</label>
+            <input type="text" id="klKeyType" list="ksKeyTypeList" placeholder="@T["keystore.field.key_type_placeholder"]" required autocomplete="off"/>
+        </div>
+        <div id="klKeyValueSingleWrap" class="field" style="margin-top:8px">
+            <label>@T["keystore.field.key_value"]</label>
+            <input type="text" id="klKeyValue" class="mono" placeholder="AV09Z-K13-8FXD-BAVZ-XT" autocomplete="off"/>
+        </div>
+        <div id="klKeyValueClsWrap" class="row" style="gap:var(--sp-3);margin-top:8px;display:none">
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.key_value_serial"]</label>
+                <input type="text" id="klKeyValueSerial" class="mono" placeholder="LW13976" autocomplete="off"/>
+            </div>
+            <div class="field" style="flex:1">
+                <label>@T["keystore.field.key_value_product"]</label>
+                <input type="text" id="klKeyValueProduct" class="mono" placeholder="729093F57" autocomplete="off"/>
+            </div>
+        </div>
+        <div class="field" style="margin-top:8px">
+            <label>@T["keystore.field.notes"]</label>
+            <textarea id="klNotes" rows="2"></textarea>
+        </div>
+        @if (isAdmin)
+        {
+            <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:400">
+                <input type="checkbox" id="klIsGlobal"/> @T["keystore.licenses.field.is_global"]
+            </label>
+            <div class="helper">@T["keystore.licenses.field.is_global_hint"]</div>
+        }
+        <div id="klModalError" class="helper" style="display:none;color:var(--status-critical);margin-top:8px"></div>
+        <div class="actions" style="margin-top:16px">
+            <button type="button" class="btn btn-ghost" onclick="klCloseModal()">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" onclick="klSave()" id="klSaveBtn">@T["modal.save"]</button>
+        </div>
+    </div>
+</div>
+<datalist id="ksKeyTypeList"></datalist>
+
+<script>
+let klRows = [];
+const KL_IS_ADMIN = @Json.Serialize(isAdmin);
+
+// Gleiche Combo-Liste wie auf /keystore (localStorage, geräteweit).
+const KL_DEFAULT_TYPES = ['Evaluation-CLS', 'Evaluation-OnPrem', 'NFR-OnPrem', 'NFR-CLS'];
+const KL_CUSTOM_TYPES_KEY = 'nimshare.keystore.customTypes';
+function klRenderTypeList() {
+    const dl = document.getElementById('ksKeyTypeList');
+    let custom = [];
+    try { custom = JSON.parse(localStorage.getItem(KL_CUSTOM_TYPES_KEY) || '[]'); } catch {}
+    dl.innerHTML = '';
+    [...KL_DEFAULT_TYPES, ...custom].forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        dl.appendChild(opt);
+    });
+}
+klRenderTypeList();
+
+function klIsClsType(type) { return /cls/i.test(type || ''); }
+function klUpdateKeyValueMode() {
+    const cls = klIsClsType(document.getElementById('klKeyType').value);
+    document.getElementById('klKeyValueSingleWrap').style.display = cls ? 'none' : '';
+    document.getElementById('klKeyValueClsWrap').style.display = cls ? 'flex' : 'none';
+}
+document.getElementById('klKeyType').addEventListener('input', klUpdateKeyValueMode);
+
+async function klApi(method, path, body) {
+    const r = await fetch(path, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+    });
+    return r;
+}
+
+function klEsc(s) {
+    return (s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function klFmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString();
+}
+
+function klRender() {
+    const tbody = document.getElementById('klBody');
+    tbody.innerHTML = '';
+    document.getElementById('klLoading').style.display = 'none';
+    if (klRows.length === 0) {
+        document.getElementById('klEmpty').style.display = 'block';
+        document.getElementById('klTable').style.display = 'none';
+        return;
+    }
+    document.getElementById('klEmpty').style.display = 'none';
+    document.getElementById('klTable').style.display = '';
+    for (const row of klRows) {
+        const isAvailable = row.status === 0; // KeyStoreEntryStatus.Available
+        const statusChip = isAvailable
+            ? `<span class="chip chip-ok">@T["keystore.licenses.status.available"]</span>`
+            : `<span class="chip chip-warn">@T["keystore.licenses.status.assigned"]</span>`;
+        const visChip = row.isGlobal
+            ? `<span class="chip">@T["keystore.licenses.visibility.global"]</span>`
+            : `<span class="chip" style="opacity:.6">@T["keystore.licenses.visibility.private"]</span>`;
+        const customer = isAvailable ? '—' : klEsc(row.customerName);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td data-th="${@Json.Serialize(T["keystore.col.type"].Value)}">${klEsc(row.keyType)}</td>
+            <td data-th="${@Json.Serialize(T["keystore.licenses.col.added"].Value)}" class="muted">${klFmtDate(row.createdAt)}</td>
+            <td data-th="${@Json.Serialize(T["keystore.licenses.col.visibility"].Value)}">${visChip}</td>
+            <td data-th="${@Json.Serialize(T["keystore.col.status"].Value)}">${statusChip}</td>
+            <td data-th="${@Json.Serialize(T["keystore.licenses.col.customer"].Value)}">${customer}</td>
+            ${KL_IS_ADMIN ? `<td data-th="${@Json.Serialize(T["keystore.col.owner"].Value)}" class="muted">${row.isOwnedByMe ? '—' : klEsc(row.ownerName || '')}</td>` : ''}
+            <td>
+                <button class="btn btn-ghost btn-sm" onclick="klReveal('${row.id}', this)">🔑 @T["keystore.action.reveal"]</button>
+                ${!isAvailable ? `<button class="btn btn-ghost btn-sm" onclick="klReset('${row.id}')">↺ @T["keystore.licenses.action.reset"]</button>` : ''}
+                <button class="btn btn-ghost btn-sm" style="color:var(--status-critical)" onclick="klDelete('${row.id}')">@T["keystore.action.delete"]</button>
+            </td>`;
+        tbody.appendChild(tr);
+    }
+}
+
+async function klLoad() {
+    const r = await klApi('GET', '/api/v1/keystore/licenses');
+    if (!r.ok) { document.getElementById('klLoading').textContent = @Json.Serialize(T["keystore.load_error"].Value); return; }
+    klRows = await r.json();
+    klRender();
+}
+
+async function klReveal(id, btn) {
+    btn.disabled = true;
+    const r = await klApi('GET', '/api/v1/keystore/' + id + '/reveal');
+    btn.disabled = false;
+    if (!r.ok) { nimAlert(@Json.Serialize(T["keystore.reveal_error"].Value), { kind: 'error' }); return; }
+    const d = await r.json();
+    if (window.nsPrompt) window.nsPrompt(@Json.Serialize(T["keystore.action.reveal"].Value), '', d.keyValue);
+    else prompt(@Json.Serialize(T["keystore.action.reveal"].Value), d.keyValue);
+}
+
+async function klReset(id) {
+    const row = klRows.find(r => r.id === id);
+    const msg = row ? @(Json.Serialize(T["keystore.licenses.confirm_reset"].Value)).replace('{0}', klEsc(row.customerName)) : '';
+    if (!await nimConfirm(msg)) return;
+    const r = await klApi('POST', '/api/v1/keystore/' + id + '/reset');
+    if (r.ok) await klLoad();
+    else nimAlert(@Json.Serialize(T["keystore.save_error"].Value), { kind: 'error' });
+}
+
+async function klDelete(id) {
+    if (!await nimConfirm(@Json.Serialize(T["keystore.confirm_delete"].Value), { danger: true })) return;
+    const r = await klApi('DELETE', '/api/v1/keystore/' + id);
+    if (r.ok) await klLoad();
+    else nimAlert(@Json.Serialize(T["keystore.delete_error"].Value), { kind: 'error' });
+}
+
+function klOpenCreate() {
+    document.getElementById('klKeyType').value = '';
+    document.getElementById('klKeyValue').value = '';
+    document.getElementById('klKeyValueSerial').value = '';
+    document.getElementById('klKeyValueProduct').value = '';
+    document.getElementById('klNotes').value = '';
+    const g = document.getElementById('klIsGlobal');
+    if (g) g.checked = false;
+    document.getElementById('klModalError').style.display = 'none';
+    klUpdateKeyValueMode();
+    document.getElementById('klModal').classList.add('open');
+}
+function klCloseModal() {
+    document.getElementById('klModal').classList.remove('open');
+}
+
+async function klSave() {
+    const err = document.getElementById('klModalError');
+    err.style.display = 'none';
+    const keyType = document.getElementById('klKeyType').value.trim();
+
+    let keyValue = '';
+    if (klIsClsType(keyType)) {
+        const serial = document.getElementById('klKeyValueSerial').value.trim();
+        const product = document.getElementById('klKeyValueProduct').value.trim();
+        if (serial && product) keyValue = serial + ' / ' + product;
+        else if (serial || product) {
+            err.textContent = @Json.Serialize(T["keystore.error.value_parts_required"].Value);
+            err.style.display = 'block';
+            return;
+        }
+    } else {
+        keyValue = document.getElementById('klKeyValue').value.trim();
+    }
+
+    if (!keyType) { err.textContent = @Json.Serialize(T["keystore.error.type_required"].Value); err.style.display = 'block'; return; }
+    if (!keyValue) { err.textContent = @Json.Serialize(T["keystore.error.value_required"].Value); err.style.display = 'block'; return; }
+
+    const g = document.getElementById('klIsGlobal');
+    const body = {
+        keyType, keyValue,
+        notes: document.getElementById('klNotes').value.trim() || null,
+        isGlobal: g ? g.checked : false,
+    };
+
+    const btn = document.getElementById('klSaveBtn');
+    btn.disabled = true;
+    const r = await klApi('POST', '/api/v1/keystore/licenses', body);
+    btn.disabled = false;
+    if (!r.ok) {
+        let msg = @Json.Serialize(T["keystore.save_error"].Value);
+        try { const p = await r.json(); if (p.title) msg = p.title; } catch {}
+        err.textContent = msg; err.style.display = 'block';
+        return;
+    }
+    klCloseModal();
+    await klLoad();
+}
+
+klLoad();
+</script>

@@ -1730,4 +1730,27 @@ Gracias por usar NimShare.</value></data>
   <data name="keystore.templates.title"><value>Plantilla de correo</value></data>
   <data name="keystore.templates.lede"><value>Personaliza el texto utilizado al enviar una clave de licencia por correo, con sugerencia de IA opcional. El idioma del correo coincide con el idioma en el que el destinatario vio la página.</value></data>
   <data name="keystore.templates.link"><value>Gestionar plantilla de correo</value></data>
+  <data name="keystore.mode.manual"><value>Introducir nueva</value></data>
+  <data name="keystore.mode.pool"><value>Elegir del stock</value></data>
+  <data name="keystore.mode.pool_manage_link"><value>Gestionar stock →</value></data>
+  <data name="keystore.field.pool_select"><value>Licencia del stock</value></data>
+  <data name="keystore.mode.pool_loading"><value>Cargando…</value></data>
+  <data name="keystore.mode.pool_empty"><value>— ninguna en stock para este tipo —</value></data>
+  <data name="keystore.mode.pool_global_tag"><value>Compartida</value></data>
+  <data name="keystore.error.pool_selection_required"><value>Selecciona una licencia del stock.</value></data>
+  <data name="keystore.licenses.title"><value>Licencias</value></data>
+  <data name="keystore.licenses.lede"><value>Guarda claves de licencia con antelación y asígnalas al crear un nuevo cliente.</value></data>
+  <data name="keystore.licenses.new"><value>+ Nueva licencia</value></data>
+  <data name="keystore.licenses.col.added"><value>Añadida el</value></data>
+  <data name="keystore.licenses.col.visibility"><value>Visibilidad</value></data>
+  <data name="keystore.licenses.col.customer"><value>Asignada a</value></data>
+  <data name="keystore.licenses.status.available"><value>Disponible</value></data>
+  <data name="keystore.licenses.status.assigned"><value>Usada</value></data>
+  <data name="keystore.licenses.visibility.private"><value>Privada</value></data>
+  <data name="keystore.licenses.visibility.global"><value>Compartida (todos los usuarios)</value></data>
+  <data name="keystore.licenses.field.is_global"><value>Compartir con todos los usuarios</value></data>
+  <data name="keystore.licenses.field.is_global_hint"><value>Solo administradores: hace que cualquier usuario pueda asignar esta licencia, no solo tú.</value></data>
+  <data name="keystore.licenses.action.reset"><value>Restablecer</value></data>
+  <data name="keystore.licenses.confirm_reset"><value>¿Deshacer la asignación a "{0}" y volver a poner esta licencia disponible?</value></data>
+  <data name="keystore.licenses.empty"><value>Todavía no hay licencias en stock.</value></data>
 </root>

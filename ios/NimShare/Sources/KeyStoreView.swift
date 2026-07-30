@@ -84,6 +84,9 @@ struct KeyStoreView: View {
         .navigationTitle("Key-Store")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { KeyStoreLicensesView() } label: { Image(systemName: "tag") }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { KeyStoreDocumentsView() } label: { Image(systemName: "doc.text") }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -164,6 +167,14 @@ struct KeyStoreEntrySheet: View {
     @State private var busy = false
     @State private var error: String?
 
+    // v1.11.56: bei Neuanlage kann statt eines neu getippten Keys eine
+    // vorrätige Lizenz zugewiesen werden ("Lizenzen"-Tab).
+    private enum KeyMode { case manual, pool }
+    @State private var keyMode: KeyMode = .manual
+    @State private var poolEntries: [NimShareAPI.KeyStorePoolEntryDto] = []
+    @State private var selectedPoolId: UUID?
+    @State private var poolLoading = false
+
     private var isCls: Bool { KeyStoreView.isClsType(keyType) }
 
     var body: some View {
@@ -187,7 +198,33 @@ struct KeyStoreEntrySheet: View {
                         }
                     }
                 }
-                if isCls {
+                if existing == nil {
+                    Section {
+                        Picker("", selection: $keyMode) {
+                            Text("Neu eingeben").tag(KeyMode.manual)
+                            Text("Aus Vorrat wählen").tag(KeyMode.pool)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                }
+                if keyMode == .pool {
+                    Section("Lizenz aus Vorrat") {
+                        if poolLoading {
+                            ProgressView()
+                        } else if poolEntries.isEmpty {
+                            Text("— keine im Vorrat für diesen Typ —").foregroundStyle(.secondary)
+                        } else {
+                            Picker("Lizenz", selection: $selectedPoolId) {
+                                Text("—").tag(UUID?.none)
+                                ForEach(poolEntries) { p in
+                                    Text(poolEntryLabel(p)).tag(Optional(p.id))
+                                }
+                            }
+                        }
+                        NavigationLink("Vorrat verwalten") { KeyStoreLicensesView() }
+                            .font(.footnote)
+                    }
+                } else if isCls {
                     Section("Key-Wert") {
                         TextField(existing == nil ? "Seriennummer (z.B. LW13976)" : "Seriennummer (unverändert lassen = leer)", text: $keySerial)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -231,13 +268,51 @@ struct KeyStoreEntrySheet: View {
                     if let until = e.validUntil { validUntil = until; hasValidUntil = true }
                 }
             }
+            .onChange(of: keyMode) { _, mode in if mode == .pool { Task { await loadPool() } } }
+            .onChange(of: keyType) { _, _ in if keyMode == .pool { Task { await loadPool() } } }
             .overlay { if busy { ProgressView() } }
         }
+    }
+
+    private func poolEntryLabel(_ p: NimShareAPI.KeyStorePoolEntryDto) -> String {
+        var parts = [p.createdAt.formatted(date: .abbreviated, time: .omitted)]
+        if p.isGlobal { parts.append("Global") }
+        if let owner = p.ownerName { parts.append(owner) }
+        if let notes = p.notes, !notes.isEmpty { parts.append(notes) }
+        return parts.joined(separator: " · ")
+    }
+
+    private func loadPool() async {
+        guard let api = auth.api else { return }
+        poolLoading = true; defer { poolLoading = false }
+        selectedPoolId = nil
+        poolEntries = (try? await api.listKeyStorePool(type: keyType.isEmpty ? nil : keyType)) ?? []
     }
 
     private func save() async {
         guard let api = auth.api else { return }
         busy = true; error = nil; defer { busy = false }
+
+        // v1.11.56: aus dem Lizenzen-Vorrat zuweisen statt neu eintippen.
+        if existing == nil && keyMode == .pool {
+            guard let poolId = selectedPoolId else {
+                error = "Bitte eine Lizenz aus dem Vorrat auswählen."
+                return
+            }
+            do {
+                var body = NimShareAPI.CreateKeyStoreEntryBody(
+                    customerName: customerName, customerEmail: customerEmail.isEmpty ? nil : customerEmail,
+                    customerEmailDomain: customerDomain.isEmpty ? nil : customerDomain, keyType: "",
+                    keyValue: "", validFrom: nil, validUntil: hasValidUntil ? validUntil : nil,
+                    notes: notes.isEmpty ? nil : notes)
+                body.poolEntryId = poolId
+                _ = try await api.createKeyStoreEntry(body)
+                onSaved()
+                dismiss()
+            } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
+            return
+        }
+
         // v1.11.39: gleiche Kombinationslogik wie ksSave() im Web — kein
         // eigenes Server-Feld für die zwei CLS-Teile, sie werden zu einem
         // String "Seriennummer / Produktcode" zusammengefasst.

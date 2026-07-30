@@ -1465,6 +1465,10 @@ final class NimShareAPI: ObservableObject {
     }
 
     // ── Key-Store (v1.11.39: iOS-Parität) ──
+    // v1.11.56: "Lizenzen"-Vorrat — Status/AssignedAt/IsGlobal. Server
+    // serialisiert das C#-Enum als Int (kein globaler String-Enum-Converter
+    // konfiguriert), daher hier RawValue Int statt String.
+    enum KeyStoreEntryStatus: Int, Codable { case available = 0, assigned = 1 }
     struct KeyStoreEntryDto: Codable, Identifiable, Hashable {
         let id: UUID
         let customerName: String
@@ -1478,6 +1482,9 @@ final class NimShareAPI: ObservableObject {
         let updatedAt: Date?
         let ownerName: String?
         let isOwnedByMe: Bool
+        let status: KeyStoreEntryStatus
+        let assignedAt: Date?
+        let isGlobal: Bool
     }
     struct KeyStoreRevealDto: Codable { let keyValue: String }
     struct CreateKeyStoreEntryBody: Encodable {
@@ -1489,6 +1496,24 @@ final class NimShareAPI: ObservableObject {
         let validFrom: Date?
         let validUntil: Date?
         let notes: String?
+        /// v1.11.56: statt eines neu getippten Keys eine vorrätige Lizenz
+        /// zuweisen — wenn gesetzt, ignoriert der Server keyType/keyValue.
+        var poolEntryId: UUID? = nil
+    }
+    /// Schlanker Eintrag für den "Aus Vorrat wählen"-Picker — kein Key-Wert.
+    struct KeyStorePoolEntryDto: Codable, Identifiable, Hashable {
+        let id: UUID
+        let keyType: String
+        let notes: String?
+        let createdAt: Date
+        let isGlobal: Bool
+        let ownerName: String?
+    }
+    struct CreateKeyStoreLicenseBody: Encodable {
+        let keyType: String
+        let keyValue: String
+        let notes: String?
+        let isGlobal: Bool
     }
     struct UpdateKeyStoreEntryBody: Encodable {
         let customerName: String?
@@ -1529,6 +1554,33 @@ final class NimShareAPI: ObservableObject {
     func deleteKeyStoreEntry(_ id: UUID) async throws {
         let req = request("DELETE", "api/v1/keystore/\(id)")
         _ = try await perform(req)
+    }
+
+    // ── Key-Store "Lizenzen"-Vorrat (v1.11.56) ──
+    func listKeyStoreLicenses(q: String? = nil) async throws -> [KeyStoreEntryDto] {
+        var query: [URLQueryItem] = []
+        if let q, !q.isEmpty { query.append(.init(name: "q", value: q)) }
+        let req = request("GET", "api/v1/keystore/licenses", query: query)
+        let (data, _) = try await perform(req)
+        return try decode([KeyStoreEntryDto].self, data)
+    }
+    func listKeyStorePool(type: String? = nil) async throws -> [KeyStorePoolEntryDto] {
+        var query: [URLQueryItem] = []
+        if let type, !type.isEmpty { query.append(.init(name: "type", value: type)) }
+        let req = request("GET", "api/v1/keystore/pool", query: query)
+        let (data, _) = try await perform(req)
+        return try decode([KeyStorePoolEntryDto].self, data)
+    }
+    func createKeyStoreLicense(_ body: CreateKeyStoreLicenseBody) async throws -> KeyStoreEntryDto {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("POST", "api/v1/keystore/licenses", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(KeyStoreEntryDto.self, respData)
+    }
+    func resetKeyStoreEntry(_ id: UUID) async throws -> KeyStoreEntryDto {
+        let req = request("POST", "api/v1/keystore/\(id)/reset")
+        let (data, _) = try await perform(req)
+        return try decode(KeyStoreEntryDto.self, data)
     }
 
     // ── Key-Store Documents (v1.11.37 auf dem Server, hier nachgezogen) ──

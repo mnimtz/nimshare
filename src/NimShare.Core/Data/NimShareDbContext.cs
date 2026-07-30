@@ -351,6 +351,8 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.KeyType).HasMaxLength(100).IsRequired();
             e.Property(x => x.KeyValueEncrypted).HasMaxLength(2000).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(2000);
+            e.Property(x => x.Status).IsRequired();
+            e.HasIndex(x => new { x.OwnerUserId, x.Status });
             e.HasOne(x => x.OwnerUser).WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 

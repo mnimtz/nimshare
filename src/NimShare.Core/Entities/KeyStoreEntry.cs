@@ -14,6 +14,8 @@ namespace NimShare.Core.Entities;
 /// CustomerEmail-Treffer, sonst nach CustomerEmailDomain-Wildcard-Treffer
 /// (analog IsEmailAllowed-Pattern in ShareController).
 /// </summary>
+public enum KeyStoreEntryStatus { Available = 0, Assigned = 1 }
+
 public class KeyStoreEntry
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -46,4 +48,24 @@ public class KeyStoreEntry
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? UpdatedAt { get; set; }
+
+    // v1.11.56 — "Lizenzen": Vorrat an noch nicht zugewiesenen Schlüsseln.
+    // Existing rows sind alle implizit Assigned (sie hatten ja immer schon
+    // einen Kunden) — die Migration setzt den Default entsprechend.
+    /// <summary>Available = Lagerbestand, noch keinem Kunden zugewiesen
+    /// (CustomerName/Email/Domain sind dann leer). Assigned = normaler,
+    /// wie bisher direkt für einen Kunden angelegter oder aus dem Vorrat
+    /// zugewiesener Eintrag.</summary>
+    public KeyStoreEntryStatus Status { get; set; } = KeyStoreEntryStatus.Assigned;
+
+    /// <summary>Zeitpunkt der Zuweisung an einen Kunden (nur bei Assigned).
+    /// Wird beim Reset wieder auf null gesetzt.</summary>
+    public DateTimeOffset? AssignedAt { get; set; }
+
+    /// <summary>Nur von Admins bei Anlage setzbar: macht einen
+    /// Available-Eintrag für ALLE User als Vorrat sichtbar/entnehmbar
+    /// (nicht nur den Owner) — analog admin-kuratierten öffentlichen
+    /// Links. Bleibt nach Zuweisung/Reset unverändert bestehen, damit der
+    /// Vorratseintrag bei einem Reset wieder für alle verfügbar wird.</summary>
+    public bool IsGlobal { get; set; }
 }

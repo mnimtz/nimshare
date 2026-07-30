@@ -145,6 +145,11 @@
                     <a href="/keystore" class="nav-sub @(currentPath.Equals("/keystore", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
                         <span class="nav-sub-ic">📋</span>@T["nav.sig.overview"]
                     </a>
+                    @* v1.11.56: Lizenzen-Vorrat — Schlüssel ohne Kunde einlagern,
+                       später einem neu angelegten Kunden zuweisen. *@
+                    <a href="/keystore/licenses" class="nav-sub @(currentPath.StartsWith("/keystore/licenses", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                        <span class="nav-sub-ic">🔖</span>@T["keystore.licenses.title"]
+                    </a>
                     <a href="/keystore/documents" class="nav-sub @(currentPath.StartsWith("/keystore/documents", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
                         <span class="nav-sub-ic">📄</span>@T["keystore.documents.section"]
                     </a>

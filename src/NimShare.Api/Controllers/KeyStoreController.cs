@@ -42,22 +42,28 @@ public class KeyStoreController : ControllerBase
         DateTimeOffset CreatedAt, DateTimeOffset? UpdatedAt,
         // v1.11.22: Owner-Name nur befüllt, wenn ein Admin fremde Einträge sieht
         // (analog LinkDto.OwnerName-Pattern) — für eigene Einträge null.
-        string? OwnerName, bool IsOwnedByMe);
+        string? OwnerName, bool IsOwnedByMe,
+        // v1.11.56: "Lizenzen"-Vorrat.
+        KeyStoreEntryStatus Status, DateTimeOffset? AssignedAt, bool IsGlobal);
 
     private KeyStoreEntryDto ToDto(KeyStoreEntry e, Guid meId) => new(
         e.Id, e.CustomerName, e.CustomerEmail, e.CustomerEmailDomain, e.KeyType,
         e.ValidFrom, e.ValidUntil, e.Notes, e.CreatedAt, e.UpdatedAt,
         OwnerName: e.OwnerUserId != meId ? e.OwnerUser?.DisplayName : null,
-        IsOwnedByMe: e.OwnerUserId == meId);
+        IsOwnedByMe: e.OwnerUserId == meId,
+        Status: e.Status, AssignedAt: e.AssignedAt, IsGlobal: e.IsGlobal);
 
-    /// <summary>Liste + Suche. Normale User: nur eigene Einträge. Admins:
-    /// alle Einträge instanzweit (mit Owner-Name, damit klar ist wessen
-    /// Kunde das ist).</summary>
+    /// <summary>Liste + Suche für die Kunden-Übersicht. Normale User: nur
+    /// eigene Einträge. Admins: alle Einträge instanzweit (mit Owner-Name,
+    /// damit klar ist wessen Kunde das ist). Zeigt bewusst nur Assigned —
+    /// unzugewiesener Lizenzen-Vorrat gehört auf die Lizenzen-Seite, nicht
+    /// in die Kunden-Tabelle.</summary>
     [HttpGet]
     public async Task<IActionResult> List(string? q, CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
-        var query = _db.KeyStoreEntries.Include(x => x.OwnerUser).AsQueryable();
+        var query = _db.KeyStoreEntries.Include(x => x.OwnerUser)
+            .Where(x => x.Status == KeyStoreEntryStatus.Assigned);
         query = me.Role == UserRole.Admin ? query : query.Where(x => x.OwnerUserId == me.Id);
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -74,7 +80,12 @@ public class KeyStoreController : ControllerBase
     }
 
     public record CreateReq(string CustomerName, string? CustomerEmail, string? CustomerEmailDomain,
-        string KeyType, string KeyValue, DateTimeOffset? ValidFrom, DateTimeOffset? ValidUntil, string? Notes);
+        string KeyType, string KeyValue, DateTimeOffset? ValidFrom, DateTimeOffset? ValidUntil, string? Notes,
+        // v1.11.56: statt eines neu getippten Keys einen vorrätigen Lizenzen-
+        // Eintrag zuweisen. Wenn gesetzt, werden KeyType/KeyValue ignoriert
+        // (der Vorrats-Eintrag bringt seinen eigenen Wert mit) — nur
+        // Kundendaten + Gültigkeit/Notes kommen aus diesem Request.
+        Guid? PoolEntryId = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateReq req, CancellationToken ct)
@@ -84,6 +95,35 @@ public class KeyStoreController : ControllerBase
             return Problem(statusCode: 422, title: "Customer name is required.");
         if (string.IsNullOrWhiteSpace(req.CustomerEmail) && string.IsNullOrWhiteSpace(req.CustomerEmailDomain))
             return Problem(statusCode: 422, title: "Either a customer email or an email domain is required.");
+
+        if (req.PoolEntryId is Guid poolId)
+        {
+            // v1.11.56: aus dem Lizenzen-Vorrat zuweisen. Sichtbarkeitsregel
+            // wie bei GET pool — eigener Eintrag ODER global (Admin-Vorrat).
+            var pool = await _db.KeyStoreEntries
+                .Where(x => x.Id == poolId && x.Status == KeyStoreEntryStatus.Available
+                    && (x.OwnerUserId == me.Id || x.IsGlobal))
+                .SingleOrDefaultAsync(ct);
+            if (pool is null)
+                return Problem(statusCode: 422, title: "Selected license is no longer available.");
+
+            pool.CustomerName = req.CustomerName.Trim();
+            pool.CustomerEmail = string.IsNullOrWhiteSpace(req.CustomerEmail) ? null : req.CustomerEmail.Trim().ToLowerInvariant();
+            pool.CustomerEmailDomain = string.IsNullOrWhiteSpace(req.CustomerEmailDomain) ? null : req.CustomerEmailDomain.Trim().ToLowerInvariant().TrimStart('@');
+            pool.ValidFrom = req.ValidFrom;
+            pool.ValidUntil = req.ValidUntil;
+            if (!string.IsNullOrWhiteSpace(req.Notes)) pool.Notes = req.Notes.Trim();
+            pool.Status = KeyStoreEntryStatus.Assigned;
+            pool.AssignedAt = DateTimeOffset.UtcNow;
+            // Geht in den Besitz der zuweisenden Person über — sonst würde
+            // ein aus dem globalen Admin-Vorrat gezogener Schlüssel nicht in
+            // der eigenen Kunden-Übersicht des zuweisenden Users auftauchen.
+            pool.OwnerUserId = me.Id;
+            await _db.SaveChangesAsync(ct);
+            pool.OwnerUser = me;
+            return CreatedAtAction(nameof(Get), new { id = pool.Id }, ToDto(pool, me.Id));
+        }
+
         if (string.IsNullOrWhiteSpace(req.KeyType))
             return Problem(statusCode: 422, title: "Key type is required.");
         if (string.IsNullOrWhiteSpace(req.KeyValue))
@@ -102,6 +142,8 @@ public class KeyStoreController : ControllerBase
             ValidFrom = req.ValidFrom,
             ValidUntil = req.ValidUntil,
             Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim(),
+            Status = KeyStoreEntryStatus.Assigned,
+            AssignedAt = DateTimeOffset.UtcNow,
         };
         _db.KeyStoreEntries.Add(entry);
         await _db.SaveChangesAsync(ct);
@@ -156,8 +198,11 @@ public class KeyStoreController : ControllerBase
         if (req.ClearValidUntil) e.ValidUntil = null; else if (req.ValidUntil is not null) e.ValidUntil = req.ValidUntil;
         if (req.Notes is not null) e.Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim();
         // Zwingt weiter unten mind. eine Zuordnung — sonst wäre der Eintrag
-        // nie mehr über einen Share-Link-Reveal auffindbar.
-        if (string.IsNullOrWhiteSpace(e.CustomerEmail) && string.IsNullOrWhiteSpace(e.CustomerEmailDomain))
+        // nie mehr über einen Share-Link-Reveal auffindbar. Gilt nur für
+        // Assigned-Einträge — ein unzugewiesener Lizenzen-Vorrat (v1.11.56)
+        // hat bewusst noch keinen Kunden.
+        if (e.Status == KeyStoreEntryStatus.Assigned
+            && string.IsNullOrWhiteSpace(e.CustomerEmail) && string.IsNullOrWhiteSpace(e.CustomerEmailDomain))
             return Problem(statusCode: 422, title: "Either a customer email or an email domain is required.");
         e.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -194,6 +239,102 @@ public class KeyStoreController : ControllerBase
         var query = _db.KeyStoreEntries.Include(x => x.OwnerUser).Where(x => x.Id == id);
         query = me.Role == UserRole.Admin ? query : query.Where(x => x.OwnerUserId == me.Id);
         return query.SingleOrDefaultAsync(ct);
+    }
+
+    // ── v1.11.56 — "Lizenzen": Vorrat an noch unzugewiesenen Schlüsseln ─────
+    // Jeder User pflegt eigenen Vorrat, sichtbar nur für sich. Ein Admin kann
+    // beim Anlegen IsGlobal setzen — der Eintrag wird dann für ALLE User als
+    // entnehmbarer Vorrat sichtbar (Sichtbarkeit, nicht Bearbeitungsrecht:
+    // Ändern/Löschen bleibt weiter Owner-oder-Admin, siehe FindAsync).
+
+    /// <summary>Volles Lizenzen-Inventar (beide Status) für die Lizenzen-
+    /// Seite: eigene Einträge + globaler Admin-Vorrat.</summary>
+    [HttpGet("licenses")]
+    public async Task<IActionResult> ListLicenses(string? q, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var query = _db.KeyStoreEntries.Include(x => x.OwnerUser)
+            .Where(x => x.OwnerUserId == me.Id || x.IsGlobal || me.Role == UserRole.Admin);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var needle = q.Trim().ToLower();
+            query = query.Where(x =>
+                x.KeyType.ToLower().Contains(needle)
+                || x.CustomerName.ToLower().Contains(needle)
+                || (x.Notes != null && x.Notes.ToLower().Contains(needle)));
+        }
+        var rows = await query.OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+        return Ok(rows.Select(x => ToDto(x, me.Id)));
+    }
+
+    /// <summary>Schlanke Liste für den "Aus Vorrat wählen"-Picker im Neuer-
+    /// Kunde-Dialog: nur verfügbare (Status=Available), eigene + globale,
+    /// optional nach Typ gefiltert. Enthält bewusst keinen Schlüsselwert.</summary>
+    public record PoolEntryDto(Guid Id, string KeyType, string? Notes, DateTimeOffset CreatedAt, bool IsGlobal, string? OwnerName);
+    [HttpGet("pool")]
+    public async Task<IActionResult> ListPool(string? type, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var query = _db.KeyStoreEntries.Include(x => x.OwnerUser)
+            .Where(x => x.Status == KeyStoreEntryStatus.Available && (x.OwnerUserId == me.Id || x.IsGlobal));
+        if (!string.IsNullOrWhiteSpace(type))
+            query = query.Where(x => x.KeyType == type);
+        var rows = await query.OrderBy(x => x.CreatedAt).ToListAsync(ct);
+        return Ok(rows.Select(x => new PoolEntryDto(x.Id, x.KeyType, x.Notes, x.CreatedAt,
+            x.IsGlobal, x.OwnerUserId != me.Id ? x.OwnerUser?.DisplayName : null)));
+    }
+
+    public record CreateLicenseReq(string KeyType, string KeyValue, string? Notes, bool IsGlobal = false);
+    [HttpPost("licenses")]
+    public async Task<IActionResult> CreateLicense([FromBody] CreateLicenseReq req, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        if (string.IsNullOrWhiteSpace(req.KeyType))
+            return Problem(statusCode: 422, title: "Key type is required.");
+        if (string.IsNullOrWhiteSpace(req.KeyValue))
+            return Problem(statusCode: 422, title: "Key value is required.");
+        if (req.KeyValue.Length > 500)
+            return Problem(statusCode: 422, title: "Key value too long (max 500 characters).");
+
+        var entry = new KeyStoreEntry
+        {
+            OwnerUserId = me.Id,
+            CustomerName = string.Empty,
+            KeyType = req.KeyType.Trim(),
+            KeyValueEncrypted = _protector.Protect(req.KeyValue.Trim()),
+            Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim(),
+            Status = KeyStoreEntryStatus.Available,
+            // Nur Admins dürfen einen Vorrat für alle freigeben — vom Client
+            // gesendetes IsGlobal=true wird für normale User ignoriert.
+            IsGlobal = me.Role == UserRole.Admin && req.IsGlobal,
+        };
+        _db.KeyStoreEntries.Add(entry);
+        await _db.SaveChangesAsync(ct);
+        entry.OwnerUser = me;
+        return CreatedAtAction(nameof(Get), new { id = entry.Id }, ToDto(entry, me.Id));
+    }
+
+    /// <summary>Löst die Kundenzuordnung eines versehentlich zugewiesenen
+    /// Eintrags wieder — z.B. wenn der Schlüssel doch nicht ausgeliefert
+    /// wurde. Der Schlüsselwert selbst bleibt unangetastet, IsGlobal bleibt
+    /// bestehen (ein zurückgesetzter globaler Vorrats-Key ist wieder für
+    /// alle entnehmbar).</summary>
+    [HttpPost("{id:guid}/reset")]
+    public async Task<IActionResult> Reset(Guid id, CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var e = await FindAsync(id, me, ct);
+        if (e is null) return NotFound();
+        if (e.Status != KeyStoreEntryStatus.Assigned)
+            return Problem(statusCode: 422, title: "License is not currently assigned.");
+        e.CustomerName = string.Empty;
+        e.CustomerEmail = null;
+        e.CustomerEmailDomain = null;
+        e.Status = KeyStoreEntryStatus.Available;
+        e.AssignedAt = null;
+        e.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(ToDto(e, me.Id));
     }
 
     // ── v1.11.37 — Key-Store-Dokumente ──────────────────────────────────────
@@ -386,4 +527,8 @@ public class KeyStorePageController : Controller
     // Unterseiten statt alles auf einer Seite).
     [HttpGet("/keystore/documents")]
     public IActionResult Documents() => View();
+
+    // v1.11.56 — eigener Nav-Punkt für den Lizenzen-Vorrat.
+    [HttpGet("/keystore/licenses")]
+    public IActionResult Licenses() => View();
 }
