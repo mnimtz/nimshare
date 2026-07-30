@@ -1617,6 +1617,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="profile.ai.privacy_link"><value>Privacybeleid</value></data>
   <data name="nav.keystore" xml:space="preserve"><value>Licentiebeheer</value></data>
   <data name="keystore.title" xml:space="preserve"><value>Licentiebeheer</value></data>
+  <data name="keystore.nav.customers"><value>Klanten</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Beheer je klanten en hun licentiesleutels — koppel een deellink aan een sleutel zodat ontvangers automatisch de juiste zien.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Zoek klant, e-mail, domein, type…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Nieuwe sleutel</value></data>

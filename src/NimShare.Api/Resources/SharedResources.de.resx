@@ -1622,6 +1622,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="profile.ai.privacy_link"><value>Datenschutzerklärung</value></data>
   <data name="nav.keystore" xml:space="preserve"><value>Lizenzverwaltung</value></data>
   <data name="keystore.title" xml:space="preserve"><value>Lizenzverwaltung</value></data>
+  <data name="keystore.nav.customers"><value>Kunden</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Verwalte deine Kunden und deren Lizenzschlüssel — verknüpfe einen Freigabelink mit einem Schlüssel, damit Empfänger automatisch den richtigen sehen.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Kunde, E-Mail, Domain, Typ suchen…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Neuer Schlüssel</value></data>

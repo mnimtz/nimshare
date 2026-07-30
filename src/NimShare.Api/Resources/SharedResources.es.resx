@@ -1618,6 +1618,7 @@ Gracias por usar NimShare.</value></data>
   <data name="profile.ai.privacy_link"><value>Política de privacidad</value></data>
   <data name="nav.keystore" xml:space="preserve"><value>Gestión de licencias</value></data>
   <data name="keystore.title" xml:space="preserve"><value>Gestión de licencias</value></data>
+  <data name="keystore.nav.customers"><value>Clientes</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Gestiona tus clientes y sus claves de licencia — vincula un enlace de descarga a una clave para que los destinatarios vean automáticamente la correcta.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Buscar cliente, email, dominio, tipo…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>Nueva clave</value></data>

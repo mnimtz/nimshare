@@ -81,7 +81,7 @@ struct KeyStoreView: View {
                 }
             }
         }
-        .navigationTitle("Key-Store")
+        .navigationTitle("Kunden")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { KeyStoreLicensesView() } label: { Image(systemName: "tag") }

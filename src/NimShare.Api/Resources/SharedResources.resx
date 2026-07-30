@@ -1620,6 +1620,7 @@ Thanks for using NimShare.</value></data>
   <data name="profile.ai.privacy_link"><value>Privacy policy</value></data>
   <data name="nav.keystore" xml:space="preserve"><value>License management</value></data>
   <data name="keystore.title" xml:space="preserve"><value>License management</value></data>
+  <data name="keystore.nav.customers"><value>Customers</value></data>
   <data name="keystore.lede" xml:space="preserve"><value>Manage your customers and their license keys — link a share link to a key so recipients see the right one automatically.</value></data>
   <data name="keystore.search_placeholder" xml:space="preserve"><value>Search customer, email, domain, type…</value></data>
   <data name="keystore.new" xml:space="preserve"><value>New key</value></data>
