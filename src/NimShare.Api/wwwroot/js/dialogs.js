@@ -8,6 +8,8 @@
 //     → resolves to true (confirmed) or false (cancelled)
 //   await window.nimAlert(message, { title?, kind?, buttonText? })
 //     → resolves to true when user closes
+//   await window.nimPrompt(message, { title?, defaultValue?, placeholder?, confirmText?, cancelText? })
+//     → resolves to the entered string, or null when cancelled (ersetzt window.prompt)
 //   window.nimToast(message, { kind?, durationMs? })
 //     → non-blocking, fades out. kind: 'success' | 'info' | 'warning' | 'error'
 //
@@ -86,8 +88,9 @@
                 const primaryText = opts.primaryText || l.ok;
                 const cancelText = opts.cancelText || l.cancel;
                 const isConfirm = !!opts.isConfirm;
+                const isPrompt = !!opts.isPrompt;
                 const danger = !!opts.danger;
-                const kind = opts.kind || (isConfirm ? 'question' : 'info');
+                const kind = opts.kind || (isConfirm || isPrompt ? 'question' : 'info');
 
                 const icons = { question: '❓', info: 'ℹ', warning: '⚠', error: '✕', success: '✓' };
                 const icon = icons[kind] || icons.info;
@@ -101,11 +104,16 @@
                             (title ? '<h2 class="nim-dialog-title">' + esc(title) + '</h2>' : '') +
                         '</div>' +
                         '<div class="nim-dialog-body">' + esc(message).replace(/\n/g, '<br>') + '</div>' +
+                        (isPrompt ? '<input type="text" class="nim-dialog-input" value="' + esc(opts.defaultValue || '') + '" placeholder="' + esc(opts.placeholder || '') + '">' : '') +
                         '<div class="nim-dialog-actions">' +
-                            (isConfirm ? '<button type="button" class="btn btn-ghost nim-dialog-cancel">' + esc(cancelText) + '</button>' : '') +
+                            ((isConfirm || isPrompt) ? '<button type="button" class="btn btn-ghost nim-dialog-cancel">' + esc(cancelText) + '</button>' : '') +
                             '<button type="button" class="btn ' + (danger ? 'nim-dialog-primary-danger' : 'btn-primary') + ' nim-dialog-primary">' + esc(primaryText) + '</button>' +
                         '</div>' +
                     '</div>';
+
+                const inputEl = isPrompt ? backdrop.querySelector('.nim-dialog-input') : null;
+                function promptValue() { return inputEl ? inputEl.value : null; }
+                function cancelValue() { return isPrompt ? null : (isConfirm ? false : true); }
 
                 function close(val) {
                     document.removeEventListener('keydown', onKey);
@@ -115,7 +123,7 @@
                 }
 
                 function onKey(ev) {
-                    if (ev.key === 'Escape') { ev.preventDefault(); close(isConfirm ? false : true); }
+                    if (ev.key === 'Escape') { ev.preventDefault(); close(cancelValue()); }
                     else if (ev.key === 'Enter' && document.activeElement?.tagName !== 'TEXTAREA') {
                         // v1.10.55 Safety: bei danger-Confirms fokussiert
                         // openDialog absichtlich den Cancel-Button. Wenn der
@@ -126,6 +134,7 @@
                         // check), sonst falls kein Focus → sicher-Seite (Cancel
                         // bei danger, OK sonst).
                         ev.preventDefault();
+                        if (isPrompt) { close(promptValue()); return; }
                         const active = document.activeElement;
                         if (isConfirm && active?.classList.contains('nim-dialog-cancel')) {
                             close(false);
@@ -139,15 +148,18 @@
 
                 document.body.appendChild(backdrop);
                 backdrop.addEventListener('click', (ev) => {
-                    if (ev.target === backdrop) close(isConfirm ? false : true);
+                    if (ev.target === backdrop) close(cancelValue());
                 });
-                backdrop.querySelector('.nim-dialog-primary').addEventListener('click', () => close(true));
-                if (isConfirm) {
-                    backdrop.querySelector('.nim-dialog-cancel').addEventListener('click', () => close(false));
+                backdrop.querySelector('.nim-dialog-primary').addEventListener('click', () => close(isPrompt ? promptValue() : true));
+                if (isConfirm || isPrompt) {
+                    backdrop.querySelector('.nim-dialog-cancel').addEventListener('click', () => close(cancelValue()));
                 }
                 document.addEventListener('keydown', onKey);
-                // Focus setzen — Cancel bei destruktiven, sonst Primary
+                // Focus setzen — bei Prompt das Eingabefeld (Text selektiert,
+                // wie beim nativen window.prompt-Vorbelegen), sonst Cancel
+                // bei destruktiven Confirms, ansonsten Primary.
                 setTimeout(() => {
+                    if (isPrompt) { inputEl?.focus(); inputEl?.select(); return; }
                     const target = danger
                         ? backdrop.querySelector('.nim-dialog-cancel')
                         : backdrop.querySelector('.nim-dialog-primary');
@@ -156,7 +168,8 @@
             } catch (e) {
                 // Wenn irgendwas beim Render kracht → native fallback
                 console.warn('nim-dialog render failed, falling back to native:', e);
-                if (opts.isConfirm) resolve(window.confirm(opts.message));
+                if (opts.isPrompt) resolve(window.prompt(opts.message, opts.defaultValue || ''));
+                else if (opts.isConfirm) resolve(window.confirm(opts.message));
                 else { window.alert(opts.message); resolve(true); }
             }
         });
@@ -183,6 +196,20 @@
             primaryText: o.buttonText,
             isConfirm: false,
             kind: o.kind || 'info',
+        });
+    };
+
+    window.nimPrompt = function (message, opts) {
+        const o = opts || {};
+        return openDialog({
+            message: message,
+            title: o.title || '',
+            primaryText: o.confirmText,
+            cancelText: o.cancelText,
+            isPrompt: true,
+            defaultValue: o.defaultValue || '',
+            placeholder: o.placeholder || '',
+            kind: 'question',
         });
     };
 })();

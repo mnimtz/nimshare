@@ -1728,6 +1728,16 @@ body.nav-open { position: relative; }
     color: var(--tw-text, #1a1a1a);
     line-height: 1.5;
 }
+.nim-dialog-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 20px 0;
+    padding: 8px 12px;
+    border: 1px solid var(--tw-gray-300, #d0d7de);
+    border-radius: 6px;
+    font-size: 1rem;
+}
 .nim-dialog-actions {
     display: flex; justify-content: flex-end; gap: 8px;
     flex-wrap: wrap;

@@ -581,10 +581,14 @@ function clearSelection() {
 }
 
 // v1.10.96: Fix „Stift ohne Funktion" — openRenameFolderModal wurde nur
-// aufgerufen, aber nie definiert. Ersetzt durch nimRenameFolder: fragt via
-// nimPrompt (window.prompt-Fallback), postet an /browse/folders/{id}/rename.
+// aufgerufen, aber nie definiert. Ersetzt durch nimRenameFolder, postet an
+// /browse/folders/{id}/rename.
+// v1.11.61: nutzt jetzt wirklich nimPrompt (den Custom-Dialog aus
+// dialogs.js) statt window.prompt — der alte Kommentar hier behauptete das
+// schon länger, tatsächlich stand aber immer noch das native Browser-Popup
+// im Code. Marcus's Feedback: keine 90er-Jahre-Browser-Popups mehr.
 async function nimRenameFolder(id, currentName) {
-    const newName = window.prompt(@Json.Serialize(T["actions.rename"].Value), currentName);
+    const newName = await nimPrompt(@Json.Serialize(T["actions.rename"].Value), { defaultValue: currentName });
     if (!newName || newName === currentName) return;
     const csrf = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
     const form = new FormData();
@@ -600,9 +604,9 @@ async function nimRenameFolder(id, currentName) {
 // noch Hover-Icon) — nur Ordner hatten nimRenameFolder. Nutzt die bereits
 // vorhandene JSON-API POST /api/v1/files/{id}/rename (FilesController.Rename),
 // keine Antiforgery nötig — wie deleteFile/performMove/performCopy auf
-// dieser Seite.
+// dieser Seite. v1.11.61: nimPrompt statt window.prompt (s.o.).
 async function nimRenameFile(id, currentName) {
-    const newName = window.prompt(@Json.Serialize(T["actions.rename"].Value), currentName);
+    const newName = await nimPrompt(@Json.Serialize(T["actions.rename"].Value), { defaultValue: currentName });
     if (!newName || newName === currentName) return;
     const r = await fetch('/api/v1/files/' + id + '/rename', {
         method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'same-origin',
