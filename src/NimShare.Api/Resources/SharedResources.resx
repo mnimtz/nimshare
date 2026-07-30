@@ -1709,8 +1709,8 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.documents.section_links"><value>Links</value></data>
   <data name="keystore.documents.lede_files"><value>PDFs bound to key types — shown as a download button on the recipient's landing page.</value></data>
   <data name="keystore.documents.lede_links"><value>External links bound to key types — shown as a button on the recipient's landing page.</value></data>
-  <data name="keystore.documents.new_file"><value>+ New file</value></data>
-  <data name="keystore.documents.new_link"><value>+ New link</value></data>
+  <data name="keystore.documents.new_file"><value>New file</value></data>
+  <data name="keystore.documents.new_link"><value>New link</value></data>
   <data name="keystore.documents.empty_files"><value>No files yet.</value></data>
   <data name="keystore.documents.empty_links"><value>No links yet.</value></data>
   <data name="keystore.documents.field.label"><value>Label (button caption)</value></data>
@@ -1742,7 +1742,7 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.error.pool_selection_required"><value>Please select a license from stock.</value></data>
   <data name="keystore.licenses.title"><value>Licenses</value></data>
   <data name="keystore.licenses.lede"><value>Stock license keys ahead of time, then assign one when you create a new customer.</value></data>
-  <data name="keystore.licenses.new"><value>+ New license</value></data>
+  <data name="keystore.licenses.new"><value>New license</value></data>
   <data name="keystore.licenses.col.added"><value>Added</value></data>
   <data name="keystore.licenses.col.visibility"><value>Visibility</value></data>
   <data name="keystore.licenses.col.customer"><value>Assigned to</value></data>

@@ -1707,8 +1707,8 @@ Grazie per usare NimShare.</value></data>
   <data name="keystore.documents.section_links"><value>Link</value></data>
   <data name="keystore.documents.lede_files"><value>PDF associati a tipi di chiave — mostrati come pulsante di download nella pagina di destinazione del destinatario.</value></data>
   <data name="keystore.documents.lede_links"><value>Link esterni associati a tipi di chiave — mostrati come pulsante nella pagina di destinazione del destinatario.</value></data>
-  <data name="keystore.documents.new_file"><value>+ Nuovo file</value></data>
-  <data name="keystore.documents.new_link"><value>+ Nuovo link</value></data>
+  <data name="keystore.documents.new_file"><value>Nuovo file</value></data>
+  <data name="keystore.documents.new_link"><value>Nuovo link</value></data>
   <data name="keystore.documents.empty_files"><value>Ancora nessun file.</value></data>
   <data name="keystore.documents.empty_links"><value>Ancora nessun link.</value></data>
   <data name="keystore.documents.field.label"><value>Etichetta (testo del pulsante)</value></data>
@@ -1740,7 +1740,7 @@ Grazie per usare NimShare.</value></data>
   <data name="keystore.error.pool_selection_required"><value>Seleziona una licenza dalla scorta.</value></data>
   <data name="keystore.licenses.title"><value>Licenze</value></data>
   <data name="keystore.licenses.lede"><value>Metti in scorta chiavi di licenza in anticipo, poi assegnane una alla creazione di un nuovo cliente.</value></data>
-  <data name="keystore.licenses.new"><value>+ Nuova licenza</value></data>
+  <data name="keystore.licenses.new"><value>Nuova licenza</value></data>
   <data name="keystore.licenses.col.added"><value>Aggiunta il</value></data>
   <data name="keystore.licenses.col.visibility"><value>Visibilità</value></data>
   <data name="keystore.licenses.col.customer"><value>Assegnata a</value></data>

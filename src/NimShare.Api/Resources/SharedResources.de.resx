@@ -1711,8 +1711,8 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.documents.section_links"><value>Links</value></data>
   <data name="keystore.documents.lede_files"><value>PDFs, die bestimmten Key-Typen zugeordnet sind — erscheinen als Download-Button auf der Empfänger-Landingpage.</value></data>
   <data name="keystore.documents.lede_links"><value>Externe Links, die bestimmten Key-Typen zugeordnet sind — erscheinen als Button auf der Empfänger-Landingpage.</value></data>
-  <data name="keystore.documents.new_file"><value>+ Neue Datei</value></data>
-  <data name="keystore.documents.new_link"><value>+ Neuer Link</value></data>
+  <data name="keystore.documents.new_file"><value>Neue Datei</value></data>
+  <data name="keystore.documents.new_link"><value>Neuer Link</value></data>
   <data name="keystore.documents.empty_files"><value>Noch keine Dateien.</value></data>
   <data name="keystore.documents.empty_links"><value>Noch keine Links.</value></data>
   <data name="keystore.documents.field.label"><value>Beschriftung (Button-Text)</value></data>
@@ -1744,7 +1744,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.error.pool_selection_required"><value>Bitte eine Lizenz aus dem Vorrat auswählen.</value></data>
   <data name="keystore.licenses.title"><value>Lizenzen</value></data>
   <data name="keystore.licenses.lede"><value>Lizenzschlüssel vorab einlagern und bei der Anlage eines neuen Kunden direkt zuweisen.</value></data>
-  <data name="keystore.licenses.new"><value>+ Neue Lizenz</value></data>
+  <data name="keystore.licenses.new"><value>Neue Lizenz</value></data>
   <data name="keystore.licenses.col.added"><value>Hinzugefügt am</value></data>
   <data name="keystore.licenses.col.visibility"><value>Sichtbarkeit</value></data>
   <data name="keystore.licenses.col.customer"><value>Zugewiesen an</value></data>
