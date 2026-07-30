@@ -105,6 +105,7 @@ public class FileVersionsController : ControllerBase
         try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/400.jpg", ct); } catch { }
         try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/1600.jpg", ct); } catch { }
         await _db.SaveChangesAsync(ct);
+        await InvalidateAlbumZipsAsync(file.FolderId, ct);
 
         var ticket = _blobs.CreateUploadTicket(file.BlobPath);
         return Ok(new NewVersionResponse(snapshot.Id, snapshot.VersionNumber,
@@ -143,7 +144,28 @@ public class FileVersionsController : ControllerBase
         try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/400.jpg", ct); } catch { }
         try { await _blobs.DeleteAsync($"thumbs/{file.Id:N}/1600.jpg", ct); } catch { }
         await _db.SaveChangesAsync(ct);
+        await InvalidateAlbumZipsAsync(file.FolderId, ct);
         return NoContent();
+    }
+
+    // v1.11.62: InitNewVersion/Restore ersetzen die Bytes am BESTEHENDEN
+    // BlobPath (gleiche File-Id) — anders als ein normaler Upload wird das
+    // hier von KEINEM bestehenden Trigger erfasst, der das vorgebaute
+    // Album-ZIP für öffentliche Ordner-Links invalidiert (der lief bisher
+    // nur bei neuen/gelöschten Dateien, siehe FilesController.Complete).
+    // Marcus's Frage: "wird das im ZIP berücksichtigt, oder ist im ZIP noch
+    // das alte File?" — ohne diesen Fix: noch das alte File, bis der Link
+    // abläuft oder jemand sonst was in den Ordner hochlädt.
+    private async Task InvalidateAlbumZipsAsync(Guid? folderId, CancellationToken ct)
+    {
+        if (folderId is null) return;
+        var linkIds = await _db.ShareLinks
+            .Where(l => l.FolderId == folderId)
+            .Select(l => l.Id).ToListAsync(ct);
+        if (linkIds.Count == 0) return;
+        var zc = HttpContext.RequestServices.GetRequiredService<IAlbumZipCache>();
+        foreach (var lid in linkIds)
+            _ = zc.DeleteAsync(lid, CancellationToken.None);
     }
 
     private static string Sanitise(string name) =>
