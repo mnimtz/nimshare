@@ -54,7 +54,10 @@ enum FileFormatInfo {
             return (Color(hex: 0xDB2777), u(ext == "jpeg" ? "jpg" : ext))
         case "mp4", "mov", "avi", "mkv", "webm", "m4v": return (Color(hex: 0x7C3AED), u(ext))
         case "mp3", "wav", "m4a", "aac", "flac", "ogg", "wma": return (Color(hex: 0x0891B2), u(ext))
-        case "zip", "7z", "rar", "tar", "gz", "bz2": return (Color(hex: 0x64748B), u(ext))
+        // v1.11.69 (redesign-Pilot): war neutrales Slate-Grau — Marcus's
+        // Feedback "zip gelb" — jetzt Gold (Theme.yellowDeep-Wert, genug
+        // Kontrast fürs weiße Label). Gespiegelt in Browse.cshtml (Web).
+        case "zip", "7z", "rar", "tar", "gz", "bz2": return (Color(hex: 0xF59E0B), u(ext))
         case "txt", "md", "log": return (Color(hex: 0x6B7280), u(ext))
         case "json", "xml", "yml", "yaml", "html", "htm", "css", "js", "ts",
              "cs", "py", "java", "sql", "sh", "swift", "go", "rb", "php":
