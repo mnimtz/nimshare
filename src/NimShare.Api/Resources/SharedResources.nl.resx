@@ -1434,7 +1434,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Voor supportvragen over &lt;em&gt;deze&lt;/em&gt; instantie neemt u contact op met de beheerder (zie &lt;a href='/imprint'&gt;impressum&lt;/a&gt;). Voor bugs of feature-verzoeken over de open-source software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Veelgestelde vragen</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ik ben mijn wachtwoord vergeten.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klik op de inlogpagina op 'Wachtwoord vergeten'. U ontvangt per e-mail een resetlink. Als op uw server geen e-mailgateway is geconfigureerd, neem dan contact op met de beheerder van uw instantie.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Er is momenteel geen zelfbedieningsreset. Neem contact op met de beheerder van uw instantie — die kan onder Instellingen → Gebruikers een nieuw wachtwoord voor u instellen.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Hoe verwijder ik mijn account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>In de app onder 'Profiel → Account verwijderen'. Al uw bestanden, contacten, API-tokens en ondertekeningsprocessen worden onherroepelijk verwijderd. Ondertekeningsaudits blijven om juridische redenen bewaard.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Hoe schakel ik tweefactorauthenticatie in?</value></data>

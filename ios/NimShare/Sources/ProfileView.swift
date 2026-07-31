@@ -2,6 +2,16 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var auth: AuthStore
+    // v1.11.63: "Sprache"-Zeile war bisher reines LabeledContent, das
+    // User.PreferredCulture roh anzeigte — ein Feld, das die App nie
+    // schrieb und das serverseitig beim Default "en" blieb. Jetzt ein
+    // echter Picker, der das Feld setzt UND (nach Neustart) die App-UI-
+    // Sprache selbst umstellt (AppleLanguages-Override).
+    @State private var cultureBusy = false
+    @State private var cultureError: String?
+    @State private var showRestartHint = false
+    private let cultureOptions = [("de", "Deutsch"), ("en", "English"), ("fr", "Français"),
+                                   ("it", "Italiano"), ("es", "Español"), ("nl", "Nederlands")]
 
     var body: some View {
         Form {
@@ -25,7 +35,14 @@ struct ProfileView: View {
                 // Section-Umgebung.
                 Section("Speicher") {
                     LabeledContent("Kontingent", value: ByteCountFormatter.string(fromByteCount: u.quotaBytes, countStyle: .file))
-                    LabeledContent("Sprache", value: u.preferredCulture)
+                    Picker("Sprache", selection: Binding(
+                        get: { u.preferredCulture },
+                        set: { newCode in Task { await setCulture(newCode) } }
+                    )) {
+                        ForEach(cultureOptions, id: \.0) { code, name in Text(name).tag(code) }
+                    }
+                    .disabled(cultureBusy)
+                    if let e = cultureError { Text(e).font(.caption).foregroundStyle(Theme.warnRed) }
                 }
             }
 
@@ -46,6 +63,12 @@ struct ProfileView: View {
                 NavigationLink { TrashView() } label: {
                     Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
                 }
+                // v1.11.63: von der Startseite hierher verschoben — die
+                // Startseiten-Kachel zeigt jetzt stattdessen "Benutzerverwaltung"
+                // (admin-only, siehe BrowseRootView).
+                NavigationLink { ActivityView() } label: {
+                    Label("Aktivität", systemImage: "clock.fill")
+                }
             }
 
             Section("Signaturen") {
@@ -59,12 +82,18 @@ struct ProfileView: View {
 
             // v1.10.88: iOS-Parität — API-Tokens, Webhooks
             // (v1.10.126: Linksammlung als Startseiten-Kachel ausgelagert)
-            Section("Wissen & Automatisierung") {
-                NavigationLink { ApiTokensView() } label: {
-                    Label("API-Tokens", systemImage: "key")
-                }
-                NavigationLink { WebhooksView() } label: {
-                    Label("Webhooks", systemImage: "bolt.horizontal")
+            // v1.11.63: admin-gated — Web hat das seit v1.10.93 bewusst vor
+            // normalen Usern versteckt ("Admin/Power-User-Krams", Marcus's
+            // Report: "ich kann als normaler User Domain sehen, sollte man
+            // nicht — auch keine API-Tokens"). iOS zeigte es bislang jedem.
+            if auth.isAdmin {
+                Section("Wissen & Automatisierung") {
+                    NavigationLink { ApiTokensView() } label: {
+                        Label("API-Tokens", systemImage: "key")
+                    }
+                    NavigationLink { WebhooksView() } label: {
+                        Label("Webhooks", systemImage: "bolt.horizontal")
+                    }
                 }
             }
 
@@ -151,7 +180,26 @@ struct ProfileView: View {
                 }
             }
         }
-        .navigationTitle("Profil")
+        .navigationTitle("Einstellungen")
+        .alert("Sprache geändert", isPresented: $showRestartHint) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Die App-Oberfläche wechselt beim nächsten Start in die neue Sprache. Server-seitige Inhalte (z. B. E-Mails) nutzen die neue Sprache sofort.")
+        }
+    }
+
+    /// v1.11.63: persistiert serverseitig (User.PreferredCulture) UND setzt
+    /// das iOS-Sprach-Override (AppleLanguages) — Apps können ihre eigene
+    /// Bundle-Lokalisierung nicht live umschalten, erst nach Neustart.
+    private func setCulture(_ code: String) async {
+        guard let api = auth.api else { return }
+        cultureBusy = true; cultureError = nil; defer { cultureBusy = false }
+        do {
+            let updated = try await api.setPreferredCulture(code)
+            auth.user = updated
+            UserDefaults.standard.set([code], forKey: "AppleLanguages")
+            showRestartHint = true
+        } catch let ex { cultureError = ex.localizedDescription }
     }
 }
 

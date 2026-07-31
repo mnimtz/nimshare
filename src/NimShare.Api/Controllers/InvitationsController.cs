@@ -38,8 +38,11 @@ public class InvitationsController : Controller
 
     /// <summary>Runs `body` with CurrentUICulture temporarily switched to `language`
     /// — used so invite/reminder emails go out in the language the admin picked for
-    /// the recipient, independent of the admin's own UI language.</summary>
-    private static T WithCulture<T>(string language, Func<T> body)
+    /// the recipient, independent of the admin's own UI language.
+    /// v1.11.63: internal (statt private) so InvitationsApiController (JSON API
+    /// for iOS user management) can reuse it without duplicating the HTML/culture
+    /// logic.</summary>
+    internal static T WithCulture<T>(string language, Func<T> body)
     {
         var prev = CultureInfo.CurrentUICulture;
         try
@@ -60,7 +63,7 @@ public class InvitationsController : Controller
     /// inline styles so it renders consistently across email clients (Outlook
     /// desktop included). Dynamic text pieces must already be HTML-encoded by
     /// the caller; `url` is inserted only as an href/plain link, never as markup.</summary>
-    private static string BuildInviteHtml(string introHtml, string ctaLabel, string url, string expiryNoteHtml)
+    internal static string BuildInviteHtml(string introHtml, string ctaLabel, string url, string expiryNoteHtml)
     {
         var encodedUrl = System.Net.WebUtility.HtmlEncode(url);
         return $$"""

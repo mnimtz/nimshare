@@ -131,6 +131,13 @@ struct ChatView: View {
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.cardBackground))
                     .focused($inputFocused)
+                    // v1.11.63: das System zeigt bei aktivem Autocorrect eine
+                    // eigene QuickType-Vorschlagsleiste im selben Tastatur-
+                    // Zubehörstreifen wie unser .toolbar(placement: .keyboard)
+                    // "Fertig"-Button — beide überlagern sich (Bugreport-
+                    // Screenshot: "?"-Chip verdeckt "Fertig"). Autocorrect aus
+                    // unterdrückt die QuickType-Leiste zuverlässig.
+                    .autocorrectionDisabled()
                 Button {
                     Task { await send() }
                 } label: {

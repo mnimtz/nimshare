@@ -177,7 +177,12 @@ struct BrowseRootView: View {
         t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.tungstenBlue, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
         t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
-        t.append(TileSpec(id: "activity", title: "Aktivität", subtitle: nil, icon: "clock.fill", tint: Theme.tungstenBlue, dest: { AnyView(ActivityView()) }))
+        // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
+        // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
+        // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
+        if auth.isAdmin {
+            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.tungstenBlue, dest: { AnyView(UsersListView()) }))
+        }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
         // „Meine Links"). Fixer Begriff in allen Sprachen.

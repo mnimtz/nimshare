@@ -14,6 +14,12 @@ import CoreImage.CIFilterBuiltins
 struct LinksView: View {
     @EnvironmentObject var auth: AuthStore
     @State private var links: [ShareLinkDto] = []
+    // v1.11.63: Web hat eine vierte Sektion "🌐 Subdomains" (Links.cshtml),
+    // die Subdomain-ShareLinks UND Subdomain-Upload-Request-Links mischt —
+    // iOS zeigte bislang keine von beiden. ShareLinks brauchten keine
+    // Backend-Änderung (subdomainUrl kam schon mit); Upload-Requests
+    // brauchten die Ergänzung in UploadRequestsController.List().
+    @State private var uploadRequests: [NimShareAPI.UploadRequestListItemDto] = []
     @State private var loading = true
     @State private var error: String?
     // v1.10.113: Löschbestätigung für einen Share-Link.
@@ -81,6 +87,20 @@ struct LinksView: View {
                     if !publicLinks.isEmpty {
                         Section("🌍 Öffentlich") {
                             ForEach(publicLinks) { linkRow($0) }
+                        }
+                    }
+                    // v1.11.63: Subdomain-Sektion, analog Web — cross-owner
+                    // sichtbar (der Server liefert sie schon gemischt), mischt
+                    // Share- und Upload-Request-Links wie Web es auch tut.
+                    let subdomainShareLinks = visible.filter { ($0.subdomainUrl?.isEmpty == false) }
+                    let visibleUploads = q.isEmpty ? uploadRequests : uploadRequests.filter { u in
+                        u.slug.lowercased().contains(q) || (u.targetFolder?.lowercased().contains(q) ?? false)
+                    }
+                    let subdomainUploadLinks = visibleUploads.filter { ($0.subdomainUrl?.isEmpty == false) }
+                    if !subdomainShareLinks.isEmpty || !subdomainUploadLinks.isEmpty {
+                        Section("🌐 Subdomains") {
+                            ForEach(subdomainShareLinks) { linkRow($0) }
+                            ForEach(subdomainUploadLinks) { uploadRequestRow($0) }
                         }
                     }
                 }
@@ -181,6 +201,50 @@ struct LinksView: View {
                     }.tint(.orange)
                 }
             }
+    }
+
+    /// v1.11.63: leichtgewichtige Row für Upload-Request-Links in der
+    /// Subdomains-Sektion — kein volles Kontext-Menü wie linkRow(), nur
+    /// Kopieren/Teilen/Löschen (die Vollansicht bleibt UploadRequestsView).
+    private func uploadRequestRow(_ u: NimShareAPI.UploadRequestListItemDto) -> some View {
+        let primaryUrl = u.subdomainUrl ?? ""
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text("📥 \(u.targetFolder ?? u.slug)").font(.subheadline.weight(.medium))
+                if u.isRevoked { miniChip("widerrufen", .secondary) }
+            }
+            Text(primaryUrl).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text("\(u.uploadCount) Uploads" + (u.isPermanent ? " · dauerhaft" : ""))
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .contextMenu {
+            Button { UIPasteboard.general.string = primaryUrl } label: {
+                Label("Link kopieren", systemImage: "doc.on.doc")
+            }
+            if let url = URL(string: primaryUrl) {
+                ShareLink(item: url) { Label("Teilen", systemImage: "square.and.arrow.up") }
+            }
+            Button(role: .destructive) { Task { await deleteUploadRequest(u) } } label: {
+                Label("Löschen", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) { Task { await deleteUploadRequest(u) } } label: {
+                Label("Löschen", systemImage: "trash")
+            }
+        }
+    }
+
+    private func miniChip(_ text: String, _ color: Color) -> some View {
+        Text(text).font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
+            .background(color.opacity(0.15)).foregroundStyle(color).clipShape(Capsule())
+    }
+
+    private func deleteUploadRequest(_ u: NimShareAPI.UploadRequestListItemDto) async {
+        guard let api = auth.api else { return }
+        do { try await api.deleteUploadRequest(u.id); await load() }
+        catch is CancellationError {}
+        catch let ex { actionError = ex.localizedDescription }
     }
 
     private func toggleRevoke(_ link: ShareLinkDto) async {
@@ -318,7 +382,12 @@ struct LinksView: View {
         guard let api = auth.api else { return }
         loading = true; error = nil
         defer { loading = false }
-        do { links = try await api.listMyLinks() }
+        do {
+            async let l = api.listMyLinks()
+            async let u = api.listUploadRequests()
+            links = try await l
+            uploadRequests = try await u
+        }
         catch let e as ApiError {
             error = e.localizedDescription
             if case .notAuthorized = e { auth.signOut() }

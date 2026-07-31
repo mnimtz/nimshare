@@ -1449,7 +1449,7 @@ Thanks for using NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>For support requests about &lt;em&gt;this&lt;/em&gt; instance, contact the operator (see &lt;a href='/imprint'&gt;legal notice&lt;/a&gt;). For bugs or feature requests about the open-source software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Frequently asked questions</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>I forgot my password.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Click 'Forgot password' on the login page. You will receive a reset link by email. If your server has no email gateway configured, contact the administrator of your instance.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>There is currently no self-service password reset. Contact the administrator of your instance — they can set a new password for you under Settings → Users.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>How do I delete my account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>In the app under 'Profile → Delete Account'. All your files, contacts, API tokens and signature workflows are irreversibly deleted. Signature audits are retained for legal reasons.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>How do I enable two-factor authentication?</value></data>

@@ -78,6 +78,29 @@ public class AuthApiController : ControllerBase
         return Ok(ToDto(me));
     }
 
+    private static readonly HashSet<string> SupportedCultures =
+        new(new[] { "en", "de", "fr", "it", "es", "nl" }, StringComparer.OrdinalIgnoreCase);
+
+    public record SetCultureRequest(string Code);
+
+    /// <summary>
+    /// v1.11.63 — JSON twin of the web /set-culture endpoint, for iOS. There
+    /// was no way for the app to ever write User.PreferredCulture (it just
+    /// sat at the DB default "en" forever), so the "Sprache" row on the
+    /// Profil screen showed a stale value even for German-speaking users.
+    /// </summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpPost("me/culture")]
+    public async Task<IActionResult> SetCulture([FromBody] SetCultureRequest req, [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var code = (req.Code ?? "").Trim().ToLowerInvariant();
+        if (!SupportedCultures.Contains(code)) return Problem(statusCode: 422, title: "Unsupported language code.");
+        var me = await _current.GetOrProvisionAsync(User, ct);
+        me.PreferredCulture = code;
+        await db.SaveChangesAsync(ct);
+        return Ok(ToDto(me));
+    }
+
     private static UserDto ToDto(User u) =>
         new(u.Id, u.Email, u.DisplayName, u.Role.ToString(), u.AvatarUrl, u.QuotaBytes, u.PreferredCulture);
 }

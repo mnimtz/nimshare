@@ -12,8 +12,22 @@ struct LinkCollectionView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var editing: LinkEditTarget?
+    // v1.11.63: Suchzeile ergänzt — Marcus's Wunsch, obwohl die Liste laut
+    // Design als schmale, admin-kuratierte Liste gedacht ist (kein Server-
+    // seitiges Paging); bei wachsender Liste hilft die Suche trotzdem.
+    @State private var searchQuery = ""
 
     private var isAdmin: Bool { auth.user?.role == "Admin" }
+
+    private var visibleLinks: [NimShareAPI.LinkEntryDto] {
+        let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return links }
+        return links.filter {
+            $0.title.lowercased().contains(q)
+                || $0.url.lowercased().contains(q)
+                || ($0.description?.lowercased().contains(q) ?? false)
+        }
+    }
 
     struct LinkEditTarget: Identifiable {
         let id: UUID          // frische UUID = neu
@@ -34,7 +48,7 @@ struct LinkCollectionView: View {
                         : "Sobald ein Admin Bookmarks hinzufügt, erscheinen sie hier."))
             } else {
                 List {
-                    ForEach(links) { l in
+                    ForEach(visibleLinks) { l in
                         Button { open(l) } label: { row(l) }
                             .buttonStyle(.plain)
                             .swipeActions(edge: .trailing) {
@@ -53,6 +67,7 @@ struct LinkCollectionView: View {
         }
         .navigationTitle("Bookmarks")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchQuery, prompt: "Titel, URL, Beschreibung")
         .toolbar {
             if isAdmin {
                 ToolbarItem(placement: .topBarTrailing) {

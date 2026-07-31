@@ -12,7 +12,10 @@ struct MainTabView: View {
             NavigationStack { NotificationsView() }
                 .tabItem { Label("Meldungen", systemImage: "bell.fill") }
             NavigationStack { ProfileView() }
-                .tabItem { Label("Profil", systemImage: "person.crop.circle") }
+                // v1.11.63: "Profil" umbenannt — die Seite enthält längst mehr
+                // als Profil-Infos (Sicherheit, Server, Rechtliches, jetzt auch
+                // Aktivität), Marcus's Feedback: der Name ist missverständlich.
+                .tabItem { Label("Einstellungen", systemImage: "gearshape.fill") }
         }
     }
 }

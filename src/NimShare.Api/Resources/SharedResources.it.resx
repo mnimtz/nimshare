@@ -1435,7 +1435,7 @@ Grazie per usare NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Per richieste di supporto relative a &amp;lt;em&amp;gt;questa&amp;lt;/em&amp;gt; istanza, contatta il gestore (vedi &amp;lt;a href='/imprint'&amp;gt;note legali&amp;lt;/a&amp;gt;). Per bug o richieste di funzionalità sul software open source: &amp;lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&amp;gt;GitHub Issues&amp;lt;/a&amp;gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Domande frequenti</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ho dimenticato la mia password.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Clicca su 'Password dimenticata' nella pagina di accesso. Riceverai un link di reset via email. Se il tuo server non ha un gateway email configurato, contatta l'amministratore della tua istanza.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Al momento non è disponibile un reset autonomo. Contatta l'amministratore della tua istanza — può impostarti una nuova password in Impostazioni → Utenti.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Come elimino il mio account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>Nell'app in 'Profilo → Elimina account'. Tutti i tuoi file, contatti, token API e processi di firma vengono eliminati in modo irreversibile. Gli audit delle firme vengono conservati per motivi legali.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Come attivo l'autenticazione a due fattori?</value></data>

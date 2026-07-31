@@ -24,6 +24,10 @@ final class AuthStore: ObservableObject {
     /// Von Feature-Views vor jedem AI-Aufruf zu prüfen. true = geht schon, false = Sheet zeigen.
     var aiReady: Bool { aiConsented == true }
 
+    /// v1.11.63: zentrale Admin-Prüfung statt des Inline-String-Vergleichs
+    /// `auth.user?.role == "Admin"`, der bislang an mehreren Stellen dupliziert war.
+    var isAdmin: Bool { user?.role == "Admin" }
+
     // v1.11.55: ProfileView's Toggle startet bei jedem Flip einen eigenen,
     // unabhängigen Task ohne Sequenzierung. Bei schnellem Doppel-Tap konnte
     // die ältere Server-Antwort NACH der neueren zurückkommen und

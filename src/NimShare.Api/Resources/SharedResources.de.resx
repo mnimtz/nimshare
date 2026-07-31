@@ -1451,7 +1451,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Für Support-Anfragen zu &lt;em&gt;dieser&lt;/em&gt; Instanz wenden Sie sich an die Betreiberin (siehe &lt;a href='/imprint'&gt;Impressum&lt;/a&gt;). Für Bugs oder Feature-Requests an der Open-Source-Software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Häufige Fragen</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ich habe mein Passwort vergessen.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klicken Sie auf der Login-Seite auf 'Passwort vergessen'. Sie erhalten per E-Mail einen Reset-Link. Falls Ihr Server keinen E-Mail-Gateway konfiguriert hat, wenden Sie sich an den Administrator Ihrer Instanz.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Aktuell gibt es kein selbstständiges Zurücksetzen. Wenden Sie sich an den Administrator Ihrer Instanz — er kann Ihnen unter Einstellungen → Benutzer ein neues Passwort setzen.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Wie lösche ich meinen Account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>In der App unter 'Profil → Account löschen'. Alle Ihre Dateien, Kontakte, API-Tokens und Signatur-Vorgänge werden unwiderruflich gelöscht. Signatur-Audits bleiben aus rechtlichen Gründen erhalten.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Wie aktiviere ich Zwei-Faktor-Anmeldung?</value></data>

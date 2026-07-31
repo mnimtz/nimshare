@@ -151,15 +151,38 @@ public class UploadRequestsController : ControllerBase
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var items = await _db.UploadRequests
+        var own = await _db.UploadRequests
             .Where(l => l.OwnerId == user.Id)
-            .OrderByDescending(l => l.CreatedAt)
-            .Select(l => new
-            {
-                l.Id, l.Slug, l.CreatedAt, l.ExpiresAt, l.IsPermanent, l.MaxUploads, l.UploadCount, l.IsRevoked, l.TargetFolder,
-            })
             .ToListAsync(ct);
+        // v1.11.63: iOS Links-Screen bekommt eine "Subdomains"-Sektion, analog
+        // web (HomeController.Links) — Subdomain-Upload-Links sind für ALLE
+        // User sichtbar, unabhängig vom Owner (nur Sichtbarkeit, keine
+        // Lösch-/Bearbeitungsrechte — die bleiben Owner/Admin-only, siehe
+        // Delete()). Ohne diesen Merge sah iOS überhaupt keine fremden
+        // Subdomain-Upload-Links, Web schon.
+        var subdomainExtra = await _db.UploadRequests
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .ToListAsync(ct);
+        var merged = own.Concat(subdomainExtra)
+            .GroupBy(l => l.Id).Select(g => g.First())
+            .OrderByDescending(l => l.CreatedAt)
+            .ToList();
+        var subBase = await SubdomainBaseAsync(ct);
+        var items = merged.Select(l => new
+        {
+            l.Id, l.Slug, l.CreatedAt, l.ExpiresAt, l.IsPermanent, l.MaxUploads, l.UploadCount, l.IsRevoked, l.TargetFolder,
+            l.SubdomainSlug,
+            SubdomainUrl = l.SubdomainSlug is not null && subBase is not null ? $"https://{l.SubdomainSlug}.{subBase}" : null,
+        });
         return Ok(items);
+    }
+
+    /// <summary>v1.11.63 — BaseDomain für Subdomain-URLs, analog LinksController.</summary>
+    private async Task<string?> SubdomainBaseAsync(CancellationToken ct)
+    {
+        var svc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+        var s = await svc.GetSettingsAsync(ct);
+        return s is { Enabled: true } && !string.IsNullOrEmpty(s.BaseDomain) ? s.BaseDomain : null;
     }
 
     [HttpDelete("{id:guid}")]

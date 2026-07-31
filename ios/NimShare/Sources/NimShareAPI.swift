@@ -41,17 +41,20 @@ final class NimShareAPI: ObservableObject {
 
     // MARK: - Request builder
 
-    private func request(_ method: String, _ path: String, query: [URLQueryItem] = [], body: Data? = nil, contentType: String? = nil) -> URLRequest {
+    private func request(_ method: String, _ path: String, query: [URLQueryItem] = [], body: Data? = nil, contentType: String? = nil, timeout: TimeInterval = 20) -> URLRequest {
         var comp = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty { comp.queryItems = query }
         var req = URLRequest(url: comp.url!)
         req.httpMethod = method
         // v1.10.172: 20s Request-Timeout. Default ist 60s — bei unerreichbarem
         // Server steht die UI eine Minute lang auf ProgressView bevor irgendein
-        // Fehler auftaucht. 20s deckt normale Latenz (auch KI-Endpoints, die
-        // 5-15s brauchen können) ohne zu früh abzubrechen. Uploads nutzen einen
-        // separaten Pfad (Blob-PUT) mit eigenem Timeout — hier nicht betroffen.
-        req.timeoutInterval = 20
+        // Fehler auftaucht. 20s deckt normale Latenz ohne zu früh abzubrechen.
+        // Uploads nutzen einen separaten Pfad (Blob-PUT) mit eigenem Timeout —
+        // hier nicht betroffen. v1.11.63: einzelne Calls (KI-Chat) können ein
+        // großzügigeres `timeout` übergeben — der Chat-Endpoint ist serverseitig
+        // synchron/nicht-gestreamt und kann bei Dateien ohne gecachten Text
+        // deutlich länger als 20s brauchen ("Zeitüberschreitung"-Bugreport).
+        req.timeoutInterval = timeout
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         // v1.10.137: Sprache der App (Schnittmenge Gerät ∩ unterstützte
         // Sprachen) explizit mitschicken, damit serverseitige Inhalte wie die
@@ -326,6 +329,17 @@ final class NimShareAPI: ObservableObject {
         return try decode(UserDto.self, data)
     }
 
+    struct SetCultureBody: Encodable { let code: String }
+    /// v1.11.63: bislang gab es KEINEN Weg für die App, User.PreferredCulture
+    /// je zu schreiben — das Feld blieb für jeden nur-iOS-Account für immer
+    /// beim DB-Default "en" stehen, egal welche Sprache das Gerät nutzte.
+    func setPreferredCulture(_ code: String) async throws -> UserDto {
+        let body = try Self.jsonEncoder.encode(SetCultureBody(code: code))
+        let req = request("POST", "api/v1/auth/me/culture", body: body, contentType: "application/json")
+        let (data, _) = try await perform(req)
+        return try decode(UserDto.self, data)
+    }
+
     func scopes() async throws -> [ScopeTile] {
         let req = request("GET", "api/v1/browse/scopes")
         let (data, _) = try await perform(req)
@@ -387,7 +401,10 @@ final class NimShareAPI: ObservableObject {
     }
     func chatAsk(question: String, scope: String = "", groupId: UUID? = nil) async throws -> ChatResponseDto {
         let body = try Self.jsonEncoder.encode(ChatBody(question: question, scope: scope, groupId: groupId))
-        let req = request("POST", "api/v1/ai/chat", body: body, contentType: "application/json")
+        // v1.11.63: 60s statt der globalen 20s — der Server baut die Antwort
+        // synchron (Retrieval + ggf. Text-Extraktion + Provider-Call, kein
+        // Streaming), das kann bei größeren/uncached Dateien länger dauern.
+        let req = request("POST", "api/v1/ai/chat", body: body, contentType: "application/json", timeout: 60)
         let (data, _) = try await perform(req)
         return try decode(ChatResponseDto.self, data)
     }
@@ -1169,6 +1186,10 @@ final class NimShareAPI: ObservableObject {
         let uploadCount: Int
         let isRevoked: Bool
         let targetFolder: String?
+        // v1.11.63: Subdomain-Parität mit Web — LinksView zeigt jetzt eine
+        // "Subdomains"-Sektion, die Upload-Request-Links mit einbezieht.
+        let subdomainSlug: String?
+        let subdomainUrl: String?
     }
     func listUploadRequests() async throws -> [UploadRequestListItemDto] {
         let req = request("GET", "api/v1/upload-requests")
@@ -1659,6 +1680,135 @@ final class NimShareAPI: ObservableObject {
     }
     func deleteKeyStoreDocument(_ id: UUID) async throws {
         let req = request("DELETE", "api/v1/keystore/documents/\(id)")
+        _ = try await perform(req)
+    }
+
+    // MARK: - User management (v1.11.63)
+    // Admin-only, JSON-Zwilling von UsersController/InvitationsController/
+    // GroupsController (die bislang nur als MVC-Form-Posts existierten).
+    // 1:1-Parität mit /settings/users im Web — Marcus's ausdrücklicher Wunsch.
+
+    struct UserListItemDto: Decodable, Identifiable {
+        let id: UUID
+        let displayName: String
+        let email: String
+        let role: String
+        let isActive: Bool
+        let quotaBytes: Int64
+        let createdAt: Date
+        let lastSeenAt: Date?
+    }
+    func listUsers() async throws -> [UserListItemDto] {
+        let req = request("GET", "api/v1/users")
+        let (data, _) = try await perform(req)
+        return try decode([UserListItemDto].self, data)
+    }
+
+    struct GroupMembershipDto: Decodable, Identifiable {
+        let groupId: UUID
+        let groupName: String
+        let role: String
+        var id: UUID { groupId }
+    }
+    struct UserDetailDto: Decodable {
+        let id: UUID
+        let displayName: String
+        let email: String
+        let role: String
+        let isActive: Bool
+        let quotaBytes: Int64
+        let publicCanRead: Bool
+        let publicCanWrite: Bool
+        let publicCanDelete: Bool
+        let groups: [GroupMembershipDto]
+    }
+    func getUser(_ id: UUID) async throws -> UserDetailDto {
+        let req = request("GET", "api/v1/users/\(id)")
+        let (data, _) = try await perform(req)
+        return try decode(UserDetailDto.self, data)
+    }
+
+    struct UpdateUserBody: Encodable {
+        let displayName: String
+        let email: String
+        let role: String
+        let quotaGb: Int
+        let isActive: Bool
+        let groupIds: [UUID]
+        let newPassword: String?
+        let publicCanRead: Bool
+        let publicCanWrite: Bool
+        let publicCanDelete: Bool
+    }
+    func updateUser(_ id: UUID, _ body: UpdateUserBody) async throws {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("POST", "api/v1/users/\(id)", body: data, contentType: "application/json")
+        _ = try await perform(req)
+    }
+    @discardableResult
+    func toggleUserActive(_ id: UUID) async throws -> Bool {
+        let req = request("POST", "api/v1/users/\(id)/toggle-active")
+        let (data, _) = try await perform(req)
+        struct R: Decodable { let isActive: Bool }
+        return try decode(R.self, data).isActive
+    }
+    func deleteUser(_ id: UUID) async throws {
+        let req = request("DELETE", "api/v1/users/\(id)")
+        _ = try await perform(req)
+    }
+
+    struct GroupListItemDto: Decodable, Identifiable {
+        let id: UUID
+        let name: String
+        let memberCount: Int
+    }
+    func listAllGroups() async throws -> [GroupListItemDto] {
+        let req = request("GET", "api/v1/groups")
+        let (data, _) = try await perform(req)
+        return try decode([GroupListItemDto].self, data)
+    }
+
+    struct InvitationDto: Decodable, Identifiable {
+        let id: UUID
+        let email: String
+        let displayName: String
+        let role: String
+        let createdAt: Date
+        let expiresAt: Date
+        let usedAt: Date?
+        let revokedAt: Date?
+        let invitedByName: String?
+    }
+    func listInvitations() async throws -> [InvitationDto] {
+        let req = request("GET", "api/v1/invitations")
+        let (data, _) = try await perform(req)
+        return try decode([InvitationDto].self, data)
+    }
+
+    struct InviteUserBody: Encodable {
+        let email: String
+        let displayName: String
+        let role: String
+        let language: String
+    }
+    struct InviteSendResult: Decodable {
+        let id: UUID
+        let emailSent: Bool
+        let manualUrl: String?
+        let error: String?
+    }
+    func inviteUser(_ body: InviteUserBody) async throws -> InviteSendResult {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("POST", "api/v1/invitations", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(InviteSendResult.self, respData)
+    }
+    func revokeInvitation(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/invitations/\(id)/revoke")
+        _ = try await perform(req)
+    }
+    func resendInvitation(_ id: UUID) async throws {
+        let req = request("POST", "api/v1/invitations/\(id)/resend")
         _ = try await perform(req)
     }
 }
