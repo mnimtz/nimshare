@@ -867,18 +867,49 @@ public class AiController : ControllerBase
             .ToDictionaryAsync(f => f.Id, ct);
         var queryTerms = Tokenize(req.Question);
         var passages = new List<string>();
+        // v1.11.66: zwei Fixes gegen "Zeitüberschreitung" beim KI-Chat (Marcus's
+        // Report): (1) frisch extrahierter Text wurde bisher NIE zurück auf
+        // file.ExtractedText geschrieben — jede Chat-Frage bezahlte die volle
+        // OCR/Extraktions-Kosten für dieselben Dateien erneut. Jetzt gecacht
+        // (gleiche 200k-Zeichen-Kappung wie AiPostProcessor). (2) Extraktion
+        // läuft sequenziell mit je bis zu 30s pro Datei (bis zu 8 Treffer) —
+        // ohne Gesamt-Budget summierte sich das leicht auf mehrere Minuten,
+        // weit über den 60s-Client-Timeout. Ab hier: Zeitbudget für Live-
+        // Extraktion — ist es aufgebraucht, fällt der Rest auf AiSummary/Name
+        // zurück statt weiter frisch zu extrahieren.
+        var extractionBudget = System.Diagnostics.Stopwatch.StartNew();
+        var extractionBudgetExceeded = false;
         for (int i = 0; i < hits.Count; i++)
         {
             if (!files.TryGetValue(hits[i].Id, out var file)) continue;
-            // Bevorzugt der bereits extrahierte Volltext (ExtractedText-Spalte),
-            // sonst frisch extrahieren, sonst die Summary als Fallback.
-            var fullText = !string.IsNullOrWhiteSpace(file.ExtractedText)
-                ? file.ExtractedText
-                : await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct)
-                  ?? file.AiSummary ?? file.Name;
+            string fullText;
+            if (!string.IsNullOrWhiteSpace(file.ExtractedText))
+            {
+                fullText = file.ExtractedText;
+            }
+            else if (!extractionBudgetExceeded && extractionBudget.Elapsed < TimeSpan.FromSeconds(35))
+            {
+                var extracted = await _ai.ExtractTextAsync(file.BlobPath, file.ContentType, _blobs, ct);
+                if (!string.IsNullOrWhiteSpace(extracted))
+                {
+                    file.ExtractedText = extracted.Length > 200_000 ? extracted[..200_000] : extracted;
+                    fullText = extracted;
+                }
+                else
+                {
+                    fullText = file.AiSummary ?? file.Name;
+                }
+                if (extractionBudget.Elapsed >= TimeSpan.FromSeconds(35)) extractionBudgetExceeded = true;
+            }
+            else
+            {
+                extractionBudgetExceeded = true;
+                fullText = file.AiSummary ?? file.Name;
+            }
             var relevant = SelectRelevantWindow(fullText, queryTerms, maxChars: 1800);
             passages.Add($"[{i + 1}] {file.Name}:\n{relevant}");
         }
+        await _db.SaveChangesAsync(ct);
         var provider = await _ai.CreateProviderAsync(ct);
         var lang = CurrentLanguageIso();
         var answer = await provider.ChatAnswerAsync(req.Question, passages, lang, ct);

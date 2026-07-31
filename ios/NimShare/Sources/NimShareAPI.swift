@@ -422,7 +422,13 @@ final class NimShareAPI: ObservableObject {
         // v1.11.63: 60s statt der globalen 20s — der Server baut die Antwort
         // synchron (Retrieval + ggf. Text-Extraktion + Provider-Call, kein
         // Streaming), das kann bei größeren/uncached Dateien länger dauern.
-        let req = request("POST", "api/v1/ai/chat", body: body, contentType: "application/json", timeout: 60)
+        // v1.11.66: auf 90s erhöht — 60s reichte nicht, wenn mehrere Treffer
+        // noch keinen gecachten Volltext hatten (Server extrahierte bis zu 8
+        // Dateien nacheinander à 30s = "Zeitüberschreitung" trotz v1.11.63-
+        // Fix). Serverseitig jetzt zusätzlich auf ein 35s-Extraktions-Budget
+        // gedeckelt und der extrahierte Text wird gecacht — 90s Client-Timeout
+        // deckt den worst case (Budget + finaler Chat-Call) mit Puffer ab.
+        let req = request("POST", "api/v1/ai/chat", body: body, contentType: "application/json", timeout: 90)
         let (data, _) = try await perform(req)
         return try decode(ChatResponseDto.self, data)
     }
