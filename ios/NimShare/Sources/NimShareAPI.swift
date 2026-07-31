@@ -117,6 +117,24 @@ final class NimShareAPI: ObservableObject {
         return try decode(LoginResponse.self, data)
     }
 
+    // MARK: - Forgot / reset password (v1.11.64)
+
+    struct ForgotPasswordBody: Encodable { let email: String }
+    /// Always succeeds regardless of whether the email exists server-side
+    /// (avoids account enumeration) — matches the web /forgot-password flow.
+    func forgotPassword(email: String) async throws {
+        let body = try Self.jsonEncoder.encode(ForgotPasswordBody(email: email))
+        let req = request("POST", "api/v1/auth/forgot-password", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
+    struct ResetPasswordBody: Encodable { let id: UUID; let token: String; let newPassword: String }
+    func resetPassword(id: UUID, token: String, newPassword: String) async throws {
+        let body = try Self.jsonEncoder.encode(ResetPasswordBody(id: id, token: token, newPassword: newPassword))
+        let req = request("POST", "api/v1/auth/reset-password", body: body, contentType: "application/json")
+        _ = try await perform(req)
+    }
+
     // MARK: - 2FA
     func totpStatus() async throws -> TotpStatus {
         let req = request("GET", "api/v1/2fa/status")

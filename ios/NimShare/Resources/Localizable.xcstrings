@@ -16933,6 +16933,146 @@
           }
         }
       }
+    },
+    "Passwort vergessen?" : {
+      "comment" : "v1.11.64: Link/Titel für den Passwort-vergessen-Flow.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forgot password?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Olvidaste tu contraseña?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe oublié ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password dimenticata?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wachtwoord vergeten?"
+          }
+        }
+      }
+    },
+    "Geben Sie Ihre E-Mail-Adresse ein. Falls ein Konto existiert, senden wir Ihnen einen Link zum Zurücksetzen des Passworts." : {
+      "comment" : "v1.11.64: Erklärtext im Passwort-vergessen-Sheet.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your email address. If an account exists, we'll send you a link to reset your password."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce tu dirección de correo electrónico. Si existe una cuenta, te enviaremos un enlace para restablecer tu contraseña."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez votre adresse e-mail. Si un compte existe, nous vous enverrons un lien pour réinitialiser votre mot de passe."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inserisci il tuo indirizzo email. Se esiste un account, ti invieremo un link per reimpostare la password."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voer uw e-mailadres in. Als er een account bestaat, sturen we u een link om uw wachtwoord opnieuw in te stellen."
+          }
+        }
+      }
+    },
+    "Link senden" : {
+      "comment" : "v1.11.64: Button im Passwort-vergessen-Sheet.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send link"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar enlace"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le lien"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia link"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link versturen"
+          }
+        }
+      }
+    },
+    "Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir einen Link zum Zurücksetzen gesendet. Bitte prüfen Sie Ihr Postfach." : {
+      "comment" : "v1.11.64: Generische Erfolgsmeldung (kein User-Enumeration-Leak).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If an account with that email address exists, we've sent a password reset link. Check your inbox."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si existe una cuenta con esa dirección de correo electrónico, hemos enviado un enlace para restablecer la contraseña. Revisa tu bandeja de entrada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si un compte existe avec cette adresse e-mail, nous avons envoyé un lien de réinitialisation. Vérifiez votre boîte de réception."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se esiste un account con questo indirizzo email, abbiamo inviato un link per reimpostare la password. Controlla la tua casella di posta."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als er een account met dit e-mailadres bestaat, hebben we een link verstuurd om het wachtwoord opnieuw in te stellen. Controleer uw inbox."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

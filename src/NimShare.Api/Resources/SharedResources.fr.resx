@@ -31,6 +31,23 @@
   <data name="login.remember_me"><value>Rester connecté</value></data>
   <data name="login.or"><value>ou</value></data>
   <data name="login.request_account"><value>Pas de compte ? Demander un compte</value></data>
+  <data name="login.forgot_password"><value>Mot de passe oublié ?</value></data>
+
+  <data name="forgot.title"><value>Mot de passe oublié ?</value></data>
+  <data name="forgot.lede"><value>Saisissez votre e-mail — si un compte existe, nous vous enverrons un lien pour réinitialiser votre mot de passe.</value></data>
+  <data name="forgot.button"><value>Envoyer le lien</value></data>
+  <data name="forgot.back_to_login"><value>Retour à la connexion</value></data>
+  <data name="forgot.sent"><value>Si un compte existe avec cette adresse e-mail, nous avons envoyé un lien de réinitialisation. Vérifiez votre boîte de réception.</value></data>
+
+  <data name="reset.title"><value>Réinitialiser votre mot de passe</value></data>
+  <data name="reset.button"><value>Réinitialiser le mot de passe</value></data>
+  <data name="reset.success"><value>Votre mot de passe a été réinitialisé. Vous pouvez maintenant vous connecter.</value></data>
+  <data name="reset.invalid.title"><value>Lien expiré ou invalide</value></data>
+  <data name="reset.invalid.body"><value>Ce lien de réinitialisation n'est plus valide. Demandez-en un nouveau.</value></data>
+  <data name="reset.email.subject"><value>Réinitialisez votre mot de passe NimShare</value></data>
+  <data name="reset.email.body"><value>Bonjour,&#10;&#10;Nous avons reçu une demande de réinitialisation de votre mot de passe NimShare.&#10;&#10;Ouvrez ce lien pour définir un nouveau mot de passe :&#10;{0}&#10;&#10;Ce lien expire le {1}.&#10;&#10;Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail — votre mot de passe restera inchangé.&#10;&#10;— NimShare</value></data>
+  <data name="reset.email.intro"><value>Nous avons reçu une demande de réinitialisation de votre mot de passe NimShare.</value></data>
+  <data name="reset.email.cta"><value>Réinitialiser le mot de passe</value></data>
 
   <data name="password.title"><value>Changer votre mot de passe</value></data>
   <data name="password.lede"><value>Entrez votre mot de passe actuel et choisissez-en un nouveau.</value></data>
@@ -1435,7 +1452,7 @@ Merci d'utiliser NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Pour toute demande d'assistance concernant &lt;em&gt;cette&lt;/em&gt; instance, contactez l'exploitant (voir les &lt;a href='/imprint'&gt;mentions légales&lt;/a&gt;). Pour signaler un bug ou demander une fonctionnalité concernant le logiciel open source : &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Questions fréquentes</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>J'ai oublié mon mot de passe.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Il n'existe actuellement pas de réinitialisation en libre-service. Contactez l'administrateur de votre instance — il peut vous définir un nouveau mot de passe sous Paramètres → Utilisateurs.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Cliquez sur « Mot de passe oublié ? » sur la page de connexion — vous recevrez un e-mail avec un lien de réinitialisation. Si l'envoi d'e-mails n'est pas configuré sur votre instance, l'administrateur peut à la place vous définir un nouveau mot de passe sous Paramètres → Utilisateurs.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Comment supprimer mon compte ?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>Dans l'application, sous « Profil → Supprimer le compte ». Tous vos fichiers, contacts, jetons API et processus de signature sont supprimés de manière irréversible. Les journaux d'audit de signature sont conservés pour des raisons légales.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Comment activer l'authentification à deux facteurs ?</value></data>

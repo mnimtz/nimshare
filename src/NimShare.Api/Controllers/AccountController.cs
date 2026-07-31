@@ -1,7 +1,11 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
+using NimShare.Core.Data;
 using NimShare.Core.Entities;
 
 namespace NimShare.Api.Controllers;
@@ -180,6 +184,115 @@ public class AccountController : Controller
         TempData["Notice"] = _l["notice.password_updated"].Value;
         return RedirectToAction("Settings", "Home");
     }
+
+    // ── Forgot / reset password (v1.11.64) ──────────────────────────────────
+    // Same one-time-token pattern as InvitationsController: 32 random bytes,
+    // only the bcrypt hash is stored, the plain token only ever lives in the
+    // emailed URL. Unlike invites this is public + rate-limited (anyone can
+    // request a reset for any email) and always answers with the same generic
+    // message regardless of whether the email exists, to avoid user
+    // enumeration.
+
+    [HttpGet("/forgot-password")]
+    public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
+
+    [HttpPost("/forgot-password")]
+    [EnableRateLimiting("public-share")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel vm,
+        [FromServices] NimShareDbContext db, [FromServices] IPasswordHasher hasher,
+        [FromServices] IEmailGatewayService gateway, [FromServices] IStringLocalizerFactory localizerFactory,
+        CancellationToken ct)
+    {
+        var email = (vm.Email ?? "").Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(email))
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+            if (user is not null)
+            {
+                var raw = RandomNumberGenerator.GetBytes(32);
+                var token = Convert.ToBase64String(raw).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+                var reset = new PasswordResetToken
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    TokenHash = hasher.Hash(token),
+                };
+                db.PasswordResetTokens.Add(reset);
+                await db.SaveChangesAsync(ct);
+
+                var url = Request.PublicUrl($"/reset-password/{reset.Id}?t={token}");
+                var expiry = reset.ExpiresAt.ToString("u");
+                var (subject, body, html) = InvitationsController.WithCulture(user.PreferredCulture, () =>
+                {
+                    var t = localizerFactory.Create(typeof(SharedResources));
+                    return (
+                        t["reset.email.subject"].Value,
+                        t["reset.email.body", url, expiry].Value,
+                        InvitationsController.BuildInviteHtml(
+                            t["reset.email.intro"].Value,
+                            t["reset.email.cta"].Value,
+                            url,
+                            t["invite.email.expiry_note", expiry].Value)
+                    );
+                });
+                try { await gateway.SendAsync(user.Email, subject, body, html, attachments: null, ct); }
+                catch { /* generic response either way — nothing to leak, nothing to retry here */ }
+            }
+        }
+        TempData["Notice"] = _l["forgot.sent"].Value;
+        return RedirectToAction(nameof(Login));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("/reset-password/{id:guid}")]
+    public async Task<IActionResult> ResetPassword(Guid id, string t,
+        [FromServices] NimShareDbContext db, [FromServices] IPasswordHasher hasher, CancellationToken ct)
+    {
+        var reset = await ValidateResetTokenAsync(id, t, db, hasher, ct);
+        if (reset is null) return View("ResetInvalid");
+        return View(new ResetPasswordViewModel { Id = id, Token = t });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("/reset-password/{id:guid}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(Guid id, ResetPasswordViewModel vm,
+        [FromServices] NimShareDbContext db, [FromServices] IPasswordHasher hasher, CancellationToken ct)
+    {
+        var reset = await ValidateResetTokenAsync(id, vm.Token, db, hasher, ct);
+        if (reset is null) return View("ResetInvalid");
+        if (!ModelState.IsValid) return View(vm);
+        if (vm.NewPassword != vm.NewPasswordConfirm)
+        {
+            ModelState.AddModelError(nameof(vm.NewPasswordConfirm), _l["err.password_mismatch"].Value);
+            return View(vm);
+        }
+        if (vm.NewPassword.Length < 8)
+        {
+            ModelState.AddModelError(nameof(vm.NewPassword), _l["err.password_too_short"].Value);
+            return View(vm);
+        }
+        var user = await db.Users.FindAsync(new object[] { reset.UserId }, ct);
+        if (user is null) return View("ResetInvalid");
+        user.PasswordHash = hasher.Hash(vm.NewPassword);
+        reset.UsedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        TempData["Notice"] = _l["reset.success"].Value;
+        return RedirectToAction(nameof(Login));
+    }
+
+    private static async Task<PasswordResetToken?> ValidateResetTokenAsync(Guid id, string t,
+        NimShareDbContext db, IPasswordHasher hasher, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(t)) return null;
+        var reset = await db.PasswordResetTokens.FindAsync(new object[] { id }, ct);
+        if (reset is null) return null;
+        if (reset.UsedAt is not null) return null;
+        if (reset.ExpiresAt < DateTimeOffset.UtcNow) return null;
+        if (!hasher.Verify(t, reset.TokenHash)) return null;
+        return reset;
+    }
 }
 
 public class SetupViewModel
@@ -200,6 +313,19 @@ public class LoginViewModel
 public class ChangePasswordViewModel
 {
     public string CurrentPassword { get; set; } = "";
+    public string NewPassword { get; set; } = "";
+    public string NewPasswordConfirm { get; set; } = "";
+}
+
+public class ForgotPasswordViewModel
+{
+    public string Email { get; set; } = "";
+}
+
+public class ResetPasswordViewModel
+{
+    public Guid Id { get; set; }
+    public string Token { get; set; } = "";
     public string NewPassword { get; set; } = "";
     public string NewPasswordConfirm { get; set; } = "";
 }

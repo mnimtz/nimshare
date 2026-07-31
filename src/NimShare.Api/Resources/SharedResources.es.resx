@@ -31,6 +31,23 @@
   <data name="login.remember_me"><value>Mantenerme conectado</value></data>
   <data name="login.or"><value>o</value></data>
   <data name="login.request_account"><value>¿Sin cuenta? Solicita una</value></data>
+  <data name="login.forgot_password"><value>¿Olvidaste tu contraseña?</value></data>
+
+  <data name="forgot.title"><value>¿Olvidaste tu contraseña?</value></data>
+  <data name="forgot.lede"><value>Introduce tu email — si existe una cuenta, te enviaremos un enlace para restablecer tu contraseña.</value></data>
+  <data name="forgot.button"><value>Enviar enlace</value></data>
+  <data name="forgot.back_to_login"><value>Volver al inicio de sesión</value></data>
+  <data name="forgot.sent"><value>Si existe una cuenta con ese email, hemos enviado un enlace para restablecer la contraseña. Revisa tu bandeja de entrada.</value></data>
+
+  <data name="reset.title"><value>Restablece tu contraseña</value></data>
+  <data name="reset.button"><value>Restablecer contraseña</value></data>
+  <data name="reset.success"><value>Tu contraseña se ha restablecido. Ya puedes iniciar sesión.</value></data>
+  <data name="reset.invalid.title"><value>Enlace caducado o no válido</value></data>
+  <data name="reset.invalid.body"><value>Este enlace para restablecer la contraseña ya no es válido. Solicita uno nuevo.</value></data>
+  <data name="reset.email.subject"><value>Restablece tu contraseña de NimShare</value></data>
+  <data name="reset.email.body"><value>Hola,&#10;&#10;Hemos recibido una solicitud para restablecer tu contraseña de NimShare.&#10;&#10;Abre este enlace para establecer una nueva contraseña:&#10;{0}&#10;&#10;El enlace caduca el {1}.&#10;&#10;Si no solicitaste esto, puedes ignorar este correo — tu contraseña no cambiará.&#10;&#10;— NimShare</value></data>
+  <data name="reset.email.intro"><value>Hemos recibido una solicitud para restablecer tu contraseña de NimShare.</value></data>
+  <data name="reset.email.cta"><value>Restablecer contraseña</value></data>
 
   <data name="password.title"><value>Cambiar tu contraseña</value></data>
   <data name="password.lede"><value>Introduce tu contraseña actual y elige una nueva.</value></data>
@@ -1435,7 +1452,7 @@ Gracias por usar NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Para solicitudes de soporte sobre &lt;em&gt;esta&lt;/em&gt; instancia, contacta con el operador (consulta el &lt;a href='/imprint'&gt;aviso legal&lt;/a&gt;). Para errores o solicitudes de funciones sobre el software de código abierto: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Preguntas frecuentes</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>He olvidado mi contraseña.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Actualmente no existe un restablecimiento de autoservicio. Contacta con el administrador de tu instancia — puede asignarte una nueva contraseña en Configuración → Usuarios.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Haz clic en «¿Olvidaste tu contraseña?» en la página de inicio de sesión — recibirás un correo con un enlace de restablecimiento. Si el envío de correo no está configurado en tu instancia, el administrador puede asignarte una nueva contraseña en Configuración → Usuarios.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>¿Cómo elimino mi cuenta?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>En la app, en 'Perfil → Eliminar cuenta'. Todos tus archivos, contactos, tokens de API y procesos de firma se eliminan de forma irreversible. Las auditorías de firma se conservan por motivos legales.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>¿Cómo activo la verificación en dos pasos?</value></data>

@@ -35,6 +35,23 @@
   <data name="login.remember_me"><value>Aangemeld blijven</value></data>
   <data name="login.or"><value>of</value></data>
   <data name="login.request_account"><value>Geen account? Account aanvragen</value></data>
+  <data name="login.forgot_password"><value>Wachtwoord vergeten?</value></data>
+
+  <data name="forgot.title"><value>Wachtwoord vergeten?</value></data>
+  <data name="forgot.lede"><value>Voer uw e-mailadres in — als er een account bestaat, sturen we u een link om uw wachtwoord opnieuw in te stellen.</value></data>
+  <data name="forgot.button"><value>Link versturen</value></data>
+  <data name="forgot.back_to_login"><value>Terug naar aanmelden</value></data>
+  <data name="forgot.sent"><value>Als er een account met dit e-mailadres bestaat, hebben we een link verstuurd om het wachtwoord opnieuw in te stellen. Controleer uw inbox.</value></data>
+
+  <data name="reset.title"><value>Wachtwoord opnieuw instellen</value></data>
+  <data name="reset.button"><value>Wachtwoord opnieuw instellen</value></data>
+  <data name="reset.success"><value>Uw wachtwoord is opnieuw ingesteld. U kunt nu inloggen.</value></data>
+  <data name="reset.invalid.title"><value>Link verlopen of ongeldig</value></data>
+  <data name="reset.invalid.body"><value>Deze link om het wachtwoord opnieuw in te stellen is niet meer geldig. Vraag een nieuwe aan.</value></data>
+  <data name="reset.email.subject"><value>Stel uw NimShare-wachtwoord opnieuw in</value></data>
+  <data name="reset.email.body"><value>Hallo,&#10;&#10;We hebben een verzoek ontvangen om uw NimShare-wachtwoord opnieuw in te stellen.&#10;&#10;Open deze link om een nieuw wachtwoord in te stellen:&#10;{0}&#10;&#10;De link verloopt op {1}.&#10;&#10;Als u dit niet heeft aangevraagd, kunt u deze e-mail negeren — uw wachtwoord blijft ongewijzigd.&#10;&#10;— NimShare</value></data>
+  <data name="reset.email.intro"><value>We hebben een verzoek ontvangen om uw NimShare-wachtwoord opnieuw in te stellen.</value></data>
+  <data name="reset.email.cta"><value>Wachtwoord opnieuw instellen</value></data>
 
   <data name="password.title"><value>Wachtwoord wijzigen</value></data>
   <data name="password.lede"><value>Voer je huidige wachtwoord in en kies een nieuw.</value></data>
@@ -1434,7 +1451,7 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Voor supportvragen over &lt;em&gt;deze&lt;/em&gt; instantie neemt u contact op met de beheerder (zie &lt;a href='/imprint'&gt;impressum&lt;/a&gt;). Voor bugs of feature-verzoeken over de open-source software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Veelgestelde vragen</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ik ben mijn wachtwoord vergeten.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Er is momenteel geen zelfbedieningsreset. Neem contact op met de beheerder van uw instantie — die kan onder Instellingen → Gebruikers een nieuw wachtwoord voor u instellen.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Klik op de aanmeldpagina op "Wachtwoord vergeten?" — u ontvangt een e-mail met een link om het opnieuw in te stellen. Als e-mailverzending niet is geconfigureerd op uw instantie, kan de beheerder in plaats daarvan onder Instellingen → Gebruikers een nieuw wachtwoord voor u instellen.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Hoe verwijder ik mijn account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>In de app onder 'Profiel → Account verwijderen'. Al uw bestanden, contacten, API-tokens en ondertekeningsprocessen worden onherroepelijk verwijderd. Ondertekeningsaudits blijven om juridische redenen bewaard.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Hoe schakel ik tweefactorauthenticatie in?</value></data>

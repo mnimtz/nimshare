@@ -31,6 +31,23 @@
   <data name="login.remember_me"><value>Mantieni l'accesso</value></data>
   <data name="login.or"><value>o</value></data>
   <data name="login.request_account"><value>Nessun account? Richiedine uno</value></data>
+  <data name="login.forgot_password"><value>Password dimenticata?</value></data>
+
+  <data name="forgot.title"><value>Password dimenticata?</value></data>
+  <data name="forgot.lede"><value>Inserisci la tua email — se esiste un account, ti invieremo un link per reimpostare la password.</value></data>
+  <data name="forgot.button"><value>Invia link</value></data>
+  <data name="forgot.back_to_login"><value>Torna al login</value></data>
+  <data name="forgot.sent"><value>Se esiste un account con questa email, abbiamo inviato un link per reimpostare la password. Controlla la tua casella di posta.</value></data>
+
+  <data name="reset.title"><value>Reimposta la tua password</value></data>
+  <data name="reset.button"><value>Reimposta password</value></data>
+  <data name="reset.success"><value>La tua password è stata reimpostata. Ora puoi accedere.</value></data>
+  <data name="reset.invalid.title"><value>Link scaduto o non valido</value></data>
+  <data name="reset.invalid.body"><value>Questo link per reimpostare la password non è più valido. Richiedine uno nuovo.</value></data>
+  <data name="reset.email.subject"><value>Reimposta la tua password NimShare</value></data>
+  <data name="reset.email.body"><value>Ciao,&#10;&#10;Abbiamo ricevuto una richiesta di reimpostazione della tua password NimShare.&#10;&#10;Apri questo link per impostare una nuova password:&#10;{0}&#10;&#10;Il link scade il {1}.&#10;&#10;Se non hai richiesto tu questa operazione, puoi ignorare questa email — la tua password rimarrà invariata.&#10;&#10;— NimShare</value></data>
+  <data name="reset.email.intro"><value>Abbiamo ricevuto una richiesta di reimpostazione della tua password NimShare.</value></data>
+  <data name="reset.email.cta"><value>Reimposta password</value></data>
 
   <data name="password.title"><value>Cambia password</value></data>
   <data name="password.lede"><value>Inserisci la password attuale e scegline una nuova.</value></data>
@@ -1435,7 +1452,7 @@ Grazie per usare NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>Per richieste di supporto relative a &amp;lt;em&amp;gt;questa&amp;lt;/em&amp;gt; istanza, contatta il gestore (vedi &amp;lt;a href='/imprint'&amp;gt;note legali&amp;lt;/a&amp;gt;). Per bug o richieste di funzionalità sul software open source: &amp;lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&amp;gt;GitHub Issues&amp;lt;/a&amp;gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Domande frequenti</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>Ho dimenticato la mia password.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Al momento non è disponibile un reset autonomo. Contatta l'amministratore della tua istanza — può impostarti una nuova password in Impostazioni → Utenti.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Fai clic su «Password dimenticata?» nella pagina di accesso — riceverai un'email con un link per reimpostarla. Se l'invio di email non è configurato sulla tua istanza, l'amministratore può invece impostarti una nuova password in Impostazioni → Utenti.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>Come elimino il mio account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>Nell'app in 'Profilo → Elimina account'. Tutti i tuoi file, contatti, token API e processi di firma vengono eliminati in modo irreversibile. Gli audit delle firme vengono conservati per motivi legali.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>Come attivo l'autenticazione a due fattori?</value></data>

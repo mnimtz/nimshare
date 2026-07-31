@@ -1,6 +1,11 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using NimShare.Api.Services;
+using NimShare.Core.Data;
 using NimShare.Core.Entities;
 
 namespace NimShare.Api.Controllers;
@@ -103,4 +108,83 @@ public class AuthApiController : ControllerBase
 
     private static UserDto ToDto(User u) =>
         new(u.Id, u.Email, u.DisplayName, u.Role.ToString(), u.AvatarUrl, u.QuotaBytes, u.PreferredCulture);
+
+    // ── Forgot / reset password (v1.11.64) — JSON twin of the web flow in
+    // AccountController, so iOS has the same self-service reset. Always
+    // answers 200 for forgot-password regardless of whether the email
+    // exists, to avoid user enumeration.
+
+    public record ForgotPasswordRequest(string Email);
+
+    [AllowAnonymous]
+    [EnableRateLimiting("public-share")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req,
+        [FromServices] NimShareDbContext db, [FromServices] IPasswordHasher hasher,
+        [FromServices] IEmailGatewayService gateway, [FromServices] IStringLocalizerFactory localizerFactory,
+        CancellationToken ct)
+    {
+        var email = (req.Email ?? "").Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(email))
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+            if (user is not null)
+            {
+                var raw = RandomNumberGenerator.GetBytes(32);
+                var token = Convert.ToBase64String(raw).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+                var reset = new NimShare.Core.Entities.PasswordResetToken
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    TokenHash = hasher.Hash(token),
+                };
+                db.PasswordResetTokens.Add(reset);
+                await db.SaveChangesAsync(ct);
+
+                var url = Request.PublicUrl($"/reset-password/{reset.Id}?t={token}");
+                var expiry = reset.ExpiresAt.ToString("u");
+                var (subject, body, html) = InvitationsController.WithCulture(user.PreferredCulture, () =>
+                {
+                    var t = localizerFactory.Create(typeof(SharedResources));
+                    return (
+                        t["reset.email.subject"].Value,
+                        t["reset.email.body", url, expiry].Value,
+                        InvitationsController.BuildInviteHtml(
+                            t["reset.email.intro"].Value,
+                            t["reset.email.cta"].Value,
+                            url,
+                            t["invite.email.expiry_note", expiry].Value)
+                    );
+                });
+                try { await gateway.SendAsync(user.Email, subject, body, html, attachments: null, ct); }
+                catch { /* generic response either way */ }
+            }
+        }
+        return Ok();
+    }
+
+    public record ResetPasswordRequest(Guid Id, string Token, string NewPassword);
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req,
+        [FromServices] NimShareDbContext db, [FromServices] IPasswordHasher hasher, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(req.Token) || string.IsNullOrEmpty(req.NewPassword))
+            return BadRequest();
+        if (req.NewPassword.Length < 8)
+            return Problem(statusCode: 422, title: "Password too short.");
+
+        var reset = await db.PasswordResetTokens.FindAsync(new object[] { req.Id }, ct);
+        if (reset is null || reset.UsedAt is not null || reset.ExpiresAt < DateTimeOffset.UtcNow || !hasher.Verify(req.Token, reset.TokenHash))
+            return Problem(statusCode: 401, title: "Reset link expired or invalid.");
+
+        var user = await db.Users.FindAsync(new object[] { reset.UserId }, ct);
+        if (user is null) return Problem(statusCode: 401, title: "Reset link expired or invalid.");
+
+        user.PasswordHash = hasher.Hash(req.NewPassword);
+        reset.UsedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return Ok();
+    }
 }

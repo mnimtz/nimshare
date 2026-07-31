@@ -19,6 +19,7 @@ public class NimShareDbContext : DbContext
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<EmailGatewaySettings> EmailGateways => Set<EmailGatewaySettings>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<AiGatewaySettings> AiGateways => Set<AiGatewaySettings>();
@@ -226,6 +227,16 @@ public class NimShareDbContext : DbContext
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
             e.Property(x => x.Language).HasMaxLength(5).IsRequired();
+        });
+
+        b.Entity<PasswordResetToken>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Email);
+            e.HasIndex(x => x.TokenHash);
+            e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(120).IsRequired();
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<AccountRequest>(e =>

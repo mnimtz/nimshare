@@ -11,6 +11,7 @@ struct LoginView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var showServerSheet = false
+    @State private var showForgotPasswordSheet = false
     @State private var rememberCredentials = true
     @FocusState private var focusedField: Field?
 
@@ -117,6 +118,13 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 6)
 
+                        // v1.11.64: "Passwort vergessen?" — Marcus's Feedback,
+                        // gleicher Flow wie im Web (Reset-Link per E-Mail).
+                        Button("Passwort vergessen?") { showForgotPasswordSheet = true }
+                            .font(.caption)
+                            .foregroundStyle(Theme.tungstenBlue)
+                            .frame(maxWidth: .infinity, alignment: .center)
+
                         // Login-Button — Tungsten-Blau, prominent
                         Button {
                             Task { await doLogin() }
@@ -192,6 +200,11 @@ struct LoginView: View {
                 ServerConfigView(isSheet: true, onDone: { showServerSheet = false })
             }
         }
+        .sheet(isPresented: $showForgotPasswordSheet) {
+            NavigationStack {
+                ForgotPasswordSheet(prefillEmail: email)
+            }
+        }
     }
 
     private var loginEnabled: Bool {
@@ -230,6 +243,84 @@ struct LoginView: View {
             if !rememberCredentials {
                 auth.lastEmail = nil
             }
+        } catch let e as ApiError {
+            error = e.localizedDescription
+        } catch let ex {
+            error = ex.localizedDescription
+        }
+    }
+}
+
+/// v1.11.64: "Passwort vergessen?" — sendet einen Reset-Link per E-Mail
+/// (Server-Endpoint antwortet bewusst immer generisch, egal ob die Adresse
+/// existiert — kein User-Enumeration-Leak). Der eigentliche Reset-Schritt
+/// passiert im Web (Link öffnet /reset-password/{id} im Browser), analog zu
+/// den bestehenden Einladungs-Links.
+struct ForgotPasswordSheet: View {
+    @EnvironmentObject var auth: AuthStore
+    @Environment(\.dismiss) private var dismiss
+    @State var email: String
+    @State private var busy = false
+    @State private var error: String?
+    @State private var sent = false
+
+    init(prefillEmail: String = "") {
+        _email = State(initialValue: prefillEmail)
+    }
+
+    var body: some View {
+        Form {
+            if sent {
+                Section {
+                    Label("Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir einen Link zum Zurücksetzen gesendet. Bitte prüfen Sie Ihr Postfach.", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Section {
+                    Text("Geben Sie Ihre E-Mail-Adresse ein. Falls ein Konto existiert, senden wir Ihnen einen Link zum Zurücksetzen des Passworts.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    TextField("E-Mail", text: $email)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .textContentType(.username)
+                }
+                if let e = error {
+                    Section {
+                        Text(e).foregroundStyle(Theme.warnRed).font(.footnote)
+                    }
+                }
+                Section {
+                    Button {
+                        Task { await send() }
+                    } label: {
+                        if busy {
+                            HStack { Spacer(); ProgressView(); Spacer() }
+                        } else {
+                            Text("Link senden")
+                        }
+                    }
+                    .disabled(email.isEmpty || busy)
+                }
+            }
+        }
+        .navigationTitle("Passwort vergessen?")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Fertig") { dismiss() }
+            }
+        }
+    }
+
+    private func send() async {
+        guard let api = auth.api else { return }
+        busy = true; error = nil
+        defer { busy = false }
+        do {
+            try await api.forgotPassword(email: email)
+            sent = true
         } catch let e as ApiError {
             error = e.localizedDescription
         } catch let ex {

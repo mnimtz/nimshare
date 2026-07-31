@@ -23,9 +23,12 @@
                 <label for="Password">@T["auth.password"]</label>
                 <input type="password" name="Password" id="Password" required autocomplete="current-password"/>
             </div>
-            <label style="display:flex;align-items:center;gap:var(--sp-2);font-weight:400">
-                <input type="checkbox" name="RememberMe" value="true"/> @T["login.remember_me"]
-            </label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2)">
+                <label style="display:flex;align-items:center;gap:var(--sp-2);font-weight:400">
+                    <input type="checkbox" name="RememberMe" value="true"/> @T["login.remember_me"]
+                </label>
+                <a href="/forgot-password" class="muted" style="font-size:.85rem">@T["login.forgot_password"]</a>
+            </div>
             <button type="submit" class="btn btn-primary">@T["login.sign_in"]</button>
         </form>
 

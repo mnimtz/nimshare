@@ -31,6 +31,23 @@
   <data name="login.remember_me"><value>Keep me signed in</value></data>
   <data name="login.or"><value>or</value></data>
   <data name="login.request_account"><value>Don't have an account? Request one</value></data>
+  <data name="login.forgot_password"><value>Forgot password?</value></data>
+
+  <data name="forgot.title"><value>Forgot your password?</value></data>
+  <data name="forgot.lede"><value>Enter your email — if an account exists, we'll send you a link to reset your password.</value></data>
+  <data name="forgot.button"><value>Send reset link</value></data>
+  <data name="forgot.back_to_login"><value>Back to sign in</value></data>
+  <data name="forgot.sent"><value>If an account with that email exists, we've sent a password reset link. Check your inbox.</value></data>
+
+  <data name="reset.title"><value>Reset your password</value></data>
+  <data name="reset.button"><value>Reset password</value></data>
+  <data name="reset.success"><value>Your password has been reset. You can sign in now.</value></data>
+  <data name="reset.invalid.title"><value>Link expired or invalid</value></data>
+  <data name="reset.invalid.body"><value>This password reset link is no longer valid. Request a new one.</value></data>
+  <data name="reset.email.subject"><value>Reset your NimShare password</value></data>
+  <data name="reset.email.body"><value>Hello,&#10;&#10;We received a request to reset your NimShare password.&#10;&#10;Open this link to set a new password:&#10;{0}&#10;&#10;The link expires on {1}.&#10;&#10;If you didn't request this, you can ignore this email — your password stays unchanged.&#10;&#10;— NimShare</value></data>
+  <data name="reset.email.intro"><value>We received a request to reset your NimShare password.</value></data>
+  <data name="reset.email.cta"><value>Reset password</value></data>
 
   <data name="password.title"><value>Change your password</value></data>
   <data name="password.lede"><value>Enter your current password and choose a new one.</value></data>
@@ -1449,7 +1466,7 @@ Thanks for using NimShare.</value></data>
   <data name="support.contact.body" xml:space="preserve"><value>For support requests about &lt;em&gt;this&lt;/em&gt; instance, contact the operator (see &lt;a href='/imprint'&gt;legal notice&lt;/a&gt;). For bugs or feature requests about the open-source software: &lt;a href='https://github.com/mnimtz/nimshare/issues' target='_blank' rel='noopener'&gt;GitHub Issues&lt;/a&gt;.</value></data>
   <data name="support.faq.title" xml:space="preserve"><value>Frequently asked questions</value></data>
   <data name="support.faq.reset_password.q" xml:space="preserve"><value>I forgot my password.</value></data>
-  <data name="support.faq.reset_password.a" xml:space="preserve"><value>There is currently no self-service password reset. Contact the administrator of your instance — they can set a new password for you under Settings → Users.</value></data>
+  <data name="support.faq.reset_password.a" xml:space="preserve"><value>Click "Forgot password?" on the sign-in page — you'll get an email with a reset link. If email isn't configured on your instance, the administrator can set a new password for you under Settings → Users instead.</value></data>
   <data name="support.faq.delete_account.q" xml:space="preserve"><value>How do I delete my account?</value></data>
   <data name="support.faq.delete_account.a" xml:space="preserve"><value>In the app under 'Profile → Delete Account'. All your files, contacts, API tokens and signature workflows are irreversibly deleted. Signature audits are retained for legal reasons.</value></data>
   <data name="support.faq.2fa.q" xml:space="preserve"><value>How do I enable two-factor authentication?</value></data>
