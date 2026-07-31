@@ -40,9 +40,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>RedHatDisplay-Variable.ttf</string>
-		<string>Fonts/RedHatDisplay-Variable.ttf</string>
 		<string>RedHatMono-Variable.ttf</string>
-		<string>Fonts/RedHatMono-Variable.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
