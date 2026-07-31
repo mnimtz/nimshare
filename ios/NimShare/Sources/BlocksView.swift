@@ -9,40 +9,47 @@ struct BlocksView: View {
     @State private var error: String?
 
     var body: some View {
-        List {
+        Group {
             if rows.isEmpty && !loading {
-                Section {
-                    Text("Du hast noch niemanden blockiert.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-            }
-            ForEach(rows) { r in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(r.blockedName ?? r.blockedEmail ?? r.blockedUserId.uuidString)
-                        .font(.body)
-                    if let email = r.blockedEmail, r.blockedName != nil {
-                        Text(email).font(.caption).foregroundStyle(.secondary)
+                RSEmptyState(systemImage: "hand.raised", title: "Keine Blocks",
+                             desc: "Du hast noch niemanden blockiert.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    ForEach(rows) { r in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.blockedName ?? r.blockedEmail ?? r.blockedUserId.uuidString)
+                                .font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                            if let email = r.blockedEmail, r.blockedName != nil {
+                                Text(email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                            }
+                            if let reason = r.reason, !reason.isEmpty {
+                                // v1.10.91: extended delimiters, sonst zerlegt das
+                                // typografische „…" den Swift-String und der Parser
+                                // wirft „unterminated string literal".
+                                Text(#"„\#(reason)""#).font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                            }
+                            Text(r.createdAt, style: .date).font(.caption2).foregroundStyle(Theme.textTertiary)
+                        }
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                Task { await unblock(r.blockedUserId) }
+                            } label: {
+                                Label("Aufheben", systemImage: "person.badge.plus")
+                            }
+                        }
                     }
-                    if let reason = r.reason, !reason.isEmpty {
-                        // v1.10.91: extended delimiters, sonst zerlegt das
-                        // typografische „…" den Swift-String und der Parser
-                        // wirft „unterminated string literal".
-                        Text(#"„\#(reason)""#).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Text(r.createdAt, style: .date).font(.caption2).foregroundStyle(.secondary)
-                }
-                .swipeActions {
-                    Button(role: .destructive) {
-                        Task { await unblock(r.blockedUserId) }
-                    } label: {
-                        Label("Aufheben", systemImage: "person.badge.plus")
+                    if let e = error {
+                        Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
                     }
                 }
-            }
-            if let e = error {
-                Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Blockierte Nutzer")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
