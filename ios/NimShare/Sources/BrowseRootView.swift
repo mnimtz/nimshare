@@ -85,7 +85,24 @@ struct BrowseRootView: View {
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.heroGradient)
+            .background(
+                // v1.11.68: Marcus's Feedback — "recht monochrom, gerade so
+                // bei zuletzt geteilt, fehlen die Farben". Die ambient-blob-
+                // Glows aus dem Handoff-Prototyp (ReferenceSnippets.swift,
+                // RecentSharedHero) waren in der ersten Fassung noch nicht
+                // übernommen — nachgezogen: gelber + cyan Glow hinter dem
+                // Navy-Gradient bricht die Fläche auf.
+                Theme.heroGradient
+                    .overlay(
+                        Circle().fill(Theme.yellow.opacity(0.35)).frame(width: 180)
+                            .blur(radius: 30).offset(x: 110, y: -60)
+                    )
+                    .overlay(
+                        Circle().fill(Theme.cyan.opacity(0.35)).frame(width: 150)
+                            .blur(radius: 30).offset(x: -90, y: 70)
+                    )
+                    .clipped()
+            )
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius2.hero, style: .continuous))
             .padding(.horizontal, Theme.Space.lg)
             .shadow(color: Theme.navy.opacity(0.4), radius: 22, x: 0, y: 14)
@@ -174,34 +191,41 @@ struct BrowseRootView: View {
 
     /// Bibliotheken (Persönlich, dann Öffentlich) — die eigentlichen Ablage-
     /// orte für Dateien/Ordner. Gruppen bewusst nicht als Kachel (v1.10.103).
+    /// v1.11.68: Persönlich=Navy, Öffentlich=Gold — matched den Zwei-Ton-Look
+    /// aus dem Handoff-Prototyp (ReferenceSnippets.LibraryTile: .personal vs
+    /// .publicShared bekommen unterschiedliche Icon-Box-Farben).
     private var librarySpecs: [TileSpec] {
         var t: [TileSpec] = []
         for tile in scopes.filter({ $0.scope.lowercased() == "personal" })
                         + scopes.filter({ $0.scope.lowercased() == "public" }) {
-            let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
+            let isPersonal = tile.scope.lowercased() == "personal"
+            let localized: String = isPersonal ? "Persönlich"
                 : tile.scope.lowercased() == "public" ? "Öffentlich" : tile.scope.capitalized
             t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
-                              icon: tile.systemImage, tint: Theme.navy,
+                              icon: tile.systemImage, tint: isPersonal ? Theme.navy : Theme.yellowDeep,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
         return t
     }
 
     /// Übersichten & Werkzeuge — unter der Trennlinie.
+    /// v1.11.68: Marcus's Feedback — "recht monochrom" (fast alle Kacheln
+    /// hatten dieselbe Navy-Tönung). Jetzt eine Farbe pro Werkzeug aus der
+    /// vollen Token-Palette, statt Navy als Standard-Fallback.
     private var overviewSpecs: [TileSpec] {
         var t: [TileSpec] = []
         t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: Theme.yellow, dest: { AnyView(FavoritesView()) }))
         // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
         // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
         // getauscht (das zieht dafür nach Profil → Dateien um).
-        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
+        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.warn2, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.cyan, dest: { AnyView(LinksView()) }))
-        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navy, dest: { AnyView(SignaturesView()) }))
+        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.success2, dest: { AnyView(SignaturesView()) }))
         // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
         // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
         // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
         if auth.isAdmin {
-            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
+            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.danger2, dest: { AnyView(UsersListView()) }))
         }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
