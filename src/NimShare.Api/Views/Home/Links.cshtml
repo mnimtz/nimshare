@@ -26,9 +26,19 @@
    Öffnen/Auswertung/Widerrufen/Löschen bleiben sichtbar. *@
 <style>
     .links-table th, .links-table td { padding: 7px 10px; font-size: .92rem; }
-    .links-table td.ellipsis, .links-table .ellipsis-inner {
-        max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        display: inline-block; vertical-align: bottom;
+    @* v1.11.69 — Marcus: "Spalte Name zeigt Inhalte nicht mehr mittig, alle
+       nach oben verrutscht". Root Cause: `td.ellipsis` bekam dieselbe Regel
+       wie `.ellipsis-inner`, inkl. `display: inline-block`. Das reißt die
+       Zelle aus dem normalen table-cell-Layout — vertical-align auf einem
+       inline-block bedeutet dann "relativ zur Zeile", nicht mehr "relativ
+       zur Tabellenzeile" wie das ererbte `.table td { vertical-align: middle }`
+       aus site.css. Fix: die Kürzung (max-width/overflow/ellipsis/inline-block)
+       gehört nur auf `.ellipsis-inner`, die äußere `<td>` bleibt ein normales
+       Table-Cell und erbt die mittige Ausrichtung wieder korrekt. *@
+    .links-table td.ellipsis { max-width: 260px; }
+    .links-table .ellipsis-inner {
+        max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        display: inline-block; vertical-align: middle;
     }
     .links-toolbar { margin: 4px 0 8px; max-width: 320px; }
     .links-toolbar input[type="search"] { width: 100%; }
