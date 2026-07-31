@@ -52,15 +52,15 @@ targets:
         # v1.10.114: optionaler Standort für die Wetter-Begrüssung auf der Startseite.
         NSLocationWhenInUseUsageDescription: "NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne."
         # Redesign-Pilot (redesign/ios-mobile-v2): Red Hat Display/Mono als
-        # Variable Fonts, siehe Resources/Fonts. Beide Pfadformen gelistet,
-        # falls xcodegen die Resources-Unterordner-Struktur im Bundle
-        # flacht oder beibehält — iOS überspringt nicht auffindbare Einträge
-        # stillschweigend, das crasht also so oder so nicht.
+        # Variable Fonts, siehe Resources/Fonts. v1.11.71: xcodegen flacht
+        # die Resources/Fonts-Unterordner-Struktur beim Kopieren ins Bundle
+        # — die .ttf landen direkt im Bundle-Root, nicht unter "Fonts/".
+        # Die zusätzlich probehalber gelisteten "Fonts/…"-Pfade trafen
+        # daher nie und produzierten nur Konsolen-Spam ("FontParser could
+        # not open filePath … Fonts/RedHatDisplay-Variable.ttf") — entfernt.
         UIAppFonts:
           - RedHatDisplay-Variable.ttf
-          - Fonts/RedHatDisplay-Variable.ttf
           - RedHatMono-Variable.ttf
-          - Fonts/RedHatMono-Variable.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: email.nimtz.nimshare
