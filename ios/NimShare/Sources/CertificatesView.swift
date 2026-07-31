@@ -16,55 +16,42 @@ struct CertificatesView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Kein Zertifikat",
+                RSEmptyState(
                     systemImage: "seal",
-                    description: Text("Ohne Zertifikat wird beim Signieren ein Web-Only-Stempel genutzt. Für PKCS-signierte PDFs generiere ein selbst-signiertes Zertifikat."))
-                    .overlay(alignment: .bottom) {
-                        Button {
-                            showGenerate = true
-                        } label: {
-                            Label("Zertifikat generieren", systemImage: "plus.circle.fill")
-                        }
-                        .buttonStyle(.borderedProminent).tint(Theme.tungstenBlue)
-                        .padding(.bottom, 40)
-                    }
+                    title: "Kein Zertifikat",
+                    desc: "Ohne Zertifikat wird beim Signieren ein Web-Only-Stempel genutzt. Für PKCS-signierte PDFs generiere ein selbst-signiertes Zertifikat.",
+                    ctaLabel: "Zertifikat generieren"
+                ) { showGenerate = true }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(items) { c in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
                                 Image(systemName: c.isDefault ? "seal.fill" : "seal")
-                                    .foregroundStyle(c.isDefault ? .green : Theme.tungstenBlue)
-                                Text(c.name).font(.body.weight(.semibold))
+                                    .foregroundStyle(c.isDefault ? Theme.success2 : Theme.navy)
+                                Text(c.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 if c.isExpired {
-                                    Text("Abgelaufen")
-                                        .font(.caption2.weight(.medium))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .background(Theme.warnRed.opacity(0.15))
-                                        .foregroundStyle(Theme.warnRed)
-                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                    Chip(text: "Abgelaufen", color: Theme.danger2, bg: Theme.danger2.opacity(0.12))
                                 } else if c.isDefault {
-                                    Text("Standard")
-                                        .font(.caption2.weight(.medium))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .background(Color.green.opacity(0.15))
-                                        .foregroundStyle(.green)
-                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                    Chip(text: "Standard", color: Theme.success2, bg: Theme.success2.opacity(0.12))
                                 }
                             }
-                            Text("CN: \(c.subjectCommonName)").font(.caption).foregroundStyle(.secondary)
+                            Text("CN: \(c.subjectCommonName)").font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             Text("Gültig bis \(c.notAfter.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.caption).foregroundStyle(.secondary)
-                            Text("Fingerprint: \(c.thumbprint.prefix(16))…").font(.caption2.monospaced()).foregroundStyle(.secondary)
+                                .font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                            Text("Fingerprint: \(c.thumbprint.prefix(16))…").font(.caption2.monospaced()).foregroundStyle(Theme.textTertiary)
                         }
                         .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if !c.isDefault {
                                 Button {
                                     Task { await setDefault(c.id) }
                                 } label: { Label("Standard", systemImage: "star.fill") }
-                                    .tint(.yellow)
+                                    .tint(Theme.yellow)
                             }
                             Button(role: .destructive) {
                                 Task { await delete(c.id) }
@@ -72,6 +59,8 @@ struct CertificatesView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Theme.bgGradient.ignoresSafeArea())
             }
         }
         .navigationTitle("Zertifikate")

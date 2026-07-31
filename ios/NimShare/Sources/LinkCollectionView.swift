@@ -40,17 +40,20 @@ struct LinkCollectionView: View {
             if loading && links.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if links.isEmpty {
-                ContentUnavailableView(
-                    "Noch keine Bookmarks",
+                RSEmptyState(
                     systemImage: "bookmark",
-                    description: Text(isAdmin
+                    title: "Noch keine Bookmarks",
+                    desc: isAdmin
                         ? "Tippe oben rechts auf +, um das erste Bookmark hinzuzufügen."
-                        : "Sobald ein Admin Bookmarks hinzufügt, erscheinen sie hier."))
+                        : "Sobald ein Admin Bookmarks hinzufügt, erscheinen sie hier.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(visibleLinks) { l in
                         Button { open(l) } label: { row(l) }
                             .buttonStyle(.plain)
+                            .listRowBackground(Theme.surface2)
+                            .listRowSeparator(.hidden)
                             .swipeActions(edge: .trailing) {
                                 if isAdmin {
                                     Button(role: .destructive) { Task { await delete(l) } } label: {
@@ -58,11 +61,13 @@ struct LinkCollectionView: View {
                                     }
                                     Button { editing = LinkEditTarget(id: l.id, existing: l) } label: {
                                         Label("Bearbeiten", systemImage: "pencil")
-                                    }.tint(Theme.tungstenBlue)
+                                    }.tint(Theme.cyan)
                                 }
                             }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Theme.bgGradient.ignoresSafeArea())
             }
         }
         .navigationTitle("Bookmarks")
@@ -91,17 +96,21 @@ struct LinkCollectionView: View {
 
     private func row(_ l: NimShareAPI.LinkEntryDto) -> some View {
         HStack(spacing: 12) {
-            Text(l.emoji?.isEmpty == false ? l.emoji! : "🔗").font(.title2)
+            ZStack {
+                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
+                Text(l.emoji?.isEmpty == false ? l.emoji! : "🔗").font(.system(size: 16))
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text(l.title).font(.body.weight(.medium))
+                Text(l.title).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                 if let d = l.description, !d.isEmpty {
-                    Text(d).font(.caption).foregroundStyle(.secondary)
+                    Text(d).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 }
-                Text(l.url).font(.caption2).foregroundStyle(Theme.tungstenBlue).lineLimit(1)
+                Text(l.url).font(.caption2).foregroundStyle(Theme.cyan).lineLimit(1)
             }
             Spacer()
-            Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary)
+            Image(systemName: "arrow.up.right.square").foregroundStyle(Theme.textTertiary)
         }
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
     }
 
