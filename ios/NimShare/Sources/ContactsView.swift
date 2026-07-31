@@ -99,30 +99,33 @@ struct ContactsView: View {
             ($0.company ?? "").localizedCaseInsensitiveContains(searchText)
         }
         if filtered.isEmpty {
-            ContentUnavailableView(
-                myContacts.isEmpty ? "Noch kein Kontakt" : "Nichts gefunden",
+            RSEmptyState(
                 systemImage: "person.crop.circle",
-                description: Text(myContacts.isEmpty
+                title: myContacts.isEmpty ? "Noch kein Kontakt" : "Nichts gefunden",
+                desc: myContacts.isEmpty
                     ? "Kontakte tauchen automatisch auf wenn du jemanden zum Signieren einlädst — du kannst auch manuell welche anlegen (+ oben rechts)."
-                    : "Kein Kontakt passt zu \"\(searchText)\"."))
+                    : "Kein Kontakt passt zu \"\(searchText)\".")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List {
                 ForEach(filtered) { c in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text(c.name).font(.body.weight(.semibold))
+                            Text(c.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                             Spacer()
                             if c.useCount > 0 {
-                                Text("\(c.useCount)×").font(.caption).foregroundStyle(.secondary)
+                                Text("\(c.useCount)×").font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             }
                         }
-                        Text(c.email).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        Text(c.email).font(.caption.monospaced()).foregroundStyle(Theme.textSecondary)
                         if let company = c.company, !company.isEmpty {
-                            Text(company).font(.caption).foregroundStyle(.secondary)
+                            Text(company).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                         }
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 4)
                     .contentShape(Rectangle())
+                    .listRowBackground(Theme.surface2)
+                    .listRowSeparator(.hidden)
                     // v1.10.113: Long-Press → Bearbeiten/Löschen.
                     .contextMenu {
                         Button { editContact = c } label: { Label("Bearbeiten", systemImage: "pencil") }
@@ -135,10 +138,12 @@ struct ContactsView: View {
                             Task { await deleteContact(c.id) }
                         } label: { Label("Löschen", systemImage: "trash") }
                         Button { editContact = c } label: { Label("Bearbeiten", systemImage: "pencil") }
-                            .tint(Theme.tungstenBlue)
+                            .tint(Theme.cyan)
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .searchable(text: $searchText, prompt: "Suchen")
         }
     }
@@ -150,23 +155,27 @@ struct ContactsView: View {
             $0.email.localizedCaseInsensitiveContains(searchText)
         }
         if filtered.isEmpty {
-            ContentUnavailableView(
-                directory.isEmpty ? "Keine anderen User" : "Nichts gefunden",
+            RSEmptyState(
                 systemImage: "person.3",
-                description: Text(directory.isEmpty
+                title: directory.isEmpty ? "Keine anderen User" : "Nichts gefunden",
+                desc: directory.isEmpty
                     ? "Aktuell bist du der einzige aktive Nutzer im System."
-                    : "Kein Kollege passt zu \"\(searchText)\"."))
+                    : "Kein Kollege passt zu \"\(searchText)\".")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List {
                 Section {
                     ForEach(filtered) { u in
-                        HStack {
-                            Image(systemName: "person.crop.circle.fill")
-                                .foregroundStyle(Theme.tungstenBlue)
-                                .frame(width: 24)
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.navy)
+                            }
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(u.name).font(.body.weight(.semibold))
-                                Text(u.email).font(.caption.monospaced()).foregroundStyle(.secondary)
+                                Text(u.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                                Text(u.email).font(.caption.monospaced()).foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                             // "In meine Kontakte übernehmen" — spart Tippen
@@ -176,9 +185,11 @@ struct ContactsView: View {
                                 Task { await addToMy(u) }
                             } label: { Image(systemName: "person.crop.circle.badge.plus") }
                                 .buttonStyle(.plain)
-                                .foregroundStyle(Theme.tungstenBlue)
+                                .foregroundStyle(Theme.cyan)
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         // v1.10.82: App-Store-Blocker Apple 1.2 — jeder User
                         // muss meldbar und blockierbar sein.
                         .contextMenu {
@@ -193,16 +204,18 @@ struct ContactsView: View {
                             Button {
                                 pendingReportUser = (u.id, u.name)
                             } label: { Label("Melden", systemImage: "flag") }
-                                .tint(.orange)
+                                .tint(Theme.yellow)
                             Button(role: .destructive) {
                                 Task { await block(u.id, name: u.name) }
                             } label: { Label("Block", systemImage: "hand.raised") }
                         }
                     }
                 } footer: {
-                    Text("\(filtered.count) NimShare-User · nur lesend").font(.caption).foregroundStyle(.secondary)
+                    Text("\(filtered.count) NimShare-User · nur lesend").font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .searchable(text: $searchText, prompt: "Suchen")
         }
     }

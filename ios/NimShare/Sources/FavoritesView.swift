@@ -12,8 +12,9 @@ struct FavoritesView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView(String(localized: "Keine Favoriten"), systemImage: "star",
-                    description: Text("Markiere Dateien mit ⭐, um sie hier zu sehen."))
+                RSEmptyState(systemImage: "star", title: String(localized: "Keine Favoriten"),
+                             desc: String(localized: "Markiere Dateien mit ⭐, um sie hier zu sehen."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(items) { fav in
@@ -26,6 +27,8 @@ struct FavoritesView: View {
                             NavigationLink {
                                 SharedFolderView(folderId: fav.targetId, initialTitle: fav.name)
                             } label: { favRow(fav) }
+                            .listRowBackground(Theme.surface2)
+                            .listRowSeparator(.hidden)
                             .swipeActions {
                                 Button(role: .destructive) { Task { await unstar(fav) } } label: {
                                     Label(String(localized: "Entfernen"), systemImage: "star.slash")
@@ -40,6 +43,8 @@ struct FavoritesView: View {
                                     aiTags: nil, aiRiskFlag: nil)
                             } label: { favRow(fav) }
                             .buttonStyle(.plain)
+                            .listRowBackground(Theme.surface2)
+                            .listRowSeparator(.hidden)
                             .swipeActions {
                                 Button(role: .destructive) { Task { await unstar(fav) } } label: {
                                     Label(String(localized: "Entfernen"), systemImage: "star.slash")
@@ -48,9 +53,11 @@ struct FavoritesView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(String(localized: "Favoriten"))
         .task { await load() }
         .refreshable { await load() }
@@ -59,18 +66,25 @@ struct FavoritesView: View {
 
     @ViewBuilder
     private func favRow(_ fav: FavoriteDto) -> some View {
-        HStack {
-            Image(systemName: fav.kind == "file" ? "doc.fill" : "folder.fill")
-                .foregroundStyle(fav.kind == "file" ? Color.blue : Color.orange)
-                .frame(width: 24)
+        HStack(spacing: 12) {
+            if fav.kind == "file" {
+                FileFormatBadge(name: fav.name, size: 34)
+            } else {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.navy)
+                    .frame(width: 36, height: 36)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Theme.navy.opacity(0.12)))
+            }
             VStack(alignment: .leading, spacing: 2) {
-                Text(fav.name).lineLimit(2)
+                Text(fav.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                 Text(fav.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            Image(systemName: "star.fill").foregroundStyle(.yellow)
+            Image(systemName: "star.fill").foregroundStyle(Theme.yellow)
         }
+        .padding(.vertical, 4)
     }
 
     private func load() async {

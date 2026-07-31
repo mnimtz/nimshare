@@ -12,27 +12,29 @@ struct TrashView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView(String(localized: "Papierkorb leer"), systemImage: "trash",
-                    description: Text("Gelöschte Dateien landen hier und können wiederhergestellt werden."))
+                RSEmptyState(systemImage: "trash", title: String(localized: "Papierkorb leer"),
+                             desc: String(localized: "Gelöschte Dateien landen hier und können wiederhergestellt werden."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(items) { item in
-                        HStack {
-                            Image(systemName: "doc")
-                                .foregroundStyle(Theme.warnRed)
-                                .frame(width: 24)
+                        HStack(spacing: 12) {
+                            FileFormatBadge(name: item.name, size: 34)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name).lineLimit(2)
+                                Text(item.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                                 HStack(spacing: 8) {
                                     if let d = item.deletedAt {
                                         Text(d.formatted(.relative(presentation: .named)))
-                                            .font(.caption).foregroundStyle(.secondary)
+                                            .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                     }
                                     Text(ByteCountFormatter.string(fromByteCount: item.sizeBytes, countStyle: .file))
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 }
                             }
                         }
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         // Restore is declared first so it sits closest to the
                         // swiped edge — the primary/safer action. Purge stays
                         // behind it and requires a longer swipe.
@@ -40,18 +42,20 @@ struct TrashView: View {
                             Button { Task { await restore(item.id) } } label: {
                                 Label("Wiederherstellen", systemImage: "arrow.uturn.backward")
                             }
-                            .tint(Theme.tungstenBlue)
+                            .tint(Theme.cyan)
                             Button(role: .destructive) { Task { await purge(item.id) } } label: {
                                 Label("Endgültig", systemImage: "xmark.bin")
                             }
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
             if let e = error {
                 Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(String(localized: "Papierkorb"))
         .task { await load() }
         .refreshable { await load() }

@@ -12,8 +12,9 @@ struct ActivityView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView(String(localized: "Noch keine Aktivität"), systemImage: "clock",
-                    description: Text("Aktionen wie Uploads, Freigaben und Löschungen erscheinen hier."))
+                RSEmptyState(systemImage: "clock", title: String(localized: "Noch keine Aktivität"),
+                             desc: String(localized: "Aktionen wie Uploads, Freigaben und Löschungen erscheinen hier."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     if auth.user?.role == "Admin" {
@@ -24,29 +25,37 @@ struct ActivityView: View {
                         .pickerStyle(.segmented)
                         .labelsHidden()
                         .onChange(of: showAll) { _, _ in Task { await load() } }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                     ForEach(items) { item in
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: item.iconName)
-                                .foregroundStyle(Theme.tungstenBlue)
-                                .frame(width: 24, alignment: .center)
-                                .padding(.top, 2)
+                            ZStack {
+                                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
+                                Image(systemName: item.iconName)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.navy)
+                            }
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(item.summary).lineLimit(3)
+                                Text(item.summary).font(TFont.bodyM).foregroundStyle(Theme.textPrimary).lineLimit(3)
                                 HStack(spacing: 6) {
-                                    Text(item.actorName).font(.caption).foregroundStyle(.secondary)
-                                    Text("·").font(.caption).foregroundStyle(.secondary)
+                                    Text(item.actorName).font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                                    Text("·").font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                     Text(item.at.formatted(.relative(presentation: .named)))
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 }
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
             if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(String(localized: "Aktivität"))
         .task { await load() }
         .refreshable { await load() }
