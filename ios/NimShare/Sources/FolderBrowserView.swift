@@ -529,8 +529,8 @@ struct FolderBrowserView: View {
                             count: viewMode == .grid ? 3 : 2)
         return ScrollView {
             if d.subfolders.isEmpty && d.files.isEmpty {
-                ContentUnavailableView("Leer", systemImage: "tray",
-                                       description: Text("Dieser Ordner ist leer."))
+                RSEmptyState(systemImage: "tray", title: "Leer",
+                             desc: "Dieser Ordner ist leer.")
                     .padding(.top, 60)
             } else {
                 LazyVGrid(columns: columns, spacing: 16) {
@@ -555,9 +555,10 @@ struct FolderBrowserView: View {
                         .contextMenu { fileMenu(f) }
                     }
                 }
-                .padding(12)
+                .padding(Theme.Space.md)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
     }
 
     private func joinPath(_ base: String, _ segment: String) -> String {

@@ -129,23 +129,28 @@ struct FolderTileView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Theme.cardBackground)
+            RoundedRectangle(cornerRadius: Theme.Radius2.card, style: .continuous)
+                .fill(Theme.surface2)
                 .aspectRatio(1, contentMode: .fit)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.Radius2.card, style: .continuous)
+                        .stroke(Theme.border2, lineWidth: 1)
+                )
                 .overlay {
                     Image(systemName: "folder.fill")
                         .font(.system(size: mode == .preview ? 52 : 34))
-                        .foregroundStyle(Theme.tungstenBlue)
+                        .foregroundStyle(Theme.navy)
                 }
             Text(name)
-                .font(mode == .preview ? .footnote : .caption2)
+                .font(mode == .preview ? TFont.bodyS : TFont.caption)
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
             if mode == .preview {
                 // Platzhalter-Zeile, damit Ordner- und Datei-Kacheln im
                 // Vorschau-Modus gleich hoch layouten.
-                Text(" ").font(.caption2)
+                Text(" ").font(TFont.caption)
             }
         }
         .contentShape(Rectangle())
@@ -162,14 +167,15 @@ struct FileTileView: View {
         VStack(spacing: 6) {
             FileThumbView(file: file, iconSize: mode == .preview ? 52 : 34)
             Text(file.name)
-                .font(mode == .preview ? .footnote : .caption2)
+                .font(mode == .preview ? TFont.bodyS : TFont.caption)
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
             if mode == .preview {
                 Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(TFont.caption)
+                    .foregroundStyle(Theme.textTertiary)
             }
         }
         .contentShape(Rectangle())
@@ -185,9 +191,13 @@ struct FileThumbView: View {
     @State private var image: UIImage?
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(Theme.cardBackground)
+        RoundedRectangle(cornerRadius: Theme.Radius2.card, style: .continuous)
+            .fill(Theme.surface2)
             .aspectRatio(1, contentMode: .fit)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius2.card, style: .continuous)
+                    .stroke(Theme.border2, lineWidth: 1)
+            )
             .overlay {
                 if let image {
                     Image(uiImage: image)
@@ -197,7 +207,7 @@ struct FileThumbView: View {
                     FileFormatBadge(name: file.name, size: iconSize)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius2.card, style: .continuous))
             .task(id: file.id) {
                 guard image == nil, let api = auth.api else { return }
                 let req = api.thumbnailRequest(fileId: file.id, size: 400)
