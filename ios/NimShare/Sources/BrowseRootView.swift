@@ -110,16 +110,17 @@ struct BrowseRootView: View {
         .buttonStyle(.plain)
     }
 
+    /// v1.11.68: Marcus's Feedback zur ersten Fassung — "nicht pro Kachel
+    /// (Navy war gut), aber z.B. einen Farb-Klecks für das Datei-Format,
+    /// genau wie in der Vorschau." Die kleine 10pt-Text-Pille war zu
+    /// unauffällig; jetzt der echte `FileFormatBadge` (weißes Dokument-Icon
+    /// + farbiges Label-Feld, dieselbe Komponente wie im Dateibrowser) in
+    /// 32pt als dominanter Farbakzent pro Karte.
     private func recentCard(_ link: ShareLinkDto) -> some View {
         let name = link.targetName ?? link.slug
-        let info = FileFormatInfo.of(name)
         let display = (name as NSString).deletingPathExtension
         return VStack(alignment: .leading, spacing: 8) {
-            Text(info.label)
-                .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6).padding(.vertical, 4)
-                .background(RoundedRectangle(cornerRadius: 10).fill(info.color))
+            FileFormatBadge(name: name, size: 32)
             Text(display.isEmpty ? link.slug : display)
                 .font(TFont.bodyS.weight(.semibold))
                 .foregroundStyle(.white)
@@ -191,41 +192,41 @@ struct BrowseRootView: View {
 
     /// Bibliotheken (Persönlich, dann Öffentlich) — die eigentlichen Ablage-
     /// orte für Dateien/Ordner. Gruppen bewusst nicht als Kachel (v1.10.103).
-    /// v1.11.68: Persönlich=Navy, Öffentlich=Gold — matched den Zwei-Ton-Look
-    /// aus dem Handoff-Prototyp (ReferenceSnippets.LibraryTile: .personal vs
-    /// .publicShared bekommen unterschiedliche Icon-Box-Farben).
+    /// v1.11.69: Marcus's Feedback — "nicht pro Kachel, das Navy war ja gut"
+    /// — Zwei-Ton-Versuch aus v1.11.68 wieder zurückgenommen, einheitlich Navy.
     private var librarySpecs: [TileSpec] {
         var t: [TileSpec] = []
         for tile in scopes.filter({ $0.scope.lowercased() == "personal" })
                         + scopes.filter({ $0.scope.lowercased() == "public" }) {
-            let isPersonal = tile.scope.lowercased() == "personal"
-            let localized: String = isPersonal ? "Persönlich"
+            let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
                 : tile.scope.lowercased() == "public" ? "Öffentlich" : tile.scope.capitalized
             t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
-                              icon: tile.systemImage, tint: isPersonal ? Theme.navy : Theme.yellowDeep,
+                              icon: tile.systemImage, tint: Theme.navy,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
         return t
     }
 
     /// Übersichten & Werkzeuge — unter der Trennlinie.
-    /// v1.11.68: Marcus's Feedback — "recht monochrom" (fast alle Kacheln
-    /// hatten dieselbe Navy-Tönung). Jetzt eine Farbe pro Werkzeug aus der
-    /// vollen Token-Palette, statt Navy als Standard-Fallback.
+    /// v1.11.69: Marcus's Feedback — die Farbe-pro-Kachel-Variante aus
+    /// v1.11.68 wieder zurück auf einheitlich Navy (nur Favoriten bleibt
+    /// gelb, das war schon vorher so). Der Farbakzent gehört stattdessen
+    /// auf den Datei-Format-Klecks in der "Zuletzt geteilt"-Hero, siehe
+    /// recentCard().
     private var overviewSpecs: [TileSpec] {
         var t: [TileSpec] = []
         t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: Theme.yellow, dest: { AnyView(FavoritesView()) }))
         // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
         // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
         // getauscht (das zieht dafür nach Profil → Dateien um).
-        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.warn2, dest: { AnyView(KeyStoreView()) }))
+        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.cyan, dest: { AnyView(LinksView()) }))
-        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.success2, dest: { AnyView(SignaturesView()) }))
+        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navy, dest: { AnyView(SignaturesView()) }))
         // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
         // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
         // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
         if auth.isAdmin {
-            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.danger2, dest: { AnyView(UsersListView()) }))
+            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
         }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
