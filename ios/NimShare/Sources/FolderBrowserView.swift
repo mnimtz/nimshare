@@ -185,7 +185,7 @@ struct FolderBrowserView: View {
             activeTransfers.removeAll()
         }
         .sheet(item: $previewFile) { file in
-            NavigationStack { FilePreviewView(file: file) }
+            FileDetailView(file: file)
         }
         .sheet(item: $directShareTarget) { target in
             DirectShareSheet(target: target, itemName: directShareName)

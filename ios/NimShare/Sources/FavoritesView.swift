@@ -54,7 +54,7 @@ struct FavoritesView: View {
         .navigationTitle(String(localized: "Favoriten"))
         .task { await load() }
         .refreshable { await load() }
-        .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
+        .sheet(item: $previewFile) { f in FileDetailView(file: f) }
     }
 
     @ViewBuilder

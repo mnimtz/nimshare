@@ -66,7 +66,7 @@ struct SearchView: View {
         }
         .navigationTitle("Suche")
         .sheet(item: $previewFileItem) { f in
-            NavigationStack { FilePreviewView(file: f) }
+            FileDetailView(file: f)
         }
         // v1.10.165: AI-Consent-Gate (Apple 5.1.1(i))
         .sheet(isPresented: $showAiConsent) {

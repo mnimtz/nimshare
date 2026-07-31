@@ -56,7 +56,7 @@ struct SharedFolderView: View {
         }
         .task { await load() }
         .refreshable { await load() }
-        .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
+        .sheet(item: $previewFile) { f in FileDetailView(file: f) }
     }
 
     private func listView(_ p: NimShareAPI.FolderBrowseResponse) -> some View {

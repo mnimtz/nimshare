@@ -40,7 +40,7 @@ struct SharedWithMeView: View {
         .navigationTitle(String(localized: "Für mich freigegeben"))
         .task { await load() }
         .refreshable { await load() }
-        .sheet(item: $previewFile) { f in NavigationStack { FilePreviewView(file: f) } }
+        .sheet(item: $previewFile) { f in FileDetailView(file: f) }
     }
 
     @ViewBuilder
