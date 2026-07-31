@@ -37,6 +37,13 @@
 	<string>NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a photo or file to share via NimShare.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>RedHatDisplay-Variable.ttf</string>
+		<string>Fonts/RedHatDisplay-Variable.ttf</string>
+		<string>RedHatMono-Variable.ttf</string>
+		<string>Fonts/RedHatMono-Variable.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

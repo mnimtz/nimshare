@@ -51,6 +51,16 @@ targets:
         NSCameraUsageDescription: "Take a photo to share via NimShare."
         # v1.10.114: optionaler Standort für die Wetter-Begrüssung auf der Startseite.
         NSLocationWhenInUseUsageDescription: "NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne."
+        # Redesign-Pilot (redesign/ios-mobile-v2): Red Hat Display/Mono als
+        # Variable Fonts, siehe Resources/Fonts. Beide Pfadformen gelistet,
+        # falls xcodegen die Resources-Unterordner-Struktur im Bundle
+        # flacht oder beibehält — iOS überspringt nicht auffindbare Einträge
+        # stillschweigend, das crasht also so oder so nicht.
+        UIAppFonts:
+          - RedHatDisplay-Variable.ttf
+          - Fonts/RedHatDisplay-Variable.ttf
+          - RedHatMono-Variable.ttf
+          - Fonts/RedHatMono-Variable.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: email.nimtz.nimshare

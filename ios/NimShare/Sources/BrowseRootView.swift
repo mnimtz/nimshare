@@ -1,145 +1,165 @@
 import SwiftUI
 
+/// v1.11.67 (redesign-Pilot, Branch redesign/ios-mobile-v2): Home komplett
+/// neu nach dem nimshare-handoff-Design-Prototyp (Turn 1 · Option 1a,
+/// "playful/soft"). Ersetzt das bisherige Einzelbildschirm-Raster (fixe
+/// Kachelhöhe per GeometryReader) durch ein normales scrollendes Layout:
+/// Begrüssung → "Zuletzt geteilt"-Hero (horizontal scrollend, echte Link-
+/// Statistiken) → Bibliotheken-Grid → Werkzeuge-Grid. Datenfluss (scopes,
+/// TileSpec-Deskriptoren, Navigationsziele) unverändert — nur Layout/Stil.
 struct BrowseRootView: View {
     @EnvironmentObject var auth: AuthStore
     @State private var scopes: [ScopeTile] = []
+    @State private var recentLinks: [ShareLinkDto] = []
     @State private var loading = true
     @State private var error: String?
-    // v1.10.123: gemessene Höhe der Begrüssung, damit das Kachel-Raster den
-    // exakt verbleibenden Platz füllt — egal ob die Begrüssung 1 oder 4 Zeilen
-    // lang ist. Siehe adaptiveHome.
-    @State private var greetingHeight: CGFloat = 0
 
     var body: some View {
-        Group {
-            if loading && scopes.isEmpty {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let e = error, scopes.isEmpty {
-                errorView(e)
-            } else if scopes.isEmpty {
-                ContentUnavailableView("Keine Bibliotheken", systemImage: "folder", description: Text("Der Server hat keine Bibliotheken zurückgegeben."))
-            } else {
-                adaptiveHome
+        ZStack {
+            Theme.bgGradient.ignoresSafeArea()
+            Group {
+                if loading && scopes.isEmpty {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let e = error, scopes.isEmpty {
+                    errorView(e)
+                } else if scopes.isEmpty {
+                    RSEmptyState(systemImage: "folder", title: "Keine Bibliotheken",
+                                 desc: "Der Server hat keine Bibliotheken zurückgegeben.")
+                } else {
+                    homeContent
+                }
             }
         }
-        // v1.10.128: Grosser „Dateien"-Titel entfernt — er nahm nur Platz weg.
-        // Die formatierte Begrüssung (Anrede + Nachricht) dient als Header.
-        // v1.10.140: Wetter-Symbol wanderte aus der Nav-Bar direkt in die
-        // Begrüssungs-Box (oben rechts) — spart die Nav-Zeile komplett.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load(showSpinner: true) }
         .refreshable { await load(showSpinner: false) }
     }
 
-    // MARK: - Adaptives Ein-Screen-Layout
+    // MARK: - Home content
 
-    /// v1.10.123: Statt scrollender List ein Raster, das sich der Fläche
-    /// anpasst. Die Begrüssung nimmt oben ihren natürlichen Platz; der Rest der
-    /// Höhe wird auf die Kacheln verteilt, deren Größe (und damit Icon-/Text-
-    /// Größe) dynamisch berechnet wird. So ist immer alles auf EINEM Screen —
-    /// kurze Begrüssung → große Kacheln, lange Begrüssung → kompaktere Kacheln.
-    /// GeometryReader macht es zugleich responsiv über alle iPhone-Größen und
-    /// iPad (dort 3 Spalten statt 2). ScrollView bleibt als Sicherheitsnetz für
-    /// sehr kleine Geräte / sehr lange Begrüssungen erhalten.
-    private var adaptiveHome: some View {
-        GeometryReader { geo in
-            let libs = librarySpecs
-            let overviews = overviewSpecs
-            let cols = geo.size.width > 700 ? 3 : 2
-            let libRows = max(1, Int(ceil(Double(libs.count) / Double(cols))))
-            let ovRows = max(1, Int(ceil(Double(overviews.count) / Double(cols))))
-            let totalRows = libRows + ovRows
-            let outerPad: CGFloat = 16
-            let gap: CGFloat = 12
-            let dividerH: CGFloat = 22   // Höhe des Trenn-Blocks
-            // Verfügbare Höhe fürs Raster = Screen − Begrüssung − Ränder −
-            // Lücken (Begrüssung→Lib, Lib→Divider, Divider→Übersicht) − Divider.
-            let avail = geo.size.height - greetingHeight - outerPad * 2 - gap * 3 - dividerH
-            let tileH = max(78, (avail - CGFloat(totalRows - 1) * gap) / CGFloat(totalRows))
-            let columns = Array(repeating: GridItem(.flexible(), spacing: gap), count: cols)
+    private var homeContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                GreetingBanner()
+                if !recentLinks.isEmpty {
+                    recentHero.padding(.top, Theme.Space.lg)
+                }
+                RSSectionHeader(title: "Bibliotheken")
+                tileGrid(librarySpecs)
+                RSSectionHeader(title: "Werkzeuge")
+                tileGrid(overviewSpecs)
+                Spacer(minLength: Theme.Space.xxl)
+            }
+        }
+    }
 
-            ScrollView {
-                VStack(spacing: gap) {
-                    GreetingBanner()
-                        .background(GeometryReader { g in
-                            Color.clear.preference(key: GreetHeightKey.self, value: g.size.height)
-                        })
-                    // Bibliotheken — die eigentlichen Ablageorte.
-                    LazyVGrid(columns: columns, spacing: gap) {
-                        ForEach(libs) { s in
-                            NavigationLink { s.dest() } label: { tileCard(s, height: tileH) }
-                                .buttonStyle(.plain)
-                        }
-                    }
-                    // v1.10.131: optische Trennung — macht klar, dass die
-                    // ersten beiden Kacheln die Ablage sind und darunter die
-                    // Übersichten kommen.
-                    sectionDivider
-                    // Übersichten & Werkzeuge.
-                    LazyVGrid(columns: columns, spacing: gap) {
-                        ForEach(overviews) { s in
-                            NavigationLink { s.dest() } label: { tileCard(s, height: tileH) }
-                                .buttonStyle(.plain)
+    // MARK: - "Zuletzt geteilt" hero (horizontal scroll, echte Link-Stats)
+
+    @ViewBuilder
+    private var recentHero: some View {
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
+        let thisWeek = recentLinks.filter { $0.createdAt >= weekAgo }.count
+        let totalHits = recentLinks.reduce(0) { $0 + $1.hitCount }
+        NavigationLink {
+            LinksView()
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("ZULETZT GETEILT")
+                    .font(TFont.micro)
+                    .kerning(0.9)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.bottom, 2)
+                Text("\(thisWeek) Links diese Woche · \(totalHits) Aufrufe")
+                    .font(TFont.titleM)
+                    .foregroundStyle(.white)
+                    .padding(.bottom, Theme.Space.md)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(recentLinks.prefix(8)) { link in
+                            recentCard(link)
                         }
                     }
                 }
-                .padding(outerPad)
-                .frame(minHeight: geo.size.height)   // mindestens ein Screen füllen
             }
-            .onPreferenceChange(GreetHeightKey.self) { greetingHeight = $0 }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.heroGradient)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius2.hero, style: .continuous))
+            .padding(.horizontal, Theme.Space.lg)
+            .shadow(color: Theme.navy.opacity(0.4), radius: 22, x: 0, y: 14)
         }
+        .buttonStyle(.plain)
     }
 
-    /// v1.10.131: dezente, beschriftete Trennlinie zwischen Bibliotheken und
-    /// Übersichten.
-    private var sectionDivider: some View {
-        HStack(spacing: 10) {
-            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
-            Text("Übersichten")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .fixedSize()
-            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
-        }
-        .padding(.vertical, 2)
-    }
-
-    /// Eine Kachel: Icon oben, Titel darunter. Alle Größen skalieren mit der
-    /// berechneten Kachelhöhe, damit das Layout auf jedem Gerät stimmig bleibt.
-    private func tileCard(_ s: TileSpec, height: CGFloat) -> some View {
-        VStack(spacing: max(4, height * 0.07)) {
-            Image(systemName: s.icon)
-                .font(.system(size: min(max(height * 0.30, 20), 46)))
-                .foregroundStyle(s.tint)
-            Text(s.title)
-                .font(.system(size: min(max(height * 0.13, 11), 16), weight: .semibold))
-                .foregroundStyle(.primary)
+    private func recentCard(_ link: ShareLinkDto) -> some View {
+        let name = link.targetName ?? link.slug
+        let info = FileFormatInfo.of(name)
+        let display = (name as NSString).deletingPathExtension
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(info.label)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6).padding(.vertical, 4)
+                .background(RoundedRectangle(cornerRadius: 10).fill(info.color))
+            Text(display.isEmpty ? link.slug : display)
+                .font(TFont.bodyS.weight(.semibold))
+                .foregroundStyle(.white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+            Text("\(link.hitCount) Aufrufe")
+                .font(TFont.caption)
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .padding(.horizontal, 11).padding(.vertical, 10)
+        .frame(width: 120, alignment: .leading)
+        .background(.ultraThinMaterial)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.18), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Tile grid (3 Spalten, feste Karten-Optik)
+
+    private func tileGrid(_ specs: [TileSpec]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Space.md), count: 3),
+                   spacing: Theme.Space.md) {
+            ForEach(specs) { s in
+                NavigationLink { s.dest() } label: { tileCard(s) }
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, Theme.Space.xl)
+        .padding(.bottom, Theme.Space.s)
+    }
+
+    private func tileCard(_ s: TileSpec) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            Image(systemName: s.icon)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(s.tint)
+                .frame(width: 40, height: 40)
+                .background(RoundedRectangle(cornerRadius: 12).fill(s.tint.opacity(0.14)))
+            Text(s.title)
+                .font(TFont.titleS)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             if let sub = s.subtitle {
                 Text(sub)
-                    .font(.system(size: min(max(height * 0.10, 9), 12)))
-                    .foregroundStyle(.secondary)
+                    .font(TFont.caption)
+                    .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
             }
         }
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Theme.tungstenBlue.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Theme.tungstenBlue.opacity(0.12), lineWidth: 1)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .padding(Theme.Space.md)
+        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius2.cardLarge, style: .continuous).fill(Theme.surface2))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius2.cardLarge, style: .continuous).stroke(Theme.border2, lineWidth: 1))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 6)
+        .contentShape(RoundedRectangle(cornerRadius: Theme.Radius2.cardLarge))
     }
 
-    // MARK: - Kachel-Definitionen
+    // MARK: - Kachel-Definitionen (unverändert gegenüber v1.11.66)
 
     /// Ein Kachel-Deskriptor. `dest` ist ein Closure, damit die Ziel-View erst
     /// beim Antippen (nicht schon beim Rendern des Rasters) gebaut wird.
@@ -161,7 +181,7 @@ struct BrowseRootView: View {
             let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
                 : tile.scope.lowercased() == "public" ? "Öffentlich" : tile.scope.capitalized
             t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
-                              icon: tile.systemImage, tint: Theme.tungstenBlue,
+                              icon: tile.systemImage, tint: Theme.navy,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
         return t
@@ -170,23 +190,23 @@ struct BrowseRootView: View {
     /// Übersichten & Werkzeuge — unter der Trennlinie.
     private var overviewSpecs: [TileSpec] {
         var t: [TileSpec] = []
-        t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: .yellow, dest: { AnyView(FavoritesView()) }))
+        t.append(TileSpec(id: "fav", title: "Favoriten", subtitle: nil, icon: "star.fill", tint: Theme.yellow, dest: { AnyView(FavoritesView()) }))
         // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
         // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
         // getauscht (das zieht dafür nach Profil → Dateien um).
-        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.tungstenBlue, dest: { AnyView(KeyStoreView()) }))
-        t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.tungstenBlue, dest: { AnyView(LinksView()) }))
-        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.tungstenBlue, dest: { AnyView(SignaturesView()) }))
+        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
+        t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.cyan, dest: { AnyView(LinksView()) }))
+        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navy, dest: { AnyView(SignaturesView()) }))
         // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
         // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
         // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
         if auth.isAdmin {
-            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.tungstenBlue, dest: { AnyView(UsersListView()) }))
+            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
         }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
         // „Meine Links"). Fixer Begriff in allen Sprachen.
-        t.append(TileSpec(id: "linkcol", title: "Bookmarks", subtitle: nil, icon: "bookmark.fill", tint: Theme.tungstenBlue, dest: { AnyView(LinkCollectionView()) }))
+        t.append(TileSpec(id: "linkcol", title: "Bookmarks", subtitle: nil, icon: "bookmark.fill", tint: Theme.navy, dest: { AnyView(LinkCollectionView()) }))
         return t
     }
 
@@ -208,8 +228,16 @@ struct BrowseRootView: View {
         if showSpinner { loading = true }
         defer { if showSpinner { loading = false } }
         do {
-            let s = try await api.scopes()
-            scopes = s
+            async let s = api.scopes()
+            // v1.11.67: Links für die "Zuletzt geteilt"-Hero — rein
+            // dekorativ, darf beim Fehlschlagen den Home-Screen nicht
+            // blockieren, daher `try?` statt throw.
+            async let linksTask: [ShareLinkDto] = (try? await api.listMyLinks()) ?? []
+            scopes = try await s
+            let links = await linksTask
+            recentLinks = links
+                .filter { !$0.isRevoked && ($0.expiresAt.map { $0 > Date() } ?? true) }
+                .sorted { $0.createdAt > $1.createdAt }
             error = nil
         }
         catch is CancellationError {
@@ -226,13 +254,5 @@ struct BrowseRootView: View {
             let isCancel = ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled
             if !isCancel && scopes.isEmpty { error = ex.localizedDescription }
         }
-    }
-}
-
-/// v1.10.123: Misst die Höhe der Begrüssung, damit das Raster den Rest füllt.
-private struct GreetHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
     }
 }

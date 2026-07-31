@@ -49,36 +49,35 @@ struct GreetingBanner: View {
     @ViewBuilder
     private var content: some View {
         if let msg = message {
-            // v1.10.128: Ordentliche Anrede-Formatierung — Zeile 1 die Anrede
-            // mit Namen (fett, ersetzt den weggefallenen „Dateien"-Titel),
-            // darunter die Nachricht. Links ausgerichtet, echter Header-Look.
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
+            // v1.11.67 (redesign-Pilot): größere, editorialere Begrüssung
+            // (TFont.titleL statt .title3) + Wetter als eigenständiger Chip
+            // rechts, matched den Home-Screen der neuen Design-Richtung.
+            // Anrede-Logik/Datenfluss unverändert — nur die Präsentation.
+            HStack(alignment: .top, spacing: Theme.Space.sm) {
+                VStack(alignment: .leading, spacing: 2) {
                     if let s = salutation, !s.isEmpty {
-                        Text("👋 \(s)")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.primary)
+                        Text("\(s) 👋")
+                            .font(TFont.titleL)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
                     }
                     Text(msg)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(TFont.bodyS)
+                        .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 8)
+                Spacer(minLength: Theme.Space.s)
                 // v1.10.140: Wetter oben rechts IN der Begrüssungs-Box (vorher
                 // ein eigenes Nav-Bar-Symbol, das eine ganze Zeile Höhe kostete).
                 if loading {
                     ProgressView().controlSize(.mini)
                 } else if let w = weather {
-                    weatherChip(w)
+                    RSWeatherChip(weather: w)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Theme.tungstenBlue.opacity(0.08))
-            )
+            .padding(.horizontal, Theme.Space.xl)
+            .padding(.top, Theme.Space.s)
+            .padding(.bottom, Theme.Space.xs)
             .contentShape(Rectangle())
             .onTapGesture { Task { await reload() } }
         } else {
@@ -86,25 +85,6 @@ struct GreetingBanner: View {
             // `.task` läuft), ist aber unsichtbar bis die Begrüssung da ist.
             Color.clear.frame(height: 0)
         }
-    }
-
-    /// v1.10.140: kompaktes Wetter oben rechts in der Begrüssungs-Box:
-    /// Symbol + aktuelle Temperatur, darunter Hoch/Tief.
-    @ViewBuilder
-    private func weatherChip(_ w: NimShareAPI.WeatherInfo) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            HStack(spacing: 3) {
-                Image(systemName: w.sfSymbol)
-                    .symbolRenderingMode(.multicolor)
-                Text("\(w.tempC)°")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            Text("↑\(w.highC)° ↓\(w.lowC)°")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .fixedSize()
     }
 
     private func initialLoad() async {
