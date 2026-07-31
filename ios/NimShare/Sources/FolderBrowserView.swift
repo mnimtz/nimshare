@@ -338,9 +338,13 @@ struct FolderBrowserView: View {
         // v1.10.72: List mit selection-Set → Multi-Select im EditMode.
         // Nur Files sind selektierbar (Folders navigierbar; bulk-ops
         // operieren nur auf Files — analog Web).
+        // v1.11.70 (redesign-Pilot): nur die Präsentation angepasst — Karten-
+        // Optik statt Standard-List-Insets, `⋯`-Menü pro Zeile (dasselbe
+        // fileMenu/folderMenu wie vorher per Kontextmenü), Format-Badge
+        // statt SF-Symbol-Ordner-Icon. Auswahl/Bulk/Swipe-Logik unverändert.
         List(selection: $selection) {
             if !d.subfolders.isEmpty {
-                Section("Ordner") {
+                Section {
                     ForEach(d.subfolders) { f in
                         NavigationLink {
                             FolderBrowserView(
@@ -349,14 +353,11 @@ struct FolderBrowserView: View {
                                 title: f.name
                             )
                         } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(Theme.tungstenBlue)
-                                    .frame(width: 24)
-                                Text(f.name)
-                            }
+                            folderRow(f)
                         }
                         .contextMenu { folderMenu(f) }
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         // v1.11.5: Ohne dies wird die Row im EditMode (Auswahl-Modus)
                         // von List(selection:) als selektierbar behandelt — der
                         // NavigationLink navigiert dann NICHT mehr, sondern der Tap
@@ -365,47 +366,68 @@ struct FolderBrowserView: View {
                         // File-IDs und würden mit einer Folder-ID fehlschlagen.
                         .selectionDisabled()
                     }
-                }
+                } header: { RSSectionHeader(title: "Ordner") }
             }
             if !d.files.isEmpty {
-                Section("Dateien") {
+                Section {
                     ForEach(d.files) { f in
                         Group {
                             if editMode == .active {
                                 // Im Auswahl-Modus: Row selbst als
                                 // selection-Target — Tap toggelt Checkmark.
-                                FileRowView(file: f)
+                                FileRowView(file: f, onMenu: { fileMenu(f) })
                             } else {
                                 Button { previewFile = f } label: {
-                                    FileRowView(file: f)
+                                    FileRowView(file: f, onMenu: { fileMenu(f) })
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                         .contextMenu { fileMenu(f) }
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) { pendingDelete = (f.id, f.name) } label: {
                                 Label("Löschen", systemImage: "trash")
                             }
                             Button { Task { await toggleFav(fileId: f.id) } } label: {
                                 Label("Fav", systemImage: "star")
-                            }.tint(.yellow)
+                            }.tint(Theme.yellow)
                             Button {
                                 shareItemName = f.name
                                 shareTarget = .file(f.id)
                             } label: {
                                 Label("Teilen", systemImage: "link.badge.plus")
-                            }.tint(Theme.tungstenBlue)
+                            }.tint(Theme.cyan)
                         }
                     }
-                }
+                } header: { RSSectionHeader(title: "Dateien") }
             }
             if d.subfolders.isEmpty && d.files.isEmpty {
-                ContentUnavailableView("Leer", systemImage: "tray", description: Text("Dieser Ordner ist leer."))
+                RSEmptyState(systemImage: "tray", title: "Leer", desc: "Dieser Ordner ist leer.")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
+    }
+
+    /// v1.11.70: Ordner-Zeile im Karten-Stil, ersetzt das schlichte
+    /// SF-Symbol+Text-HStack — matched die Optik der neuen FileRowView.
+    private func folderRow(_ f: FolderItem) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Theme.navy)
+                .frame(width: 36, height: 36)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.navy.opacity(0.12)))
+            Text(f.name)
+                .font(TFont.titleS)
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+        }
+        .padding(.vertical, 4)
     }
 
     // MARK: - Kontextmenüs (v1.10.195: extrahiert, damit Liste UND
@@ -841,37 +863,55 @@ extension DirectShareSheet.Target: Identifiable {
     }
 }
 
-struct FileRowView: View {
+/// v1.11.70 (redesign-Pilot): neue Optik — Format-Badge größer, Dateiname
+/// OHNE Erweiterung (das Badge zeigt den Typ bereits, siehe QA-Checkliste
+/// im Handoff), `⋯`-Button rechts öffnet dasselbe Menü wie der bestehende
+/// Kontext-Menü-Long-Press (`onMenu`-Closure — Aufrufer übergibt weiterhin
+/// `fileMenu(f)`, keine doppelte Logik). Business-Logik unverändert.
+struct FileRowView<Menu: View>: View {
     let file: FileItem
+    @ViewBuilder let onMenu: () -> Menu
+
+    private var displayName: String {
+        let stripped = (file.name as NSString).deletingPathExtension
+        return stripped.isEmpty ? file.name : stripped
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // v1.10.143: präzises Format-Icon statt einfarbigem SF-Symbol.
-            FileFormatBadge(name: file.name, size: 30)
-                .frame(width: 26, alignment: .center)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(file.name).lineLimit(2)
+        HStack(alignment: .center, spacing: 12) {
+            FileFormatBadge(name: file.name, size: 34)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(displayName)
+                    .font(TFont.titleS)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
                 HStack(spacing: 8) {
                     Text(byteCountFormatter.string(fromByteCount: file.sizeBytes))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                     if let owner = file.ownerName {
-                        Text("· " + owner).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        Text("· " + owner).font(TFont.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
                     }
                 }
                 if !file.tags.isEmpty || file.aiRiskFlag != nil {
                     HStack(spacing: 6) {
                         if let risk = file.aiRiskFlag {
-                            Chip(text: "⚠ " + risk, color: Theme.warnRed, bg: Theme.warnRed.opacity(0.12))
+                            Chip(text: "⚠ " + risk, color: Theme.danger2, bg: Theme.danger2.opacity(0.12))
                         }
                         ForEach(file.tags.prefix(3), id: \.self) { tag in
-                            Chip(text: tag, color: Theme.tungstenBlue, bg: Theme.aiBlueTintBg)
+                            Chip(text: tag, color: Theme.cyan, bg: Theme.cyan.opacity(0.12))
                         }
                     }
                 }
             }
+            Spacer(minLength: 4)
+            SwiftUI.Menu { onMenu() } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 30, height: 30)
+                    .contentShape(Rectangle())
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
 }
 
