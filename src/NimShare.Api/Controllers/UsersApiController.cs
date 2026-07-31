@@ -47,6 +47,28 @@ public class UsersApiController : ControllerBase
         return Ok(users);
     }
 
+    public record CreateUserReq(string Email, string DisplayName, string Password, string Role);
+
+    /// <summary>v1.11.65 — JSON twin of UsersController's "/settings/users/create"
+    /// (direct creation with an admin-set password, no invite email round-trip).
+    /// That MVC action existed since the web user-management page shipped but
+    /// was never exposed to iOS — Marcus noticed the app only offers "Einladen".</summary>
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateUserReq req,
+        [FromServices] ILocalAuthService authService, CancellationToken ct)
+    {
+        if (await RequireAdminAsync(ct) is null) return Forbid();
+        var role = string.Equals(req.Role, "Admin", StringComparison.OrdinalIgnoreCase) ? UserRole.Admin : UserRole.User;
+        try
+        {
+            var u = await authService.CreateAsync(req.Email, req.DisplayName, req.Password, role, ct);
+            return Ok(new UserListItemDto(u.Id, u.DisplayName, u.Email, u.Role.ToString(), u.IsActive,
+                u.QuotaBytes, u.CreatedAt, u.LastSeenAt));
+        }
+        catch (ArgumentException ex) { return Problem(statusCode: 422, title: ex.Message); }
+        catch (InvalidOperationException ex) { return Problem(statusCode: 422, title: ex.Message); }
+    }
+
     public record GroupMembershipDto(Guid GroupId, string GroupName, string Role);
     public record UserDetailDto(Guid Id, string DisplayName, string Email, string Role, bool IsActive,
         long QuotaBytes, bool PublicCanRead, bool PublicCanWrite, bool PublicCanDelete,

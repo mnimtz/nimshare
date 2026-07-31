@@ -17073,6 +17073,76 @@
           }
         }
       }
+    },
+    "Benutzer hinzufügen" : {
+      "comment" : "v1.11.65: Titel des Sheets zum direkten Anlegen eines Benutzers (mit Passwort statt Einladung).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add user"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir usuario"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un utilisateur"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi utente"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruiker toevoegen"
+          }
+        }
+      }
+    },
+    "Mindestens 8 Zeichen. Der Benutzer kann sich damit sofort anmelden — es wird keine Einladungs-E-Mail versendet." : {
+      "comment" : "v1.11.65: Hinweistext im Benutzer-hinzufügen-Sheet.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least 8 characters. The user can sign in immediately — no invitation email is sent."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al menos 8 caracteres. El usuario podrá iniciar sesión de inmediato — no se envía ningún correo de invitación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Au moins 8 caractères. L'utilisateur peut se connecter immédiatement — aucun e-mail d'invitation n'est envoyé."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Almeno 8 caratteri. L'utente potrà accedere subito — non viene inviata alcuna email di invito."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimaal 8 tekens. De gebruiker kan direct inloggen — er wordt geen uitnodigings-e-mail verstuurd."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

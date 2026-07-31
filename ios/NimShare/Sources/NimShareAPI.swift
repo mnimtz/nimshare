@@ -1722,6 +1722,23 @@ final class NimShareAPI: ObservableObject {
         return try decode([UserListItemDto].self, data)
     }
 
+    struct CreateUserBody: Encodable {
+        let email: String
+        let displayName: String
+        let password: String
+        let role: String
+    }
+    /// v1.11.65: direktes Anlegen mit selbst gesetztem Passwort — Pendant zu
+    /// `inviteUser`, für den Fall dass kein Einladungs-E-Mail-Versand nötig
+    /// oder erwünscht ist (Parität zum Web-Formular "/settings/users/create").
+    @discardableResult
+    func createUser(_ body: CreateUserBody) async throws -> UserListItemDto {
+        let data = try Self.jsonEncoder.encode(body)
+        let req = request("POST", "api/v1/users", body: data, contentType: "application/json")
+        let (respData, _) = try await perform(req)
+        return try decode(UserListItemDto.self, respData)
+    }
+
     struct GroupMembershipDto: Decodable, Identifiable {
         let groupId: UUID
         let groupName: String

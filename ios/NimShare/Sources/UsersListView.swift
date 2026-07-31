@@ -10,6 +10,7 @@ struct UsersListView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var showInvite = false
+    @State private var showAdd = false
 
     private var pendingInvitations: [NimShareAPI.InvitationDto] {
         invitations.filter { $0.usedAt == nil && $0.revokedAt == nil }
@@ -70,11 +71,23 @@ struct UsersListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showInvite = true } label: { Image(systemName: "person.badge.plus") }
+                // v1.11.65: Marcus's Feedback — bisher gab es nur "Einladen"
+                // (E-Mail-Link), aber kein direktes Anlegen mit selbst
+                // gesetztem Passwort (Web hat das seit je unter
+                // /settings/users/create, iOS hatte dafür nie eine JSON-API).
+                Menu {
+                    Button { showInvite = true } label: { Label("Einladen", systemImage: "envelope") }
+                    Button { showAdd = true } label: { Label("Hinzufügen", systemImage: "person.badge.plus") }
+                } label: {
+                    Image(systemName: "plus")
+                }
             }
         }
         .sheet(isPresented: $showInvite) {
             InviteUserSheet(onSent: { Task { await load() } })
+        }
+        .sheet(isPresented: $showAdd) {
+            AddUserSheet(onCreated: { Task { await load() } })
         }
         .task { await load() }
         .refreshable { await load() }
@@ -173,6 +186,70 @@ struct InviteUserSheet: View {
                 manualUrl = result.manualUrl
                 error = result.error
             }
+        } catch let ex { error = ex.localizedDescription }
+    }
+}
+
+/// v1.11.65: direktes Anlegen mit selbst gesetztem Passwort — Pendant zu
+/// `InviteUserSheet`, für den Fall dass kein Einladungs-E-Mail nötig/gewollt
+/// ist (Parität zum Web-Formular "/settings/users/create").
+struct AddUserSheet: View {
+    @EnvironmentObject var auth: AuthStore
+    @Environment(\.dismiss) private var dismiss
+    let onCreated: () -> Void
+
+    @State private var email = ""
+    @State private var displayName = ""
+    @State private var password = ""
+    @State private var role = "User"
+    @State private var busy = false
+    @State private var error: String?
+
+    private var canSubmit: Bool {
+        !email.trimmingCharacters(in: .whitespaces).isEmpty && password.count >= 8 && !busy
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Benutzer") {
+                    TextField("E-Mail", text: $email)
+                        .keyboardType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    TextField("Name (optional)", text: $displayName)
+                    SecureField("Passwort", text: $password)
+                        .textContentType(.newPassword)
+                    Picker("Rolle", selection: $role) {
+                        Text("Benutzer").tag("User")
+                        Text("Admin").tag("Admin")
+                    }
+                }
+                Section {
+                    Text("Mindestens 8 Zeichen. Der Benutzer kann sich damit sofort anmelden — es wird keine Einladungs-E-Mail versendet.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+            }
+            .navigationTitle("Benutzer hinzufügen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Hinzufügen") { Task { await create() } }
+                        .disabled(!canSubmit)
+                }
+            }
+            .overlay { if busy { ProgressView() } }
+        }
+    }
+
+    private func create() async {
+        guard let api = auth.api else { return }
+        busy = true; error = nil; defer { busy = false }
+        do {
+            _ = try await api.createUser(.init(email: email, displayName: displayName, password: password, role: role))
+            onCreated()
+            dismiss()
         } catch let ex { error = ex.localizedDescription }
     }
 }
