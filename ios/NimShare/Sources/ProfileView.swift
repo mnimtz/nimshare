@@ -13,16 +13,19 @@ struct ProfileView: View {
     private let cultureOptions = [("de", "Deutsch"), ("en", "English"), ("fr", "Français"),
                                    ("it", "Italiano"), ("es", "Español"), ("nl", "Nederlands")]
 
+    // v1.11.73: Erscheinungsbild-Picker — siehe AppearanceMode in NimShareApp.swift.
+    @AppStorage("appearance.mode") private var appearanceRaw: String = AppearanceMode.system.rawValue
+
     var body: some View {
         Form {
             Section {
                 HStack(spacing: 16) {
                     AvatarView(user: auth.user, size: 72)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(auth.user?.displayName ?? "").font(.title3.weight(.semibold))
-                        Text(auth.user?.email ?? "").font(.footnote).foregroundStyle(.secondary)
+                        Text(auth.user?.displayName ?? "").font(TFont.titleM).foregroundStyle(Theme.textPrimary)
+                        Text(auth.user?.email ?? "").font(TFont.bodyS).foregroundStyle(Theme.textSecondary)
                         if let role = auth.user?.role {
-                            Text(role).font(.caption).foregroundStyle(Theme.tungstenBlue)
+                            Text(role).font(TFont.caption).foregroundStyle(Theme.cyan)
                         }
                     }
                 }
@@ -42,8 +45,19 @@ struct ProfileView: View {
                         ForEach(cultureOptions, id: \.0) { code, name in Text(name).tag(code) }
                     }
                     .disabled(cultureBusy)
-                    if let e = cultureError { Text(e).font(.caption).foregroundStyle(Theme.warnRed) }
+                    if let e = cultureError { Text(e).font(TFont.caption).foregroundStyle(Theme.danger2) }
                 }
+            }
+
+            // v1.11.73: Erscheinungsbild-Picker (Marcus's Wunsch).
+            Section("Erscheinungsbild") {
+                Picker("Erscheinungsbild", selection: $appearanceRaw) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Text(mode.label).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
 
             // v1.10.126: Papierkorb von der Startseiten-Kachel hierher —
@@ -61,7 +75,7 @@ struct ProfileView: View {
                     Label("Freigegeben für mich", systemImage: "person.crop.circle.badge.checkmark")
                 }
                 NavigationLink { TrashView() } label: {
-                    Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.warnRed)
+                    Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.danger2)
                 }
                 // v1.11.63: von der Startseite hierher verschoben — die
                 // Startseiten-Kachel zeigt jetzt stattdessen "Benutzerverwaltung"
@@ -147,7 +161,7 @@ struct ProfileView: View {
             Section {
                 NavigationLink { DeleteAccountView() } label: {
                     Label("Account löschen", systemImage: "trash")
-                        .foregroundStyle(Theme.warnRed)
+                        .foregroundStyle(Theme.danger2)
                 }
             } footer: {
                 Text("Löscht deinen Account und alle deine Dateien unwiderruflich vom Server.")
