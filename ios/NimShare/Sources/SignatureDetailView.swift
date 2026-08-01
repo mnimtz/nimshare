@@ -147,7 +147,7 @@ struct SignatureDetailView: View {
             .listRowBackground(Theme.surface2)
             if let e = error {
                 Section {
-                    Text(e).font(.footnote).foregroundStyle(Theme.warnRed)
+                    Text(e).font(.footnote).foregroundStyle(Theme.danger2)
                 }
             }
         }

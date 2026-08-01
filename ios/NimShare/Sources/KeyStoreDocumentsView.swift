@@ -156,7 +156,7 @@ struct KeyStoreDocumentSheet: View {
                         .foregroundStyle(.primary)
                     }
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle(existing == nil ? "Neues Dokument" : "Dokument bearbeiten")
             .navigationBarTitleDisplayMode(.inline)

@@ -111,7 +111,7 @@ private struct CreateWebhookSheet: View {
                         .autocorrectionDisabled()
                 }
                 if let e = error {
-                    Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                    Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
             .navigationTitle("Neuer Webhook")

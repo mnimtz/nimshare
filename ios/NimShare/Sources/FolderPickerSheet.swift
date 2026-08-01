@@ -37,7 +37,7 @@ struct FolderPickerSheet: View {
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let e = error {
                     VStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle").font(.title).foregroundStyle(Theme.warnRed)
+                        Image(systemName: "exclamationmark.triangle").font(.title).foregroundStyle(Theme.danger2)
                         Text(e).font(.footnote).multilineTextAlignment(.center).padding()
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if searchText.trimmingCharacters(in: .whitespaces).isEmpty {

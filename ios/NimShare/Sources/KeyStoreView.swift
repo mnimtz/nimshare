@@ -251,7 +251,7 @@ struct KeyStoreEntrySheet: View {
                 Section("Notizen") {
                     TextField("Optional", text: $notes, axis: .vertical)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle(existing == nil ? "Neuer Schlüssel" : "Schlüssel bearbeiten")
             .navigationBarTitleDisplayMode(.inline)

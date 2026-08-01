@@ -19,7 +19,7 @@ struct UsersListView: View {
     var body: some View {
         List {
             if let e = error {
-                Section { Text(e).foregroundStyle(Theme.warnRed) }
+                Section { Text(e).foregroundStyle(Theme.danger2) }
             }
             if !pendingInvitations.isEmpty {
                 Section("Ausstehende Einladungen") {
@@ -171,7 +171,7 @@ struct InviteUserSheet: View {
                         Text(m).font(.footnote).textSelection(.enabled)
                     }
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle("Benutzer einladen")
             .navigationBarTitleDisplayMode(.inline)
@@ -240,7 +240,7 @@ struct AddUserSheet: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle("Benutzer hinzufügen")
             .navigationBarTitleDisplayMode(.inline)

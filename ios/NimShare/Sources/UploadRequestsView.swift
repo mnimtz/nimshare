@@ -21,7 +21,7 @@ struct UploadRequestsView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let e = error, items.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.danger2)
                     Text(e).multilineTextAlignment(.center).padding(.horizontal)
                     Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)

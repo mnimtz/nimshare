@@ -60,7 +60,7 @@ struct ReportSheet: View {
                     }
                 }
                 if let e = error {
-                    Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                    Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
             .navigationTitle("Melden")
@@ -87,7 +87,7 @@ struct ReportSheet: View {
                         // Haken und glaubte sich fälschlich geschützt.
                         if blockFailed {
                             Text("Blockieren ist fehlgeschlagen — bitte manuell nachholen.")
-                                .font(.caption).foregroundStyle(Theme.warnRed)
+                                .font(.caption).foregroundStyle(Theme.danger2)
                         }
                     }
                     .padding(32).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))

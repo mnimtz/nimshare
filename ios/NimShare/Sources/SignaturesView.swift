@@ -45,7 +45,7 @@ struct SignaturesView: View {
                 .scrollContentBackground(.hidden)
             }
             if let e = error {
-                Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
+                Text(e).font(.footnote).foregroundStyle(Theme.danger2).padding()
             }
         }
         .background(Theme.bgGradient.ignoresSafeArea())
@@ -300,7 +300,7 @@ struct NewSignatureRequestSheet: View {
                     DatePicker("Deadline", selection: $deadline, in: Date()..., displayedComponents: [.date])
                 }
             }
-            if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+            if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             Section {
                 Button("Weiter →") { Task { await createDraft() } }
                     .disabled(pickedFileId == nil || busy)
@@ -355,7 +355,7 @@ struct NewSignatureRequestSheet: View {
                     }
                 }
             }
-            if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+            if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
         }
     }
 

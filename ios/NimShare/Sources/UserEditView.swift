@@ -81,7 +81,7 @@ struct UserEditView: View {
                 Section("Passwort zurücksetzen (optional)") {
                     SecureField("Neues Passwort (min. 8 Zeichen)", text: $newPassword)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
                 if !isSelf {
                     Section {
                         Button("Benutzer löschen", role: .destructive) { showDeleteConfirm = true }

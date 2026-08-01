@@ -63,7 +63,7 @@ struct AiConsentSheet: View {
                             .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.08)))
                         } else {
                             Text("Anbieter-Info nicht verfügbar. Bitte Netzwerk prüfen und erneut versuchen.")
-                                .font(.caption).foregroundStyle(Theme.warnRed)
+                                .font(.caption).foregroundStyle(Theme.danger2)
                         }
                     }
 
@@ -99,7 +99,7 @@ struct AiConsentSheet: View {
                         let privacyUrl = base.appendingPathComponent("privacy").absoluteString
                         Text("Du kannst diese Zustimmung jederzeit im Profil widerrufen. Details in der [Datenschutzerklärung](\(privacyUrl)).")
                             .font(.caption).foregroundStyle(.secondary)
-                            .tint(Theme.tungstenBlue)
+                            .tint(Theme.cyan)
                     } else {
                         Text("Du kannst diese Zustimmung jederzeit im Profil widerrufen.")
                             .font(.caption).foregroundStyle(.secondary)

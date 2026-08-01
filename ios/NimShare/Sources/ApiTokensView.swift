@@ -83,7 +83,7 @@ struct ApiTokensView: View {
                 Form {
                     Section {
                         Label("Nur JETZT sichtbar", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Theme.warnRed).font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.danger2).font(.body.weight(.semibold))
                         Text("Speichere den Token jetzt an einem sicheren Ort. Er wird niemals wieder angezeigt.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
@@ -159,7 +159,7 @@ private struct CreateApiTokenSheet: View {
                     }
                 }
                 if let e = error {
-                    Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                    Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
             .navigationTitle("Neuer Token")

@@ -43,7 +43,7 @@ struct BlocksView: View {
                         }
                     }
                     if let e = error {
-                        Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                        Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                     }
                 }
                 .scrollContentBackground(.hidden)

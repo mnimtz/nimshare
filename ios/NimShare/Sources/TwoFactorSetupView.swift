@@ -23,7 +23,7 @@ struct TwoFactorSetupView: View {
                     ProgressView().frame(maxWidth: .infinity)
                 }
                 if let e = error {
-                    Text(e).foregroundStyle(Theme.warnRed).font(.footnote)
+                    Text(e).foregroundStyle(Theme.danger2).font(.footnote)
                 }
             }
             .navigationTitle("Zwei-Faktor")

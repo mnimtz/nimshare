@@ -193,7 +193,7 @@ struct KeyStoreLicenseAddSheet: View {
                         Text("Macht diese Lizenz für jeden Nutzer entnehmbar, nicht nur für dich.")
                     }
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle("Neue Lizenz")
             .navigationBarTitleDisplayMode(.inline)

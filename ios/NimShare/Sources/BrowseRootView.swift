@@ -266,7 +266,7 @@ struct BrowseRootView: View {
 
     private func errorView(_ e: String) -> some View {
         VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
+            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.danger2)
             Text(e).multilineTextAlignment(.center).padding(.horizontal)
             Button("Erneut versuchen") { Task { await load() } }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)

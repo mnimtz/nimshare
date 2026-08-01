@@ -22,7 +22,7 @@ struct DeleteAccountView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Diese Aktion ist endgültig.", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Theme.warnRed)
+                            .foregroundStyle(Theme.danger2)
                             .font(.body.weight(.semibold))
                         Text("Wenn du deinen NimShare-Account löschst, verlierst du dauerhaft:")
                             .font(.footnote)
@@ -30,7 +30,7 @@ struct DeleteAccountView: View {
                             .font(.footnote).foregroundStyle(.secondary)
                         Text("Der Account kann NICHT wiederhergestellt werden.")
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.warnRed)
+                            .foregroundStyle(Theme.danger2)
                     }
                 }
                 Section("Passwort bestätigen") {
@@ -47,7 +47,7 @@ struct DeleteAccountView: View {
                 }
                 if let e = error {
                     Section {
-                        Text(e).foregroundStyle(Theme.warnRed).font(.footnote)
+                        Text(e).foregroundStyle(Theme.danger2).font(.footnote)
                     }
                 }
                 Section {

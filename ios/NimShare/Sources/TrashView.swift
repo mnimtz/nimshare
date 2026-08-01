@@ -52,7 +52,7 @@ struct TrashView: View {
                 .scrollContentBackground(.hidden)
             }
             if let e = error {
-                Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
+                Text(e).font(.footnote).foregroundStyle(Theme.danger2).padding()
             }
         }
         .background(Theme.bgGradient.ignoresSafeArea())

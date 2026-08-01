@@ -162,7 +162,7 @@ struct ShareLinkCreateSheet: View {
                 Text("Wird auf der Landing-Seite erst nach Klick des Empfängers angezeigt.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+            if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             Section {
                 Button("Freigabelink erstellen") { Task { await create() } }
                     .frame(maxWidth: .infinity)
@@ -277,7 +277,7 @@ struct SubdomainSection: View {
                             .font(.caption).foregroundStyle(.green)
                     } else {
                         Text("✕ \(reasonText(c.reason))")
-                            .font(.caption).foregroundStyle(Theme.warnRed)
+                            .font(.caption).foregroundStyle(Theme.danger2)
                     }
                 }
             }
@@ -451,7 +451,7 @@ struct UploadRequestCreateSheet: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+            if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             Section {
                 Button("Upload-Anforderung erstellen") { Task { await create() } }
                     .frame(maxWidth: .infinity)

@@ -55,7 +55,7 @@ struct FavoritesView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
+            if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.danger2).padding() }
         }
         .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(String(localized: "Favoriten"))

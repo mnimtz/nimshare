@@ -141,7 +141,7 @@ struct GenerateCertSheet: View {
                 Section {
                     Toggle("Als Standard setzen", isOn: $setAsDefault)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle("Neues Zertifikat")
             .navigationBarTitleDisplayMode(.inline)

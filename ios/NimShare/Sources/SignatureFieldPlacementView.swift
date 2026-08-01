@@ -97,7 +97,7 @@ struct SignatureFieldPlacementView: View {
                 ProgressView("PDF wird geladen…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let e = error {
                 VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.danger2)
                     Text(e).multilineTextAlignment(.center).padding(.horizontal)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let pdf, pdf.pageCount > 0 {
@@ -236,7 +236,7 @@ private struct PageCanvas: View {
                             Button { Task { await onDelete(f) } } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .symbolRenderingMode(.palette)
-                                    .foregroundStyle(.white, Theme.warnRed)
+                                    .foregroundStyle(.white, Theme.danger2)
                             }
                             .offset(x: 10, y: -10)
                         }

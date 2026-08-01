@@ -47,7 +47,7 @@ struct LinksView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let e = error, links.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.danger2)
                     Text(e).multilineTextAlignment(.center).padding(.horizontal)
                     Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -485,7 +485,7 @@ private struct SendLinkByEmailSheet: View {
                 Section("Nachricht (optional)") {
                     TextField("Kurze Nachricht", text: $message, axis: .vertical).lineLimit(2...5)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
                 if sent { Section { Label("Gesendet!", systemImage: "checkmark.circle.fill").foregroundStyle(.green) } }
                 Section {
                     Button("Senden") { Task { await send() } }

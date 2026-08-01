@@ -284,7 +284,7 @@ struct ForgotPasswordSheet: View {
                 }
                 if let e = error {
                     Section {
-                        Text(e).foregroundStyle(Theme.warnRed).font(.footnote)
+                        Text(e).foregroundStyle(Theme.danger2).font(.footnote)
                     }
                 }
                 Section {

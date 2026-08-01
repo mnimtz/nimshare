@@ -306,7 +306,7 @@ struct AddContactSheet: View {
                     Text("Kommagetrennt. Werden im Web für den Filter genutzt.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                if let e = error { Section { Text(e).foregroundStyle(Theme.warnRed) } }
+                if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
             .navigationTitle(existing == nil ? "Kontakt anlegen" : "Kontakt bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
