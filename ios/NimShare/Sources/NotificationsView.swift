@@ -11,44 +11,52 @@ struct NotificationsView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Keine Benachrichtigungen", systemImage: "bell.slash",
-                    description: Text("Sobald etwas passiert, taucht es hier auf."))
+                RSEmptyState(systemImage: "bell.slash", title: "Keine Benachrichtigungen",
+                    desc: "Sobald etwas passiert, taucht es hier auf.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(items) { n in
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: n.iconName)
-                                .foregroundStyle(n.isUnread ? Theme.tungstenBlue : Color.secondary)
-                                .frame(width: 24, alignment: .center)
-                                .padding(.top, 2)
+                            ZStack {
+                                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
+                                Image(systemName: n.iconName)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(n.isUnread ? Theme.navy : Theme.textTertiary)
+                            }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(n.title)
-                                    .font(.body.weight(n.isUnread ? .semibold : .regular))
+                                    .font(n.isUnread ? TFont.titleS : TFont.bodyM)
+                                    .foregroundStyle(Theme.textPrimary)
                                     .lineLimit(3)
                                 if let b = n.body {
-                                    Text(b).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                                    Text(b).font(TFont.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
                                 }
                                 Text(n.createdAt.formatted(.relative(presentation: .named)))
-                                    .font(.caption2).foregroundStyle(.secondary)
+                                    .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                             }
                             Spacer()
                             if n.isUnread {
-                                Circle().fill(Theme.tungstenBlue).frame(width: 8, height: 8)
+                                Circle().fill(Theme.cyan).frame(width: 8, height: 8)
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .swipeActions {
                             Button {
                                 Task { await markRead(n.id) }
                             } label: {
                                 Label("Gelesen", systemImage: "checkmark")
-                            }.tint(Theme.tungstenBlue)
+                            }.tint(Theme.cyan)
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
-            if let e = error { Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding() }
+            if let e = error { Text(e).font(TFont.bodyS).foregroundStyle(Theme.danger2).padding() }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Benachrichtigungen")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

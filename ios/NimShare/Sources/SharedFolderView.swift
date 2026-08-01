@@ -32,14 +32,14 @@ struct SharedFolderView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let e = error, payload == nil {
                 VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.warnRed)
-                    Text(e).multilineTextAlignment(.center).padding(.horizontal)
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(Theme.danger2)
+                    Text(e).font(TFont.bodyM).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center).padding(.horizontal)
                     Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let p = payload {
                 if p.subfolders.isEmpty && p.files.isEmpty {
-                    ContentUnavailableView("Ordner ist leer", systemImage: "folder",
-                        description: Text("Hier gibt es aktuell nichts."))
+                    RSEmptyState(systemImage: "folder", title: "Ordner ist leer", desc: "Hier gibt es aktuell nichts.")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewMode == .list {
                     listView(p)
                 } else {
@@ -47,6 +47,7 @@ struct SharedFolderView: View {
                 }
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(payload?.name ?? initialTitle)
         .toolbar {
             // v1.10.195: Ansichts-Umschalter (Liste/Kacheln/Vorschau).
@@ -67,9 +68,14 @@ struct SharedFolderView: View {
                         NavigationLink {
                             SharedFolderView(folderId: sub.id, initialTitle: sub.name)
                         } label: {
-                            Label(sub.name, systemImage: "folder.fill")
-                                .foregroundStyle(Color.orange)
+                            Label {
+                                Text(sub.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                            } icon: {
+                                Image(systemName: "folder.fill").foregroundStyle(Theme.navy)
+                            }
                         }
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
@@ -82,19 +88,22 @@ struct SharedFolderView: View {
                             HStack {
                                 FileFormatBadge(name: f.name, size: 28)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(f.name).foregroundStyle(.primary)
+                                    Text(f.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                     Text(ByteCountFormatter.string(fromByteCount: f.sizeBytes, countStyle: .file))
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
         }
+        .scrollContentBackground(.hidden)
     }
 
     // v1.10.195: Kachel-/Vorschau-Modus mit denselben Tiles wie

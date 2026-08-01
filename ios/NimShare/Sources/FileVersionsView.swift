@@ -22,48 +22,46 @@ struct FileVersionsView: View {
                 // vorher trotzdem "Diese Datei hat nur eine Version" — eine
                 // falsche Tatsachenbehauptung, obwohl schlicht der Request
                 // fehlgeschlagen ist (der Fehler landete nur im separaten Alert).
-                ContentUnavailableView("Fehler beim Laden",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(error ?? ""))
+                RSEmptyState(systemImage: "exclamationmark.triangle", title: "Fehler beim Laden", desc: error ?? "")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Keine Versionen",
-                    systemImage: "clock.arrow.circlepath",
-                    description: Text("Diese Datei hat nur eine Version. Beim erneuten Upload wird die alte hier archiviert."))
+                RSEmptyState(systemImage: "clock.arrow.circlepath", title: "Keine Versionen",
+                    desc: "Diese Datei hat nur eine Version. Beim erneuten Upload wird die alte hier archiviert.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(items) { v in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text("v\(v.versionNumber)").font(.body.weight(.semibold))
+                                Text("v\(v.versionNumber)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                 if v.isCurrent {
-                                    Text("Aktuell")
-                                        .font(.caption2.weight(.medium))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .background(Color.green.opacity(0.15))
-                                        .foregroundStyle(.green)
-                                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                                    Chip(text: "Aktuell", color: Theme.success2, bg: Theme.success2.opacity(0.12))
                                 }
                                 Spacer()
                                 Text(ByteCountFormatter.string(fromByteCount: v.sizeBytes, countStyle: .file))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             }
                             Text(v.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption).foregroundStyle(.secondary)
-                            Text("Hochgeladen von: \(v.createdByName)").font(.caption2).foregroundStyle(.secondary)
+                                .font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                            Text("Hochgeladen von: \(v.createdByName)").font(TFont.caption).foregroundStyle(Theme.textTertiary)
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if !v.isCurrent {
                                 Button {
                                     confirmRestore = v
                                 } label: { Label("Wiederherstellen", systemImage: "arrow.uturn.backward") }
-                                    .tint(Theme.tungstenBlue)
+                                    .tint(Theme.cyan)
                             }
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Versionen")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
