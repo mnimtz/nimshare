@@ -216,14 +216,21 @@ struct BrowseRootView: View {
     /// orte für Dateien/Ordner. Gruppen bewusst nicht als Kachel (v1.10.103).
     /// v1.11.69: Marcus's Feedback — "nicht pro Kachel, das Navy war ja gut"
     /// — Zwei-Ton-Versuch aus v1.11.68 wieder zurückgenommen, einheitlich Navy.
+    /// v1.11.72: Marcus's Feedback — "Persönlich"/"Öffentlich" wirkten zu
+    /// steril nebeneinander (beide navy). Kein Rückfall in die verworfene
+    /// Farbe-pro-Kachel-Orgie aus v1.11.68 — nur DIESES eine Paar bekommt
+    /// einen dezenten, semantisch passenden Unterschied: Persönlich bleibt
+    /// navy (das etablierte Primary), Öffentlich bekommt Cyan (schon an
+    /// anderer Stelle für "offen/geteilt" reserviert, z.B. Meine Links).
     private var librarySpecs: [TileSpec] {
         var t: [TileSpec] = []
         for tile in scopes.filter({ $0.scope.lowercased() == "personal" })
                         + scopes.filter({ $0.scope.lowercased() == "public" }) {
+            let isPublic = tile.scope.lowercased() == "public"
             let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
-                : tile.scope.lowercased() == "public" ? "Öffentlich" : tile.scope.capitalized
+                : isPublic ? "Öffentlich" : tile.scope.capitalized
             t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
-                              icon: tile.systemImage, tint: Theme.navy,
+                              icon: tile.systemImage, tint: isPublic ? Theme.cyan : Theme.navy,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
         return t
