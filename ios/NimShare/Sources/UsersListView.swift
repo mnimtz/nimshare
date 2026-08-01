@@ -25,14 +25,17 @@ struct UsersListView: View {
                 Section("Ausstehende Einladungen") {
                     ForEach(pendingInvitations) { inv in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(inv.displayName).font(.subheadline.weight(.medium))
-                            Text(inv.email).font(.caption).foregroundStyle(.secondary)
+                            Text(inv.displayName).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                            Text(inv.email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             Text("Läuft ab \(inv.expiresAt.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.caption2).foregroundStyle(.secondary)
+                                .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                         }
+                        .padding(.vertical, 2)
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .swipeActions {
                             Button("Widerrufen", role: .destructive) { Task { await revoke(inv) } }
-                            Button("Erneut senden") { Task { await resend(inv) } }.tint(Theme.tungstenBlue)
+                            Button("Erneut senden") { Task { await resend(inv) } }.tint(Theme.cyan)
                         }
                     }
                 }
@@ -43,30 +46,39 @@ struct UsersListView: View {
                         UserEditView(userId: u.id, onSaved: { Task { await load() } }, onDeleted: { Task { await load() } })
                     } label: {
                         HStack {
+                            ZStack {
+                                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.navy)
+                            }
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
-                                    Text(u.displayName).font(.subheadline.weight(.medium))
+                                    Text(u.displayName).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                     if u.role == "Admin" {
-                                        Text("Admin").font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-                                            .background(Theme.tungstenBlue.opacity(0.15))
-                                            .foregroundStyle(Theme.tungstenBlue).clipShape(Capsule())
+                                        Chip(text: "Admin", color: Theme.navy, bg: Theme.navy.opacity(0.12))
                                     }
                                     if !u.isActive {
-                                        Text("Deaktiviert").font(.caption2).foregroundStyle(Theme.warnRed)
+                                        Text("Deaktiviert").font(TFont.caption).foregroundStyle(Theme.danger2)
                                     }
                                 }
-                                Text(u.email).font(.caption).foregroundStyle(.secondary)
+                                Text(u.email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                         }
                     }
+                    .padding(.vertical, 2)
+                    .listRowBackground(Theme.surface2)
+                    .listRowSeparator(.hidden)
                     .swipeActions {
                         Button(u.isActive ? "Deaktivieren" : "Aktivieren") { Task { await toggleActive(u) } }
-                            .tint(u.isActive ? Theme.warnRed : .green)
+                            .tint(u.isActive ? Theme.danger2 : Theme.success2)
                     }
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Benutzerverwaltung")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
