@@ -248,14 +248,14 @@ struct BrowseRootView: View {
         // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
         // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
         // getauscht (das zieht dafür nach Profil → Dateien um).
-        t.append(TileSpec(id: "keystore", title: "Lizenzverwaltung", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
+        t.append(TileSpec(id: "keystore", title: "Lizenzen", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.cyan, dest: { AnyView(LinksView()) }))
         t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navy, dest: { AnyView(SignaturesView()) }))
         // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
         // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
         // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
         if auth.isAdmin {
-            t.append(TileSpec(id: "users", title: "Benutzerverwaltung", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
+            t.append(TileSpec(id: "users", title: "Benutzer", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
         }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
