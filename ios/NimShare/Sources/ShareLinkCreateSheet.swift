@@ -81,7 +81,7 @@ struct ShareLinkCreateSheet: View {
                     Image(systemName: {
                         switch target { case .file: return "doc.text.fill"; case .folder: return "folder.fill" }
                     }())
-                    .foregroundStyle(Theme.tungstenBlue)
+                    .foregroundStyle(Theme.navy)
                     Text(itemName).font(.body.weight(.semibold)).lineLimit(1)
                 }
             }
@@ -167,8 +167,11 @@ struct ShareLinkCreateSheet: View {
                 Button("Freigabelink erstellen") { Task { await create() } }
                     .frame(maxWidth: .infinity)
                     .disabled(busy)
+                    .tint(Theme.navy)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Freigabelink")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -181,9 +184,9 @@ struct ShareLinkCreateSheet: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(.green)
+                .foregroundStyle(Theme.success2)
                 .padding(.top, 24)
-            Text("Link erstellt").font(.title2.weight(.bold))
+            Text("Link erstellt").font(TFont.titleL).foregroundStyle(Theme.textPrimary)
             // v1.11.0-UX-Fix: vorher wurden klassische /s/slug-URL UND
             // Subdomain-URL gleichwertig nebeneinander gezeigt — Marcus
             // fand das "doppelt". Jetzt: wenn eine Subdomain existiert,
@@ -193,6 +196,7 @@ struct ShareLinkCreateSheet: View {
             Spacer()
         }
         .padding()
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Fertig")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -274,7 +278,7 @@ struct SubdomainSection: View {
                 if let c = check {
                     if c.available {
                         Text("✓ \(host(c.normalised))")
-                            .font(.caption).foregroundStyle(.green)
+                            .font(.caption).foregroundStyle(Theme.success2)
                     } else {
                         Text("✕ \(reasonText(c.reason))")
                             .font(.caption).foregroundStyle(Theme.danger2)
@@ -335,11 +339,11 @@ struct ShareResultUrlBlock: View {
                     UIPasteboard.general.string = primaryUrl
                 } label: {
                     Label("Kopieren", systemImage: "doc.on.doc")
-                }.buttonStyle(.borderedProminent).tint(Theme.tungstenBlue)
+                }.buttonStyle(.borderedProminent).tint(Theme.navy)
                 if let u = URL(string: primaryUrl) {
                     ShareLink(item: u) {
                         Label("Teilen", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(.bordered).tint(Theme.tungstenBlue)
+                    }.buttonStyle(.bordered).tint(Theme.navy)
                 }
             }
             if hasSubdomain {
@@ -456,8 +460,11 @@ struct UploadRequestCreateSheet: View {
                 Button("Upload-Anforderung erstellen") { Task { await create() } }
                     .frame(maxWidth: .infinity)
                     .disabled(busy)
+                    .tint(Theme.navy)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Upload anfordern")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -469,14 +476,15 @@ struct UploadRequestCreateSheet: View {
     private func resultView(_ r: NimShareAPI.UploadRequestResult) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 48)).foregroundStyle(.green).padding(.top, 24)
-            Text("Anforderung erstellt").font(.title2.weight(.bold))
+                .font(.system(size: 48)).foregroundStyle(Theme.success2).padding(.top, 24)
+            Text("Anforderung erstellt").font(TFont.titleL).foregroundStyle(Theme.textPrimary)
             // v1.11.0-UX-Fix: siehe ShareLinkCreateSheet.resultView — Subdomain
             // wird primär, klassische URL nur noch als dezenter Hinweis.
             ShareResultUrlBlock(classicUrl: r.url, subdomainUrl: r.subdomainUrl)
             Spacer()
         }
         .padding()
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Fertig")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Schließen") { dismiss() } } }

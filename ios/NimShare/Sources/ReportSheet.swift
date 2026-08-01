@@ -63,6 +63,8 @@ struct ReportSheet: View {
                     Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Melden")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -78,7 +80,7 @@ struct ReportSheet: View {
                 if done {
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 48)).foregroundStyle(.green)
+                            .font(.system(size: 48)).foregroundStyle(Theme.success2)
                         Text("Meldung ist eingegangen.")
                         Text("Ein Admin sichtet den Report zeitnah.")
                             .font(.caption).foregroundStyle(.secondary)

@@ -60,6 +60,8 @@ struct DeleteAccountView: View {
                     .disabled(confirmationText.uppercased() != requiredConfirmation || password.isEmpty || loading)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Account löschen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

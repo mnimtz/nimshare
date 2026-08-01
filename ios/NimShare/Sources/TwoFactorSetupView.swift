@@ -26,6 +26,8 @@ struct TwoFactorSetupView: View {
                     Text(e).foregroundStyle(Theme.danger2).font(.footnote)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Zwei-Faktor")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -42,7 +44,7 @@ struct TwoFactorSetupView: View {
     private func enrolledSection(_ s: TotpStatus) -> some View {
         Section("Status") {
             HStack {
-                Image(systemName: "checkmark.shield.fill").foregroundStyle(.green)
+                Image(systemName: "checkmark.shield.fill").foregroundStyle(Theme.success2)
                 VStack(alignment: .leading) {
                     Text("2FA ist aktiv").font(.body.weight(.semibold))
                     if let at = s.enrolledAt {
@@ -93,7 +95,7 @@ struct TwoFactorSetupView: View {
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)
                         .padding(6)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(Theme.cardBackground))
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Theme.surfaceMuted))
                 } else {
                     Button("Setup starten") { Task { await initSetup() } }
                 }

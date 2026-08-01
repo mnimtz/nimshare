@@ -48,12 +48,13 @@ struct DirectShareSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(itemName).font(.body.weight(.medium)).lineLimit(2)
+                    Text(itemName).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                 } header: {
-                    Text(target.isFile ? "Datei" : "Ordner")
+                    RSSectionHeader(title: target.isFile ? "Datei" : "Ordner")
                 }
+                .listRowBackground(Theme.surface2)
 
-                Section("Neue Berechtigung") {
+                Section {
                     Picker("Typ", selection: $kind) {
                         ForEach(PickerKind.allCases) { k in
                             Text(k.localized).tag(k)
@@ -82,15 +83,15 @@ struct DirectShareSheet: View {
                                     userMatches = []
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(u.displayName).foregroundStyle(.primary)
-                                        Text(u.email).font(.caption).foregroundStyle(.secondary)
+                                        Text(u.displayName).foregroundStyle(Theme.textPrimary)
+                                        Text(u.email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                     }
                                 }
                             }
                         }
                     } else {
                         if groups.isEmpty {
-                            Text("Keine Gruppen verfügbar").foregroundStyle(.secondary)
+                            Text("Keine Gruppen verfügbar").foregroundStyle(Theme.textSecondary)
                         } else {
                             Picker("Gruppe", selection: $selectedGroup) {
                                 Text("—").tag(DirectShareGroupOption?.none)
@@ -109,41 +110,47 @@ struct DirectShareSheet: View {
 
                     Button("Hinzufügen") { Task { await grant() } }
                         .disabled(!canGrant)
-                }
+                        .tint(Theme.navy)
+                } header: { RSSectionHeader(title: "Neue Berechtigung") }
+                    .listRowBackground(Theme.surface2)
 
-                Section("Bereits freigegeben") {
+                Section {
                     if shares.isEmpty {
-                        Text("Noch niemand.").foregroundStyle(.secondary)
+                        Text("Noch niemand.").foregroundStyle(Theme.textSecondary)
                     } else {
                         ForEach(shares) { s in
                             HStack {
                                 Image(systemName: s.isGroup ? "person.3.fill" : "person.crop.circle.fill")
-                                    .foregroundStyle(Theme.tungstenBlue)
+                                    .foregroundStyle(Theme.navy)
                                     .frame(width: 24)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(s.displayName)
+                                    Text(s.displayName).foregroundStyle(Theme.textPrimary)
                                     Text(s.permissionEnum == .write ? "Schreibrechte" : "Nur lesen")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 }
                                 Spacer()
                                 Button(role: .destructive) {
                                     Task { await revoke(s.id) }
                                 } label: {
-                                    Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+                                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.danger2)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                     }
-                }
+                } header: { RSSectionHeader(title: "Bereits freigegeben") }
+                    .listRowBackground(Theme.surface2)
 
                 if justGranted {
                     Section {
                         Label("Freigabe hinzugefügt", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Theme.success2)
                     }
+                    .listRowBackground(Theme.surface2)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             // v1.10.197: Fehler als Alert statt leicht übersehbarer Fußnote —
             // Marcus: „weiß nicht, ob es wirklich freigegeben wurde".
             .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {

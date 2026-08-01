@@ -49,17 +49,19 @@ struct PermissionsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(folderName).font(.body.weight(.medium)).lineLimit(2)
+                    Text(folderName).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                 } header: {
-                    Text("Öffentlicher Ordner")
+                    RSSectionHeader(title: "Öffentlicher Ordner")
                 } footer: {
                     Text("Schalt den Ordner auf privat und nur die unten aufgeführten Nutzer und Gruppen sehen ihn noch — alle anderen sehen ihn weder in der Ordner-Liste, in der Suche noch im AI-Chat.")
                 }
+                .listRowBackground(Theme.surface2)
 
                 Section {
                     Toggle(isOn: $isPrivate) {
                         Label("Nur für explizit Berechtigte sichtbar", systemImage: "lock.fill")
                     }
+                    .tint(Theme.cyan)
                     .disabled(!canManage || loading)
                     .onChange(of: isPrivate) { _, newValue in
                         // Nur echte User-Umschaltungen an den Server senden.
@@ -67,10 +69,11 @@ struct PermissionsSheet: View {
                         Task { await togglePrivacy(newValue) }
                     }
                 } header: {
-                    Text("Sichtbarkeit")
+                    RSSectionHeader(title: "Sichtbarkeit")
                 }
+                .listRowBackground(Theme.surface2)
 
-                Section("Berechtigte hinzufügen") {
+                Section {
                     Picker("Typ", selection: $kind) {
                         ForEach(PickerKind.allCases) { k in
                             Text(k.label).tag(k)
@@ -102,8 +105,8 @@ struct PermissionsSheet: View {
                                     HStack {
                                         Image(systemName: "person.crop.circle")
                                         VStack(alignment: .leading) {
-                                            Text(u.displayName)
-                                            Text(u.email).font(.caption).foregroundStyle(.secondary)
+                                            Text(u.displayName).foregroundStyle(Theme.textPrimary)
+                                            Text(u.email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                         }
                                     }
                                 }
@@ -111,7 +114,7 @@ struct PermissionsSheet: View {
                         }
                     } else {
                         if groups.isEmpty {
-                            Text("Keine Gruppen verfügbar.").foregroundStyle(.secondary)
+                            Text("Keine Gruppen verfügbar.").foregroundStyle(Theme.textSecondary)
                         } else {
                             Picker("Gruppe", selection: $selectedGroup) {
                                 Text("—").tag(Optional<DirectShareGroupOption>.none)
@@ -135,11 +138,13 @@ struct PermissionsSheet: View {
                         Label("Hinzufügen", systemImage: "plus.circle.fill")
                     }
                     .disabled(!canManage || loading || !canAdd)
-                }
+                    .tint(Theme.navy)
+                } header: { RSSectionHeader(title: "Berechtigte hinzufügen") }
+                    .listRowBackground(Theme.surface2)
 
-                Section("Berechtigt") {
+                Section {
                     if userGrants.isEmpty && groupGrants.isEmpty {
-                        Text("Noch niemand berechtigt.").foregroundStyle(.secondary)
+                        Text("Noch niemand berechtigt.").foregroundStyle(Theme.textSecondary)
                     }
                     ForEach(userGrants) { g in
                         grantRow(icon: "person.crop.circle", label: g.label, perm: g.permissionEnum) {
@@ -151,8 +156,11 @@ struct PermissionsSheet: View {
                             Task { await revoke(g.id) }
                         }
                     }
-                }
+                } header: { RSSectionHeader(title: "Berechtigt") }
+                    .listRowBackground(Theme.surface2)
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("🔒 Berechtigungen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -181,12 +189,11 @@ struct PermissionsSheet: View {
 
     private func grantRow(icon: String, label: String, perm: DirectSharePermission, remove: @escaping () -> Void) -> some View {
         HStack {
-            Image(systemName: icon).foregroundStyle(Theme.tungstenBlue)
-            Text(label)
+            Image(systemName: icon).foregroundStyle(Theme.navy)
+            Text(label).foregroundStyle(Theme.textPrimary)
             Spacer()
-            Text(perm.localized).font(.caption).padding(.horizontal, 8).padding(.vertical, 3)
-                .background(perm == .write ? Color.orange.opacity(0.2) : Color.gray.opacity(0.2))
-                .clipShape(Capsule())
+            Chip(text: perm.localized, color: perm == .write ? Theme.yellow : Theme.textSecondary,
+                 bg: (perm == .write ? Theme.yellow : Theme.textTertiary).opacity(0.15))
             if canManage {
                 Button(role: .destructive) { remove() } label: {
                     Image(systemName: "trash")
