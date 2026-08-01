@@ -65,6 +65,7 @@ struct SignatureFieldPlacementView: View {
                         Label(signers.first(where: { $0.serverId == selectedParticipantId })?.name ?? "Empfänger wählen",
                               systemImage: "person.crop.circle")
                     }
+                    .tint(Theme.navy)
                     Spacer()
                     Menu {
                         Button("✍ Unterschrift") { selectedType = "Signature" }
@@ -74,8 +75,9 @@ struct SignatureFieldPlacementView: View {
                     } label: {
                         Label(typeLabel(selectedType), systemImage: "square.dashed")
                     }
+                    .tint(Theme.cyan)
                 }
-                .font(.subheadline)
+                .font(TFont.bodyM)
                 .padding(.horizontal)
                 .padding(.top, 8)
                 .padding(.bottom, 4)
@@ -117,12 +119,14 @@ struct SignatureFieldPlacementView: View {
                 Text(pdf.pageCount > 1
                      ? "Seite \(currentPage + 1) von \(pdf.pageCount) · Ziehe ein Rechteck, um ein Feld zu platzieren"
                      : "Ziehe ein Rechteck auf das Dokument, um ein Feld zu platzieren")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 6)
             } else {
-                ContentUnavailableView("PDF leer", systemImage: "doc.questionmark")
+                RSEmptyState(systemImage: "doc.questionmark", title: "PDF leer", desc: "")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .task { await load() }
         .onAppear {
             if selectedParticipantId == nil { selectedParticipantId = signers.first?.serverId }
@@ -289,8 +293,8 @@ private struct PageCanvas: View {
 
     private func fieldBox(_ r: CGRect, kind: String) -> some View {
         RoundedRectangle(cornerRadius: 4)
-            .strokeBorder(Theme.tungstenBlue, style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
-            .background(RoundedRectangle(cornerRadius: 4).fill(Theme.tungstenBlue.opacity(0.12)))
+            .strokeBorder(Theme.cyan, style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
+            .background(RoundedRectangle(cornerRadius: 4).fill(Theme.cyan.opacity(0.12)))
             .frame(width: max(r.width, 1), height: max(r.height, 1))
             .overlay(Text(icon(for: kind)).font(.caption))
     }
