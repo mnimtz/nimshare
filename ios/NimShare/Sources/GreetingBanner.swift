@@ -56,10 +56,19 @@ struct GreetingBanner: View {
             HStack(alignment: .top, spacing: Theme.Space.sm) {
                 VStack(alignment: .leading, spacing: 2) {
                     if let s = salutation, !s.isEmpty {
+                        // v1.11.71: war .lineLimit(1) — bei align-items:flex-
+                        // end zwischen Name+Wetter-Chip wurde der Name mit
+                        // Ellipsis abgeschnitten ("Guten Morgen, Marc…"),
+                        // Marcus's Report "Name nicht ganz sichtbar, wirkt
+                        // unhöflich". Jetzt 2 Zeilen statt Abschneiden, plus
+                        // layoutPriority damit die Begrüssung Vorrang vor dem
+                        // Wetter-Chip bekommt, falls beides eng wird.
                         Text("\(s) 👋")
                             .font(TFont.titleL)
                             .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .layoutPriority(1)
                     }
                     Text(msg)
                         .font(TFont.bodyS)

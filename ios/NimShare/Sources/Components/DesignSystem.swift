@@ -149,9 +149,17 @@ struct RSWeatherChip: View {
     let weather: NimShareAPI.WeatherInfo
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: weather.sfSymbol)
-                .symbolRenderingMode(.multicolor)
-                .font(.system(size: 18))
+            // v1.11.71: Marcus's Report "Wetter-Logo nicht erkennbar" — die
+            // Multicolor-Wettersymbole (z.B. cloud.fill) sind bei bewölktem
+            // Wetter fast weiß/hellgrau und verschwanden auf dem hellen
+            // Chip-Hintergrund. Getönter Kreis dahinter sorgt für Kontrast
+            // unabhängig vom Wettercode.
+            ZStack {
+                Circle().fill(Theme.cyan.opacity(0.14)).frame(width: 32, height: 32)
+                Image(systemName: weather.sfSymbol)
+                    .symbolRenderingMode(.multicolor)
+                    .font(.system(size: 17))
+            }
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(weather.tempC)°").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                 Text("↑\(weather.highC) ↓\(weather.lowC)").font(TFont.caption).foregroundStyle(Theme.textSecondary)

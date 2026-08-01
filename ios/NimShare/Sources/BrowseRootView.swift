@@ -119,8 +119,30 @@ struct BrowseRootView: View {
     private func recentCard(_ link: ShareLinkDto) -> some View {
         let name = link.targetName ?? link.slug
         let display = (name as NSString).deletingPathExtension
+        // v1.11.71: Marcus's Report "Logo 'file' ist grau, obwohl eigentlich
+        // ein zip dahintersteckt" — der Link war ein ORDNER-Link, nicht eine
+        // Datei. FileFormatBadge(name:) bekam den Ordnernamen (ohne
+        // Erweiterung) und fiel auf die neutral-graue "FILE"-Kachel zurück.
+        // Ordner-Links bekommen jetzt ein eigenes Ordner-Icon statt des
+        // Datei-Formats — der Download-als-ZIP-Automatismus macht daraus
+        // trotzdem kein "Zip-Dokument".
         return VStack(alignment: .leading, spacing: 8) {
-            FileFormatBadge(name: name, size: 32)
+            if link.targetKind == "folder" {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Theme.navy, lineWidth: 1.5)
+                    )
+                    .overlay(
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Theme.navy)
+                    )
+                    .frame(width: 26, height: 32)
+            } else {
+                FileFormatBadge(name: name, size: 32)
+            }
             Text(display.isEmpty ? link.slug : display)
                 .font(TFont.bodyS.weight(.semibold))
                 .foregroundStyle(.white)
