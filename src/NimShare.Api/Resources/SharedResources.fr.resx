@@ -243,6 +243,11 @@
   <data name="links.revoked"><value>Révoqué</value></data>
   <data name="links.expired"><value>Expiré</value></data>
   <data name="links.action.revoke"><value>Révoquer</value></data>
+  <data name="links.filter.all_people"><value>Toutes les personnes</value></data>
+  <data name="links.action.edit_expiry"><value>Modifier l'expiration…</value></data>
+  <data name="links.expiry.title"><value>Modifier la date d'expiration</value></data>
+  <data name="links.expiry.prompt"><value>Nouvelle date d'expiration (AAAA-MM-JJ). Laissez vide pour que le lien n'expire jamais.</value></data>
+  <data name="links.expiry.invalid"><value>Veuillez saisir une date au format AAAA-MM-JJ.</value></data>
   <data name="links.action.delete"><value>Supprimer</value></data>
   <data name="links.confirm.revoke"><value>Révoquer ce lien ? Le fichier reste ; l'URL cesse de fonctionner.</value></data>
   <data name="links.confirm.delete"><value>Supprimer ce lien définitivement ? Le fichier reste.</value></data>

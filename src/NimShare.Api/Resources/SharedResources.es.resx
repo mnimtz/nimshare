@@ -243,6 +243,11 @@
   <data name="links.revoked"><value>Revocado</value></data>
   <data name="links.expired"><value>Caducado</value></data>
   <data name="links.action.revoke"><value>Revocar</value></data>
+  <data name="links.filter.all_people"><value>Todas las personas</value></data>
+  <data name="links.action.edit_expiry"><value>Cambiar caducidad…</value></data>
+  <data name="links.expiry.title"><value>Cambiar fecha de caducidad</value></data>
+  <data name="links.expiry.prompt"><value>Nueva fecha de caducidad (AAAA-MM-DD). Déjalo vacío para que el enlace nunca caduque.</value></data>
+  <data name="links.expiry.invalid"><value>Introduce una fecha en formato AAAA-MM-DD.</value></data>
   <data name="links.action.delete"><value>Eliminar</value></data>
   <data name="links.confirm.revoke"><value>¿Revocar este enlace? El archivo permanece; la URL deja de funcionar.</value></data>
   <data name="links.confirm.delete"><value>¿Eliminar este enlace de forma permanente? El archivo permanece.</value></data>

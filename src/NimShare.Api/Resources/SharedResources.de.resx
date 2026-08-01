@@ -291,6 +291,11 @@
   <data name="links.revoked"><value>Widerrufen</value></data>
   <data name="links.expired"><value>Abgelaufen</value></data>
   <data name="links.action.revoke"><value>Widerrufen</value></data>
+  <data name="links.filter.all_people"><value>Alle Personen</value></data>
+  <data name="links.action.edit_expiry"><value>Ablauf ändern…</value></data>
+  <data name="links.expiry.title"><value>Ablaufdatum ändern</value></data>
+  <data name="links.expiry.prompt"><value>Neues Ablaufdatum (JJJJ-MM-TT). Leer lassen, damit der Link nie abläuft.</value></data>
+  <data name="links.expiry.invalid"><value>Bitte ein Datum im Format JJJJ-MM-TT eingeben.</value></data>
   <data name="links.action.delete"><value>Löschen</value></data>
   <data name="links.confirm.revoke"><value>Diesen Link widerrufen? Die Datei bleibt, die URL wird ungültig.</value></data>
   <data name="links.confirm.delete"><value>Diesen Link dauerhaft löschen? Die Datei bleibt.</value></data>

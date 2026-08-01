@@ -10,13 +10,40 @@
     var uploadSubdomainLinks = (List<NimShare.Core.Entities.UploadRequestLink>)(ViewData["UploadSubdomainLinks"] ?? new List<NimShare.Core.Entities.UploadRequestLink>());
     var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
     var currentUserId = (Guid)(ViewData["CurrentUserId"] ?? Guid.Empty);
+    // v1.11.72 — Marcus's Wunsch: Admin-Filter "nur Links dieser Person"
+    // oben neben "Neuer Upload". Rein clientseitig (Daten sind eh schon
+    // komplett gerendert) — distinct Owner über ALLE Sektionen hinweg,
+    // damit auch Gruppen-/Öffentlich-/Subdomain-/Upload-Owner erfasst sind.
+    var allOwners = Model.Select(l => l.Owner)
+        .Concat(groupLinks.Select(l => l.Owner))
+        .Concat(publicLinks.Select(l => l.Owner))
+        .Concat(subdomainLinks.Select(l => l.Owner))
+        .Concat(uploadLinks.Select(l => l.Owner))
+        .Concat(uploadSubdomainLinks.Select(l => l.Owner))
+        .Where(o => o != null)
+        .GroupBy(o => o!.Id)
+        .Select(g => g.First()!)
+        .OrderBy(o => o.DisplayName)
+        .ToList();
 }
 <div class="page-header">
     <div>
         <h1>@T["links.title"]</h1>
         <p class="lede">@T["links.lede"]</p>
     </div>
-    <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
+    <div style="display:flex;align-items:center;gap:var(--sp-3)">
+        @if (isAdmin && allOwners.Count > 1)
+        {
+            <select id="ownerFilter" onchange="filterByOwner(this.value)">
+                <option value="">👤 @T["links.filter.all_people"]</option>
+                @foreach (var o in allOwners)
+                {
+                    <option value="@o.Id">@o.DisplayName</option>
+                }
+            </select>
+        }
+        <a class="btn btn-primary" href="/upload">@T["dashboard.new_upload"]</a>
+    </div>
 </div>
 
 @* v1.11.50 — Marcus: die Tabellen wirkten mit vielen Aktions-Buttons pro
@@ -65,12 +92,27 @@ document.addEventListener('click', (e) => {
 // Generic per-section search: filters <tr> in the given table by whether
 // any cell's text contains the query (case-insensitive). Client-side only —
 // the page already renders every row server-side, no extra API round-trip.
+// v1.11.72: composes with the admin "Person"-Filter (filterByOwner) below —
+// a row needs to pass BOTH to stay visible, tracked via two data-* flags
+// so neither filter blindly overwrites the other's hidden rows.
+function applyRowVisibility(tr) {
+    tr.style.display = (tr.dataset.searchHide === '1' || tr.dataset.ownerHide === '1') ? 'none' : '';
+}
 function filterLinksTable(inputEl, tableId) {
     const q = inputEl.value.trim().toLowerCase();
     const table = document.getElementById(tableId);
     if (!table) return;
     table.querySelectorAll('tbody > tr').forEach(tr => {
-        tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+        tr.dataset.searchHide = (!q || tr.textContent.toLowerCase().includes(q)) ? '0' : '1';
+        applyRowVisibility(tr);
+    });
+}
+// v1.11.72 — Marcus's Wunsch: Admin-Filter "nur Links dieser Person",
+// wirkt über ALLE Sektionen/Tabellen hinweg (jede Zeile trägt data-owner-id).
+function filterByOwner(ownerId) {
+    document.querySelectorAll('.links-table tbody > tr').forEach(tr => {
+        tr.dataset.ownerHide = (!ownerId || tr.dataset.ownerId === ownerId) ? '0' : '1';
+        applyRowVisibility(tr);
     });
 }
 </script>
@@ -107,7 +149,7 @@ else
                 : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
                 <td data-th="@T["file.name"]" class="ellipsis">
                     @if (l.File is not null)
@@ -156,6 +198,7 @@ else
                                 <button class="btn btn-ghost btn-sm" data-toggle-public="@l.Id" data-current="@(l.IsPublic ? "true" : "false")">
                                     @(l.IsPublic ? "🔒 " + @T["links.public.unshare"].Value : "🌐 " + @T["links.public.share"].Value)
                                 </button>
+                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
                             }
                         </div>
                     </details>
@@ -206,7 +249,7 @@ else
                 : (l.ExpiresAt is not null && l.ExpiresAt <= now) || (l.MaxUploads is not null && l.UploadCount >= l.MaxUploads)
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.slug"]"><a href="/u/@l.Slug" class="mono" target="_blank">@l.Slug</a></td>
                 <td data-th="@T["links.uploads.target_folder"]" class="ellipsis">📁 <span class="ellipsis-inner" title="@l.TargetFolder">@l.TargetFolder</span></td>
                 @if (isAdmin)
@@ -270,7 +313,7 @@ else
                 : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.subdomain.url"]"><a href="@sdUrl" class="mono" target="_blank">@sdHost</a></td>
                 <td data-th="@T["file.name"]" class="ellipsis">
                     @if (l.File is not null)
@@ -309,6 +352,10 @@ else
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
                             }
+                            @if (isAdmin)
+                            {
+                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
+                            }
                         </div>
                     </details>
                     @if (canManage)
@@ -335,7 +382,7 @@ else
                 : (l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow) || (l.MaxUploads is not null && l.UploadCount >= l.MaxUploads)
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.subdomain.url"]"><a href="@sdUrlU" class="mono" target="_blank">@sdHostU</a></td>
                 <td data-th="@T["file.name"]" class="ellipsis">📤 <span class="ellipsis-inner" title="@l.TargetFolder">@l.TargetFolder</span></td>
                 <td class="muted" data-th="@T["links.public.by"]">@l.Owner?.DisplayName</td>
@@ -389,7 +436,7 @@ else
                 : l.ExpiresAt is not null && l.ExpiresAt <= DateTimeOffset.UtcNow
                     ? ("chip-warn", @T["links.expired"].Value)
                     : ("chip-ok", @T["links.active"].Value);
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
                 <td data-th="@T["file.name"]" class="ellipsis">
                     @if (l.File is not null)
@@ -422,6 +469,10 @@ else
                             @if (l.PasswordHash is null)
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                            }
+                            @if (isAdmin)
+                            {
+                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
                             }
                         </div>
                     </details>
@@ -470,7 +521,7 @@ else
             // erlaubt — die UI blendete Revoke/Delete hier fälschlich nur für
             // Admins ein. isAdmin bleibt zusätzlich (v1.10.97: Admin-Moderation).
             var canManagePublic = isAdmin || l.OwnerId == currentUserId;
-            <tr>
+            <tr data-owner-id="@l.OwnerId">
                 <td data-th="@T["links.slug"]"><a href="/s/@l.Slug" class="mono">@l.Slug</a></td>
                 <td data-th="@T["file.name"]" class="ellipsis">
                     @if (l.File is not null)
@@ -507,6 +558,10 @@ else
                             @if (l.PasswordHash is null)
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
+                            }
+                            @if (isAdmin)
+                            {
+                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
                             }
                         </div>
                     </details>
@@ -546,6 +601,33 @@ document.querySelectorAll('[data-toggle-public]').forEach(b => {
     b.addEventListener('click', async () => {
         const currentlyPublic = b.dataset.current === 'true';
         const r = await api('PATCH', `/api/v1/links/${b.dataset.togglePublic}`, { isPublic: !currentlyPublic });
+        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
+    });
+});
+// v1.11.72 — Marcus's Wunsch: Admin kann das Ablaufdatum eines Links
+// nachträglich setzen/ändern (bzw. auf "läuft nie ab" umstellen). Der
+// Server-Endpoint (LinksController.Update) unterstützt ExpiresAt/
+// IsPermanent bereits seit v1.11.50 — hier fehlte nur die UI.
+document.querySelectorAll('[data-edit-expiry]').forEach(b => {
+    b.addEventListener('click', async () => {
+        const cur = b.dataset.expires ? b.dataset.expires.substring(0, 10) : '';
+        const input = await nimPrompt(@Json.Serialize(T["links.expiry.prompt"].Value), {
+            title: @Json.Serialize(T["links.expiry.title"].Value),
+            defaultValue: cur,
+            placeholder: 'JJJJ-MM-TT'
+        });
+        if (input === null) return;
+        const trimmed = input.trim();
+        let body;
+        if (trimmed === '') {
+            body = { isPermanent: true };
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            body = { expiresAt: trimmed + 'T23:59:59.000Z', isPermanent: false };
+        } else {
+            nimAlert(@Json.Serialize(T["links.expiry.invalid"].Value), { kind: 'error' });
+            return;
+        }
+        const r = await api('PATCH', `/api/v1/links/${b.dataset.editExpiry}`, body);
         if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });

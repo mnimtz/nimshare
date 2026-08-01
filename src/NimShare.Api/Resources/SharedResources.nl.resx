@@ -132,6 +132,11 @@
   <data name="links.revoked"><value>Ingetrokken</value></data>
   <data name="links.expired"><value>Verlopen</value></data>
   <data name="links.action.revoke"><value>Intrekken</value></data>
+  <data name="links.filter.all_people"><value>Alle personen</value></data>
+  <data name="links.action.edit_expiry"><value>Vervaldatum wijzigen…</value></data>
+  <data name="links.expiry.title"><value>Vervaldatum wijzigen</value></data>
+  <data name="links.expiry.prompt"><value>Nieuwe vervaldatum (JJJJ-MM-DD). Laat leeg zodat de link nooit verloopt.</value></data>
+  <data name="links.expiry.invalid"><value>Voer een datum in het formaat JJJJ-MM-DD in.</value></data>
   <data name="links.action.delete"><value>Verwijderen</value></data>
   <data name="links.action.copy"><value>URL kopiëren</value></data>
   <data name="links.action.email"><value>Per e-mail versturen</value></data>

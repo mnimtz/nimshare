@@ -291,6 +291,11 @@
   <data name="links.revoked"><value>Revoked</value></data>
   <data name="links.expired"><value>Expired</value></data>
   <data name="links.action.revoke"><value>Revoke</value></data>
+  <data name="links.filter.all_people"><value>All people</value></data>
+  <data name="links.action.edit_expiry"><value>Change expiry…</value></data>
+  <data name="links.expiry.title"><value>Change expiry date</value></data>
+  <data name="links.expiry.prompt"><value>New expiry date (YYYY-MM-DD). Leave empty so the link never expires.</value></data>
+  <data name="links.expiry.invalid"><value>Please enter a date in YYYY-MM-DD format.</value></data>
   <data name="links.action.delete"><value>Delete</value></data>
   <data name="links.confirm.revoke"><value>Revoke this link? The file stays; the URL stops working.</value></data>
   <data name="links.confirm.delete"><value>Delete this link permanently? The file stays.</value></data>
