@@ -821,9 +821,9 @@ struct LinkResultSheet: View {
         VStack(spacing: 16) {
             Image(systemName: "link.circle.fill")
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.tungstenBlue)
+                .foregroundStyle(Theme.cyan)
                 .padding(.top, 20)
-            Text(title).font(.headline).multilineTextAlignment(.center)
+            Text(title).font(TFont.titleM).foregroundStyle(Theme.textPrimary).multilineTextAlignment(.center)
             TextField("", text: .constant(url))
                 .textFieldStyle(.roundedBorder)
                 .disabled(true)
@@ -835,18 +835,19 @@ struct LinkResultSheet: View {
                     Label("Kopieren", systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.tungstenBlue)
+                .tint(Theme.navy)
                 if let u = URL(string: url) {
                     ShareLink(item: u) {
                         Label("Teilen", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(.bordered)
-                    .tint(Theme.tungstenBlue)
+                    .tint(Theme.navy)
                 }
             }
             Spacer()
         }
         .padding()
+        .background(Theme.bgGradient.ignoresSafeArea())
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Fertig") { dismiss() }

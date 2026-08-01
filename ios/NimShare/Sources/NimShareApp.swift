@@ -8,7 +8,11 @@ struct NimShareApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(auth)
-                .tint(Theme.tungstenBlue)
+                // v1.11.73 — Redesign-Pilot: globaler Tint auf Theme.cyan
+                // (statt tungstenBlue) — matcht die Interaktions-Akzentfarbe,
+                // die alle redesignten Screens für Buttons/Links/Toggles
+                // benutzen (Theme.navy bleibt Icon-/Marken-Akzent).
+                .tint(Theme.cyan)
         }
     }
 }

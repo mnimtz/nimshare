@@ -38,7 +38,7 @@ struct FolderPickerSheet: View {
                 } else if let e = error {
                     VStack(spacing: 10) {
                         Image(systemName: "exclamationmark.triangle").font(.title).foregroundStyle(Theme.danger2)
-                        Text(e).font(.footnote).multilineTextAlignment(.center).padding()
+                        Text(e).font(TFont.bodyS).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center).padding()
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                     if path.isEmpty {
@@ -51,6 +51,7 @@ struct FolderPickerSheet: View {
                     searchResults
                 }
             }
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Ordner suchen…")
@@ -72,14 +73,17 @@ struct FolderPickerSheet: View {
                 path = [root]
             } label: {
                 HStack {
-                    Image(systemName: iconFor(root)).foregroundStyle(Theme.tungstenBlue)
-                    Text(labelFor(root))
+                    Image(systemName: iconFor(root)).foregroundStyle(Theme.navy)
+                    Text(labelFor(root)).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                     Spacer()
-                    Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
                 }
             }
+            .listRowBackground(Theme.surface2)
+            .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private var breadcrumbBar: some View {
@@ -87,10 +91,10 @@ struct FolderPickerSheet: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
                     ForEach(Array(path.enumerated()), id: \.element.id) { i, n in
-                        if i > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary) }
+                        if i > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary) }
                         Button(labelFor(n)) { path = Array(path.prefix(i + 1)) }
-                            .font(.footnote)
-                            .foregroundStyle(i == path.count - 1 ? Color.primary : Theme.tungstenBlue)
+                            .font(TFont.bodyS)
+                            .foregroundStyle(i == path.count - 1 ? Theme.textPrimary : Theme.cyan)
                             .disabled(i == path.count - 1)
                     }
                 }.padding(.horizontal).padding(.vertical, 8)
@@ -104,24 +108,25 @@ struct FolderPickerSheet: View {
         let kids = children(of: current.id)
         return Group {
             if kids.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "folder").font(.title).foregroundStyle(.secondary)
-                    Text("Keine Unterordner.").font(.footnote).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                RSEmptyState(systemImage: "folder", title: "Keine Unterordner", desc: "Dieser Ordner hat keine Unterordner.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(kids) { n in
                     Button {
                         path.append(n)
                     } label: {
                         HStack {
-                            Image(systemName: "folder.fill").foregroundStyle(Theme.tungstenBlue)
-                            Text(n.name ?? "(unbenannt)")
+                            Image(systemName: "folder.fill").foregroundStyle(Theme.navy)
+                            Text(n.name ?? "(unbenannt)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                             Spacer()
-                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
                         }
                     }
+                    .listRowBackground(Theme.surface2)
+                    .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
     }
@@ -133,10 +138,8 @@ struct FolderPickerSheet: View {
             .prefix(40)
         return Group {
             if hits.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").font(.title).foregroundStyle(.secondary)
-                    Text("Keine passenden Ordner gefunden.").font(.footnote).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                RSEmptyState(systemImage: "magnifyingglass", title: "Keine Treffer", desc: "Keine passenden Ordner gefunden.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(Array(hits)) { n in
                     Button {
@@ -144,17 +147,20 @@ struct FolderPickerSheet: View {
                         searchText = ""
                     } label: {
                         HStack(alignment: .top) {
-                            Image(systemName: iconFor(n)).foregroundStyle(Theme.tungstenBlue)
+                            Image(systemName: iconFor(n)).foregroundStyle(Theme.navy)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(n.name ?? "(unbenannt)")
-                                if let p = n.path, !p.isEmpty { Text(p).font(.caption2).foregroundStyle(.secondary) }
+                                Text(n.name ?? "(unbenannt)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                                if let p = n.path, !p.isEmpty { Text(p).font(TFont.caption).foregroundStyle(Theme.textSecondary) }
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
                         }
                     }
+                    .listRowBackground(Theme.surface2)
+                    .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
     }
