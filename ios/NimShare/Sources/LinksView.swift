@@ -292,7 +292,15 @@ struct LinksView: View {
             if link.targetKind == "folder" { return ("folder.fill", "Ordner", link.targetName ?? "?") }
             return nil
         }()
-        return VStack(alignment: .leading, spacing: 6) {
+        // v1.11.74 — Marcus's Feedback: die Rows wirkten zu groß/unübersichtlich
+        // (zwei volle Kopieren/Teilen-Pillen + eine redundante "auch erreichbar
+        // über"-Zeile). Kopieren/Teilen stehen bereits vollständig im Kontext-
+        // Menü (Long-Press) — hier jetzt nur noch als kleine Icon-Buttons
+        // inline in der URL-Zeile statt als eigene Button-Reihe. Die klassische
+        // URL bei Subdomain-Links entfällt als eigene Zeile komplett (war
+        // ohnehin nur "dezenter Hinweis", im Kontext-Menü wirkt eh die primäre
+        // URL). Spart ~2 Zeilen + eine ganze Button-Reihe pro Row.
+        return VStack(alignment: .leading, spacing: 4) {
             if let t = targetLine {
                 HStack(spacing: 6) {
                     Image(systemName: t.icon).foregroundStyle(Theme.navy)
@@ -317,6 +325,14 @@ struct LinksView: View {
                 // Links eine hinterlegt haben.
                 if link.hasSerialNumber == true { Image(systemName: "key.fill").font(.caption).foregroundStyle(Theme.textTertiary) }
                 if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.danger2) }
+                Spacer()
+                Text("\(link.downloadCount)×").font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                if link.isPermanent == true {
+                    Image(systemName: "infinity").font(.caption2).foregroundStyle(Theme.textTertiary)
+                } else if let exp = link.expiresAt {
+                    Text(exp.formatted(date: .abbreviated, time: .omitted))
+                        .font(TFont.caption).foregroundStyle(Theme.textTertiary)
+                }
             }
             // v1.11.18: Owner-Name bei fremden Links (Public/Group-Scope von
             // anderen Usern) — analog Web-Spalte "Owner.DisplayName" in
@@ -328,41 +344,24 @@ struct LinksView: View {
                 if hasSubdomain { Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.cyan) }
                 Text(primaryUrl).font(.caption.monospaced())
                     .foregroundStyle(hasSubdomain ? Theme.cyan : Theme.textSecondary).lineLimit(1)
-            }
-            // v1.11.0-UX-Fix: klassische URL nur noch als kleiner, dezenter
-            // Hinweis wenn die Subdomain bereits oben prominent gezeigt wird
-            // (statt beide gleichwertig untereinander — "das wär doppelt").
-            if hasSubdomain {
-                Text("Auch erreichbar über \(link.url)")
-                    .font(TFont.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
-            }
-            HStack(spacing: 12) {
-                Text("\(link.downloadCount) Downloads").font(TFont.caption).foregroundStyle(Theme.textSecondary)
-                if let limit = link.maxDownloads { Text("Limit: \(limit)").font(TFont.caption).foregroundStyle(Theme.textSecondary) }
-                // v1.11.50: ♾️ statt Datum, wenn der Link explizit dauerhaft ist.
-                if link.isPermanent == true {
-                    Label("Dauerhaft", systemImage: "infinity")
-                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
-                } else if let exp = link.expiresAt {
-                    Text("Läuft ab: \(exp.formatted(date: .abbreviated, time: .omitted))")
-                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
-                }
-            }
-            HStack(spacing: 8) {
+                Spacer(minLength: 8)
                 Button {
                     UIPasteboard.general.string = primaryUrl
                 } label: {
-                    Label("Kopieren", systemImage: "doc.on.doc")
-                }.buttonStyle(.bordered).controlSize(.small).tint(Theme.navy)
+                    Image(systemName: "doc.on.doc").font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.navy)
                 if let full {
                     ShareLink(item: full) {
-                        Label("Teilen", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(.bordered).controlSize(.small).tint(Theme.navy)
+                        Image(systemName: "square.and.arrow.up").font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.navy)
                 }
             }
-            .padding(.top, 2)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
     }
 
     @ViewBuilder
