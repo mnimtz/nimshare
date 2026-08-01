@@ -451,7 +451,8 @@ public class ShareController : Controller
 
     [DisableRateLimiting]  // v1.10.175: Bild/Video-Preview per SAS-Redirect, kein Missbrauchsrisiko
     [HttpGet("{slug}/preview")]
-    public async Task<IActionResult> Preview(string slug, CancellationToken ct)
+    public async Task<IActionResult> Preview(string slug,
+        [FromServices] IThumbnailService thumbs, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return NotFound();
@@ -472,6 +473,21 @@ public class ShareController : Controller
             || ct2.StartsWith("video/")
             || ct2.StartsWith("audio/");
         if (!isPreviewable) return BadRequest();
+        // v1.11.71: Marcus's Report — Bild (z.B. .HEIC) zeigte auf der
+        // Landing ein kaputtes Icon. Vorher ging die Vorschau direkt auf den
+        // Original-Blob (rohe HEIC-Bytes), die Chrome/Firefox nicht rendern
+        // können — genau die Lücke, die GalleryThumb() für Ordner-Landings
+        // schon lange über den Thumbnail-Service schließt (HEIC→JPEG via
+        // Magick.NET). Einzel-Datei-Preview nutzt jetzt denselben Pfad.
+        if (ct2.StartsWith("image/"))
+        {
+            var thumbUrl = await thumbs.GetOrCreateAsync(link.File.Id, link.File.BlobPath, link.File.ContentType ?? "", 1600, ct);
+            if (thumbUrl is not null) return Redirect(thumbUrl.ToString());
+            // Cache-Miss enqueued den Job bereits; Original-Fallback nur für
+            // ohnehin browser-taugliche Formate, damit die Landing nicht
+            // leer bleibt bis der Worker fertig ist.
+            if (ct2 is "image/heic" or "image/heif") return NotFound();
+        }
         var sas = _blobs.CreateInlineSas(link.File.BlobPath, link.File.ContentType);
         return Redirect(sas.ToString());
     }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using ImageMagick;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -392,7 +393,33 @@ public class AiController : ControllerBase
             using var ms = new MemoryStream();
             await _blobs.DownloadToAsync(file.BlobPath, ms, ct);
             var bytes = ms.ToArray();
-            summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
+            var visionContentType = contentTypeLower;
+            // v1.11.71: Marcus's Report — HEIC/HEIF (iPhone-Fotos) landete
+            // unkonvertiert bei OpenAI's Vision-Endpoint, der nur png/jpeg/
+            // gif/webp akzeptiert ("unsupported image" 400) — der rohe
+            // Provider-Fehler wurde dabei 1:1 an den anonymen Besucher
+            // durchgereicht. Gleiche Magick.NET-Konvertierung wie
+            // ThumbnailService (HEIC→JPEG), hier synchron statt über die
+            // Thumb-Queue, weil der Vision-Call die Bytes sofort braucht.
+            if (visionContentType is "image/heic" or "image/heif" or "image/tiff" or "image/bmp")
+            {
+                try
+                {
+                    using var img = new MagickImage(bytes);
+                    img.AutoOrient();
+                    img.Format = MagickFormat.Jpeg;
+                    img.Quality = 85;
+                    using var jpegMs = new MemoryStream();
+                    img.Write(jpegMs, MagickFormat.Jpeg);
+                    bytes = jpegMs.ToArray();
+                    visionContentType = "image/jpeg";
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "HEIC/TIFF→JPEG-Konvertierung für Vision fehlgeschlagen. File={FileId}", file.Id);
+                }
+            }
+            summary = await provider.DescribeImageAsync(bytes, visionContentType, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
             {
                 // v1.10.20: NullAiProvider gets the specific reason from the
@@ -405,8 +432,13 @@ public class AiController : ControllerBase
                     ?? $"AI provider is {provider.GetType().Name} (model: {settings.Model ?? "-"}). Provider gab keinen Text und keine Fehler-Ursache zurück — Server-Log prüfen.";
                 log.LogWarning(
                     "Vision returned no result. Provider={ProviderType} Model={Model} File={FileId} ContentType={ContentType} OpenErr={OpenErr} GeminiErr={GeminiErr} AnthErr={AnthErr} CreateErr={CreateErr}",
-                    provider.GetType().Name, settings.Model, file.Id, contentTypeLower, openErr, geminiErr, anthErr, creationFailure);
-                return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
+                    provider.GetType().Name, settings.Model, file.Id, visionContentType, openErr, geminiErr, anthErr, creationFailure);
+                // v1.11.71: der rohe Provider-Fehler (Modellname, interne
+                // Fehlercodes) ging vorher 1:1 an anonyme Landing-Besucher —
+                // Detail bleibt im Server-Log (siehe LogWarning oben), die
+                // API-Antwort an den Client ist jetzt generisch.
+                return Problem(statusCode: 502, title: "Vision returned no result.",
+                    detail: "Die Zusammenfassung konnte nicht erstellt werden.");
             }
         }
         else
