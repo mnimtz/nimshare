@@ -487,7 +487,23 @@ public class LinksController : ControllerBase
     public async Task<IActionResult> Report(Guid id, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        var link = await _db.ShareLinks.SingleOrDefaultAsync(l => l.Id == id && l.OwnerId == user.Id, ct);
+        // v1.11.69: fehlte hier — List()/GetById() erlauben Admins + Public-
+        // Scope-Ziel + IsPublic + Subdomain-Links schon lange (siehe dort),
+        // dieser Endpoint prüfte aber stur nur OwnerId==me. iOS zeigte den
+        // Link in "Meine Links" (via List()) korrekt an, der Tap auf den
+        // Bericht eines fremden Links warf dann aber 404 ("Nicht gefunden").
+        // Web hat dieselbe Regel schon in LinkReportController.Detail().
+        var link = await _db.ShareLinks
+            .Include(l => l.File)
+            .Include(l => l.Folder)
+            .SingleOrDefaultAsync(l => l.Id == id && (
+                user.Role == UserRole.Admin
+                || l.OwnerId == user.Id
+                || (l.File != null && l.File.Scope == FileScope.Public)
+                || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                || l.IsPublic
+                || (l.SubdomainSlug != null && l.SubdomainSlug != "")
+            ), ct);
         if (link is null) return NotFound();
 
         var all = await _db.ShareLinkAccesses
