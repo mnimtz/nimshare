@@ -26,10 +26,11 @@ struct UploadRequestsView: View {
                     Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView(
-                    "Keine Upload-Anforderungen",
+                RSEmptyState(
                     systemImage: "tray.and.arrow.down",
-                    description: Text(#"Erstelle eine Upload-Anforderung aus dem Kontext-Menü eines Ordners (Long-Press → „Upload anfordern“)."#))
+                    title: "Keine Upload-Anforderungen",
+                    desc: #"Erstelle eine Upload-Anforderung aus dem Kontext-Menü eines Ordners (Long-Press → „Upload anfordern“)."#)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
                 let visible = q.isEmpty ? items : items.filter { it in
@@ -38,8 +39,10 @@ struct UploadRequestsView: View {
                 List {
                     ForEach(visible) { row(for: $0) }
                 }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Upload-Anforderungen")
         .searchable(text: $searchQuery, prompt: "Slug, Zielordner")
         .task { await load() }
@@ -57,38 +60,44 @@ struct UploadRequestsView: View {
     private func row(for it: NimShareAPI.UploadRequestListItemDto) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: "tray.and.arrow.down.fill")
-                    .foregroundStyle(Theme.tungstenBlue)
-                Text(it.slug).font(.body.weight(.semibold)).monospaced()
+                ZStack {
+                    Circle().fill(Theme.navy.opacity(0.12)).frame(width: 32, height: 32)
+                    Image(systemName: "tray.and.arrow.down.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.navy)
+                }
+                Text(it.slug).font(TFont.titleS.monospaced()).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 statusChip(it)
             }
             HStack(spacing: 12) {
                 Label("\(it.uploadCount)\(it.maxUploads.map { "/\($0)" } ?? "")",
                       systemImage: "arrow.up.doc.fill")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 if let target = it.targetFolder, !target.isEmpty {
                     Label(target, systemImage: "folder")
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 }
                 // v1.11.50: ♾️ statt Datum, wenn die Anfrage explizit dauerhaft ist.
                 if it.isPermanent {
                     Label("Dauerhaft", systemImage: "infinity")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 } else if let exp = it.expiresAt {
                     Label(exp.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 }
             }
         }
         .padding(.vertical, 4)
+        .listRowBackground(Theme.surface2)
+        .listRowSeparator(.hidden)
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) { pendingDelete = it } label: {
                 Label("Widerrufen", systemImage: "xmark.circle")
             }
             Button { copyUrl(it.slug) } label: {
                 Label("Kopieren", systemImage: "doc.on.doc")
-            }.tint(Theme.tungstenBlue)
+            }.tint(Theme.cyan)
         }
         .contextMenu {
             Button { copyUrl(it.slug) } label: { Label("URL kopieren", systemImage: "doc.on.doc") }
@@ -107,17 +116,17 @@ struct UploadRequestsView: View {
         let expired = (it.expiresAt.map { $0 <= now }) ?? false
         let limit = it.maxUploads.map { it.uploadCount >= $0 } ?? false
         if it.isRevoked {
-            chip("Widerrufen", color: .gray)
+            chip("Widerrufen", color: Theme.textTertiary)
         } else if expired {
-            chip("Abgelaufen", color: .orange)
+            chip("Abgelaufen", color: Theme.yellow)
         } else if limit {
-            chip("Limit erreicht", color: .orange)
+            chip("Limit erreicht", color: Theme.yellow)
         } else {
-            chip("Aktiv", color: .green)
+            chip("Aktiv", color: Theme.success2)
         }
     }
     private func chip(_ text: String, color: Color) -> some View {
-        Text(text).font(.caption2.weight(.semibold))
+        Text(text).font(TFont.caption.weight(.semibold))
             .padding(.horizontal, 8).padding(.vertical, 2)
             .background(color.opacity(0.15)).foregroundStyle(color)
             .clipShape(Capsule())
