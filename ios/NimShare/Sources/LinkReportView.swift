@@ -26,7 +26,7 @@ struct LinkReportView: View {
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let r = report {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: Theme.Space.lg) {
                         statTiles(r)
                         aggregateCard(title: "🌍 Länder", rows: r.countries, keyPrefix: { Self.countryFlag($0) })
                         aggregateCard(title: "🏙 Städte", rows: r.cities)
@@ -36,8 +36,9 @@ struct LinkReportView: View {
                         heatmapCard(r.hourHeatmap)
                         eventsCard(r)
                     }
-                    .padding(16)
+                    .padding(Theme.Space.lg)
                 }
+                .background(Theme.bgGradient.ignoresSafeArea())
             }
         }
         .navigationTitle("📊 \(slug)")
@@ -59,12 +60,11 @@ struct LinkReportView: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
             ForEach(tiles, id: \.label) { t in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(t.label).font(.caption).foregroundStyle(.secondary)
-                    Text(t.value).font(.title2.weight(.bold)).foregroundStyle(Theme.tungstenBlue)
+                    Text(t.label).font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                    Text(t.value).font(TFont.titleXL).foregroundStyle(Theme.navy)
                 }
-                .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+                .rsCard()
             }
         }
     }
@@ -75,9 +75,9 @@ struct LinkReportView: View {
                                keyPrefix: ((String) -> String)? = nil,
                                monospace: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.headline)
+            Text(title).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
             if rows.isEmpty {
-                Text("Keine Daten.").font(.caption).foregroundStyle(.secondary)
+                Text("Keine Daten.").font(TFont.caption).foregroundStyle(Theme.textSecondary)
             } else {
                 let total = rows.map(\.count).reduce(0, +)
                 ForEach(rows, id: \.key) { r in
@@ -85,24 +85,24 @@ struct LinkReportView: View {
                     HStack(spacing: 8) {
                         if let prefix = keyPrefix { Text(prefix(r.key)).font(.body) }
                         Text(r.key)
-                            .font(monospace ? .caption.monospaced() : .caption)
+                            .font(monospace ? .caption.monospaced() : TFont.caption)
+                            .foregroundStyle(Theme.textPrimary)
                             .frame(width: 90, alignment: .leading)
                             .lineLimit(1)
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 3).fill(Color.gray.opacity(0.15))
-                                RoundedRectangle(cornerRadius: 3).fill(Theme.tungstenBlue)
+                                RoundedRectangle(cornerRadius: 3).fill(Theme.border2)
+                                RoundedRectangle(cornerRadius: 3).fill(Theme.cyan)
                                     .frame(width: geo.size.width * CGFloat(pct))
                             }
                         }
                         .frame(height: 8)
-                        Text("\(r.count)").font(.caption).foregroundStyle(.secondary).frame(width: 40, alignment: .trailing)
+                        Text("\(r.count)").font(TFont.caption).foregroundStyle(Theme.textSecondary).frame(width: 40, alignment: .trailing)
                     }
                 }
             }
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+        .rsCard()
     }
 
     @ViewBuilder
@@ -110,26 +110,26 @@ struct LinkReportView: View {
         let dayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
         let maxCount = max(1, cells.map(\.count).max() ?? 1)
         VStack(alignment: .leading, spacing: 6) {
-            Text("🔥 Peak-Zeiten · letzte 30 Tage (UTC)").font(.headline)
+            Text("🔥 Peak-Zeiten · letzte 30 Tage (UTC)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 3) {
                         Text("").frame(width: 22)
                         ForEach(0..<24, id: \.self) { h in
-                            Text("\(h)").font(.system(size: 8)).foregroundStyle(.secondary)
+                            Text("\(h)").font(.system(size: 8)).foregroundStyle(Theme.textTertiary)
                                 .frame(width: 14, alignment: .center)
                         }
                     }
                     ForEach(0..<7, id: \.self) { dow in
                         HStack(spacing: 3) {
                             Text(dayLabels[dow]).font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                                 .frame(width: 22, alignment: .trailing)
                             ForEach(0..<24, id: \.self) { h in
                                 let count = cells.first { $0.dayOfWeek == dow && $0.hour == h }?.count ?? 0
                                 let intensity = Double(count) / Double(maxCount)
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.green.opacity(0.08 + 0.92 * intensity))
+                                    .fill(Theme.cyan.opacity(0.08 + 0.92 * intensity))
                                     .frame(width: 14, height: 14)
                             }
                         }
@@ -137,10 +137,9 @@ struct LinkReportView: View {
                 }
             }
             Text("Intensität 0–\(maxCount) Zugriffe · Landings + Downloads")
-                .font(.caption2).foregroundStyle(.secondary)
+                .font(TFont.caption).foregroundStyle(Theme.textTertiary)
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+        .rsCard()
     }
 
     @ViewBuilder
@@ -151,40 +150,39 @@ struct LinkReportView: View {
             // die Kopfzeile zeigte also z.B. "200 von 530" obwohl nur 60
             // Zeilen sichtbar sind. Jetzt zeigt sie die tatsächlich
             // gerenderte Anzahl.
-            Text("Zugriffs-Log · \(min(r.recentEvents.count, 60)) von \(r.totalEventCount)").font(.headline)
+            Text("Zugriffs-Log · \(min(r.recentEvents.count, 60)) von \(r.totalEventCount)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
             if r.recentEvents.isEmpty {
-                Text("Noch keine Zugriffe.").font(.caption).foregroundStyle(.secondary)
+                Text("Noch keine Zugriffe.").font(TFont.caption).foregroundStyle(Theme.textSecondary)
             } else {
                 ForEach(Array(r.recentEvents.prefix(60).enumerated()), id: \.offset) { _, e in
                     HStack(spacing: 8) {
                         Text(kindIcon(e.kind)).font(.body)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(e.at.formatted(date: .abbreviated, time: .shortened)).font(.caption)
+                            Text(e.at.formatted(date: .abbreviated, time: .shortened)).font(TFont.caption).foregroundStyle(Theme.textPrimary)
                             HStack(spacing: 6) {
                                 if let loc = formatLocation(city: e.city, country: e.countryCode) {
-                                    Text(loc).font(.caption2).foregroundStyle(.secondary)
+                                    Text(loc).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 }
                                 if let d = e.deviceType, d != "Unknown", !d.isEmpty {
                                     Text(deviceIcon(d)).font(.caption2)
                                 }
                                 if r.storeFullIp, let ip = e.ipAddress {
-                                    Text(ip).font(.caption2.monospaced()).foregroundStyle(.secondary)
+                                    Text(ip).font(.caption2.monospaced()).foregroundStyle(Theme.textTertiary)
                                 }
                             }
                         }
                         Spacer()
                     }
                     .padding(.vertical, 2)
-                    Divider()
+                    Divider().background(Theme.border2)
                 }
                 if r.storeFullIp {
                     Text("IP-Speicherung ist Instanz-weit aktiviert (Art. 6(1)(f) DSGVO).")
-                        .font(.caption2).foregroundStyle(.secondary).padding(.top, 4)
+                        .font(TFont.caption).foregroundStyle(Theme.textTertiary).padding(.top, 4)
                 }
             }
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+        .rsCard()
     }
 
     // MARK: - Helpers
