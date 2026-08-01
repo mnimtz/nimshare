@@ -327,6 +327,7 @@
   <data name="landing.password.label"><value>Dieser Link ist geschützt — bitte Passwort eingeben:</value></data>
   <data name="landing.download.button"><value>Herunterladen</value></data>
   <data name="landing.powered_by"><value>Bereitgestellt mit</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Auch für iOS erhältlich</value></data>
   <data name="landing.brand_note"><value>Im Design der Tungsten Automation Brand Guidelines.</value></data>
 
   <data name="share.password.error"><value>Falsches Passwort. Bitte erneut versuchen.</value></data>
@@ -1449,6 +1450,9 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Der von der Instanz konfigurierte SMTP-Server oder Resend/SendGrid, um Signatur-Einladungen, Passwort-Resets und Benachrichtigungen zu verschicken.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>KI-Anbieter (optional)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Wenn KI-Features (Auto-Summary, Tags, Chat, OCR) im Admin-Bereich aktiviert sind, werden Dokumentinhalte — sowie, wo relevant, dein Anzeigename oder die E-Mail-Adresse eines Empfängers (bei KI-generierten Einladungstexten) — an den konfigurierten Anbieter (OpenAI, Anthropic, Azure OpenAI) gesendet, ausschließlich für die konkrete Anfrage, nie zum Training. Diese Anbieter sind vertraglich verpflichtet, diese Daten mindestens gleichwertig zu unserem eigenen Schutzniveau zu behandeln.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>KI-Verarbeitung (Opt-In)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Manche KI-Funktionen — semantische Suche, Chat mit deinen Dateien, automatische Zusammenfassungen, Smart Tags, Risiko-Erkennung und KI-generierte Nachrichten — senden Teile deines Dateiinhalts oder, in manchen Fällen, die E-Mail-Adresse eines Empfängers an einen externen KI-Anbieter, den dein Administrator konfiguriert hat (OpenAI, Anthropic, Google Gemini oder Azure OpenAI). Das passiert ausschließlich für die konkrete Anfrage und wird nie zum Training der Anbieter-Modelle verwendet.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Diese Funktionen sind strikt Opt-In: Es wird nichts an einen KI-Anbieter gesendet, bevor du in der App oder im Web-Dashboard ausdrücklich zugestimmt hast. Du kannst deine Zustimmung jederzeit in deinen Kontoeinstellungen widerrufen — das deaktiviert alle KI-Funktionen für deinen Account sofort.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Aufbewahrung</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Dateien bleiben bis zur manuellen Löschung durch Sie oder bis zur Löschung Ihres Accounts. Signatur-Audits bleiben aus Beweiskraft-Gründen 10 Jahre erhalten (gesetzliche Aufbewahrungsfrist). Öffentliche Link-Zugriffs-Logs werden nach 12 Monaten anonymisiert.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Ihre Rechte</value></data>

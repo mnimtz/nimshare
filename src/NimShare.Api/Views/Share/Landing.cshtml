@@ -373,6 +373,7 @@
         <p class="landing-meta" style="margin-top:var(--sp-4);font-size:.75rem">
             @T["landing.powered_by"] <strong>NimShare</strong>
         </p>
+        @await Html.PartialAsync("_AppStoreBadge")
         @await Html.PartialAsync("_LinkFeedbackWidget", Model.Slug)
     </div>
 </div>

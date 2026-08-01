@@ -327,6 +327,7 @@
   <data name="landing.password.label"><value>This link is protected — enter the password:</value></data>
   <data name="landing.download.button"><value>Download</value></data>
   <data name="landing.powered_by"><value>Powered by</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Also available on iOS</value></data>
   <data name="landing.brand_note"><value>Brand-styled with Tungsten Automation guidelines.</value></data>
 
   <data name="share.password.error"><value>Wrong password. Try again.</value></data>
@@ -1447,6 +1448,9 @@ Thanks for using NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>The SMTP server configured by the instance, or Resend/SendGrid, used to send signature invitations, password resets and notifications.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI provider (optional)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>If AI features are enabled by the administrator, document contents — and, where relevant, your display name or a message recipient's email address (for AI-drafted invitations) — are sent to the configured provider (OpenAI, Anthropic, Azure OpenAI) for that specific request only, never for training. These providers are contractually required to protect this data to a standard equal to our own.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>AI Processing (Opt-In)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Some AI-powered features — semantic search, chat with your files, automatic summaries, smart tags, content risk detection, and AI-drafted messages — send parts of your file content, or in some cases a recipient's email address, to an external AI provider configured by your administrator (OpenAI, Anthropic, Google Gemini, or Azure OpenAI). This only happens for the specific request you make and is never used to train the provider's models.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>These features are strictly opt-in: nothing is sent to an AI provider until you explicitly consent from within the app or web dashboard. You can revoke your consent at any time in your account settings, which immediately disables all AI-powered features for your account.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Retention</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Files remain until you delete them manually or delete your account. Signature audits are retained for 10 years for evidentiary reasons. Public link access logs are anonymized after 12 months.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Your rights</value></data>

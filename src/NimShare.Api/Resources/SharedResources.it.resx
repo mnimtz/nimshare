@@ -279,6 +279,7 @@
   <data name="landing.password.label"><value>Questo link è protetto — inserisci la password:</value></data>
   <data name="landing.download.button"><value>Scarica</value></data>
   <data name="landing.powered_by"><value>Offerto da</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Disponibile anche su iOS</value></data>
   <data name="landing.brand_note"><value>Nello stile delle linee guida Tungsten Automation.</value></data>
 
   <data name="share.password.error"><value>Password errata. Riprova.</value></data>
@@ -1433,6 +1434,9 @@ Grazie per usare NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Il server SMTP configurato dall'istanza, oppure Resend/SendGrid, usato per inviare inviti di firma, reset password e notifiche.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Provider IA (facoltativo)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Se le funzionalità IA sono abilitate dall'amministratore, il contenuto dei documenti — e, se pertinente, il tuo nome visualizzato o l'indirizzo email di un destinatario (per gli inviti generati dall'IA) — vengono inviati al provider configurato (OpenAI, Anthropic, Azure OpenAI), solo per quella specifica richiesta, mai per l'addestramento. Questi provider sono contrattualmente tenuti a proteggere questi dati con un livello equivalente al nostro.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>Elaborazione IA (opt-in)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Alcune funzionalità IA — ricerca semantica, chat con i tuoi file, riepiloghi automatici, tag intelligenti, rilevamento del rischio dei contenuti e messaggi generati dall'IA — inviano parti del contenuto dei tuoi file, o in alcuni casi l'indirizzo email di un destinatario, a un provider IA esterno configurato dal tuo amministratore (OpenAI, Anthropic, Google Gemini o Azure OpenAI). Questo avviene solo per la richiesta specifica che effettui e non viene mai utilizzato per addestrare i modelli del provider.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Queste funzionalità sono rigorosamente opt-in: non viene inviato nulla a un provider IA finché non fornisci il tuo consenso esplicito nell'app o nella dashboard web. Puoi revocare il tuo consenso in qualsiasi momento nelle impostazioni del tuo account, disattivando immediatamente tutte le funzionalità IA per il tuo account.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Conservazione</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>I file restano fino a quando non li elimini manualmente o elimini il tuo account. Gli audit delle firme vengono conservati per 10 anni per motivi probatori. I log di accesso ai link pubblici vengono anonimizzati dopo 12 mesi.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>I tuoi diritti</value></data>

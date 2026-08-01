@@ -1,0 +1,15 @@
+@* v1.11.73 — kleiner, dezenter Hinweis auf die iOS-App unten auf den
+   öffentlichen Landing-Seiten (Datei- und Ordner-Freigabe). Gleiche
+   App-Store-ID wie der bestehende Dashboard-Hinweis (Home/Dashboard.cshtml).
+   Kein Tracking, kein Cookie — reiner Link. *@
+<p class="landing-meta" style="margin-top:var(--sp-3);display:flex;align-items:center;justify-content:center;gap:8px">
+    <a href="https://apps.apple.com/app/id6793128659" target="_blank" rel="noopener"
+       style="display:inline-flex;align-items:center;gap:6px;color:inherit;text-decoration:none">
+        <span style="width:20px;height:20px;border-radius:6px;background:#000;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                <path d="M17 2H7a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3zm-5 19a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM17 17H7V5h10v12z"/>
+            </svg>
+        </span>
+        <span style="font-size:.75rem">@T["landing.ios_app"]</span>
+    </a>
+</p>

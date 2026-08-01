@@ -646,6 +646,7 @@
                 <text>@T["landing.powered_by"] <strong>NimShare</strong></text>
             }
         </p>
+        @await Html.PartialAsync("_AppStoreBadge")
         @await Html.PartialAsync("_LinkFeedbackWidget", Model.Slug)
     </div>
 </div>

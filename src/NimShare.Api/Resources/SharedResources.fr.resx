@@ -279,6 +279,7 @@
   <data name="landing.password.label"><value>Ce lien est protégé — entrez le mot de passe :</value></data>
   <data name="landing.download.button"><value>Télécharger</value></data>
   <data name="landing.powered_by"><value>Propulsé par</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Également disponible sur iOS</value></data>
   <data name="landing.brand_note"><value>Habillé selon la charte Tungsten Automation.</value></data>
 
   <data name="share.password.error"><value>Mot de passe incorrect. Réessayez.</value></data>
@@ -1433,6 +1434,9 @@ Merci d'utiliser NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>Le serveur SMTP configuré par l'instance, ou Resend/SendGrid, utilisé pour envoyer les invitations de signature, les réinitialisations de mot de passe et les notifications.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Fournisseur d'IA (facultatif)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Si les fonctionnalités IA sont activées par l'administrateur, le contenu des documents — ainsi que, le cas échéant, votre nom d'affichage ou l'adresse e-mail d'un destinataire (pour les invitations rédigées par l'IA) — sont envoyés au fournisseur configuré (OpenAI, Anthropic, Azure OpenAI), uniquement pour cette requête spécifique, jamais pour l'entraînement. Ces fournisseurs sont contractuellement tenus de protéger ces données à un niveau équivalent au nôtre.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>Traitement par IA (opt-in)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Certaines fonctionnalités IA — recherche sémantique, chat avec vos fichiers, résumés automatiques, tags intelligents, détection de risque de contenu et messages rédigés par IA — envoient des parties du contenu de vos fichiers, ou dans certains cas l'adresse e-mail d'un destinataire, à un fournisseur IA externe configuré par votre administrateur (OpenAI, Anthropic, Google Gemini ou Azure OpenAI). Cela ne se produit que pour la requête spécifique que vous effectuez et n'est jamais utilisé pour entraîner les modèles du fournisseur.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Ces fonctionnalités sont strictement opt-in : rien n'est envoyé à un fournisseur IA tant que vous n'avez pas donné votre consentement explicite dans l'application ou le tableau de bord web. Vous pouvez révoquer votre consentement à tout moment dans les paramètres de votre compte, ce qui désactive immédiatement toutes les fonctionnalités IA pour votre compte.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Conservation</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Les fichiers sont conservés jusqu'à ce que vous les supprimiez manuellement ou que vous supprimiez votre compte. Les journaux d'audit de signature sont conservés pendant 10 ans à des fins probatoires. Les journaux d'accès aux liens publics sont anonymisés après 12 mois.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Vos droits</value></data>

@@ -226,6 +226,7 @@
   <data name="landing.password.label"><value>Deze link is beveiligd — voer het wachtwoord in:</value></data>
   <data name="landing.download.button"><value>Downloaden</value></data>
   <data name="landing.powered_by"><value>Mogelijk gemaakt door</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Ook beschikbaar voor iOS</value></data>
   <data name="landing.brand_note"><value>Gestyled volgens de Tungsten Automation-richtlijnen.</value></data>
 
   <data name="share.password.error"><value>Onjuist wachtwoord. Probeer opnieuw.</value></data>
@@ -1432,6 +1433,9 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>De door de instantie geconfigureerde SMTP-server of Resend/SendGrid, gebruikt om ondertekeningsuitnodigingen, wachtwoordresets en meldingen te versturen.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI-provider (optioneel)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Als AI-functies door de beheerder zijn ingeschakeld, worden documentinhoud — en, waar relevant, je weergavenaam of het e-mailadres van een ontvanger (bij door AI opgestelde uitnodigingen) — naar de geconfigureerde provider (OpenAI, Anthropic, Azure OpenAI) gestuurd, uitsluitend voor dat specifieke verzoek, nooit voor training. Deze providers zijn contractueel verplicht deze gegevens op een niveau te beschermen dat gelijkwaardig is aan het onze.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>AI-verwerking (opt-in)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Sommige AI-functies — semantisch zoeken, chatten met je bestanden, automatische samenvattingen, slimme tags, risicodetectie van inhoud en door AI opgestelde berichten — sturen delen van je bestandsinhoud, of in sommige gevallen het e-mailadres van een ontvanger, naar een externe AI-provider die door je beheerder is geconfigureerd (OpenAI, Anthropic, Google Gemini of Azure OpenAI). Dit gebeurt alleen voor het specifieke verzoek dat je doet en wordt nooit gebruikt om de modellen van de provider te trainen.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Deze functies zijn strikt opt-in: er wordt niets naar een AI-provider gestuurd totdat je expliciet toestemming geeft in de app of het webdashboard. Je kunt je toestemming op elk moment intrekken in je accountinstellingen, waardoor alle AI-functies voor je account onmiddellijk worden uitgeschakeld.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Bewaartermijn</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Bestanden blijven bewaard totdat u ze handmatig verwijdert of uw account verwijdert. Ondertekeningsaudits blijven om bewijsredenen 10 jaar bewaard (wettelijke bewaartermijn). Toegangslogs van openbare links worden na 12 maanden geanonimiseerd.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Uw rechten</value></data>
