@@ -31,7 +31,7 @@ struct ServerConfigView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Theme.tungstenBlue.opacity(isSheet ? 0 : 0.12),
+                    Theme.navy.opacity(isSheet ? 0 : 0.12),
                     Color(.systemBackground)
                 ],
                 startPoint: .top,
@@ -47,20 +47,21 @@ struct ServerConfigView: View {
                             .frame(maxWidth: 220, maxHeight: 90)
                             .padding(.top, 60)
                         Text("NimShare")
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundStyle(Theme.tungstenDark)
+                            .font(TFont.titleL)
+                            .foregroundStyle(Theme.navy)
                     }
                     Text(isSheet
                          ? "Trage die URL deiner eigenen NimShare-Instanz ein."
                          : "NimShare-Server-URL")
-                        .foregroundStyle(.secondary)
+                        .font(TFont.bodyM)
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
 
                     VStack(spacing: 14) {
                         HStack(spacing: 12) {
                             Image(systemName: "server.rack")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                                 .frame(width: 20)
                             TextField(AuthStore.defaultServerURL.absoluteString, text: $input)
                                 .textInputAutocapitalization(.never)
@@ -70,15 +71,15 @@ struct ServerConfigView: View {
                                 .textFieldStyle(.plain)
                         }
                         .padding(14)
-                        .background(Color(.secondarySystemBackground))
+                        .background(Theme.surfaceMuted)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                                .stroke(Theme.border2, lineWidth: 1)
                         )
 
                         if let e = error {
-                            Text(e).font(.footnote).foregroundStyle(Theme.warnRed)
+                            Text(e).font(TFont.bodyS).foregroundStyle(Theme.danger2)
                         }
 
                         Button {
@@ -87,12 +88,12 @@ struct ServerConfigView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
                                 Text("Speichern")
-                                    .font(.body.weight(.semibold))
+                                    .font(TFont.bodyL.weight(.bold))
                             }
                             .frame(maxWidth: .infinity, minHeight: 52)
                         }
                         .buttonStyle(.plain)
-                        .background(isValid ? Theme.tungstenBlue : Color.gray.opacity(0.3))
+                        .background(isValid ? Theme.navy : Theme.textTertiary.opacity(0.3))
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .disabled(!isValid)
@@ -101,14 +102,14 @@ struct ServerConfigView: View {
                             Button("Standard wiederherstellen") {
                                 input = AuthStore.defaultServerURL.absoluteString
                             }
-                            .font(.footnote)
-                            .foregroundStyle(Theme.tungstenBlue)
+                            .font(TFont.caption)
+                            .foregroundStyle(Theme.cyan)
                             .padding(.top, 4)
                         }
                     }
                     .padding(22)
-                    .background(Color(.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius2.cardLarge))
                     .shadow(color: Color.black.opacity(0.06), radius: 20, x: 0, y: 4)
                     .padding(.horizontal, 20)
 

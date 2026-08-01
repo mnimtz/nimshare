@@ -27,14 +27,10 @@ struct LoginView: View {
         // Wave-Kurve rein für den Look. Kein reines Weiß mehr.
         ZStack(alignment: .top) {
             // Voll-Hintergrund: weiß unten, Tungsten oben.
-            LinearGradient(
-                colors: [Theme.tungstenDark, Theme.tungstenBlue],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 320)
-            .ignoresSafeArea(edges: .top)
-            .frame(maxHeight: .infinity, alignment: .top)
+            Theme.heroGradient
+                .frame(height: 320)
+                .ignoresSafeArea(edges: .top)
+                .frame(maxHeight: .infinity, alignment: .top)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
@@ -48,10 +44,10 @@ struct LoginView: View {
                             .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 6)
                             .accessibilityHidden(true)
                         Text("NimShare")
-                            .font(.system(size: 32, weight: .bold, design: .default))
+                            .font(TFont.titleXL)
                             .foregroundStyle(.white)
                         Text("Sichere Datenübergabe")
-                            .font(.subheadline)
+                            .font(TFont.bodyM)
                             .foregroundStyle(Color.white.opacity(0.85))
                     }
                     .padding(.top, 50)
@@ -86,14 +82,14 @@ struct LoginView: View {
                         if let e = error {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Theme.warnRed)
+                                    .foregroundStyle(Theme.danger2)
                                 Text(e)
-                                    .font(.footnote)
-                                    .foregroundStyle(Theme.warnRed)
+                                    .font(TFont.bodyS)
+                                    .foregroundStyle(Theme.danger2)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(12)
-                            .background(Theme.warnRed.opacity(0.08))
+                            .background(Theme.danger2.opacity(0.08))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
@@ -107,11 +103,11 @@ struct LoginView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: rememberCredentials ? "checkmark.square.fill" : "square")
-                                    .font(.caption)
-                                    .foregroundStyle(rememberCredentials ? Theme.tungstenBlue : Color.secondary)
+                                    .font(TFont.caption)
+                                    .foregroundStyle(rememberCredentials ? Theme.cyan : Theme.textTertiary)
                                 Text("Anmeldedaten merken")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(TFont.caption)
+                                    .foregroundStyle(Theme.textSecondary)
                             }
                         }
                         .buttonStyle(.plain)
@@ -121,8 +117,8 @@ struct LoginView: View {
                         // v1.11.64: "Passwort vergessen?" — Marcus's Feedback,
                         // gleicher Flow wie im Web (Reset-Link per E-Mail).
                         Button("Passwort vergessen?") { showForgotPasswordSheet = true }
-                            .font(.caption)
-                            .foregroundStyle(Theme.tungstenBlue)
+                            .font(TFont.caption)
+                            .foregroundStyle(Theme.cyan)
                             .frame(maxWidth: .infinity, alignment: .center)
 
                         // Login-Button — Tungsten-Blau, prominent
@@ -136,20 +132,20 @@ struct LoginView: View {
                                     Image(systemName: "arrow.right.circle.fill")
                                 }
                                 Text(busy ? "Anmelden…" : "Anmelden")
-                                    .font(.body.weight(.semibold))
+                                    .font(TFont.bodyL.weight(.bold))
                             }
                             .frame(maxWidth: .infinity, minHeight: 52)
                         }
                         .buttonStyle(.plain)
-                        .background(loginEnabled ? Theme.tungstenBlue : Color.gray.opacity(0.3))
+                        .background(loginEnabled ? Theme.navy : Theme.textTertiary.opacity(0.3))
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .disabled(!loginEnabled)
                         .animation(.easeOut(duration: 0.15), value: loginEnabled)
                     }
                     .padding(22)
-                    .background(Color(.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius2.cardLarge))
                     .shadow(color: Color.black.opacity(0.08), radius: 24, x: 0, y: 6)
                     .padding(.horizontal, 20)
 
@@ -157,15 +153,15 @@ struct LoginView: View {
                     VStack(spacing: 6) {
                         HStack(spacing: 6) {
                             Image(systemName: "server.rack")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(TFont.caption)
+                                .foregroundStyle(Theme.textSecondary)
                             Text(auth.serverURL?.host ?? "nimshare.com")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(TFont.caption)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                         Button("Server ändern") { showServerSheet = true }
-                            .font(.caption)
-                            .foregroundStyle(Theme.tungstenBlue)
+                            .font(TFont.caption)
+                            .foregroundStyle(Theme.cyan)
                     }
                     .padding(.top, 20)
 
