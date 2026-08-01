@@ -71,7 +71,7 @@ struct UserEditView: View {
                                     Text(g.name).foregroundStyle(.primary)
                                     Spacer()
                                     if selectedGroupIds.contains(g.id) {
-                                        Image(systemName: "checkmark").foregroundStyle(Theme.tungstenBlue)
+                                        Image(systemName: "checkmark").foregroundStyle(Theme.navy)
                                     }
                                 }
                             }
@@ -89,6 +89,8 @@ struct UserEditView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle(detail?.displayName ?? "Benutzer")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

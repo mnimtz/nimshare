@@ -253,6 +253,8 @@ struct KeyStoreEntrySheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(existing == nil ? "Neuer Schlüssel" : "Schlüssel bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

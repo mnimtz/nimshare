@@ -98,6 +98,8 @@ struct ApiTokensView: View {
                         } label: { Label("Kopieren", systemImage: "doc.on.doc") }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Theme.bgGradient.ignoresSafeArea())
                 .navigationTitle(c.token.name)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -162,6 +164,8 @@ private struct CreateApiTokenSheet: View {
                     Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Neuer Token")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

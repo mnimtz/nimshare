@@ -143,6 +143,8 @@ struct GenerateCertSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Neues Zertifikat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

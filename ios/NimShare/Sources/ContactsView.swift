@@ -308,6 +308,8 @@ struct AddContactSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(existing == nil ? "Kontakt anlegen" : "Kontakt bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

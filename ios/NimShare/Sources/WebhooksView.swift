@@ -114,6 +114,8 @@ private struct CreateWebhookSheet: View {
                     Section { Text(e).foregroundStyle(Theme.danger2).font(.footnote) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Neuer Webhook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

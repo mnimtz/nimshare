@@ -161,6 +161,8 @@ struct NewSignatureRequestSheet: View {
                 default: EmptyView()
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(step == 1 ? "Dokument" : (step == 2 ? "Empfänger" : "Felder platzieren"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -319,7 +321,7 @@ struct NewSignatureRequestSheet: View {
                             newName = c.name
                         } label: {
                             HStack {
-                                Image(systemName: "person.crop.circle").foregroundStyle(Theme.tungstenBlue)
+                                Image(systemName: "person.crop.circle").foregroundStyle(Theme.navy)
                                 VStack(alignment: .leading) {
                                     Text(c.name).foregroundStyle(.primary)
                                     Text(c.email).font(.caption).foregroundStyle(.secondary)
@@ -346,7 +348,7 @@ struct NewSignatureRequestSheet: View {
                     ForEach(participants) { p in
                         HStack {
                             Image(systemName: p.role == "Signer" ? "signature" : "eye")
-                                .foregroundStyle(Theme.tungstenBlue)
+                                .foregroundStyle(Theme.navy)
                             VStack(alignment: .leading) {
                                 Text(p.name).font(.body.weight(.medium))
                                 Text(p.email).font(.caption).foregroundStyle(.secondary)

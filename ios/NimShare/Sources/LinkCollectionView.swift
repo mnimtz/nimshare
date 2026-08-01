@@ -166,7 +166,7 @@ struct LinkCollectionEditSheet: View {
                                         .padding(.horizontal, 8).padding(.vertical, 4)
                                         .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(emoji == e ? Theme.tungstenBlue : Color.gray.opacity(0.3), lineWidth: 1)
+                                                .stroke(emoji == e ? Theme.navy : Color.gray.opacity(0.3), lineWidth: 1)
                                         )
                                 }
                                 .buttonStyle(.plain)
@@ -187,6 +187,8 @@ struct LinkCollectionEditSheet: View {
                     TextField("Kurze Notiz", text: $desc)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(target.isNew ? "Bookmark hinzufügen" : "Bookmark bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -437,6 +437,8 @@ private struct QrCodeSheet: View {
                 }
             }
             .padding()
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("QR-Code")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -491,6 +493,8 @@ private struct SendLinkByEmailSheet: View {
                         .disabled(toEmail.isEmpty || !toEmail.contains("@") || busy)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Per E-Mail senden")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

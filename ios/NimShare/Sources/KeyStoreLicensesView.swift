@@ -195,6 +195,8 @@ struct KeyStoreLicenseAddSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Neue Lizenz")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

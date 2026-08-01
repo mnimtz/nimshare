@@ -150,7 +150,7 @@ struct KeyStoreDocumentSheet: View {
                             HStack {
                                 Text(t)
                                 Spacer()
-                                if selectedTypes.contains(t) { Image(systemName: "checkmark").foregroundStyle(Theme.tungstenBlue) }
+                                if selectedTypes.contains(t) { Image(systemName: "checkmark").foregroundStyle(Theme.navy) }
                             }
                         }
                         .foregroundStyle(.primary)
@@ -158,6 +158,8 @@ struct KeyStoreDocumentSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle(existing == nil ? "Neues Dokument" : "Dokument bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

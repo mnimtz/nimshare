@@ -173,6 +173,8 @@ struct InviteUserSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Benutzer einladen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -242,6 +244,8 @@ struct AddUserSheet: View {
                 }
                 if let e = error { Section { Text(e).foregroundStyle(Theme.danger2) } }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("Benutzer hinzufügen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
