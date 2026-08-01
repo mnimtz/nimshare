@@ -77,34 +77,36 @@ struct SignatureDetailView: View {
                     statusBadge(d.status)
                     Spacer()
                     Text("\(signedCount(d)) / \(d.participants.count) fertig")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 }
-                Text(d.sourceFileName).font(.footnote).foregroundStyle(.secondary)
+                Text(d.sourceFileName).font(TFont.bodyS).foregroundStyle(Theme.textSecondary)
                 Text("Erstellt: \(d.createdAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                 if let sent = d.sentAt {
                     Text("Gesendet: \(sent.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if let done = d.completedAt {
                     Text("Abgeschlossen: \(done.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                 }
             }
+            .listRowBackground(Theme.surface2)
             Section("Beteiligte") {
                 ForEach(d.participants.sorted { $0.order < $1.order }) { p in
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(p.name).font(.body.weight(.medium))
-                            Text(p.email).font(.caption).foregroundStyle(.secondary)
+                            Text(p.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                            Text(p.email).font(TFont.caption).foregroundStyle(Theme.textSecondary)
                             Text("\(p.role) · \(p.status)")
-                                .font(.caption2).foregroundStyle(.secondary)
+                                .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                         }
                         Spacer()
                         participantIcon(p)
                     }
                     .padding(.vertical, 2)
                 }
+                .listRowBackground(Theme.surface2)
             }
             Section("Aktionen") {
                 if d.status == "Completed", d.finalFileId != nil {
@@ -142,12 +144,15 @@ struct SignatureDetailView: View {
                 }
                 .disabled(busy)
             }
+            .listRowBackground(Theme.surface2)
             if let e = error {
                 Section {
                     Text(e).font(.footnote).foregroundStyle(Theme.warnRed)
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .overlay {
             if busy { ProgressView().padding().background(.thickMaterial).clipShape(RoundedRectangle(cornerRadius: 10)) }
         }
@@ -160,14 +165,14 @@ struct SignatureDetailView: View {
     private func statusBadge(_ status: String) -> some View {
         let (color, label): (Color, String)
         switch status {
-        case "Completed": (color, label) = (.green, "Abgeschlossen")
-        case "Sent":      (color, label) = (.orange, "Läuft")
-        case "Declined":  (color, label) = (Theme.warnRed, "Abgelehnt")
-        case "Cancelled": (color, label) = (.gray, "Abgebrochen")
-        default:          (color, label) = (.gray, "Entwurf")
+        case "Completed": (color, label) = (Theme.success2, "Abgeschlossen")
+        case "Sent":      (color, label) = (Theme.yellow, "Läuft")
+        case "Declined":  (color, label) = (Theme.danger2, "Abgelehnt")
+        case "Cancelled": (color, label) = (Theme.textTertiary, "Abgebrochen")
+        default:          (color, label) = (Theme.textTertiary, "Entwurf")
         }
         return Text(label)
-            .font(.caption.weight(.semibold))
+            .font(TFont.caption.weight(.semibold))
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(color.opacity(0.15))
             .foregroundStyle(color)
@@ -178,13 +183,13 @@ struct SignatureDetailView: View {
     private func participantIcon(_ p: SignatureParticipantDto) -> some View {
         switch p.status {
         case "Signed":
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success2)
         case "Viewed":
-            Image(systemName: "eye.fill").foregroundStyle(.blue)
+            Image(systemName: "eye.fill").foregroundStyle(Theme.cyan)
         case "Declined":
-            Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.warnRed)
+            Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.danger2)
         default:
-            Image(systemName: "circle").foregroundStyle(.secondary)
+            Image(systemName: "circle").foregroundStyle(Theme.textTertiary)
         }
     }
 

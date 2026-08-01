@@ -15,9 +15,9 @@ struct SignaturesView: View {
             if loading && items.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
-                ContentUnavailableView("Keine Signatur-Anforderungen",
-                    systemImage: "signature",
-                    description: Text("Sende ein PDF an eine Person, damit sie unterschreibt."))
+                RSEmptyState(systemImage: "signature", title: "Keine Signatur-Anforderungen",
+                             desc: "Sende ein PDF an eine Person, damit sie unterschreibt.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // v1.10.56: 3 Sektionen wie im Web — "In Bearbeitung"
                 // (Draft+Sent), "Abgeschlossen" (Completed), "Abgelehnt/
@@ -42,12 +42,13 @@ struct SignaturesView: View {
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
             if let e = error {
                 Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding()
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Signaturen")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -71,30 +72,32 @@ struct SignaturesView: View {
         NavigationLink(destination: SignatureDetailView(requestId: r.id, initialTitle: r.title)) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(r.title).font(.body.weight(.semibold)).lineLimit(2)
+                    Text(r.title).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                     Spacer()
                     statusBadge(r.status)
                 }
                 Text("\(r.participants.filter { $0.status == "Signed" || ($0.role == "Viewer" && $0.status == "Viewed") }.count) / \(r.participants.count) fertig")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 Text(r.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textTertiary)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
         }
+        .listRowBackground(Theme.surface2)
+        .listRowSeparator(.hidden)
     }
 
     private func statusBadge(_ status: String) -> some View {
         let (color, label): (Color, String)
         switch status {
-        case "Completed": (color, label) = (.green, "Fertig")
-        case "Sent":      (color, label) = (.orange, "Läuft")
-        case "Declined":  (color, label) = (Theme.warnRed, "Abgelehnt")
-        case "Cancelled": (color, label) = (.gray, "Zurückgezogen")
-        default:          (color, label) = (.gray, "Entwurf")
+        case "Completed": (color, label) = (Theme.success2, "Fertig")
+        case "Sent":      (color, label) = (Theme.yellow, "Läuft")
+        case "Declined":  (color, label) = (Theme.danger2, "Abgelehnt")
+        case "Cancelled": (color, label) = (Theme.textTertiary, "Zurückgezogen")
+        default:          (color, label) = (Theme.textTertiary, "Entwurf")
         }
         return Text(label)
-            .font(.caption2.weight(.medium))
+            .font(TFont.caption.weight(.medium))
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.15))
             .foregroundStyle(color)
