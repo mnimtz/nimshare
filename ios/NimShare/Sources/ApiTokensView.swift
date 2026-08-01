@@ -18,23 +18,22 @@ struct ApiTokensView: View {
     var body: some View {
         List {
             if tokens.isEmpty && !loading {
-                ContentUnavailableView(
-                    "Keine API-Tokens",
-                    systemImage: "key",
-                    description: Text("Erstelle einen Token um NimShare per API zu automatisieren."))
+                RSEmptyState(systemImage: "key", title: "Keine API-Tokens",
+                    desc: "Erstelle einen Token um NimShare per API zu automatisieren.")
+                    .listRowBackground(Color.clear)
             }
             ForEach(tokens) { t in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
-                        Text(t.name).font(.body.weight(.semibold))
+                        Text(t.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                         Spacer()
                         if t.revokedAt != nil {
-                            Text("widerrufen").font(.caption).foregroundStyle(.red)
+                            Chip(text: "widerrufen", color: Theme.danger2, bg: Theme.danger2.opacity(0.12))
                         } else if let exp = t.expiresAt, exp < Date() {
-                            Text("abgelaufen").font(.caption).foregroundStyle(.orange)
+                            Chip(text: "abgelaufen", color: Theme.yellow, bg: Theme.yellow.opacity(0.12))
                         }
                     }
-                    Text(t.prefix + "…").font(.caption.monospaced()).foregroundStyle(.secondary)
+                    Text(t.prefix + "…").font(TFont.mono12).foregroundStyle(Theme.textSecondary)
                     HStack(spacing: 6) {
                         Text(t.createdAt, style: .date)
                         if let scopes = t.scopes, !scopes.isEmpty {
@@ -44,8 +43,11 @@ struct ApiTokensView: View {
                             Text("· zuletzt: \(last, style: .relative)")
                         }
                     }
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                 }
+                .padding(.vertical, 4)
+                .listRowBackground(Theme.surface2)
+                .listRowSeparator(.hidden)
                 .swipeActions {
                     if t.revokedAt == nil {
                         Button(role: .destructive) {
@@ -55,9 +57,12 @@ struct ApiTokensView: View {
                 }
             }
             if let e = error {
-                Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                Section { Text(e).foregroundStyle(Theme.danger2).font(TFont.bodyS) }
+                    .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("API-Tokens")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

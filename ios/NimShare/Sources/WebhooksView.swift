@@ -12,32 +12,34 @@ struct WebhooksView: View {
     var body: some View {
         List {
             if hooks.isEmpty && !loading {
-                ContentUnavailableView(
-                    "Keine Webhooks",
-                    systemImage: "bolt.horizontal",
-                    description: Text("Konfiguriere Webhooks um bei Events (Upload, Signatur, Share) HTTP-Callbacks zu erhalten."))
+                RSEmptyState(systemImage: "bolt.horizontal", title: "Keine Webhooks",
+                    desc: "Konfiguriere Webhooks um bei Events (Upload, Signatur, Share) HTTP-Callbacks zu erhalten.")
+                    .listRowBackground(Color.clear)
             }
             ForEach(hooks) { w in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: w.isActive ? "circle.fill" : "circle")
-                            .foregroundStyle(w.isActive ? .green : .secondary)
+                            .foregroundStyle(w.isActive ? Theme.success2 : Theme.textTertiary)
                             .font(.caption)
-                        Text(w.url).font(.footnote.monospaced()).lineLimit(1)
+                        Text(w.url).font(TFont.mono12).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     }
                     if let ev = w.events, !ev.isEmpty {
-                        Text("Events: \(ev)").font(.caption2).foregroundStyle(.secondary)
+                        Text("Events: \(ev)").font(TFont.caption).foregroundStyle(Theme.textSecondary)
                     }
                     HStack(spacing: 6) {
-                        Text(w.createdAt, style: .date).font(.caption2).foregroundStyle(.secondary)
+                        Text(w.createdAt, style: .date).font(TFont.caption).foregroundStyle(Theme.textTertiary)
                         if w.failureCount > 0 {
-                            Text("· \(w.failureCount) Fehler").font(.caption2).foregroundStyle(.red)
+                            Text("· \(w.failureCount) Fehler").font(TFont.caption).foregroundStyle(Theme.danger2)
                         }
                         if let last = w.lastDeliveredAt {
-                            Text("· zuletzt: \(last, style: .relative)").font(.caption2).foregroundStyle(.secondary)
+                            Text("· zuletzt: \(last, style: .relative)").font(TFont.caption).foregroundStyle(Theme.textTertiary)
                         }
                     }
                 }
+                .padding(.vertical, 4)
+                .listRowBackground(Theme.surface2)
+                .listRowSeparator(.hidden)
                 .swipeActions {
                     Button(role: .destructive) {
                         Task { await remove(w.id) }
@@ -45,9 +47,12 @@ struct WebhooksView: View {
                 }
             }
             if let e = error {
-                Section { Text(e).foregroundStyle(Theme.warnRed).font(.footnote) }
+                Section { Text(e).foregroundStyle(Theme.danger2).font(TFont.bodyS) }
+                    .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Webhooks")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
