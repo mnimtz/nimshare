@@ -19,35 +19,38 @@ struct KeyStoreLicensesView: View {
             if loading && rows.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if rows.isEmpty {
-                ContentUnavailableView(
-                    "Noch keine Lizenzen im Vorrat",
+                RSEmptyState(
                     systemImage: "tag",
-                    description: Text("Lege Lizenzschlüssel ohne Kunde an (+ oben rechts), um sie später zuzuweisen."))
+                    title: "Noch keine Lizenzen im Vorrat",
+                    desc: "Lege Lizenzschlüssel ohne Kunde an (+ oben rechts), um sie später zuzuweisen.")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(rows) { row in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text(row.keyType).font(.body.weight(.semibold))
+                                Text(row.keyType).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 statusChip(row)
                             }
                             HStack(spacing: 6) {
                                 Text(row.createdAt.formatted(date: .abbreviated, time: .omitted))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                                 if row.isGlobal {
-                                    Text("· Global").font(.caption2).foregroundStyle(Theme.tungstenBlue)
+                                    Text("· Global").font(TFont.caption).foregroundStyle(Theme.cyan)
                                 }
                                 if !row.isOwnedByMe, let owner = row.ownerName {
-                                    Text("· \(owner)").font(.caption2).foregroundStyle(.secondary)
+                                    Text("· \(owner)").font(TFont.caption).foregroundStyle(Theme.textTertiary)
                                 }
                             }
                             if row.status == .assigned {
-                                Text(row.customerName).font(.caption).foregroundStyle(.secondary)
+                                Text(row.customerName).font(TFont.caption).foregroundStyle(Theme.textTertiary)
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
                         .contentShape(Rectangle())
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .contextMenu {
                             Button { Task { await reveal(row.id) } } label: { Label("Key anzeigen", systemImage: "eye") }
                             if row.status == .assigned {
@@ -58,16 +61,18 @@ struct KeyStoreLicensesView: View {
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { Task { await delete(row.id) } } label: { Label("Löschen", systemImage: "trash") }
                             if row.status == .assigned {
-                                Button { pendingReset = row } label: { Label("Reset", systemImage: "arrow.uturn.backward") }.tint(.orange)
+                                Button { pendingReset = row } label: { Label("Reset", systemImage: "arrow.uturn.backward") }.tint(Theme.yellow)
                             }
                         }
                         .swipeActions(edge: .leading) {
-                            Button { Task { await reveal(row.id) } } label: { Label("Key", systemImage: "eye") }.tint(Theme.tungstenBlue)
+                            Button { Task { await reveal(row.id) } } label: { Label("Key", systemImage: "eye") }.tint(Theme.cyan)
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Lizenzen")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -103,9 +108,9 @@ struct KeyStoreLicensesView: View {
     @ViewBuilder
     private func statusChip(_ row: NimShareAPI.KeyStoreEntryDto) -> some View {
         if row.status == .available {
-            Text("Verfügbar").font(.caption2).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2).background(.green).clipShape(Capsule())
+            Chip(text: "Verfügbar", color: Theme.success2, bg: Theme.success2.opacity(0.12))
         } else {
-            Text("Verbraucht").font(.caption2).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2).background(.orange).clipShape(Capsule())
+            Chip(text: "Verbraucht", color: Theme.yellow, bg: Theme.yellow.opacity(0.12))
         }
     }
 

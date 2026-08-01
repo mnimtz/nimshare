@@ -24,34 +24,37 @@ struct KeyStoreView: View {
             if loading && rows.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if rows.isEmpty {
-                ContentUnavailableView(
-                    "Noch kein Schlüssel",
+                RSEmptyState(
                     systemImage: "key.fill",
-                    description: Text("Lege Kunden mit ihrem Lizenzschlüssel an (+ oben rechts)."))
+                    title: "Noch kein Schlüssel",
+                    desc: "Lege Kunden mit ihrem Lizenzschlüssel an (+ oben rechts).")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(rows) { row in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text(row.customerName).font(.body.weight(.semibold))
+                                Text(row.customerName).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 statusChip(row)
                             }
                             Text(row.customerEmail ?? row.customerEmailDomain.map { "@\($0)" } ?? "—")
-                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                                .font(.caption.monospaced()).foregroundStyle(Theme.textSecondary)
                             HStack(spacing: 6) {
-                                Text(row.keyType).font(.caption).foregroundStyle(Theme.tungstenBlue)
+                                Text(row.keyType).font(TFont.caption).foregroundStyle(Theme.cyan)
                                 if let until = row.validUntil {
                                     Text("· bis \(until.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.caption2).foregroundStyle(.secondary)
+                                        .font(TFont.caption).foregroundStyle(Theme.textTertiary)
                                 }
                                 if !row.isOwnedByMe, let owner = row.ownerName {
-                                    Text("· \(owner)").font(.caption2).foregroundStyle(.secondary)
+                                    Text("· \(owner)").font(TFont.caption).foregroundStyle(Theme.textTertiary)
                                 }
                             }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
                         .contentShape(Rectangle())
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .contextMenu {
                             Button { Task { await reveal(row.id) } } label: { Label("Key anzeigen", systemImage: "eye") }
                             Button { editEntry = row } label: { Label("Bearbeiten", systemImage: "pencil") }
@@ -59,13 +62,14 @@ struct KeyStoreView: View {
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { Task { await delete(row.id) } } label: { Label("Löschen", systemImage: "trash") }
-                            Button { editEntry = row } label: { Label("Bearbeiten", systemImage: "pencil") }.tint(Theme.tungstenBlue)
+                            Button { editEntry = row } label: { Label("Bearbeiten", systemImage: "pencil") }.tint(Theme.cyan)
                         }
                         .swipeActions(edge: .leading) {
-                            Button { Task { await reveal(row.id) } } label: { Label("Key", systemImage: "eye") }.tint(.orange)
+                            Button { Task { await reveal(row.id) } } label: { Label("Key", systemImage: "eye") }.tint(Theme.yellow)
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
                 .searchable(text: $searchText, prompt: "Kunde, Email, Typ")
                 // v1.11.55: undebounced Suche konnte bei Netz-Jitter Ergebnisse
                 // eines älteren, kürzeren Suchbegriffs über die des aktuellen
@@ -81,6 +85,7 @@ struct KeyStoreView: View {
                 }
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Kunden")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -117,11 +122,11 @@ struct KeyStoreView: View {
     private func statusChip(_ row: NimShareAPI.KeyStoreEntryDto) -> some View {
         let now = Date()
         if let until = row.validUntil, until < now {
-            Text("Abgelaufen").font(.caption2).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2).background(Theme.warnRed).clipShape(Capsule())
+            Chip(text: "Abgelaufen", color: Theme.danger2, bg: Theme.danger2.opacity(0.12))
         } else if let from = row.validFrom, from > now {
-            Text("Zukünftig").font(.caption2).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2).background(.orange).clipShape(Capsule())
+            Chip(text: "Zukünftig", color: Theme.yellow, bg: Theme.yellow.opacity(0.12))
         } else {
-            Text("Aktiv").font(.caption2).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2).background(.green).clipShape(Capsule())
+            Chip(text: "Aktiv", color: Theme.success2, bg: Theme.success2.opacity(0.12))
         }
     }
 

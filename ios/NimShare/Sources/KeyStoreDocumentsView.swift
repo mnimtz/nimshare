@@ -19,36 +19,45 @@ struct KeyStoreDocumentsView: View {
             if loading && rows.isEmpty {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if rows.isEmpty {
-                ContentUnavailableView(
-                    "Noch kein Dokument",
+                RSEmptyState(
                     systemImage: "doc.text",
-                    description: Text("PDFs oder feste Links (z.B. Tenant-Login), gebunden an Key-Typen (+ oben rechts)."))
+                    title: "Noch kein Dokument",
+                    desc: "PDFs oder feste Links (z.B. Tenant-Login), gebunden an Key-Typen (+ oben rechts).")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(rows) { row in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
                                 Image(systemName: row.isFile ? "doc.fill" : "link")
-                                    .foregroundStyle(Theme.tungstenBlue)
-                                Text(row.label).font(.body.weight(.semibold))
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.navy)
                             }
-                            Text(row.keyTypes.joined(separator: ", "))
-                                .font(.caption).foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.label).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                                Text(row.keyTypes.joined(separator: ", "))
+                                    .font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                            }
                         }
-                        .padding(.vertical, 2)
+                        .padding(.vertical, 4)
                         .contentShape(Rectangle())
+                        .listRowBackground(Theme.surface2)
+                        .listRowSeparator(.hidden)
                         .contextMenu {
                             Button { editDoc = row } label: { Label("Bearbeiten", systemImage: "pencil") }
                             Button(role: .destructive) { Task { await delete(row.id) } } label: { Label("Löschen", systemImage: "trash") }
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) { Task { await delete(row.id) } } label: { Label("Löschen", systemImage: "trash") }
-                            Button { editDoc = row } label: { Label("Bearbeiten", systemImage: "pencil") }.tint(Theme.tungstenBlue)
+                            Button { editDoc = row } label: { Label("Bearbeiten", systemImage: "pencil") }.tint(Theme.cyan)
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Dokumentation")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
