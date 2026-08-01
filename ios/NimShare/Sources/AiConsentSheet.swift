@@ -107,6 +107,7 @@ struct AiConsentSheet: View {
                 }
                 .padding()
             }
+            .background(Theme.bgGradient.ignoresSafeArea())
             .navigationTitle("KI-Zustimmung")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
