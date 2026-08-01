@@ -64,7 +64,7 @@ struct ChatView: View {
                 bottomBar
             }
         }
-        .navigationTitle("KI-Chat")
+        .background(Theme.bgGradient.ignoresSafeArea())
         .toolbar {
             // System-Tastatur-Toolbar: "Fertig"-Button klappt Tastatur ein
             // → Tab-Bar wird wieder sichtbar → User kommt aus dem Chat raus.
@@ -112,24 +112,26 @@ struct ChatView: View {
                 let looksLikeNoIndex = e.contains("indexier") || e.contains("indexed") || e.contains("bereit")
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: looksLikeNoIndex ? "info.circle" : "exclamationmark.triangle")
-                        .foregroundStyle(looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed)
+                        .foregroundStyle(looksLikeNoIndex ? Theme.cyan : Theme.danger2)
                     Text(e)
-                        .font(.footnote)
-                        .foregroundStyle(.primary)
+                        .font(TFont.bodyS)
+                        .foregroundStyle(Theme.textPrimary)
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background((looksLikeNoIndex ? Theme.tungstenBlue : Theme.warnRed).opacity(0.08))
+                .background((looksLikeNoIndex ? Theme.cyan : Theme.danger2).opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             }
             HStack(spacing: 8) {
                 TextField("Frage zu deinen Dateien…", text: $input, axis: .vertical)
+                    .font(TFont.bodyM)
                     .textFieldStyle(.plain)
                     .lineLimit(1...4)
                     .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.cardBackground))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Theme.surface2))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.border2, lineWidth: 1))
                     .focused($inputFocused)
                     // v1.11.63: das System zeigt bei aktivem Autocorrect eine
                     // eigene QuickType-Vorschlagsleiste im selben Tastatur-
@@ -144,7 +146,7 @@ struct ChatView: View {
                     Image(systemName: "paperplane.fill")
                         .foregroundStyle(.white)
                         .frame(width: 42, height: 42)
-                        .background(Theme.tungstenBlue)
+                        .background(Theme.navy)
                         .clipShape(Circle())
                 }.disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || busy)
             }
@@ -156,10 +158,10 @@ struct ChatView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(Theme.tungstenBlue)
-            Text("Chatte mit deinen Dateien").font(.title3.weight(.semibold))
+            Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(Theme.yellow.gradient)
+            Text("Chatte mit deinen Dateien").font(TFont.titleM).foregroundStyle(Theme.textPrimary)
             Text("Stelle eine Frage — der Assistent durchsucht deine Dateien und zeigt die verwendeten Quellen.")
-                .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                .font(TFont.bodyS).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
     }
@@ -174,9 +176,10 @@ struct ChatView: View {
         let bubbleMax: CGFloat = hSize == .regular ? 640 : 320
         return VStack(alignment: m.role == .user ? .trailing : .leading, spacing: 6) {
             Text(m.text)
+                .font(TFont.bodyM)
                 .padding(10)
-                .background(m.role == .user ? Theme.tungstenBlue : Theme.cardBackground)
-                .foregroundStyle(m.role == .user ? .white : .primary)
+                .background(m.role == .user ? Theme.navy : Theme.surface2)
+                .foregroundStyle(m.role == .user ? .white : Theme.textPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .frame(maxWidth: bubbleMax, alignment: m.role == .user ? .trailing : .leading)
             if !m.citations.isEmpty {
@@ -189,8 +192,8 @@ struct ChatView: View {
                                                        aiTags: nil, aiRiskFlag: nil)
                         } label: {
                             HStack(spacing: 6) {
-                                Text("[\(idx + 1)]").font(.caption2.monospaced()).foregroundStyle(.secondary)
-                                Text(c.name).font(.caption).foregroundStyle(Theme.tungstenBlue).lineLimit(1)
+                                Text("[\(idx + 1)]").font(TFont.mono12).foregroundStyle(Theme.textTertiary)
+                                Text(c.name).font(TFont.caption).foregroundStyle(Theme.cyan).lineLimit(1)
                             }
                         }
                     }

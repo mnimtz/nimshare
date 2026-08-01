@@ -15,56 +15,60 @@ struct SearchView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Image(systemName: "sparkle.magnifyingglass").foregroundStyle(Theme.tungstenBlue)
+                Image(systemName: "sparkle.magnifyingglass").foregroundStyle(Theme.cyan)
                 TextField("Dateien nach Bedeutung suchen…", text: $query)
+                    .font(TFont.bodyM)
                     .textFieldStyle(.plain)
                     .submitLabel(.search)
                     .onSubmit { Task { await run() } }
                 if busy { ProgressView() }
                 else if !query.isEmpty {
                     Button { query = ""; results = []; hasSearched = false } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.textTertiary)
                     }
                 }
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+            .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface2))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border2, lineWidth: 1))
             .padding()
 
             if let e = error {
-                Text(e).font(.footnote).foregroundStyle(Theme.warnRed).padding(.horizontal)
+                Text(e).font(TFont.bodyS).foregroundStyle(Theme.danger2).padding(.horizontal)
             }
 
             if results.isEmpty {
-                ContentUnavailableView(
-                    hasSearched ? "Keine Treffer" : "Semantische Suche",
+                RSEmptyState(
                     systemImage: hasSearched ? "magnifyingglass" : "sparkle.magnifyingglass",
-                    description: Text(hasSearched
+                    title: hasSearched ? "Keine Treffer" : "Semantische Suche",
+                    desc: hasSearched
                         ? "Versuch andere Stichworte oder eine längere Formulierung."
                         : #"Frag wie bei einer Suchmaschine — „Budget-Folien Q4" oder „Vertrag Lizenz". Benötigt einen konfigurierten AI-Provider in den Server-Einstellungen."#)
-                )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(results) { hit in
                     Button { open(hit) } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text(hit.name).lineLimit(2)
+                                Text(hit.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(2)
                                 Spacer()
                                 Text(Int(hit.score * 100).description + "%")
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .font(TFont.mono12)
+                                    .foregroundStyle(Theme.textSecondary)
                             }
                             if let s = hit.snippet, !s.isEmpty {
-                                Text(s).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                                Text(s).font(TFont.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
                             }
-                        }.padding(.vertical, 2)
+                        }.padding(.vertical, 4)
                     }.buttonStyle(.plain)
+                    .listRowBackground(Theme.surface2)
+                    .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
-        .navigationTitle("Suche")
+        .background(Theme.bgGradient.ignoresSafeArea())
         .sheet(item: $previewFileItem) { f in
             FileDetailView(file: f)
         }

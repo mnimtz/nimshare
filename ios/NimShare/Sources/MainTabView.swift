@@ -5,10 +5,8 @@ struct MainTabView: View {
         TabView {
             NavigationStack { BrowseRootView() }
                 .tabItem { Label("Dateien", systemImage: "folder.fill") }
-            NavigationStack { SearchView() }
-                .tabItem { Label("Suche", systemImage: "sparkle.magnifyingglass") }
-            NavigationStack { ChatView() }
-                .tabItem { Label("Chat", systemImage: "message.badge.filled.fill") }
+            NavigationStack { KIView() }
+                .tabItem { Label("KI", systemImage: "sparkles") }
             NavigationStack { NotificationsView() }
                 .tabItem { Label("Meldungen", systemImage: "bell.fill") }
             NavigationStack { ProfileView() }
