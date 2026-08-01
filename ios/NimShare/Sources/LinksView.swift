@@ -52,9 +52,9 @@ struct LinksView: View {
                     Button("Erneut versuchen") { Task { await load() } }
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if links.isEmpty {
-                ContentUnavailableView("Noch keine Freigabelinks",
-                                       systemImage: "link",
-                                       description: Text("Erstelle Freigabelinks aus dem Dateien-Browser (rechtsklick / Kontext-Menü)."))
+                RSEmptyState(systemImage: "link", title: "Noch keine Freigabelinks",
+                             desc: "Erstelle Freigabelinks aus dem Dateien-Browser (rechtsklick / Kontext-Menü).")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     // v1.11.18: bevorzugt scope-basiert (private/group/public);
@@ -104,8 +104,10 @@ struct LinksView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Theme.bgGradient.ignoresSafeArea())
         .navigationTitle("Meine Links")
         .searchable(text: $searchQuery, prompt: "Slug, Datei/Ordner, Owner")
         .task { await load() }
@@ -198,9 +200,11 @@ struct LinksView: View {
                     Button { Task { await toggleRevoke(link) } } label: {
                         Label(link.isRevoked ? "Aktivieren" : "Widerrufen",
                               systemImage: link.isRevoked ? "arrow.uturn.backward.circle" : "xmark.circle")
-                    }.tint(.orange)
+                    }.tint(Theme.yellow)
                 }
             }
+            .listRowBackground(Theme.surface2)
+            .listRowSeparator(.hidden)
     }
 
     /// v1.11.63: leichtgewichtige Row für Upload-Request-Links in der
@@ -210,13 +214,16 @@ struct LinksView: View {
         let primaryUrl = u.subdomainUrl ?? ""
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text("📥 \(u.targetFolder ?? u.slug)").font(.subheadline.weight(.medium))
-                if u.isRevoked { miniChip("widerrufen", .secondary) }
+                Text("📥 \(u.targetFolder ?? u.slug)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
+                if u.isRevoked { miniChip("widerrufen", Theme.danger2) }
             }
-            Text(primaryUrl).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(primaryUrl).font(TFont.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
             Text("\(u.uploadCount) Uploads" + (u.isPermanent ? " · dauerhaft" : ""))
-                .font(.caption2).foregroundStyle(.secondary)
+                .font(TFont.caption).foregroundStyle(Theme.textTertiary)
         }
+        .padding(.vertical, 4)
+        .listRowBackground(Theme.surface2)
+        .listRowSeparator(.hidden)
         .contextMenu {
             Button { UIPasteboard.general.string = primaryUrl } label: {
                 Label("Link kopieren", systemImage: "doc.on.doc")
@@ -236,8 +243,8 @@ struct LinksView: View {
     }
 
     private func miniChip(_ text: String, _ color: Color) -> some View {
-        Text(text).font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-            .background(color.opacity(0.15)).foregroundStyle(color).clipShape(Capsule())
+        Text(text).font(TFont.caption).padding(.horizontal, 6).padding(.vertical, 2)
+            .background(color.opacity(0.12)).foregroundStyle(color).clipShape(Capsule())
     }
 
     private func deleteUploadRequest(_ u: NimShareAPI.UploadRequestListItemDto) async {
@@ -288,57 +295,57 @@ struct LinksView: View {
         return VStack(alignment: .leading, spacing: 6) {
             if let t = targetLine {
                 HStack(spacing: 6) {
-                    Image(systemName: t.icon).foregroundStyle(Theme.tungstenBlue)
-                    Text("\(t.prefix): ").foregroundStyle(.secondary)
-                    Text(t.name).font(.body.weight(.semibold)).lineLimit(1)
+                    Image(systemName: t.icon).foregroundStyle(Theme.navy)
+                    Text("\(t.prefix): ").foregroundStyle(Theme.textSecondary)
+                    Text(t.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Spacer()
                     statusChip(link)
                 }
             } else {
                 HStack {
-                    Image(systemName: "link").foregroundStyle(Theme.tungstenBlue)
-                    Text(link.slug).font(.body.weight(.medium)).lineLimit(1)
+                    Image(systemName: "link").foregroundStyle(Theme.navy)
+                    Text(link.slug).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Spacer()
                     statusChip(link)
                 }
             }
             HStack(spacing: 6) {
-                Text(link.slug).font(.caption.monospaced()).foregroundStyle(Theme.tungstenBlue)
-                if link.hasPassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary) }
+                Text(link.slug).font(.caption.monospaced()).foregroundStyle(Theme.cyan)
+                if link.hasPassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(Theme.textTertiary) }
                 // v1.11.18: Seriennummer-Indikator, analog Web (🔑-Zeile auf
                 // der Landing) — zeigt dem Owner auf einen Blick, welche
                 // Links eine hinterlegt haben.
-                if link.hasSerialNumber == true { Image(systemName: "key.fill").font(.caption).foregroundStyle(.secondary) }
-                if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.warnRed) }
+                if link.hasSerialNumber == true { Image(systemName: "key.fill").font(.caption).foregroundStyle(Theme.textTertiary) }
+                if link.isRevoked { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(Theme.danger2) }
             }
             // v1.11.18: Owner-Name bei fremden Links (Public/Group-Scope von
             // anderen Usern) — analog Web-Spalte "Owner.DisplayName" in
             // Links.cshtml. Bei eigenen Links (isOwnedByMe != false) leer.
             if link.isOwnedByMe == false, let owner = link.ownerName {
-                Text("von \(owner)").font(.caption2).foregroundStyle(.secondary)
+                Text("von \(owner)").font(TFont.caption).foregroundStyle(Theme.textSecondary)
             }
             HStack(spacing: 6) {
-                if hasSubdomain { Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.tungstenBlue) }
+                if hasSubdomain { Image(systemName: "globe").font(.caption2).foregroundStyle(Theme.cyan) }
                 Text(primaryUrl).font(.caption.monospaced())
-                    .foregroundStyle(hasSubdomain ? Theme.tungstenBlue : Color.secondary).lineLimit(1)
+                    .foregroundStyle(hasSubdomain ? Theme.cyan : Theme.textSecondary).lineLimit(1)
             }
             // v1.11.0-UX-Fix: klassische URL nur noch als kleiner, dezenter
             // Hinweis wenn die Subdomain bereits oben prominent gezeigt wird
             // (statt beide gleichwertig untereinander — "das wär doppelt").
             if hasSubdomain {
                 Text("Auch erreichbar über \(link.url)")
-                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    .font(TFont.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
             }
             HStack(spacing: 12) {
-                Text("\(link.downloadCount) Downloads").font(.caption).foregroundStyle(.secondary)
-                if let limit = link.maxDownloads { Text("Limit: \(limit)").font(.caption).foregroundStyle(.secondary) }
+                Text("\(link.downloadCount) Downloads").font(TFont.caption).foregroundStyle(Theme.textSecondary)
+                if let limit = link.maxDownloads { Text("Limit: \(limit)").font(TFont.caption).foregroundStyle(Theme.textSecondary) }
                 // v1.11.50: ♾️ statt Datum, wenn der Link explizit dauerhaft ist.
                 if link.isPermanent == true {
                     Label("Dauerhaft", systemImage: "infinity")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 } else if let exp = link.expiresAt {
                     Text("Läuft ab: \(exp.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TFont.caption).foregroundStyle(Theme.textSecondary)
                 }
             }
             HStack(spacing: 8) {
@@ -346,11 +353,11 @@ struct LinksView: View {
                     UIPasteboard.general.string = primaryUrl
                 } label: {
                     Label("Kopieren", systemImage: "doc.on.doc")
-                }.buttonStyle(.bordered).controlSize(.small)
+                }.buttonStyle(.bordered).controlSize(.small).tint(Theme.navy)
                 if let full {
                     ShareLink(item: full) {
                         Label("Teilen", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(.bordered).controlSize(.small)
+                    }.buttonStyle(.bordered).controlSize(.small).tint(Theme.navy)
                 }
             }
             .padding(.top, 2)
@@ -362,11 +369,11 @@ struct LinksView: View {
     private func statusChip(_ link: ShareLinkDto) -> some View {
         let now = Date()
         if link.isRevoked {
-            chip("Widerrufen", color: Theme.warnRed)
+            chip("Widerrufen", color: Theme.danger2)
         } else if let exp = link.expiresAt, exp <= now {
-            chip("Abgelaufen", color: .orange)
+            chip("Abgelaufen", color: Theme.yellow)
         } else {
-            chip("Aktiv", color: .green)
+            chip("Aktiv", color: Theme.success2)
         }
     }
     private func chip(_ text: String, color: Color) -> some View {
