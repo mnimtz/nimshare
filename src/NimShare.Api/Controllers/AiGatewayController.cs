@@ -112,49 +112,6 @@ public class AiGatewayController : Controller
     }
 
     /// <summary>
-    /// v1.10.70: Reindex-Endpoint. Der Button in /settings/ai ruft ihn per
-    /// fetch()-POST. Legt alle Ready-Files (alle Scopes) wieder in die
-    /// AiPostProcessor-Queue. SemaphoreSlim(2) im PostProcessor bremst so
-    /// dass tausende gequeueter Files den Server nicht erschlagen.
-    /// Response: { queued: N } — der UI-JS ersetzt {0} damit.
-    /// </summary>
-    [HttpPost("/api/v1/ai/reindex")]
-    public async Task<IActionResult> Reindex([FromServices] IAiPostProcessor postProcessor,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
-    {
-        if (!await IsAdmin(ct)) return Forbid();
-        var s = await _ai.LoadAsync(ct);
-        if (s.Provider == AiProvider.Disabled)
-            return Problem(statusCode: 422, title: _l["ai.reindex.err_disabled"].Value);
-        if (!s.EnableSemanticSearch)
-            return Problem(statusCode: 422, title: "Semantische Suche ist deaktiviert.",
-                detail: "Ohne Semantische-Suche-Flag baut der PostProcessor keine Embeddings. Aktiviere sie oben.");
-
-        // v1.10.76: SMOKE-TEST — synchron einen einzelnen Embed-Call gegen
-        // den Provider machen und Ergebnis in die Response schreiben. Wenn
-        // der crasht (falscher API-Key, tote URL, Modell weg), sieht der
-        // Admin sofort was los ist statt "hab schon oft reindex gedrückt".
-        var provider = await _ai.CreateProviderAsync(ct);
-        var testVec = await provider.EmbedAsync("smoke-test");
-        if (testVec is null || testVec.Length == 0)
-        {
-            var err = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
-                ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
-                ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError
-                ?? _ai.LastProviderCreationFailure
-                ?? $"Provider {provider.GetType().Name} lieferte keinen Vector zurück.";
-            return Problem(statusCode: 502,
-                title: "AI-Provider liefert keine Embeddings.",
-                detail: $"Smoke-Test-Embed schlug fehl: {err}\n\nHäufigste Ursachen: API-Key falsch/abgelaufen, gewähltes Modell unterstützt kein Embedding, oder Rate-Limit. Bitte in Settings › AI-Gateway den Key neu eintragen oder Modell wechseln.");
-        }
-
-        var ids = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
-            db.Files.Where(f => f.Status == StorageFileStatus.Ready).Select(f => f.Id), ct);
-        foreach (var id in ids) postProcessor.QueueForFile(id);
-        return Ok(new { queued = ids.Count, smokeTest = "ok", vectorDim = testVec.Length });
-    }
-
-    /// <summary>
     /// v1.10.98: Diagnose-Endpoint. Zeigt sofort was mit dem AI-Setup los ist:
     /// aktueller Provider, Feature-Flags, Ready-Files vs Embeddings, letzter
     /// Fehler. Löst Marcus's „hab 20 mal Reindex geklickt, geht immer noch nicht".
