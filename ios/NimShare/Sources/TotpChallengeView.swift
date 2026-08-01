@@ -11,12 +11,13 @@ struct TotpChallengeView: View {
             Spacer()
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 60))
-                .foregroundStyle(Theme.tungstenBlue)
+                .foregroundStyle(Theme.navy)
             Text("2FA-Code eingeben")
-                .font(.title.bold())
+                .font(TFont.titleL)
+                .foregroundStyle(Theme.textPrimary)
             Text("Öffne deine Authenticator-App und gib den 6-stelligen Code ein.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(TFont.bodyM)
+                .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -26,7 +27,7 @@ struct TotpChallengeView: View {
                 .multilineTextAlignment(.center)
                 .font(.system(size: 32, weight: .medium, design: .monospaced))
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.cardBackground))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surfaceMuted))
                 .padding(.horizontal, 40)
                 .onChange(of: code) { _, new in
                     if new.count > 6 { code = String(new.prefix(6)) }
@@ -34,7 +35,7 @@ struct TotpChallengeView: View {
                 }
 
             if let e = error {
-                Text(e).font(.footnote).foregroundStyle(Theme.warnRed)
+                Text(e).font(TFont.bodyS).foregroundStyle(Theme.danger2)
                     .multilineTextAlignment(.center)
             }
 
@@ -44,16 +45,18 @@ struct TotpChallengeView: View {
                 if busy { ProgressView() } else { Text("Bestätigen").frame(maxWidth: .infinity) }
             }
             .buttonStyle(.borderedProminent)
+            .tint(Theme.navy)
             .controlSize(.large)
             .disabled(code.count != 6 || busy)
             .padding(.horizontal, 40)
 
             Button("Abbrechen", role: .cancel) { auth.cancelTotpChallenge() }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(TFont.bodyS)
+                .foregroundStyle(Theme.textSecondary)
             Spacer()
         }
         .padding()
+        .background(Theme.bgGradient.ignoresSafeArea())
     }
 
     private func submit() async {
