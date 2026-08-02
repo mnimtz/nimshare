@@ -81,7 +81,7 @@ struct ShareLinkCreateSheet: View {
                     Image(systemName: {
                         switch target { case .file: return "doc.text.fill"; case .folder: return "folder.fill" }
                     }())
-                    .foregroundStyle(Theme.navy)
+                    .foregroundStyle(Theme.navyFg)
                     Text(itemName).font(.body.weight(.semibold)).lineLimit(1)
                 }
             }

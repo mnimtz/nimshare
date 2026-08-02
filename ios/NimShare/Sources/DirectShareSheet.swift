@@ -121,7 +121,7 @@ struct DirectShareSheet: View {
                         ForEach(shares) { s in
                             HStack {
                                 Image(systemName: s.isGroup ? "person.3.fill" : "person.crop.circle.fill")
-                                    .foregroundStyle(Theme.navy)
+                                    .foregroundStyle(Theme.navyFg)
                                     .frame(width: 24)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(s.displayName).foregroundStyle(Theme.textPrimary)

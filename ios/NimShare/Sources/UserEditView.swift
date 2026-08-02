@@ -71,7 +71,7 @@ struct UserEditView: View {
                                     Text(g.name).foregroundStyle(.primary)
                                     Spacer()
                                     if selectedGroupIds.contains(g.id) {
-                                        Image(systemName: "checkmark").foregroundStyle(Theme.navy)
+                                        Image(systemName: "checkmark").foregroundStyle(Theme.navyFg)
                                     }
                                 }
                             }

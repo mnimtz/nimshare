@@ -33,6 +33,13 @@ extension Theme {
 
     static let navy = Color(hex: 0x002854)
     static let navyDark2 = Color(hex: 0x001938)
+    /// v2.0.1: `navy` itself stays fixed (used for solid fills — buttons,
+    /// gradients, chat bubbles — where contrast comes from the fill, not
+    /// from being read as icon/text foreground). Everywhere `navy` was used
+    /// as `.foregroundStyle`/icon tint on top of the app's own adaptive
+    /// background, it went near-invisible in dark mode (dark navy on
+    /// near-black). `navyFg` is the adaptive variant for that case.
+    static let navyFg = Color.dynamic(light: Color(hex: 0x002854), dark: Color(hex: 0x7DD3FC))
     static let cyan = Color(hex: 0x00A0FB)
     static let cyanBright = Color(hex: 0x7DD3FC)
     static let yellow = Color(hex: 0xFFC600)

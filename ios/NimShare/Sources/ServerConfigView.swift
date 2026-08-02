@@ -48,7 +48,7 @@ struct ServerConfigView: View {
                             .padding(.top, 60)
                         Text("NimShare")
                             .font(TFont.titleL)
-                            .foregroundStyle(Theme.navy)
+                            .foregroundStyle(Theme.navyFg)
                     }
                     Text(isSheet
                          ? "Trage die URL deiner eigenen NimShare-Instanz ein."

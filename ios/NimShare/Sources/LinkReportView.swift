@@ -61,7 +61,7 @@ struct LinkReportView: View {
             ForEach(tiles, id: \.label) { t in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(t.label).font(TFont.caption).foregroundStyle(Theme.textSecondary)
-                    Text(t.value).font(TFont.titleXL).foregroundStyle(Theme.navy)
+                    Text(t.value).font(TFont.titleXL).foregroundStyle(Theme.navyFg)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .rsCard()

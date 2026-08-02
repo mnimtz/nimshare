@@ -71,7 +71,7 @@ struct SharedFolderView: View {
                             Label {
                                 Text(sub.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                             } icon: {
-                                Image(systemName: "folder.fill").foregroundStyle(Theme.navy)
+                                Image(systemName: "folder.fill").foregroundStyle(Theme.navyFg)
                             }
                         }
                         .listRowBackground(Theme.surface2)

@@ -303,7 +303,7 @@ struct LinksView: View {
         return VStack(alignment: .leading, spacing: 4) {
             if let t = targetLine {
                 HStack(spacing: 6) {
-                    Image(systemName: t.icon).foregroundStyle(Theme.navy)
+                    Image(systemName: t.icon).foregroundStyle(Theme.navyFg)
                     Text("\(t.prefix): ").foregroundStyle(Theme.textSecondary)
                     Text(t.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Spacer()
@@ -311,7 +311,7 @@ struct LinksView: View {
                 }
             } else {
                 HStack {
-                    Image(systemName: "link").foregroundStyle(Theme.navy)
+                    Image(systemName: "link").foregroundStyle(Theme.navyFg)
                     Text(link.slug).font(TFont.titleS).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Spacer()
                     statusChip(link)
@@ -351,13 +351,13 @@ struct LinksView: View {
                     Image(systemName: "doc.on.doc").font(.caption)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Theme.navy)
+                .foregroundStyle(Theme.navyFg)
                 if let full {
                     ShareLink(item: full) {
                         Image(systemName: "square.and.arrow.up").font(.caption)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Theme.navy)
+                    .foregroundStyle(Theme.navyFg)
                 }
             }
         }

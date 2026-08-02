@@ -321,7 +321,7 @@ struct NewSignatureRequestSheet: View {
                             newName = c.name
                         } label: {
                             HStack {
-                                Image(systemName: "person.crop.circle").foregroundStyle(Theme.navy)
+                                Image(systemName: "person.crop.circle").foregroundStyle(Theme.navyFg)
                                 VStack(alignment: .leading) {
                                     Text(c.name).foregroundStyle(.primary)
                                     Text(c.email).font(.caption).foregroundStyle(.secondary)
@@ -348,7 +348,7 @@ struct NewSignatureRequestSheet: View {
                     ForEach(participants) { p in
                         HStack {
                             Image(systemName: p.role == "Signer" ? "signature" : "eye")
-                                .foregroundStyle(Theme.navy)
+                                .foregroundStyle(Theme.navyFg)
                             VStack(alignment: .leading) {
                                 Text(p.name).font(.body.weight(.medium))
                                 Text(p.email).font(.caption).foregroundStyle(.secondary)

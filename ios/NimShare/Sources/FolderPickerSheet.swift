@@ -73,7 +73,7 @@ struct FolderPickerSheet: View {
                 path = [root]
             } label: {
                 HStack {
-                    Image(systemName: iconFor(root)).foregroundStyle(Theme.navy)
+                    Image(systemName: iconFor(root)).foregroundStyle(Theme.navyFg)
                     Text(labelFor(root)).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                     Spacer()
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
@@ -116,7 +116,7 @@ struct FolderPickerSheet: View {
                         path.append(n)
                     } label: {
                         HStack {
-                            Image(systemName: "folder.fill").foregroundStyle(Theme.navy)
+                            Image(systemName: "folder.fill").foregroundStyle(Theme.navyFg)
                             Text(n.name ?? "(unbenannt)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
@@ -147,7 +147,7 @@ struct FolderPickerSheet: View {
                         searchText = ""
                     } label: {
                         HStack(alignment: .top) {
-                            Image(systemName: iconFor(n)).foregroundStyle(Theme.navy)
+                            Image(systemName: iconFor(n)).foregroundStyle(Theme.navyFg)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.name ?? "(unbenannt)").font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                 if let p = n.path, !p.isEmpty { Text(p).font(TFont.caption).foregroundStyle(Theme.textSecondary) }

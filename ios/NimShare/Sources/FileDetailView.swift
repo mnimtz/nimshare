@@ -109,7 +109,7 @@ struct FileDetailView: View {
                     if busy {
                         ProgressView().controlSize(.mini)
                     } else {
-                        Image(systemName: icon).font(.system(size: 19)).foregroundStyle(Theme.navy)
+                        Image(systemName: icon).font(.system(size: 19)).foregroundStyle(Theme.navyFg)
                     }
                 }
                 Text(label).font(TFont.caption).foregroundStyle(Theme.textSecondary)

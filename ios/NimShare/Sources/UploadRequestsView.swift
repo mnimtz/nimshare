@@ -64,7 +64,7 @@ struct UploadRequestsView: View {
                     Circle().fill(Theme.navy.opacity(0.12)).frame(width: 32, height: 32)
                     Image(systemName: "tray.and.arrow.down.fill")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.navy)
+                        .foregroundStyle(Theme.navyFg)
                 }
                 Text(it.slug).font(TFont.titleS.monospaced()).foregroundStyle(Theme.textPrimary)
                 Spacer()

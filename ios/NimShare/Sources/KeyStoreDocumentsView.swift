@@ -32,7 +32,7 @@ struct KeyStoreDocumentsView: View {
                                 Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
                                 Image(systemName: row.isFile ? "doc.fill" : "link")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Theme.navy)
+                                    .foregroundStyle(Theme.navyFg)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(row.label).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
@@ -150,7 +150,7 @@ struct KeyStoreDocumentSheet: View {
                             HStack {
                                 Text(t)
                                 Spacer()
-                                if selectedTypes.contains(t) { Image(systemName: "checkmark").foregroundStyle(Theme.navy) }
+                                if selectedTypes.contains(t) { Image(systemName: "checkmark").foregroundStyle(Theme.navyFg) }
                             }
                         }
                         .foregroundStyle(.primary)

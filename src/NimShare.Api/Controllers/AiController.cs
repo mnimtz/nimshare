@@ -580,6 +580,28 @@ public class AiController : ControllerBase
     {
         var text = (raw ?? "").Trim();
         if (string.IsNullOrEmpty(text)) return ("", "");
+
+        // v2.0.1: manche LLM-Antworten stellen ein Kategorie-/Stil-Label vor
+        // die "SUBJECT:"-Zeile (z.B. "Formaler Vertrag / Unterschrift erbeten
+        // \nSUBJECT: ..."), obwohl der Prompt "genau zwei Blöcke" verlangt.
+        // Der strikte StartsWith-Check unten griff dann nicht, und die
+        // komplette Präambel + die "SUBJECT:"-Zeile landeten wortwörtlich
+        // im Email-Body (Marcus's Bug-Report: "SUBJECT: Einladung..." als
+        // erste Zeile in der Mail vorm eigentlichen Anschreiben). Wir suchen
+        // "SUBJECT:" daher auch außerhalb der Text-Startposition — aber nur
+        // wenn die Präambel kurz/einzeilig ist, damit ein zufälliges
+        // "SUBJECT:" mitten im echten Fließtext nicht fälschlich alles davor
+        // verwirft.
+        var subjectIdx = text.IndexOf("SUBJECT:", StringComparison.OrdinalIgnoreCase);
+        if (subjectIdx > 0)
+        {
+            var preamble = text[..subjectIdx];
+            if (!preamble.Contains('\n') && preamble.Trim().Length < 80)
+            {
+                text = text[subjectIdx..];
+            }
+        }
+
         var idx = text.IndexOf("BODY:", StringComparison.OrdinalIgnoreCase);
         if (idx > 0)
         {

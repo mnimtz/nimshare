@@ -50,13 +50,13 @@ struct UsersListView: View {
                                 Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
                                 Image(systemName: "person.fill")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Theme.navy)
+                                    .foregroundStyle(Theme.navyFg)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Text(u.displayName).font(TFont.titleS).foregroundStyle(Theme.textPrimary)
                                     if u.role == "Admin" {
-                                        Chip(text: "Admin", color: Theme.navy, bg: Theme.navy.opacity(0.12))
+                                        Chip(text: "Admin", color: Theme.navyFg, bg: Theme.navy.opacity(0.12))
                                     }
                                     if !u.isActive {
                                         Text("Deaktiviert").font(TFont.caption).foregroundStyle(Theme.danger2)

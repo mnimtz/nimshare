@@ -419,7 +419,7 @@ struct FolderBrowserView: View {
         HStack(spacing: 12) {
             Image(systemName: "folder.fill")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Theme.navy)
+                .foregroundStyle(Theme.navyFg)
                 .frame(width: 36, height: 36)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.navy.opacity(0.12)))
             Text(f.name)

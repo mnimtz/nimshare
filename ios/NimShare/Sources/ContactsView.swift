@@ -171,7 +171,7 @@ struct ContactsView: View {
                                 Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
                                 Image(systemName: "person.fill")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Theme.navy)
+                                    .foregroundStyle(Theme.navyFg)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(u.name).font(TFont.titleS).foregroundStyle(Theme.textPrimary)

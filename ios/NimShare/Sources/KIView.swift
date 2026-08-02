@@ -21,7 +21,22 @@ struct KIView: View {
     @State private var mode: Mode = .search
 
     var body: some View {
-        VStack(spacing: 0) {
+        // v2.0.1: Picker war ein VStack-Geschwister VOR ChatView/SearchView —
+        // dadurch war ChatView nicht mehr der direkte Inhalt des
+        // NavigationStack, und dessen .safeAreaInset(edge: .bottom)-Keyboard-
+        // Fix (ChatView.swift) griff nicht mehr: die Tastatur überdeckte das
+        // Eingabefeld komplett, nur der "Fertig"-Button (System-Keyboard-
+        // Toolbar, von der Verschachtelung unabhängig) blieb sichtbar.
+        // .safeAreaInset(edge: .top) statt VStack-Partitionierung komponiert
+        // die Safe-Area korrekt durch, ChatView bleibt für Keyboard-Avoidance
+        // "top-level" genug.
+        Group {
+            switch mode {
+            case .search: SearchView()
+            case .chat: ChatView()
+            }
+        }
+        .safeAreaInset(edge: .top) {
             Picker("Modus", selection: $mode) {
                 ForEach(Mode.allCases) { m in
                     Text(m.label).tag(m)
@@ -31,13 +46,7 @@ struct KIView: View {
             .padding(.horizontal)
             .padding(.top, 8)
             .padding(.bottom, 4)
-
-            Group {
-                switch mode {
-                case .search: SearchView()
-                case .chat: ChatView()
-                }
-            }
+            .background(.bar)
         }
         .navigationTitle("KI")
         .navigationBarTitleDisplayMode(.inline)

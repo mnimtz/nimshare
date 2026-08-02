@@ -11,7 +11,7 @@ struct TotpChallengeView: View {
             Spacer()
             Image(systemName: "lock.shield.fill")
                 .font(.system(size: 60))
-                .foregroundStyle(Theme.navy)
+                .foregroundStyle(Theme.navyFg)
             Text("2FA-Code eingeben")
                 .font(TFont.titleL)
                 .foregroundStyle(Theme.textPrimary)

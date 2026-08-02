@@ -70,13 +70,13 @@ struct ProfileView: View {
                 // v1.10.147: Upload-Anforderungen sichtbar/widerrufbar
                 // machen — vorher gab's nur Erstellen, keine Listen-Ansicht.
                 NavigationLink { UploadRequestsView() } label: {
-                    Label("Upload-Anforderungen", systemImage: "tray.and.arrow.down").foregroundStyle(Theme.navy)
+                    Label("Upload-Anforderungen", systemImage: "tray.and.arrow.down").foregroundStyle(Theme.navyFg)
                 }
                 // v1.11.42: hierher getauscht — die Startseiten-Kachel zeigt
                 // jetzt stattdessen Key-Store/"Lizenzverwaltung" (Marcus's
                 // Wunsch, siehe BrowseRootView).
                 NavigationLink { SharedWithMeView() } label: {
-                    Label("Freigegeben für mich", systemImage: "person.crop.circle.badge.checkmark").foregroundStyle(Theme.navy)
+                    Label("Freigegeben für mich", systemImage: "person.crop.circle.badge.checkmark").foregroundStyle(Theme.navyFg)
                 }
                 NavigationLink { TrashView() } label: {
                     Label("Papierkorb", systemImage: "trash").foregroundStyle(Theme.danger2)
@@ -85,17 +85,17 @@ struct ProfileView: View {
                 // Startseiten-Kachel zeigt jetzt stattdessen "Benutzerverwaltung"
                 // (admin-only, siehe BrowseRootView).
                 NavigationLink { ActivityView() } label: {
-                    Label("Aktivität", systemImage: "clock.fill").foregroundStyle(Theme.navy)
+                    Label("Aktivität", systemImage: "clock.fill").foregroundStyle(Theme.navyFg)
                 }
             } header: { RSSectionHeader(title: "Dateien") }
                 .listRowBackground(Theme.surface2)
 
             Section {
                 NavigationLink { CertificatesView() } label: {
-                    Label("Meine Zertifikate", systemImage: "seal").foregroundStyle(Theme.navy)
+                    Label("Meine Zertifikate", systemImage: "seal").foregroundStyle(Theme.navyFg)
                 }
                 NavigationLink { ContactsView() } label: {
-                    Label("Adressbuch", systemImage: "person.crop.circle.badge.checkmark").foregroundStyle(Theme.navy)
+                    Label("Adressbuch", systemImage: "person.crop.circle.badge.checkmark").foregroundStyle(Theme.navyFg)
                 }
             } header: { RSSectionHeader(title: "Signaturen") }
                 .listRowBackground(Theme.surface2)
@@ -109,10 +109,10 @@ struct ProfileView: View {
             if auth.isAdmin {
                 Section {
                     NavigationLink { ApiTokensView() } label: {
-                        Label("API-Tokens", systemImage: "key").foregroundStyle(Theme.navy)
+                        Label("API-Tokens", systemImage: "key").foregroundStyle(Theme.navyFg)
                     }
                     NavigationLink { WebhooksView() } label: {
-                        Label("Webhooks", systemImage: "bolt.horizontal").foregroundStyle(Theme.navy)
+                        Label("Webhooks", systemImage: "bolt.horizontal").foregroundStyle(Theme.navyFg)
                     }
                 } header: { RSSectionHeader(title: "Wissen & Automatisierung") }
                     .listRowBackground(Theme.surface2)
@@ -145,11 +145,11 @@ struct ProfileView: View {
 
             Section {
                 NavigationLink { TwoFactorSetupView() } label: {
-                    Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield").foregroundStyle(Theme.navy)
+                    Label("Zwei-Faktor-Anmeldung", systemImage: "lock.shield").foregroundStyle(Theme.navyFg)
                 }
                 // v1.10.82: App-Store-Blocker Apple 1.2 — Blockliste einsehbar.
                 NavigationLink { BlocksView() } label: {
-                    Label("Blockierte Nutzer", systemImage: "hand.raised").foregroundStyle(Theme.navy)
+                    Label("Blockierte Nutzer", systemImage: "hand.raised").foregroundStyle(Theme.navyFg)
                 }
             } header: { RSSectionHeader(title: "Sicherheit") }
                 .listRowBackground(Theme.surface2)
@@ -187,13 +187,13 @@ struct ProfileView: View {
             Section {
                 if let base = auth.serverURL {
                     Link(destination: base.appendingPathComponent("privacy")) {
-                        Label("Datenschutz", systemImage: "lock.doc").foregroundStyle(Theme.navy)
+                        Label("Datenschutz", systemImage: "lock.doc").foregroundStyle(Theme.navyFg)
                     }
                     Link(destination: base.appendingPathComponent("support")) {
-                        Label("Support & Hilfe", systemImage: "questionmark.circle").foregroundStyle(Theme.navy)
+                        Label("Support & Hilfe", systemImage: "questionmark.circle").foregroundStyle(Theme.navyFg)
                     }
                     Link(destination: base.appendingPathComponent("imprint")) {
-                        Label("Impressum", systemImage: "info.circle").foregroundStyle(Theme.navy)
+                        Label("Impressum", systemImage: "info.circle").foregroundStyle(Theme.navyFg)
                     }
                 }
             } header: { RSSectionHeader(title: "Rechtliches") }

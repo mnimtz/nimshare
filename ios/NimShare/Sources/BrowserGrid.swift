@@ -139,7 +139,7 @@ struct FolderTileView: View {
                 .overlay {
                     Image(systemName: "folder.fill")
                         .font(.system(size: mode == .preview ? 52 : 34))
-                        .foregroundStyle(Theme.navy)
+                        .foregroundStyle(Theme.navyFg)
                 }
             Text(name)
                 .font(mode == .preview ? TFont.bodyS : TFont.caption)

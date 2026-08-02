@@ -137,7 +137,7 @@ struct BrowseRootView: View {
                     .overlay(
                         Image(systemName: "folder.fill")
                             .font(.system(size: 15))
-                            .foregroundStyle(Theme.navy)
+                            .foregroundStyle(Theme.navyFg)
                     )
                     .frame(width: 26, height: 32)
             } else {
@@ -230,7 +230,7 @@ struct BrowseRootView: View {
             let localized: String = tile.scope.lowercased() == "personal" ? "Persönlich"
                 : isPublic ? "Öffentlich" : tile.scope.capitalized
             t.append(TileSpec(id: "lib-\(tile.id)", title: localized, subtitle: nil,
-                              icon: tile.systemImage, tint: isPublic ? Theme.cyan : Theme.navy,
+                              icon: tile.systemImage, tint: isPublic ? Theme.cyan : Theme.navyFg,
                               dest: { AnyView(FolderBrowserView(scope: tile.scope, groupId: tile.groupId, path: "", title: localized)) }))
         }
         return t
@@ -248,19 +248,19 @@ struct BrowseRootView: View {
         // v1.11.42 — Marcus's Wunsch: Key-Store ("Lizenzverwaltung") war in
         // Profil versteckt, obwohl es ein Kernfeature ist — mit „Freigegeben"
         // getauscht (das zieht dafür nach Profil → Dateien um).
-        t.append(TileSpec(id: "keystore", title: "Lizenzen", subtitle: nil, icon: "key.fill", tint: Theme.navy, dest: { AnyView(KeyStoreView()) }))
+        t.append(TileSpec(id: "keystore", title: "Lizenzen", subtitle: nil, icon: "key.fill", tint: Theme.navyFg, dest: { AnyView(KeyStoreView()) }))
         t.append(TileSpec(id: "links", title: "Meine Links", subtitle: nil, icon: "link", tint: Theme.cyan, dest: { AnyView(LinksView()) }))
-        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navy, dest: { AnyView(SignaturesView()) }))
+        t.append(TileSpec(id: "sign", title: "Signaturen", subtitle: nil, icon: "signature", tint: Theme.navyFg, dest: { AnyView(SignaturesView()) }))
         // v1.11.63: "Aktivität" ist ins Profil/Einstellungen gewandert (dort
         // unter "Dateien"), hier steht dafür "Benutzerverwaltung" — admin-only,
         // 1:1-Parität mit /settings/users im Web (bislang nur Web-Feature).
         if auth.isAdmin {
-            t.append(TileSpec(id: "users", title: "Benutzer", subtitle: nil, icon: "person.2.fill", tint: Theme.navy, dest: { AnyView(UsersListView()) }))
+            t.append(TileSpec(id: "users", title: "Benutzer", subtitle: nil, icon: "person.2.fill", tint: Theme.navyFg, dest: { AnyView(UsersListView()) }))
         }
         // v1.10.126: Papierkorb ist ins Profil gewandert, hier steht dafür die
         // v1.10.133: „Bookmarks" (vorher „Linksammlung" — kollidierte mit
         // „Meine Links"). Fixer Begriff in allen Sprachen.
-        t.append(TileSpec(id: "linkcol", title: "Bookmarks", subtitle: nil, icon: "bookmark.fill", tint: Theme.navy, dest: { AnyView(LinkCollectionView()) }))
+        t.append(TileSpec(id: "linkcol", title: "Bookmarks", subtitle: nil, icon: "bookmark.fill", tint: Theme.navyFg, dest: { AnyView(LinkCollectionView()) }))
         return t
     }
 

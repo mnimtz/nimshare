@@ -189,7 +189,7 @@ struct PermissionsSheet: View {
 
     private func grantRow(icon: String, label: String, perm: DirectSharePermission, remove: @escaping () -> Void) -> some View {
         HStack {
-            Image(systemName: icon).foregroundStyle(Theme.navy)
+            Image(systemName: icon).foregroundStyle(Theme.navyFg)
             Text(label).foregroundStyle(Theme.textPrimary)
             Spacer()
             Chip(text: perm.localized, color: perm == .write ? Theme.yellow : Theme.textSecondary,

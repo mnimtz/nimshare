@@ -388,7 +388,10 @@ public class SignaturesController : ControllerBase
             // leer, "SUBJECT: xxx" als erste Zeile im BodyMarkdown).
             // Ohne diesen Fix landet "SUBJECT: xxx" im Empfänger-Inbox als
             // Body und der Betreff ist leer. Marcus's Bug-Report.
-            if (string.IsNullOrWhiteSpace(subject) || body.StartsWith("SUBJECT:", StringComparison.OrdinalIgnoreCase))
+            // v2.0.1: StartsWith → Contains — deckt jetzt auch bereits
+            // gespeicherte Templates ab, bei denen vor "SUBJECT:" noch eine
+            // Präambel-Zeile steht (siehe AiController.SplitSubjectBody).
+            if (string.IsNullOrWhiteSpace(subject) || body.Contains("SUBJECT:", StringComparison.OrdinalIgnoreCase))
             {
                 var combined = string.IsNullOrWhiteSpace(subject) ? body : (subject + "\n" + body);
                 var (subj, bod) = NimShare.Api.Controllers.AiController.SplitSubjectBody(combined);
