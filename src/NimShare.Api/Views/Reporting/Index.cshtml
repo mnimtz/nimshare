@@ -1,0 +1,222 @@
+@model NimShare.Api.Services.ReportingSummaryDto
+@using NimShare.Api.Services
+@using NimShare.Api.Controllers
+@{
+    ViewData["Title"] = T["reporting.title"];
+    Layout = "_AppShell";
+    var isAdmin = (bool)ViewData["IsAdmin"]!;
+    var owners = (List<ReportingOwnerOption>)(ViewData["Owners"] ?? new List<ReportingOwnerOption>());
+    var groups = (List<ReportingGroupOption>)(ViewData["Groups"] ?? new List<ReportingGroupOption>());
+    var from = (DateTimeOffset)ViewData["From"]!;
+    var to = (DateTimeOffset)ViewData["To"]!;
+    var ownerId = (Guid?)ViewData["OwnerId"];
+    var groupId = (Guid?)ViewData["GroupId"];
+    var maxY = Math.Max(1, Model.Trend.Count == 0 ? 1 : Model.Trend.Max(p => Math.Max(p.Landings, p.Downloads)));
+
+    string RangeUrl(int days)
+    {
+        var t = DateTimeOffset.UtcNow.Date;
+        var f = t.AddDays(-(days - 1));
+        var q = $"?from={f:yyyy-MM-dd}&to={t:yyyy-MM-dd}";
+        if (ownerId.HasValue) q += $"&ownerId={ownerId}";
+        if (groupId.HasValue) q += $"&groupId={groupId}";
+        return "/reporting" + q;
+    }
+}
+<div class="page-header">
+    <div>
+        <h1>📊 @T["reporting.title"]</h1>
+        <p class="lede">@T["reporting.lede"]</p>
+    </div>
+</div>
+
+<form method="get" action="/reporting" class="card" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+    <div>
+        <label class="muted" style="display:block;font-size:.78rem;margin-bottom:2px">@T["reporting.filter.from"]</label>
+        <input type="date" name="from" value="@from.ToString("yyyy-MM-dd")" />
+    </div>
+    <div>
+        <label class="muted" style="display:block;font-size:.78rem;margin-bottom:2px">@T["reporting.filter.to"]</label>
+        <input type="date" name="to" value="@to.ToString("yyyy-MM-dd")" />
+    </div>
+    @if (isAdmin)
+    {
+        <div>
+            <label class="muted" style="display:block;font-size:.78rem;margin-bottom:2px">@T["reporting.filter.owner"]</label>
+            <select name="ownerId">
+                <option value="">@T["reporting.filter.all"]</option>
+                @foreach (var o in owners)
+                {
+                    <option value="@o.Id" selected="@(ownerId == o.Id)">@o.DisplayName</option>
+                }
+            </select>
+        </div>
+        @if (groups.Any())
+        {
+            <div>
+                <label class="muted" style="display:block;font-size:.78rem;margin-bottom:2px">@T["reporting.filter.group"]</label>
+                <select name="groupId">
+                    <option value="">@T["reporting.filter.all"]</option>
+                    @foreach (var g in groups)
+                    {
+                        <option value="@g.Id" selected="@(groupId == g.Id)">@g.Name</option>
+                    }
+                </select>
+            </div>
+        }
+    }
+    <button class="btn btn-primary btn-sm" type="submit">@T["reporting.filter.apply"]</button>
+    <div class="row" style="gap:6px;margin-left:auto">
+        <a class="btn btn-secondary btn-sm" href="@RangeUrl(7)">@T["reporting.filter.range_7"]</a>
+        <a class="btn btn-secondary btn-sm" href="@RangeUrl(30)">@T["reporting.filter.range_30"]</a>
+        <a class="btn btn-secondary btn-sm" href="@RangeUrl(90)">@T["reporting.filter.range_90"]</a>
+    </div>
+</form>
+
+<div class="row" style="gap:16px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap">
+    <div class="card" style="flex:1;min-width:180px">
+        <div class="muted">@T["reporting.tile.links"]</div>
+        <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@Model.Kpis.LinksCount</div>
+    </div>
+    <div class="card" style="flex:1;min-width:180px">
+        <div class="muted">@T["report.tile.landings"]</div>
+        <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@Model.Kpis.Landings</div>
+    </div>
+    <div class="card" style="flex:1;min-width:180px">
+        <div class="muted">@T["report.tile.downloads"]</div>
+        <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@Model.Kpis.Downloads</div>
+    </div>
+    <div class="card" style="flex:1;min-width:180px">
+        <div class="muted">@T["report.tile.unique_visitors"]</div>
+        <div style="font-size:1.9rem;font-weight:700;color:var(--tw-primary)">@Model.Kpis.UniqueVisitors</div>
+    </div>
+</div>
+
+<!-- ─────────── Aktivität über Zeit ─────────── -->
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">@T["reporting.chart.title"]</h2>
+    @if (!Model.Trend.Any())
+    {
+        <p class="muted">@T["reporting.empty.trend"]</p>
+    }
+    else
+    {
+        <div style="overflow-x:auto">
+            <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:220px;background:var(--tw-gray-100);border-radius:6px">
+                @{
+                    var W = 600.0; var H = 200.0; var pad = 18.0;
+                    var barW = (W - 2 * pad) / Model.Trend.Count;
+                    for (int i = 0; i < Model.Trend.Count; i++)
+                    {
+                        var p = Model.Trend[i];
+                        double x = pad + i * barW;
+                        double landings = (p.Landings / (double)maxY) * (H - 2 * pad);
+                        double downloads = (p.Downloads / (double)maxY) * (H - 2 * pad);
+                        var yLand = H - pad - landings;
+                        var yDown = H - pad - downloads;
+                        var bw = Math.Max(2.0, barW - 3.0);
+                        <rect x="@x.ToString("0.0")" y="@yLand.ToString("0.0")" width="@bw.ToString("0.0")" height="@landings.ToString("0.0")" fill="#00A0FB" opacity="0.5"><title>@p.Day: @p.Landings</title></rect>
+                        <rect x="@x.ToString("0.0")" y="@yDown.ToString("0.0")" width="@bw.ToString("0.0")" height="@downloads.ToString("0.0")" fill="#00EB86"><title>@p.Day: @p.Downloads</title></rect>
+                    }
+                    <line x1="@pad.ToString("0.0")" y1="@(H - pad).ToString("0.0")" x2="@(W - pad).ToString("0.0")" y2="@(H - pad).ToString("0.0")" stroke="#8094AA" stroke-width="1"/>
+                }
+            </svg>
+        </div>
+        <div class="row" style="gap:16px;font-size:.8rem;margin-top:6px">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#00A0FB;opacity:.5;border-radius:2px;vertical-align:middle;margin-right:4px"></span>@T["report.chart.legend.landings"]</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#00EB86;border-radius:2px;vertical-align:middle;margin-right:4px"></span>@T["report.chart.legend.downloads"]</span>
+        </div>
+    }
+</div>
+
+<!-- ─────────── Top-Links ─────────── -->
+<div class="card" style="margin-bottom:16px">
+    <h2 class="card-title">🏆 @T["reporting.card.top_links"]</h2>
+    @if (!Model.TopLinks.Any())
+    {
+        <p class="muted">@T["reporting.empty.top_links"]</p>
+    }
+    else
+    {
+        <table class="table" style="font-size:.9rem">
+            <thead>
+                <tr>
+                    <th>@T["reporting.col.link"]</th>
+                    @if (isAdmin)
+                    {
+                        <th>@T["reporting.col.owner"]</th>
+                    }
+                    <th style="text-align:right">@T["report.tile.landings"]</th>
+                    <th style="text-align:right">@T["report.tile.downloads"]</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var l in Model.TopLinks)
+            {
+                <tr>
+                    <td><a href="/links/@l.Id">@l.Title</a> <span class="muted mono" style="font-size:.75rem">/s/@l.Slug</span></td>
+                    @if (isAdmin)
+                    {
+                        <td class="muted">@l.OwnerName</td>
+                    }
+                    <td style="text-align:right">@l.Landings</td>
+                    <td style="text-align:right;font-weight:600">@l.Downloads</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+<!-- ─────────── Geo-Verteilung ─────────── -->
+<div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">🌍 @T["report.card.countries"]</h2>
+        @if (!Model.Countries.Any())
+        {
+            <p class="muted">@T["report.empty.countries"]</p>
+        }
+        else
+        {
+            var total = Model.Countries.Sum(c => c.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var c in Model.Countries)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * c.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="width:32px;font-size:1.2rem;text-align:center">@LinkReportController.CountryFlag(c.Key)</span>
+                        <span style="flex:1;font-size:.9rem" class="mono">@c.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:var(--tw-primary)"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@c.Count</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <div class="card" style="flex:1;min-width:260px">
+        <h2 class="card-title">🏙 @T["report.card.cities"]</h2>
+        @if (!Model.Cities.Any())
+        {
+            <p class="muted">@T["report.empty.cities"]</p>
+        }
+        else
+        {
+            var total = Model.Cities.Sum(c => c.Count);
+            <div style="display:flex;flex-direction:column;gap:6px">
+                @foreach (var c in Model.Cities)
+                {
+                    var pct = total == 0 ? 0 : (int)Math.Round(100.0 * c.Count / total);
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="flex:1;font-size:.9rem">@c.Key</span>
+                        <div style="flex:2;height:8px;background:var(--tw-gray-200);border-radius:4px;overflow:hidden">
+                            <div style="height:100%;width:@(pct)%;background:var(--tw-primary-alt)"></div>
+                        </div>
+                        <span style="width:44px;text-align:right;font-size:.85rem">@c.Count</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

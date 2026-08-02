@@ -127,6 +127,10 @@
             </div>
 
             <a href="/links"     class="@Exact("/links")">🔗 @T["nav.links"]</a>
+            @* v2.0-web: Reporting-Modul — Kreuz-Link-Auswertung, ergänzt die
+               Einzel-Link-Reports unter /links/{id}. Direkt unter "Links"
+               eingehängt, da es fachlich am nächsten dran ist. *@
+            <a href="/reporting" class="@Active("/reporting")">📊 @T["nav.reporting"]</a>
             @* v1.11.22: Key-Store/Lizenzverwaltung — Marcus's Anfrage, für
                alle User sichtbar (nicht nur Admins). Owner-Scoping passiert
                serverseitig im Controller (eigene Einträge, Admins sehen

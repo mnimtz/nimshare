@@ -10,6 +10,7 @@
   <data name="nav.dashboard"><value>Dashboard</value></data>
   <data name="nav.upload"><value>Upload</value></data>
   <data name="nav.links"><value>Links</value></data>
+  <data name="nav.reporting"><value>Reporting</value></data>
   <data name="nav.settings"><value>Settings</value></data>
   <data name="nav.password"><value>Password</value></data>
   <data name="nav.users"><value>Users</value></data>
@@ -1714,6 +1715,24 @@ Thanks for using NimShare.</value></data>
   <data name="report.access_kind.serial_emailed"><value>Serial number emailed</value></data>
   <data name="report.access_kind.keystore_revealed"><value>License key shown</value></data>
   <data name="report.access_kind.keystore_emailed"><value>License key emailed</value></data>
+  <data name="reporting.title" xml:space="preserve"><value>Reporting</value></data>
+  <data name="reporting.lede" xml:space="preserve"><value>Analytics across your links — filterable by time range, owner, and group.</value></data>
+  <data name="reporting.filter.from" xml:space="preserve"><value>From</value></data>
+  <data name="reporting.filter.to" xml:space="preserve"><value>To</value></data>
+  <data name="reporting.filter.owner" xml:space="preserve"><value>Owner</value></data>
+  <data name="reporting.filter.group" xml:space="preserve"><value>Group</value></data>
+  <data name="reporting.filter.all" xml:space="preserve"><value>All</value></data>
+  <data name="reporting.filter.apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="reporting.filter.range_7" xml:space="preserve"><value>7 days</value></data>
+  <data name="reporting.filter.range_30" xml:space="preserve"><value>30 days</value></data>
+  <data name="reporting.filter.range_90" xml:space="preserve"><value>90 days</value></data>
+  <data name="reporting.tile.links" xml:space="preserve"><value>Links created</value></data>
+  <data name="reporting.chart.title" xml:space="preserve"><value>Activity over time</value></data>
+  <data name="reporting.empty.trend" xml:space="preserve"><value>No activity in the selected range.</value></data>
+  <data name="reporting.card.top_links" xml:space="preserve"><value>Top links</value></data>
+  <data name="reporting.empty.top_links" xml:space="preserve"><value>No accesses in the selected range.</value></data>
+  <data name="reporting.col.link" xml:space="preserve"><value>Link</value></data>
+  <data name="reporting.col.owner" xml:space="preserve"><value>Owner</value></data>
   <data name="upload.date_subfolders_label"><value>Sort into date subfolders</value></data>
   <data name="upload.date_subfolders_hint"><value>Each upload lands in an extra subfolder named by date (e.g. 2026-07-28), so you can find them again more easily later.</value></data>
   <data name="links.uploads.section"><value>Uploads</value></data>

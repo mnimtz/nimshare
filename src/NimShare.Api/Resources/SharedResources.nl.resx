@@ -10,6 +10,7 @@
   <data name="nav.dashboard"><value>Dashboard</value></data>
   <data name="nav.upload"><value>Uploaden</value></data>
   <data name="nav.links"><value>Links</value></data>
+  <data name="nav.reporting"><value>Rapportage</value></data>
   <data name="nav.settings"><value>Instellingen</value></data>
   <data name="nav.password"><value>Wachtwoord</value></data>
   <data name="nav.users"><value>Gebruikers</value></data>
@@ -1711,6 +1712,24 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="report.access_kind.serial_emailed"><value>Serienummer per e-mail verzonden</value></data>
   <data name="report.access_kind.keystore_revealed"><value>Licentiesleutel getoond</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Licentiesleutel per e-mail verzonden</value></data>
+  <data name="reporting.title" xml:space="preserve"><value>Rapportage</value></data>
+  <data name="reporting.lede" xml:space="preserve"><value>Analyses van je links — filterbaar op periode, eigenaar en groep.</value></data>
+  <data name="reporting.filter.from" xml:space="preserve"><value>Van</value></data>
+  <data name="reporting.filter.to" xml:space="preserve"><value>Tot</value></data>
+  <data name="reporting.filter.owner" xml:space="preserve"><value>Persoon</value></data>
+  <data name="reporting.filter.group" xml:space="preserve"><value>Groep</value></data>
+  <data name="reporting.filter.all" xml:space="preserve"><value>Alle</value></data>
+  <data name="reporting.filter.apply" xml:space="preserve"><value>Toepassen</value></data>
+  <data name="reporting.filter.range_7" xml:space="preserve"><value>7 dagen</value></data>
+  <data name="reporting.filter.range_30" xml:space="preserve"><value>30 dagen</value></data>
+  <data name="reporting.filter.range_90" xml:space="preserve"><value>90 dagen</value></data>
+  <data name="reporting.tile.links" xml:space="preserve"><value>Links aangemaakt</value></data>
+  <data name="reporting.chart.title" xml:space="preserve"><value>Activiteit over tijd</value></data>
+  <data name="reporting.empty.trend" xml:space="preserve"><value>Geen activiteit in de gekozen periode.</value></data>
+  <data name="reporting.card.top_links" xml:space="preserve"><value>Toplinks</value></data>
+  <data name="reporting.empty.top_links" xml:space="preserve"><value>Geen toegangen in de gekozen periode.</value></data>
+  <data name="reporting.col.link" xml:space="preserve"><value>Link</value></data>
+  <data name="reporting.col.owner" xml:space="preserve"><value>Eigenaar</value></data>
   <data name="upload.date_subfolders_label"><value>Sorteren in datum-submappen</value></data>
   <data name="upload.date_subfolders_hint"><value>Elke upload komt ook in een submap met de datum als naam (bijv. 2026-07-28), zodat je later makkelijker terugvindt wat wanneer binnenkwam.</value></data>
   <data name="links.uploads.section"><value>Uploads</value></data>

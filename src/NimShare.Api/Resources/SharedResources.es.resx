@@ -10,6 +10,7 @@
   <data name="nav.dashboard"><value>Panel</value></data>
   <data name="nav.upload"><value>Subir</value></data>
   <data name="nav.links"><value>Enlaces</value></data>
+  <data name="nav.reporting"><value>Informes</value></data>
   <data name="nav.settings"><value>Ajustes</value></data>
   <data name="nav.password"><value>Contraseña</value></data>
   <data name="nav.users"><value>Usuarios</value></data>
@@ -1712,6 +1713,24 @@ Gracias por usar NimShare.</value></data>
   <data name="report.access_kind.serial_emailed"><value>Número de serie enviado por correo</value></data>
   <data name="report.access_kind.keystore_revealed"><value>Clave de licencia mostrada</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Clave de licencia enviada por correo</value></data>
+  <data name="reporting.title" xml:space="preserve"><value>Informes</value></data>
+  <data name="reporting.lede" xml:space="preserve"><value>Análisis de tus enlaces — filtrable por periodo, propietario y grupo.</value></data>
+  <data name="reporting.filter.from" xml:space="preserve"><value>Desde</value></data>
+  <data name="reporting.filter.to" xml:space="preserve"><value>Hasta</value></data>
+  <data name="reporting.filter.owner" xml:space="preserve"><value>Persona</value></data>
+  <data name="reporting.filter.group" xml:space="preserve"><value>Grupo</value></data>
+  <data name="reporting.filter.all" xml:space="preserve"><value>Todos</value></data>
+  <data name="reporting.filter.apply" xml:space="preserve"><value>Aplicar</value></data>
+  <data name="reporting.filter.range_7" xml:space="preserve"><value>7 días</value></data>
+  <data name="reporting.filter.range_30" xml:space="preserve"><value>30 días</value></data>
+  <data name="reporting.filter.range_90" xml:space="preserve"><value>90 días</value></data>
+  <data name="reporting.tile.links" xml:space="preserve"><value>Enlaces creados</value></data>
+  <data name="reporting.chart.title" xml:space="preserve"><value>Actividad en el tiempo</value></data>
+  <data name="reporting.empty.trend" xml:space="preserve"><value>Sin actividad en el periodo seleccionado.</value></data>
+  <data name="reporting.card.top_links" xml:space="preserve"><value>Enlaces principales</value></data>
+  <data name="reporting.empty.top_links" xml:space="preserve"><value>Sin accesos en el periodo seleccionado.</value></data>
+  <data name="reporting.col.link" xml:space="preserve"><value>Enlace</value></data>
+  <data name="reporting.col.owner" xml:space="preserve"><value>Propietario</value></data>
   <data name="upload.date_subfolders_label"><value>Organizar en subcarpetas por fecha</value></data>
   <data name="upload.date_subfolders_hint"><value>Cada archivo subido se guarda además en una subcarpeta con el nombre de la fecha (p. ej. 2026-07-28), para que puedas encontrarlo más fácilmente después.</value></data>
   <data name="links.uploads.section"><value>Subidas</value></data>
