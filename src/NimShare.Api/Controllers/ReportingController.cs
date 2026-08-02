@@ -28,14 +28,24 @@ public class ReportingController : Controller
     // Default-Zeitraum: letzte 30 Tage, jeweils auf Tagesgrenzen normiert
     // (To = Ende des heutigen Tages) — sonst fehlt der laufende Tag im
     // Trend, weil "jetzt" meist vor Mitternacht liegt.
+    //
+    // v1.11.76: DateTimeOffset.TryParse + .Date lieferte ein DateTime mit
+    // Kind=Unspecified zurück — die implizite Konvertierung zurück zu
+    // DateTimeOffset behandelt Unspecified als SERVER-LOKALE Zeit, nicht
+    // UTC. ShareLinkAccess.At wird aber via UtcTicks-ValueConverter
+    // gespeichert/verglichen (siehe NimShareDbContext) — bei einer
+    // Server-Zeitzone ungleich UTC schnitt die obere Grenze die letzten
+    // Stunden von "heute" ab, bei explizitem From/To-Filter (aus dem
+    // <input type="date">) verschob sich das Fenster auf beiden Seiten.
+    // Fix: DateOnly (zeitzonenfrei) parsen, DateTimeOffset explizit mit
+    // TimeSpan.Zero (UTC) konstruieren — keine implizite Lokalzeit mehr.
     private static (DateTimeOffset From, DateTimeOffset To) ResolveRange(string? fromRaw, string? toRaw)
     {
-        var to = DateTimeOffset.TryParse(toRaw, out var toParsed)
-            ? toParsed.Date.AddDays(1).AddTicks(-1)
-            : DateTimeOffset.UtcNow.Date.AddDays(1).AddTicks(-1);
-        var from = DateTimeOffset.TryParse(fromRaw, out var fromParsed)
-            ? fromParsed.Date
-            : to.Date.AddDays(-29);
+        var todayUtc = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        var toDate = DateOnly.TryParse(toRaw, out var toParsed) ? toParsed : todayUtc;
+        var to = new DateTimeOffset(toDate.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
+        var fromDate = DateOnly.TryParse(fromRaw, out var fromParsed) ? fromParsed : toDate.AddDays(-29);
+        var from = new DateTimeOffset(fromDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         return (from, to);
     }
 
