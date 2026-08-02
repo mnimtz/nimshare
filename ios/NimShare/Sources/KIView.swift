@@ -1,5 +1,31 @@
 import SwiftUI
 
+/// v2.0.2: Bereichs-Filter für Chat + Suche. Web hat seit v1.10.112 ein
+/// <select> mit Default "Öffentlich" — iOS hatte so etwas noch nie (weder
+/// Chat noch Suche haben je einen Scope mitgeschickt, seit dem allerersten
+/// iOS-Commit). Der Server durchsucht bei leerem Scope zwar schon alles
+/// Erreichbare (Personal+Public+Group+DirectShares — eher zu viel als zu
+/// wenig), aber ohne sichtbare Auswahl wirkte das für Marcus wie "findet
+/// nur Privates". Werte/Labels spiegeln 1:1 die Web-Optionen.
+enum KiScope: Hashable {
+    case personal
+    case `public`
+    case group(id: UUID, name: String)
+
+    var apiValue: String {
+        switch self {
+        case .personal: return "Personal"
+        case .public: return "Public"
+        case .group: return "Group"
+        }
+    }
+
+    var groupId: UUID? {
+        if case .group(let id, _) = self { return id }
+        return nil
+    }
+}
+
 /// v1.11.73 — Tab-Konsolidierung: "Suche" und "Chat" waren zwei separate
 /// Tabs, obwohl beide dieselbe KI-Funktion (AI-Gateway, gleicher Consent-
 /// Gate) nutzen. Marcus's Wunsch: zu einem "KI"-Tab zusammenlegen, per
@@ -18,7 +44,12 @@ struct KIView: View {
         }
     }
 
+    @EnvironmentObject var auth: AuthStore
     @State private var mode: Mode = .search
+    // v2.0.2: Default "Öffentlich" — spiegelt Web (v1.10.112: "dort liegt
+    // die geteilte Dokumentation, über die man typischerweise chattet").
+    @State private var scope: KiScope = .public
+    @State private var groups: [DirectShareGroupOption] = []
 
     var body: some View {
         // v2.0.1: Picker war ein VStack-Geschwister VOR ChatView/SearchView —
@@ -32,17 +63,36 @@ struct KIView: View {
         // "top-level" genug.
         Group {
             switch mode {
-            case .search: SearchView()
-            case .chat: ChatView()
+            case .search: SearchView(scope: $scope)
+            case .chat: ChatView(scope: $scope)
             }
         }
         .safeAreaInset(edge: .top) {
-            Picker("Modus", selection: $mode) {
-                ForEach(Mode.allCases) { m in
-                    Text(m.label).tag(m)
+            VStack(spacing: 6) {
+                Picker("Modus", selection: $mode) {
+                    ForEach(Mode.allCases) { m in
+                        Text(m.label).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "target")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textTertiary)
+                    Picker("Bereich", selection: $scope) {
+                        Text("Öffentlich").tag(KiScope.public)
+                        Text("Persönlich").tag(KiScope.personal)
+                        ForEach(groups) { g in
+                            Text(g.name).tag(KiScope.group(id: g.id, name: g.name))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .font(TFont.bodyS)
+                    .tint(Theme.textSecondary)
+                    Spacer()
                 }
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.top, 8)
             .padding(.bottom, 4)
@@ -50,5 +100,9 @@ struct KIView: View {
         }
         .navigationTitle("KI")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            guard groups.isEmpty, let api = auth.api else { return }
+            groups = (try? await api.listShareableGroups()) ?? []
+        }
     }
 }

@@ -10,6 +10,9 @@ struct ChatMessage: Identifiable {
 
 struct ChatView: View {
     @EnvironmentObject var auth: AuthStore
+    // v2.0.2: von KIView durchgereicht — Bereichs-Picker (Persönlich/
+    // Öffentlich/Gruppe), siehe KIView.swift.
+    @Binding var scope: KiScope
     @State private var messages: [ChatMessage] = []
     @State private var input = ""
     @State private var busy = false
@@ -220,7 +223,7 @@ struct ChatView: View {
         busy = true; error = nil
         defer { busy = false }
         do {
-            let resp = try await api.chatAsk(question: q)
+            let resp = try await api.chatAsk(question: q, scope: scope.apiValue, groupId: scope.groupId)
             messages.append(.init(role: .assistant, text: resp.answer, citations: resp.citations))
         } catch let e as ApiError {
             // v1.10.171: Wenn der Server 403 „ai_consent_required" zurück

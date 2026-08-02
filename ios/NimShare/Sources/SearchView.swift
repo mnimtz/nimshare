@@ -2,6 +2,9 @@ import SwiftUI
 
 struct SearchView: View {
     @EnvironmentObject var auth: AuthStore
+    // v2.0.2: von KIView durchgereicht — Bereichs-Picker (Persönlich/
+    // Öffentlich/Gruppe), siehe KIView.swift.
+    @Binding var scope: KiScope
     @State private var query = ""
     @State private var results: [SearchHitDto] = []
     @State private var busy = false
@@ -96,7 +99,7 @@ struct SearchView: View {
         }
         busy = true; error = nil; hasSearched = true
         defer { busy = false }
-        do { results = try await api.semanticSearch(query: query) }
+        do { results = try await api.semanticSearch(query: query, scope: scope.apiValue, groupId: scope.groupId) }
         catch let e as ApiError {
             // v1.10.171: 403 „ai_consent_required" (Consent auf anderem Gerät
             // widerrufen) → lokal spiegeln + Consent-Sheet öffnen.
