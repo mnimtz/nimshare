@@ -726,8 +726,9 @@ public class AiController : ControllerBase
         SearchReq req, User me, IFileAccessService access, CancellationToken ct)
     {
         var provider = await _ai.CreateProviderAsync(ct);
-        var qv = await provider.EmbedAsync(req.Query, ct);
-        if (qv is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
+        var embedResult = await provider.EmbedAsync(req.Query, ct);
+        if (embedResult is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
+        var (qv, queryModel) = embedResult.Value;
 
         // v1.10.104: siehe KeywordSearch — Private-Ordner filtern.
         var hidden = await access.GetHiddenPublicFolderIdsAsync(me, ct);
@@ -741,7 +742,17 @@ public class AiController : ControllerBase
         var fileIds = await readable.Select(f => f.Id).ToListAsync(ct);
         if (fileIds.Count == 0) return (true, new(), null);
 
-        var embs = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
+        // v2.0.4: erst nach dem AKTUELLEN Query-Embedding-Modell filtern,
+        // bevor überhaupt verglichen wird — vorher wurde nur die Vektor-Länge
+        // geprüft, was zwei Probleme machte: (1) unterschiedliche Modelle mit
+        // zufällig gleicher Dimension lieferten Cosine-Werte aus inkompatiblen
+        // Vektorräumen (technisch berechenbar, semantisch Unsinn), (2) bei
+        // unterschiedlicher Dimension (der häufigere Fall bei Gemini's
+        // Fallback-Kaskade, siehe AiProvider.cs) wurden ALLE Zeilen übersprungen
+        // → 0 Treffer, "Keine passenden Dateien gefunden" trotz vorhandener
+        // Embeddings. Marcus's Bug-Report: Chat/Suche antworten fast nie.
+        var embsAll = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
+        var embs = embsAll.Where(e => e.Model == queryModel).ToList();
         var scored = new List<(Guid Id, double Score)>();
         foreach (var e in embs)
         {

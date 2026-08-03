@@ -19,8 +19,16 @@ public interface IAiProvider
     // steht, sind die Tags englisch").
     Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default);
     Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default);
-    /// <summary>Embed short text (name + first 2 KB) to a fixed-length float vector for semantic search. Returns null if the provider doesn't support embeddings.</summary>
-    Task<float[]?> EmbedAsync(string text, CancellationToken ct = default);
+    /// <summary>
+    /// Embed short text (name + first 2 KB) to a fixed-length float vector for
+    /// semantic search. Returns null if the provider doesn't support embeddings.
+    /// v2.0.4: also returns which model actually produced the vector — some
+    /// providers (Gemini) fall back across several embedding models at
+    /// runtime depending on availability, so "the configured model" and "the
+    /// model that actually embedded this text" can differ. Callers must
+    /// store/compare this, not the AI-Gateway's chat-completion model name.
+    /// </summary>
+    Task<(float[] Vector, string Model)?> EmbedAsync(string text, CancellationToken ct = default);
     /// <summary>Answer a question grounded in the caller's file corpus. Text passages are the retrieved chunks.</summary>
     Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default);
     /// <summary>v1.10.114 — freier Prompt (z. B. Startseiten-Begrüssung). Kein RAG, keine Struktur.</summary>
@@ -36,7 +44,7 @@ public class NullAiProvider : IAiProvider
     public Task<string?> SummarizeAsync(string text, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<AiClassification?> ClassifyAsync(string filename, string text, string language = "en", CancellationToken ct = default) => Task.FromResult<AiClassification?>(null);
     public Task<string?> DraftShareEmailAsync(string senderName, string fileName, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
-    public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null);
+    public Task<(float[] Vector, string Model)?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<(float[], string)?>(null);
     public Task<string?> ChatAnswerAsync(string question, IEnumerable<string> passages, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
     public Task<string?> DraftUploadRequestAsync(string senderName, string recipientEmail, string? context, string language, CancellationToken ct = default) => Task.FromResult<string?>(null);
@@ -126,7 +134,7 @@ public class OpenAiProvider : IAiProvider
     public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) =>
         ChatAsync(system: $"Reply in the language whose ISO code is '{language}'.", user: prompt, temperature: 0.9, ct);
 
-    public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
+    public async Task<(float[] Vector, string Model)?> EmbedAsync(string text, CancellationToken ct = default)
     {
         LastError = null;
         var url = _isAzure
@@ -134,6 +142,11 @@ public class OpenAiProvider : IAiProvider
             : "https://api.openai.com/v1/embeddings";
         var payload = new { model = _isAzure ? (object?)null : "text-embedding-3-small", input = text.Length > 8000 ? text[..8000] : text };
         var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        // v2.0.4: Azure-Deployment bestimmt das tatsächliche Embedding-Modell
+        // über die Endpoint-URL, nicht über das payload.model-Feld (das bleibt
+        // dort null). Für die Model-Konsistenzprüfung reicht ein fixes Label
+        // pro Betriebsart — der Deployment-Name ändert sich zur Laufzeit nicht.
+        var modelLabel = _isAzure ? "azure-openai-embed" : "text-embedding-3-small";
         try
         {
             var resp = await _http.PostAsync(url, body, ct);
@@ -157,7 +170,7 @@ public class OpenAiProvider : IAiProvider
             var arr = doc.RootElement.GetProperty("data")[0].GetProperty("embedding");
             var vec = new float[arr.GetArrayLength()];
             for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
-            return vec;
+            return (vec, modelLabel);
         }
         catch (Exception ex)
         {
@@ -493,7 +506,7 @@ public class GeminiProvider : IAiProvider
         }
     }
 
-    public async Task<float[]?> EmbedAsync(string text, CancellationToken ct = default)
+    public async Task<(float[] Vector, string Model)?> EmbedAsync(string text, CancellationToken ct = default)
     {
         LastError = null;
         // v1.10.99: Marcus's Report — Provider funktioniert für Chat/Classify,
@@ -538,7 +551,17 @@ public class GeminiProvider : IAiProvider
                 var arr = doc.RootElement.GetProperty("embedding").GetProperty("values");
                 var vec = new float[arr.GetArrayLength()];
                 for (int i = 0; i < vec.Length; i++) vec[i] = arr[i].GetSingle();
-                return vec;
+                // v2.0.4: `model` (nicht nur der Vektor) zurückgeben — welches
+                // Kandidaten-Modell diesmal durchkam, kann sich zwischen dem
+                // Index-Zeitpunkt eines Files und einer späteren Live-Anfrage
+                // unterscheiden (Verfügbarkeit driftet, siehe Kommentar oben).
+                // Ohne das Modell mitzuführen verglich RetrieveHitsAsync
+                // teils Vektoren aus verschiedenen Embedding-Räumen (nur per
+                // Länge geprüft) — lieferte je nach Zufallstreffer Unsinn oder,
+                // bei unterschiedlicher Dimension, gar keine Treffer. Marcus's
+                // Report: Chat/Suche antworten fast nie ("Keine passenden
+                // Dateien gefunden").
+                return (vec, model);
             }
             catch (Exception ex)
             {
@@ -743,7 +766,7 @@ public class AnthropicProvider : IAiProvider
     public Task<string?> FreeformAsync(string prompt, string language, CancellationToken ct = default) =>
         MessagesAsync($"Reply in the language whose ISO code is '{language}'.", prompt, 0.9, ct);
 
-    public Task<float[]?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<float[]?>(null); // Anthropic doesn't ship embeddings — semantic search falls back to null
+    public Task<(float[] Vector, string Model)?> EmbedAsync(string text, CancellationToken ct = default) => Task.FromResult<(float[], string)?>(null); // Anthropic doesn't ship embeddings — semantic search falls back to null
 
     public async Task<string?> DescribeImageAsync(byte[] imageBytes, string mimeType, string language, CancellationToken ct = default)
     {

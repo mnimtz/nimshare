@@ -141,14 +141,15 @@ public class AiGatewayController : Controller
             try
             {
                 var provider = await _ai.CreateProviderAsync(ct);
-                var vec = await provider.EmbedAsync("smoke-test");
+                var embedResult = await provider.EmbedAsync("smoke-test");
                 var lastErr = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
                     ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
                     ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError;
                 smokeTestResult = new
                 {
-                    ok = vec is not null && vec.Length > 0,
-                    vectorDim = vec?.Length ?? 0,
+                    ok = embedResult is not null && embedResult.Value.Vector.Length > 0,
+                    vectorDim = embedResult?.Vector.Length ?? 0,
+                    model = embedResult?.Model,
                     lastError = lastErr,
                 };
             }
