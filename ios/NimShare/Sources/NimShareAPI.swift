@@ -328,6 +328,26 @@ final class NimShareAPI: ObservableObject {
         return (data, filename)
     }
 
+    // v2.0.4: Marcus vermisste auf dem abgeschlossenen Signatur-Screen einen
+    // Weg, den forensischen Audit-Bericht (IP/Zeitstempel/Gerät/Standort je
+    // Ereignis) einzusehen — Web hat das schon lange (/signatures/{id}/audit
+    // + JSON-Export), iOS bot dafür nie einen Einstieg. Gleicher JSON-Export
+    // wie Web, als Datei zum Teilen/Öffnen.
+    func downloadAuditReport(_ id: UUID) async throws -> (Data, String) {
+        let req = request("GET", "api/v1/signatures/\(id)/audit")
+        let (data, resp) = try await perform(req)
+        var filename = "nimshare-audit-\(id.uuidString).json"
+        if let cd = resp.value(forHTTPHeaderField: "Content-Disposition") {
+            if let range = cd.range(of: "filename=\"") {
+                let rest = cd[range.upperBound...]
+                if let end = rest.firstIndex(of: "\"") {
+                    filename = String(rest[..<end])
+                }
+            }
+        }
+        return (data, filename)
+    }
+
     // Delete für Signatur-Vorgänge (Web-UI hat sig.confirm_delete).
     func deleteSignatureRequest(_ id: UUID) async throws {
         let req = request("DELETE", "api/v1/signatures/\(id)")

@@ -22,7 +22,7 @@ struct NotificationsView: View {
                                 Circle().fill(Theme.navy.opacity(0.12)).frame(width: 34, height: 34)
                                 Image(systemName: n.iconName)
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(n.isUnread ? Theme.navy : Theme.textTertiary)
+                                    .foregroundStyle(n.isUnread ? Theme.navyFg : Theme.textTertiary)
                             }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(n.title)

@@ -99,7 +99,7 @@ struct SearchView: View {
         }
         busy = true; error = nil; hasSearched = true
         defer { busy = false }
-        do { results = try await api.semanticSearch(query: query, scope: scope.apiValue, groupId: scope.groupId) }
+        do { results = try await api.semanticSearch(query: query, scope: scope.apiValue) }
         catch let e as ApiError {
             // v1.10.171: 403 „ai_consent_required" (Consent auf anderem Gerät
             // widerrufen) → lokal spiegeln + Consent-Sheet öffnen.

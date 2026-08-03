@@ -223,7 +223,7 @@ struct ChatView: View {
         busy = true; error = nil
         defer { busy = false }
         do {
-            let resp = try await api.chatAsk(question: q, scope: scope.apiValue, groupId: scope.groupId)
+            let resp = try await api.chatAsk(question: q, scope: scope.apiValue)
             messages.append(.init(role: .assistant, text: resp.answer, citations: resp.citations))
         } catch let e as ApiError {
             // v1.10.171: Wenn der Server 403 „ai_consent_required" zurück

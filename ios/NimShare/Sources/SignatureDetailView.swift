@@ -19,6 +19,7 @@ struct SignatureDetailView: View {
     @State private var busy = false
     @State private var pdfURL: URL?
     @State private var showPdfQuickLook = false
+    @State private var auditURL: URL?
     @State private var showFinalizeInfo = false
     @State private var finalizeInfo: String = ""
     @State private var showDeleteConfirm = false
@@ -44,6 +45,7 @@ struct SignatureDetailView: View {
         .task { await load() }
         .refreshable { await load() }
         .quickLookPreview($pdfURL)
+        .quickLookPreview($auditURL)
         .alert("Abschluss-Info", isPresented: $showFinalizeInfo) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -114,6 +116,21 @@ struct SignatureDetailView: View {
                         Task { await openSignedPdf() }
                     } label: {
                         Label("Signiertes PDF öffnen", systemImage: "doc.text.fill")
+                    }
+                    .disabled(busy)
+                }
+                // v2.0.4: Marcus vermisste bei einem abgeschlossenen Vorgang
+                // eine Möglichkeit, den forensischen Audit-Bericht (IP/
+                // Zeitstempel/Gerät/Standort je Ereignis) einzusehen — Web
+                // zeigt den "🔐 Audit"-Button ab jedem Status außer Draft
+                // (Detail.cshtml: "sichtbar ab Sent, weil ab da Events
+                // anfallen... für Draft macht Audit noch keinen Sinn"),
+                // hier dieselbe Regel.
+                if d.status != "Draft" {
+                    Button {
+                        Task { await openAuditReport() }
+                    } label: {
+                        Label("Audit-Bericht", systemImage: "lock.shield")
                     }
                     .disabled(busy)
                 }
@@ -217,6 +234,19 @@ struct SignatureDetailView: View {
             pdfURL = tmp
         } catch let ex {
             error = "PDF konnte nicht geladen werden: \(ex.localizedDescription)"
+        }
+    }
+
+    private func openAuditReport() async {
+        guard let api = auth.api else { return }
+        busy = true; defer { busy = false }
+        do {
+            let (data, filename) = try await api.downloadAuditReport(requestId)
+            let tmp = TmpFile.destinationURL(for: filename)
+            try data.write(to: tmp, options: .atomic)
+            auditURL = tmp
+        } catch let ex {
+            error = "Audit-Bericht konnte nicht geladen werden: \(ex.localizedDescription)"
         }
     }
 

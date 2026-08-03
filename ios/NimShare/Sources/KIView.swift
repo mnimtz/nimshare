@@ -4,25 +4,24 @@ import SwiftUI
 /// <select> mit Default "Öffentlich" — iOS hatte so etwas noch nie (weder
 /// Chat noch Suche haben je einen Scope mitgeschickt, seit dem allerersten
 /// iOS-Commit). Der Server durchsucht bei leerem Scope zwar schon alles
-/// Erreichbare (Personal+Public+Group+DirectShares — eher zu viel als zu
-/// wenig), aber ohne sichtbare Auswahl wirkte das für Marcus wie "findet
-/// nur Privates". Werte/Labels spiegeln 1:1 die Web-Optionen.
+/// Erreichbare (Personal+Public+DirectShares — eher zu viel als zu wenig),
+/// aber ohne sichtbare Auswahl wirkte das für Marcus wie "findet nur
+/// Privates".
+///
+/// v2.0.3: Gruppen-Option wieder entfernt — Marcus's Korrektur: "wieso gibt
+/// es 3 Bereiche? sollte doch nur privat und öffentlich geben, Gruppen sind
+/// ja keine Bereiche". Deckt sich mit der v1.10.102-Entscheidung, dass
+/// Gruppen nur noch Verteiler-Namen für "Teilen mit → Gruppe" sind, keine
+/// eigene durchsuchbare Bibliothek mehr.
 enum KiScope: Hashable {
     case personal
     case `public`
-    case group(id: UUID, name: String)
 
     var apiValue: String {
         switch self {
         case .personal: return "Personal"
         case .public: return "Public"
-        case .group: return "Group"
         }
-    }
-
-    var groupId: UUID? {
-        if case .group(let id, _) = self { return id }
-        return nil
     }
 }
 
@@ -49,7 +48,6 @@ struct KIView: View {
     // v2.0.2: Default "Öffentlich" — spiegelt Web (v1.10.112: "dort liegt
     // die geteilte Dokumentation, über die man typischerweise chattet").
     @State private var scope: KiScope = .public
-    @State private var groups: [DirectShareGroupOption] = []
 
     var body: some View {
         // v2.0.1: Picker war ein VStack-Geschwister VOR ChatView/SearchView —
@@ -83,9 +81,6 @@ struct KIView: View {
                     Picker("Bereich", selection: $scope) {
                         Text("Öffentlich").tag(KiScope.public)
                         Text("Persönlich").tag(KiScope.personal)
-                        ForEach(groups) { g in
-                            Text(g.name).tag(KiScope.group(id: g.id, name: g.name))
-                        }
                     }
                     .pickerStyle(.menu)
                     .font(TFont.bodyS)
@@ -100,9 +95,5 @@ struct KIView: View {
         }
         .navigationTitle("KI")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            guard groups.isEmpty, let api = auth.api else { return }
-            groups = (try? await api.listShareableGroups()) ?? []
-        }
     }
 }
