@@ -1113,6 +1113,7 @@ Apri questo link per firmare:
   <data name="certs.origin.self"><value>Auto-firmato</value></data>
   <data name="certs.origin.import"><value>Importato</value></data>
   <data name="certs.col.name"><value>Nome</value></data>
+  <data name="certs.col.owner"><value>Proprietario</value></data>
   <data name="certs.col.subject"><value>Soggetto</value></data>
   <data name="certs.col.valid"><value>Validità</value></data>
   <data name="certs.col.origin"><value>Origine</value></data>
@@ -1398,6 +1399,20 @@ Grazie per usare NimShare.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Fuso orario</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Nota</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Bozza creata</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Invito inviato</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Promemoria inviato</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Promemoria inviato manualmente</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>Turno iniziato (firma sequenziale)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Annullato automaticamente — scadenza superata</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Firmato con timbro certificato</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Firmato con certificato proprio</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Confermato (nessun dato di scorrimento)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>Invio email non riuscito: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Delegato a {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Assunto come delegato da {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Pagine {0} di {1} visualizzate</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Pagine {0} visualizzate</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Questo registro viene generato in tempo reale dal database. Per una registrazione immutabile, archiviare separatamente l'export JSON.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Privacy</value></data>
   <data name="nav.support" xml:space="preserve"><value>Supporto</value></data>

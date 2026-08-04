@@ -1112,6 +1112,7 @@ Open deze link om te tekenen:
   <data name="certs.origin.self"><value>Zelfondertekend</value></data>
   <data name="certs.origin.import"><value>Geïmporteerd</value></data>
   <data name="certs.col.name"><value>Naam</value></data>
+  <data name="certs.col.owner"><value>Eigenaar</value></data>
   <data name="certs.col.subject"><value>Onderwerp</value></data>
   <data name="certs.col.valid"><value>Geldig</value></data>
   <data name="certs.col.origin"><value>Herkomst</value></data>
@@ -1397,6 +1398,20 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Tijdzone</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Notitie</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Concept aangemaakt</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Uitnodiging verzonden</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Herinnering verzonden</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Herinnering handmatig verzonden</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>Aan de beurt (opeenvolgende ondertekening)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Automatisch geannuleerd — deadline verstreken</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Ondertekend met certificaatstempel</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Ondertekend met eigen certificaat</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Bevestigd (geen scrolgegevens beschikbaar)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>E-mailbezorging mislukt: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Gedelegeerd aan {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Overgenomen als gedelegeerde van {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Pagina's {0} van {1} bekeken</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Pagina's {0} bekeken</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Dit logboek wordt live uit de database opgebouwd. Archiveer de JSON-export apart voor een onveranderlijk record.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Privacy</value></data>
   <data name="nav.support" xml:space="preserve"><value>Support</value></data>

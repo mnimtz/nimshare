@@ -281,9 +281,10 @@
                             @kindLabel
                             @if (!string.IsNullOrEmpty(pName)) { <span class="muted"> · @pName</span> }
                         </div>
+                        @{ var noteDisplay = SignatureAuditNoteFormatter.Display(a, T); }
                         <div class="muted" style="font-size:12px">
                             @a.At.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
-                            @if (!string.IsNullOrEmpty(a.Note)) { <span> · <code>@a.Note</code></span> }
+                            @if (!string.IsNullOrEmpty(noteDisplay)) { <span> · @noteDisplay</span> }
                         </div>
                         @{
                             // v1.10.42: forensische Zusatzinfo pro Audit-Zeile.

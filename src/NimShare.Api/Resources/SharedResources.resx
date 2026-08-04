@@ -1118,6 +1118,7 @@ Please open this link to sign:
   <data name="certs.origin.self"><value>Self-signed</value></data>
   <data name="certs.origin.import"><value>Imported</value></data>
   <data name="certs.col.name"><value>Name</value></data>
+  <data name="certs.col.owner"><value>Owner</value></data>
   <data name="certs.col.subject"><value>Subject</value></data>
   <data name="certs.col.valid"><value>Valid</value></data>
   <data name="certs.col.origin"><value>Origin</value></data>
@@ -1412,6 +1413,20 @@ Thanks for using NimShare.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Time zone</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Note</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Draft created</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Invitation sent</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Reminder sent</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Reminder sent manually</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>Their turn began (sequential signing)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Auto-cancelled — deadline expired</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Signed using certificate stamp</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Signed using own certificate</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Acknowledged (no page-scroll data)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>Email delivery failed: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Delegated to {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Received as delegate from {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Viewed pages {0} of {1}</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Viewed pages {0}</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>This audit trail is generated live from the database. For an immutable record, archive the JSON export separately.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Privacy</value></data>
   <data name="nav.support" xml:space="preserve"><value>Support</value></data>

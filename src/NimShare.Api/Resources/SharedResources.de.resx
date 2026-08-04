@@ -1120,6 +1120,7 @@ Bitte öffne diesen Link, um zu unterschreiben:
   <data name="certs.origin.self"><value>Selbst-signiert</value></data>
   <data name="certs.origin.import"><value>Importiert</value></data>
   <data name="certs.col.name"><value>Name</value></data>
+  <data name="certs.col.owner"><value>Besitzer</value></data>
   <data name="certs.col.subject"><value>Inhaber</value></data>
   <data name="certs.col.valid"><value>Gültig</value></data>
   <data name="certs.col.origin"><value>Herkunft</value></data>
@@ -1414,6 +1415,20 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Zeitzone</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Notiz</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Entwurf erstellt</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Einladung versendet</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Erinnerung versendet</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Erinnerung manuell versendet</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>An der Reihe (sequenzielle Signierung)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Automatisch abgebrochen — Frist abgelaufen</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Signiert per Zertifikat-Stempel</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Signiert mit eigenem Zertifikat</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Bestätigt (keine Scroll-Daten verfügbar)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>E-Mail-Zustellung fehlgeschlagen: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Weitergeleitet an {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Als Vertretung übernommen von {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Seiten {0} von {1} angesehen</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Seiten {0} angesehen</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Dieses Protokoll wird zum Zeitpunkt des Aufrufs aus der Datenbank generiert. Für einen unveränderlichen Nachweis den JSON-Export separat archivieren.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Datenschutz</value></data>
   <data name="nav.support" xml:space="preserve"><value>Support</value></data>
