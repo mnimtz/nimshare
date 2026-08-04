@@ -322,6 +322,41 @@ input:focus, select:focus, textarea:focus {
 .file-tile .name { font-weight: 700; color: var(--tw-primary); }
 .file-tile .sub { color: var(--tw-muted-blue); font-size: .85rem; }
 
+/* v2.0.4: FolderLanding (Mehr-Datei-Ordner-Link) nutzte bisher die generische
+   .table-cards-mobile-Karte (Label+Wert-Zeilen, "NAME" / "GRÖSSE" je eigene
+   Zeile) — für einen simplen Namen+Größe+Download-Button wirkte das wie ein
+   Admin-Datengrid statt einer Empfänger-freundlichen Dateiliste ("optik
+   aufgebrochen", Marcus-Feedback). .folder-file-row ist die .file-tile-
+   Optik (Icon-Badge + Name + Größe) von Landing.cshtml, nur mit dem
+   Download-Button als dritter Flex-Slot rechts statt als eigener Block
+   darunter — auf schmalen Screens rutscht der Button per flex-wrap in eine
+   eigene volle Zeile, bleibt aber an Icon+Name andockt statt frei zu
+   schweben. */
+.folder-file-list { margin: var(--sp-6) 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.folder-file-row {
+    background: var(--tw-gray-100);
+    border: 1px solid var(--tw-gray-300);
+    border-radius: var(--r);
+    padding: var(--sp-4);
+    display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+}
+.folder-file-row .icon {
+    width: 40px; height: 40px;
+    background: var(--pillar-gradient);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    color: var(--tw-white); font-weight: 900;
+    font-size: .8rem; flex-shrink: 0;
+}
+.folder-file-row .meta { display: flex; flex-direction: column; flex: 1 1 160px; min-width: 0; }
+.folder-file-row .name { font-weight: 700; color: var(--tw-primary); word-break: break-word; }
+.folder-file-row .sub { color: var(--tw-muted-blue); font-size: .85rem; }
+.folder-file-row form { flex-shrink: 0; margin-left: auto; }
+@media (max-width: 480px) {
+    .folder-file-row form { flex: 1 1 100%; margin-left: 56px; }
+    .folder-file-row form .btn { width: 100%; }
+}
+
 /* ── Language dropdown (tonerwatch-style <details>) ────────────── */
 .sidebar-lang { position: relative; margin-bottom: var(--sp-3); }
 .sidebar-lang summary {
