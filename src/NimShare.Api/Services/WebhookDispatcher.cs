@@ -60,6 +60,15 @@ public class WebhookDispatcher : IWebhookDispatcher
         foreach (var w in subs)
         {
             if (!string.IsNullOrEmpty(w.Events) && !w.Events.Split(',').Contains(name)) continue;
+            // v1.11.81: SSRF-Schutz. Auch wenn die URL bei der Anlage geprüft wurde, kann
+            // ein Hostname zwischenzeitlich auf eine interne Adresse zeigen (DNS-Rebinding /
+            // nachträglich geänderter DNS-Eintrag) — deshalb hier vor jedem Versand erneut
+            // gegen private/link-local/loopback-Ziele absichern.
+            if (!SsrfGuard.IsPubliclyRoutableHttpUrl(w.Url))
+            {
+                _log.LogWarning("webhook {Id} skipped: URL is not a publicly-routable http(s) target", w.Id);
+                continue;
+            }
             try
             {
                 var secret = _protector.Unprotect(w.SecretEncrypted);

@@ -22,11 +22,24 @@ public class JwtTokenService : IJwtTokenService
     private readonly SymmetricSecurityKey _signingKey;
     private readonly TimeSpan _lifetime = TimeSpan.FromDays(30);
 
-    public JwtTokenService(IConfiguration cfg)
+    public JwtTokenService(IConfiguration cfg, IHostEnvironment env, ILogger<JwtTokenService> log)
     {
-        // Signing key: from config LocalJwt:Signing, or derived from IpHash:Salt as a fallback
-        // so an admin who set that env-var already has a stable key for tokens too.
-        var raw = cfg["LocalJwt:Signing"] ?? cfg["IpHash:Salt"] ?? "override-with-env-var-in-production";
+        // Prefer a DEDICATED signing secret (LocalJwt:Signing). Historically this fell back to
+        // IpHash:Salt — reusing one secret for two unrelated purposes (30-day admin-capable token
+        // signing + IP pseudonymisation). If the salt ever leaks (it is meant to be rotatable and
+        // feeds stored values), that reuse makes admin JWTs forgeable. v1.11.81: keep the fallback
+        // for backward compatibility, but refuse the well-known placeholder in production and warn
+        // whenever no dedicated key is configured.
+        var dedicated = cfg["LocalJwt:Signing"];
+        var raw = dedicated ?? cfg["IpHash:Salt"] ?? "override-with-env-var-in-production";
+        if (!env.IsDevelopment())
+        {
+            if (string.IsNullOrWhiteSpace(raw) || raw == "override-with-env-var-in-production")
+                throw new InvalidOperationException(
+                    "LocalJwt:Signing (or at minimum a non-default IpHash:Salt) must be set to a strong secret outside Development.");
+            if (string.IsNullOrWhiteSpace(dedicated))
+                log.LogWarning("[STARTUP] LocalJwt:Signing is not set — deriving the JWT signing key from IpHash:Salt (secret reuse). Set a dedicated high-entropy LocalJwt:Signing.");
+        }
         // Widen to 32 bytes with SHA-256 so HS256 has enough entropy regardless of input length.
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("NimShare.Local.JWT:" + raw));
         _signingKey = new SymmetricSecurityKey(bytes);

@@ -356,6 +356,15 @@ public class AiController : ControllerBase
         // Session-Gate-Cookie geprüft, den ShareController.Landing setzt.
         if (!link.IsActive(DateTimeOffset.UtcNow))
             return Problem(statusCode: 410, title: "Link no longer available");
+        // v1.11.81: Passwort-Gate. Der Passwortschutz eines Share-Links wird per
+        // Request im Download-Pfad geprüft und setzt KEINEN Session-Gate — ein
+        // Angreifer mit nur dem Slug (ohne Passwort) konnte deshalb hier eine
+        // KI-Zusammenfassung/Vision-Beschreibung des geschützten Inhalts ziehen
+        // und das Passwort komplett umgehen. Konsistent mit ShareController.Preview
+        // (Inline-Vorschau ist für passwortgeschützte Links ebenfalls gesperrt):
+        // für passwortgeschützte Links gibt es keine anonyme KI-Zusammenfassung.
+        if (link.PasswordHash is not null)
+            return Problem(statusCode: 403, title: "Password required");
         // v1.11.13: Apple-5.1.1(i) — dieser Endpoint ist [AllowAnonymous] (der
         // Besucher ist nicht eingeloggt), schickt aber den Dateiinhalt des
         // FILE-OWNERS an den AI-Provider. Ohne dessen Zustimmung darf das
