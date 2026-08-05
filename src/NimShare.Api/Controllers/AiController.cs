@@ -996,19 +996,36 @@ public class AiController : ControllerBase
         if (settings.Provider == AiProvider.Disabled)
             return Problem(statusCode: 503, title: "AI Gateway ist deaktiviert.");
         var me = await users.GetOrProvisionAsync(User, ct);
-        // Missing embeddings only — no point re-crunching every file if the
-        // model didn't change. Admins get the full backfill (everything
-        // without an embedding row across scopes they can already see).
-        IQueryable<StorageFile> q = _db.Files.Where(f =>
-            f.Status == StorageFileStatus.Ready
-            && !_db.FileEmbeddings.Any(e => e.FileId == f.Id));
+
+        // v1.11.84: aktuelles Embedding-Modell live ermitteln (Ping-Embed).
+        // Vorher nahm Reindex NUR Dateien ganz ohne Embedding — Dateien mit
+        // einem Embedding aus einem ANDEREN Modell (z.B. Alt-Bestand aus einer
+        // früheren Gemini-Phase) wurden übersprungen und blieben für die
+        // aktuelle Query unbrauchbar → dauerhaft "0 Treffer". Jetzt: alles neu
+        // einreihen, das KEIN Embedding im aktuellen Modell hat (fehlend ODER
+        // veraltetes Label). Der Post-Processor aktualisiert die Zeile in-place.
+        // Sicher dank v1.11.82 (Größen-Cap + Parallelität 1).
+        string? currentModel = null;
+        try
+        {
+            var provider = await _ai.CreateProviderAsync(ct);
+            var ping = await provider.EmbedAsync("ping", ct);
+            if (ping is { } p) currentModel = p.Model;
+        }
+        catch { /* Ping fehlgeschlagen → Fallback auf "nur fehlende" unten. */ }
+
+        IQueryable<StorageFile> q = _db.Files.Where(f => f.Status == StorageFileStatus.Ready);
+        if (currentModel is not null)
+            q = q.Where(f => !_db.FileEmbeddings.Any(e => e.FileId == f.Id && e.Model == currentModel));
+        else
+            q = q.Where(f => !_db.FileEmbeddings.Any(e => e.FileId == f.Id));
         if (me.Role != UserRole.Admin)
             q = q.Where(f => f.OwnerId == me.Id);
         // Cap the batch — anything larger and the async queue would swamp the
         // provider quota. Callers can re-hit this endpoint later.
         var ids = await q.OrderByDescending(f => f.CreatedAt).Take(500).Select(f => f.Id).ToListAsync(ct);
         foreach (var id in ids) post.QueueForFile(id);
-        return Ok(new { queued = ids.Count });
+        return Ok(new { queued = ids.Count, currentModel });
     }
 
     /// <summary>v1.11.83: Admin-Diagnose für den KI-Chat/Suche-"0 Treffer"-Fall.
@@ -1056,8 +1073,13 @@ public class AiController : ControllerBase
         }
         catch (Exception ex) { providerError = ex.Message; }
 
-        var mismatch = queryModel != null && storedModels.Count > 0
-            && storedModels.All(s => s.model != queryModel);
+        // v1.11.84: brauchbar = Embeddings, deren Label dem aktuellen Query-
+        // Modell entspricht; alle anderen (z.B. Alt-Bestand aus Gemini-Phase)
+        // sind für die Query unbrauchbar, auch wenn EINZELNE passen.
+        var usableEmbeddings = queryModel is null ? 0
+            : storedModels.Where(s => s.model == queryModel).Sum(s => s.count);
+        var staleEmbeddings = totalEmbeddings - usableEmbeddings;
+        var mismatch = queryModel != null && staleEmbeddings > 0;
 
         return Ok(new
         {
@@ -1065,14 +1087,16 @@ public class AiController : ControllerBase
             providerError,
             storedModels,
             totalEmbeddings,
+            usableEmbeddings,
+            staleEmbeddings,
             readyFiles,
             filesWithoutEmbedding,
             mismatch,
-            hint = storedModels.Count == 0
+            hint = totalEmbeddings == 0
                 ? "Keine Embeddings vorhanden — Index ist leer."
-                : mismatch
-                    ? "MISMATCH: gespeicherte Vektoren tragen ein anderes Modell-Label als die aktuelle Query → Relabel (wenn real dasselbe Modell) oder gezieltes Re-Embed nötig, KEIN Reindex."
-                    : "Kein Label-Mismatch: Query- und Index-Label passen zusammen."
+                : staleEmbeddings > 0
+                    ? $"{staleEmbeddings} von {totalEmbeddings} Embeddings stammen aus einem anderen Modell und sind für die aktuelle Query unbrauchbar. 'Neu indexieren' (ab v1.11.84) embeddet sie neu."
+                    : "Alle Embeddings passen zum aktuellen Query-Modell."
         });
     }
 
