@@ -116,6 +116,12 @@
     <div style="overflow-x:auto">
         <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:220px;background:var(--tw-gray-100);border-radius:6px">
             @{
+                // v1.11.85: SVG-Zahlen mit InvariantCulture (Punkt) — sonst macht
+                // de-DE aus 18.0 ein "18,0" (Komma) → ungültige SVG-Koordinate →
+                // keine Balken. (Der Heatmap-Teil weiter unten machte das schon
+                // richtig, der Balken-Chart hier wurde übersehen.)
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                string F(double v) => v.ToString("0.0", inv);
                 var W = 600.0; var H = 200.0; var pad = 18.0;
                 var barW = (W - 2 * pad) / buckets.Count;
                 for (int i = 0; i < buckets.Count; i++)
@@ -127,10 +133,10 @@
                     var yLand = H - pad - landings;
                     var yDown = H - pad - downloads;
                     var bw = Math.Max(2.0, barW - 3.0);
-                    <rect x="@x.ToString("0.0")" y="@yLand.ToString("0.0")" width="@bw.ToString("0.0")" height="@landings.ToString("0.0")" fill="#00A0FB" opacity="0.5"><title>@string.Format(T["report.chart.tooltip.landings"].Value, b.Day, b.Landings)</title></rect>
-                    <rect x="@x.ToString("0.0")" y="@yDown.ToString("0.0")" width="@bw.ToString("0.0")" height="@downloads.ToString("0.0")" fill="#00EB86"><title>@string.Format(T["report.chart.tooltip.downloads"].Value, b.Day, b.Downloads)</title></rect>
+                    <rect x="@F(x)" y="@F(yLand)" width="@F(bw)" height="@F(landings)" fill="#00A0FB" opacity="0.5"><title>@string.Format(T["report.chart.tooltip.landings"].Value, b.Day, b.Landings)</title></rect>
+                    <rect x="@F(x)" y="@F(yDown)" width="@F(bw)" height="@F(downloads)" fill="#00EB86"><title>@string.Format(T["report.chart.tooltip.downloads"].Value, b.Day, b.Downloads)</title></rect>
                 }
-                <line x1="@pad.ToString("0.0")" y1="@(H - pad).ToString("0.0")" x2="@(W - pad).ToString("0.0")" y2="@(H - pad).ToString("0.0")" stroke="#8094AA" stroke-width="1"/>
+                <line x1="@F(pad)" y1="@F(H - pad)" x2="@F(W - pad)" y2="@F(H - pad)" stroke="#8094AA" stroke-width="1"/>
             }
         </svg>
     </div>
