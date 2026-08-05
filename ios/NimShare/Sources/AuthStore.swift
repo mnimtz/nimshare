@@ -15,6 +15,11 @@ final class AuthStore: ObservableObject {
     @Published var serverURL: URL?
     @Published var api: NimShareAPI?
 
+    /// v2.0.5: Optionales biometrisches App-Schloss (Face ID / Touch ID).
+    /// true = eine bestehende Sitzung ist gesperrt und muss vor Nutzung
+    /// biometrisch entsperrt werden. Rein lokal, kein Server-Gegenpart.
+    @Published var isLocked = false
+
     // v1.10.165: AI-Consent-Cache (Apple 5.1.1(i)). nil = noch nicht geladen,
     // false = User hat abgelehnt oder noch nie zugestimmt, true = zugestimmt.
     // Wird bei bootstrap + Login geladen und nach setAiConsent aktualisiert.
@@ -87,6 +92,7 @@ final class AuthStore: ObservableObject {
     private let tokenKey = "nimshare.jwt"
     private let lastEmailKey = "nimshare.lastEmail"
     private let rememberKey = "nimshare.rememberCredentials"
+    private let biometricLockKey = "nimshare.biometricLock"
 
     /// v1.10.59: Werksseitig eingestellte Standard-URL. Marcus's Vorgabe.
     /// User kann via "Server ändern" trotzdem umschalten wenn nötig.
@@ -110,6 +116,26 @@ final class AuthStore: ObservableObject {
         set { defaults.set(newValue, forKey: rememberKey) }
     }
 
+    /// v2.0.5: Nutzer-Opt-in für das biometrische App-Schloss. Default false.
+    var biometricLockEnabled: Bool {
+        get { defaults.bool(forKey: biometricLockKey) }
+        set { defaults.set(newValue, forKey: biometricLockKey) }
+    }
+
+    /// Sperrt eine bestehende Sitzung, wenn das Schloss aktiviert und
+    /// Biometrie verfügbar ist (App-Start / Rückkehr aus dem Hintergrund).
+    func lockIfEnabled() {
+        guard state == .signedIn, biometricLockEnabled, BiometricAuth.available != .none else { return }
+        isLocked = true
+    }
+
+    /// Führt die Biometrie aus; bei Erfolg wird entsperrt. true = entsperrt.
+    func unlock() async -> Bool {
+        let ok = await BiometricAuth.authenticate(reason: String(localized: "NimShare entsperren"))
+        if ok { isLocked = false }
+        return ok
+    }
+
     func bootstrap() async {
         // v1.10.59: Wenn kein Server konfiguriert ist, den default nutzen
         // statt auf einen expliziten Setup-Screen zu warten. Marcus's
@@ -129,6 +155,7 @@ final class AuthStore: ObservableObject {
                 let me = try await api.me()
                 user = me
                 state = .signedIn
+                lockIfEnabled()
                 Task { await refreshAiConsent() }
                 return
             } catch ApiError.notAuthorized {
@@ -145,6 +172,7 @@ final class AuthStore: ObservableObject {
                 // Token und tun so als wären wir signedIn. Beim nächsten
                 // API-Call kommt der echte Auth-Check.
                 state = .signedIn
+                lockIfEnabled()
                 return
             }
         }
@@ -210,6 +238,7 @@ final class AuthStore: ObservableObject {
         Keychain.remove(forKey: tokenKey)
         api?.setToken(nil)
         user = nil
+        isLocked = false
         state = .needsLogin
     }
 

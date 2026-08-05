@@ -151,7 +151,14 @@ struct ProfileView: View {
                 NavigationLink { BlocksView() } label: {
                     Label("Blockierte Nutzer", systemImage: "hand.raised").foregroundStyle(Theme.navyFg)
                 }
-            } header: { RSSectionHeader(title: "Sicherheit") }
+                // v2.0.5: biometrisches App-Schloss (Face ID / Touch ID).
+                BiometricLockRow()
+            } header: { RSSectionHeader(title: "Sicherheit") } footer: {
+                Text(BiometricAuth.available == .none
+                     ? "Richte Face ID oder Touch ID in den iOS-Einstellungen ein, um die App-Sperre zu nutzen."
+                     : "Verlangt beim Öffnen der App eine biometrische Bestätigung.")
+                    .font(TFont.caption).foregroundStyle(Theme.textTertiary)
+            }
                 .listRowBackground(Theme.surface2)
 
             Section {

@@ -15,8 +15,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    MARKETING_VERSION: "2.0.4"
-    CURRENT_PROJECT_VERSION: "66"
+    MARKETING_VERSION: "2.0.5"
+    CURRENT_PROJECT_VERSION: "67"
 targets:
   NimShare:
     type: application
@@ -51,6 +51,9 @@ targets:
         NSCameraUsageDescription: "Take a photo to share via NimShare."
         # v1.10.114: optionaler Standort für die Wetter-Begrüssung auf der Startseite.
         NSLocationWhenInUseUsageDescription: "NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne."
+        # v2.0.5: biometrisches App-Schloss (Face ID). Übersetzungen der
+        # System-Aufforderung liegen in Resources/InfoPlist.xcstrings (EFIGS+NL).
+        NSFaceIDUsageDescription: "NimShare nutzt Face ID, um deine Sitzung beim Öffnen der App zu entsperren."
         # Redesign-Pilot (redesign/ios-mobile-v2): Red Hat Display/Mono als
         # Variable Fonts, siehe Resources/Fonts. v1.11.71: xcodegen flacht
         # die Resources/Fonts-Unterordner-Struktur beim Kopieren ins Bundle

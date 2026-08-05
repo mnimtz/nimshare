@@ -41,6 +41,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
 struct RootView: View {
     @EnvironmentObject var auth: AuthStore
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance.mode") private var appearanceRaw: String = AppearanceMode.system.rawValue
 
     var body: some View {
@@ -57,9 +58,22 @@ struct RootView: View {
                     LoginView()
                 }
             case .signedIn:
-                MainTabView()
+                // v2.0.5: biometrisches App-Schloss (Variante A) vor der
+                // eigentlichen Oberfläche. isLocked wird beim Bootstrap und
+                // beim Wechsel in den Hintergrund gesetzt (siehe AuthStore).
+                if auth.isLocked {
+                    LockScreenView()
+                } else {
+                    MainTabView()
+                }
             }
         }
         .preferredColorScheme((AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme)
+        // Beim Wechsel in den Hintergrund sperren, damit beim nächsten Öffnen
+        // wieder Biometrie verlangt wird. Nur .background (nicht .inactive) —
+        // sonst würde die Face-ID-System-UI selbst ein Re-Lock auslösen.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { auth.lockIfEnabled() }
+        }
     }
 }

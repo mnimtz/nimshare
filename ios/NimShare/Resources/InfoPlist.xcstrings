@@ -1,0 +1,41 @@
+{
+  "sourceLanguage" : "de",
+  "strings" : {
+    "NSFaceIDUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare uses Face ID to unlock your session when you open the app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare usa Face ID para desbloquear tu sesión al abrir la app."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare utilise Face ID pour déverrouiller votre session à l’ouverture de l’app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare usa Face ID per sbloccare la tua sessione all’apertura dell’app."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare gebruikt Face ID om je sessie te ontgrendelen wanneer je de app opent."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
