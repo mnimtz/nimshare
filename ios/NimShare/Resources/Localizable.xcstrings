@@ -1,6 +1,40 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
+    "Dazu habe ich keine passenden Dateien gefunden. Versuch es mit anderen Suchbegriffen." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I couldn’t find any matching files. Try different search terms."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No encontré archivos que coincidan. Prueba con otros términos de búsqueda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je n’ai trouvé aucun fichier correspondant. Essayez d’autres termes de recherche."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ho trovato file corrispondenti. Prova con altri termini di ricerca."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ik heb geen bijpassende bestanden gevonden. Probeer andere zoektermen."
+          }
+        }
+      }
+    },
     "NimShare ist gesperrt" : {
       "localizations" : {
         "en" : {

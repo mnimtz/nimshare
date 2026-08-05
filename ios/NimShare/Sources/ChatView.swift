@@ -68,16 +68,14 @@ struct ChatView: View {
             }
         }
         .background(Theme.bgGradient.ignoresSafeArea())
-        .toolbar {
-            // System-Tastatur-Toolbar: "Fertig"-Button klappt Tastatur ein
-            // → Tab-Bar wird wieder sichtbar → User kommt aus dem Chat raus.
-            ToolbarItem(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button("Fertig") { inputFocused = false }
-                }
-            }
-        }
+        // v2.0.5: Der frühere .toolbar(placement:.keyboard)-"Fertig"-Button
+        // (v1.10.66) erzwang einen Input-Accessory-View. In Kombination mit der
+        // QuickType-Vorschlagsleiste stapelten sich beide über der Eingabezeile
+        // — Marcus's Report "Tastatur-UI-Probleme" (Screenshot: Vorschlags-Chip
+        // über der Zeile). Der Button ist inzwischen redundant: Einklappen läuft
+        // über Tippen in den Chat (simultaneousGesture unten) und interaktives
+        // Runterziehen (.scrollDismissesKeyboard). Ohne den Accessory-View greift
+        // .autocorrectionDisabled() und die QuickType-Leiste bleibt aus.
         .sheet(item: $previewFileItem) { f in
             FileDetailView(file: f)
         }
@@ -178,13 +176,17 @@ struct ChatView: View {
         // (iPad, landscape iPhone Pro Max) → 640pt max.
         let bubbleMax: CGFloat = hSize == .regular ? 640 : 320
         return VStack(alignment: m.role == .user ? .trailing : .leading, spacing: 6) {
-            Text(m.text)
-                .font(TFont.bodyM)
-                .padding(10)
-                .background(m.role == .user ? Theme.navy : Theme.surface2)
-                .foregroundStyle(m.role == .user ? .white : Theme.textPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .frame(maxWidth: bubbleMax, alignment: m.role == .user ? .trailing : .leading)
+            // v2.0.5: leere Texte NIE als Bubble rendern — zweite Absicherung
+            // gegen den "weißen Kasten", falls doch mal eine leere answer kommt.
+            if !m.text.isEmpty {
+                Text(m.text)
+                    .font(TFont.bodyM)
+                    .padding(10)
+                    .background(m.role == .user ? Theme.navy : Theme.surface2)
+                    .foregroundStyle(m.role == .user ? .white : Theme.textPrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .frame(maxWidth: bubbleMax, alignment: m.role == .user ? .trailing : .leading)
+            }
             if !m.citations.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(m.citations.enumerated()), id: \.element.id) { idx, c in
@@ -224,7 +226,18 @@ struct ChatView: View {
         defer { busy = false }
         do {
             let resp = try await api.chatAsk(question: q, scope: scope.apiValue)
-            messages.append(.init(role: .assistant, text: resp.answer, citations: resp.citations))
+            // v2.0.5: Bei 0 Treffern liefert der Server answer="" (HTTP 200,
+            // kein Fehler) — siehe AiController.Chat. Vorher hängte iOS eine
+            // leere Bubble an → der "weiße Kasten" aus Marcus's Report. Jetzt:
+            // klare Meldung statt Leer-Bubble (Web zeigt dafür chat.no_context).
+            let trimmedAnswer = resp.answer.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedAnswer.isEmpty && resp.citations.isEmpty {
+                messages.append(.init(role: .assistant,
+                    text: String(localized: "Dazu habe ich keine passenden Dateien gefunden. Versuch es mit anderen Suchbegriffen."),
+                    citations: []))
+            } else {
+                messages.append(.init(role: .assistant, text: resp.answer, citations: resp.citations))
+            }
         } catch let e as ApiError {
             // v1.10.171: Wenn der Server 403 „ai_consent_required" zurück
             // liefert (z.B. Consent auf anderem Gerät widerrufen), spiegeln
