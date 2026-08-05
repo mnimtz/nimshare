@@ -101,33 +101,44 @@
     }
     else
     {
+        @{
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            string F(double v) => v.ToString("0.0", inv);
+            var n = Model.Trend.Count;
+            // Datums-Labels ausdünnen, wenn viele Tage (sonst überlappen sie).
+            var lblStep = n <= 16 ? 1 : (int)Math.Ceiling(n / 12.0);
+        }
         <div style="overflow-x:auto">
-            <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:220px;background:var(--tw-gray-100);border-radius:6px">
-                @{
-                    // v1.11.85: SVG-Koordinaten MÜSSEN mit InvariantCulture (Punkt)
-                    // formatiert werden. Unter de-DE machte ToString("0.0") aus 18.0
-                    // ein "18,0" (Komma) → SVG verwirft die ungültige Koordinate →
-                    // GAR KEINE Balken (nur grauer Hintergrund). DAS war der Grund
-                    // für "Aktivität über Zeit immer leer".
-                    var inv = System.Globalization.CultureInfo.InvariantCulture;
-                    string F(double v) => v.ToString("0.0", inv);
-                    var W = 600.0; var H = 200.0; var pad = 18.0;
-                    var barW = (W - 2 * pad) / Model.Trend.Count;
-                    for (int i = 0; i < Model.Trend.Count; i++)
-                    {
-                        var p = Model.Trend[i];
-                        double x = pad + i * barW;
-                        double landings = (p.Landings / (double)maxY) * (H - 2 * pad);
-                        double downloads = (p.Downloads / (double)maxY) * (H - 2 * pad);
-                        var yLand = H - pad - landings;
-                        var yDown = H - pad - downloads;
-                        var bw = Math.Max(2.0, barW - 3.0);
-                        <rect x="@F(x)" y="@F(yLand)" width="@F(bw)" height="@F(landings)" fill="#00A0FB" opacity="0.5"><title>@p.Day: @p.Landings</title></rect>
-                        <rect x="@F(x)" y="@F(yDown)" width="@F(bw)" height="@F(downloads)" fill="#00EB86"><title>@p.Day: @p.Downloads</title></rect>
+            <div style="position:relative;min-width:340px">
+                <span style="position:absolute;top:3px;left:6px;font-size:.62rem;color:#8094AA">@maxY</span>
+                <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:220px;background:var(--tw-gray-100);border-radius:6px">
+                    @{
+                        // v1.11.85: SVG-Zahlen mit InvariantCulture (Punkt) — sonst
+                        // macht de-DE aus 18.0 ein "18,0" (Komma) → ungültige SVG-
+                        // Koordinate → keine Balken (früher "immer grau").
+                        var W = 600.0; var H = 200.0; var pad = 18.0;
+                        var barW = (W - 2 * pad) / n;
+                        for (int i = 0; i < n; i++)
+                        {
+                            var p = Model.Trend[i];
+                            double x = pad + i * barW;
+                            double landings = (p.Landings / (double)maxY) * (H - 2 * pad);
+                            double downloads = (p.Downloads / (double)maxY) * (H - 2 * pad);
+                            var bw = Math.Max(2.0, barW - 3.0);
+                            var dl = p.Day.ToString("dd.MM.yyyy", inv);
+                            <rect x="@F(x)" y="@F(H - pad - landings)" width="@F(bw)" height="@F(landings)" fill="#00A0FB" opacity="0.5"><title>@dl — @p.Landings @T["report.chart.legend.landings"]</title></rect>
+                            <rect x="@F(x)" y="@F(H - pad - downloads)" width="@F(bw)" height="@F(downloads)" fill="#00EB86"><title>@dl — @p.Downloads @T["report.chart.legend.downloads"]</title></rect>
+                        }
+                        <line x1="@F(pad)" y1="@F(H - pad)" x2="@F(W - pad)" y2="@F(H - pad)" stroke="#8094AA" stroke-width="1"/>
                     }
-                    <line x1="@F(pad)" y1="@F(H - pad)" x2="@F(W - pad)" y2="@F(H - pad)" stroke="#8094AA" stroke-width="1"/>
-                }
-            </svg>
+                </svg>
+                <div style="display:flex;padding:3px 3% 0;font-size:.6rem;color:#8094AA">
+                    @for (int i = 0; i < n; i++)
+                    {
+                        <div style="flex:1;text-align:center;white-space:nowrap;overflow:hidden">@((i % lblStep == 0 || i == n - 1) ? Model.Trend[i].Day.ToString("dd.MM", inv) : "")</div>
+                    }
+                </div>
+            </div>
         </div>
         <div class="row" style="gap:16px;font-size:.8rem;margin-top:6px">
             <span><span style="display:inline-block;width:12px;height:12px;background:#00A0FB;opacity:.5;border-radius:2px;vertical-align:middle;margin-right:4px"></span>@T["report.chart.legend.landings"]</span>
