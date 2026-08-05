@@ -89,7 +89,13 @@ struct ApiTokensView: View {
                     }
                     Section {
                         Button {
-                            UIPasteboard.general.string = c.rawToken
+                            // v1.11.82 (Security-Review): API-Token ist ein Secret — nur lokal
+                            // in die Zwischenablage (kein Universal-Clipboard-Sync auf andere
+                            // Geräte) und nach 60 s automatisch löschen.
+                            UIPasteboard.general.setItems(
+                                [["public.utf8-plain-text": c.rawToken]],
+                                options: [.localOnly: true,
+                                          .expirationDate: Date().addingTimeInterval(60)])
                         } label: { Label("Kopieren", systemImage: "doc.on.doc") }
                     }
                 }
