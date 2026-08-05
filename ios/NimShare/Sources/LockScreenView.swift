@@ -5,8 +5,13 @@ import SwiftUI
 /// Biometrie automatisch beim Erscheinen; bei Fehlschlag Retry + Abmelden.
 struct LockScreenView: View {
     @EnvironmentObject var auth: AuthStore
+    @Environment(\.scenePhase) private var scenePhase
     @State private var failed = false
     @State private var busy = false
+    // v2.0.6: „scharf" für genau EINEN Auto-Versuch pro Vordergrund-Rückkehr.
+    // Verhindert, dass der System-Face-ID-Dialog (der die App kurz
+    // .inactive→.active schaukelt) einen Endlos-Prompt auslöst.
+    @State private var armed = true
 
     private let bio = BiometricAuth.available
 
@@ -48,12 +53,35 @@ struct LockScreenView: View {
             }
             .padding(.horizontal, Theme.Space.lg)
         }
-        .task { await attempt() }
+        // v2.0.6: Face ID NICHT beim bloßen Erscheinen auslösen — der
+        // Sperr-Screen erscheint schon beim Wechsel IN den Hintergrund, wo
+        // Biometrie nicht laufen kann (deshalb musste man vorher beim
+        // Zurückkommen manuell tippen). Stattdessen beim Wechsel in den
+        // VORDERGRUND (.active) genau einmal automatisch versuchen.
+        .task { triggerAutoUnlock() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                armed = true          // für die nächste Rückkehr neu schärfen
+                failed = false
+            } else if phase == .active {
+                triggerAutoUnlock()
+            }
+        }
+    }
+
+    /// Löst genau EINEN automatischen Biometrie-Versuch aus, sofern die App im
+    /// Vordergrund und noch gesperrt ist. Manuelles Antippen umgeht das (Retry).
+    @MainActor
+    private func triggerAutoUnlock() {
+        guard armed, scenePhase == .active, auth.isLocked else { return }
+        armed = false
+        Task { await attempt() }
     }
 
     @MainActor
     private func attempt() async {
-        guard !busy else { return }
+        // Nur im Vordergrund — Biometrie im Hintergrund/inaktiv schlägt fehl.
+        guard !busy, scenePhase == .active else { return }
         busy = true
         let ok = await auth.unlock()
         busy = false
