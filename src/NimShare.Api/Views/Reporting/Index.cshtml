@@ -12,6 +12,12 @@
     var ownerId = (Guid?)ViewData["OwnerId"];
     var groupId = (Guid?)ViewData["GroupId"];
     var maxY = Math.Max(1, Model.Trend.Count == 0 ? 1 : Model.Trend.Max(p => Math.Max(p.Landings, p.Downloads)));
+    // v1.11.87: SVG-Zahlen mit InvariantCulture (Punkt) — de-DE würde "18,0"
+    // erzeugen und die Balken unsichtbar machen. n/lblStep für die Datums-Achse.
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string F(double v) => v.ToString("0.0", inv);
+    var n = Model.Trend.Count;
+    var lblStep = n <= 16 ? 1 : (int)Math.Ceiling(n / 12.0);
 
     string RangeUrl(int days)
     {
@@ -101,21 +107,11 @@
     }
     else
     {
-        @{
-            var inv = System.Globalization.CultureInfo.InvariantCulture;
-            string F(double v) => v.ToString("0.0", inv);
-            var n = Model.Trend.Count;
-            // Datums-Labels ausdünnen, wenn viele Tage (sonst überlappen sie).
-            var lblStep = n <= 16 ? 1 : (int)Math.Ceiling(n / 12.0);
-        }
         <div style="overflow-x:auto">
             <div style="position:relative;min-width:340px">
                 <span style="position:absolute;top:3px;left:6px;font-size:.62rem;color:#8094AA">@maxY</span>
                 <svg viewBox="0 0 600 200" preserveAspectRatio="none" style="width:100%;height:220px;background:var(--tw-gray-100);border-radius:6px">
                     @{
-                        // v1.11.85: SVG-Zahlen mit InvariantCulture (Punkt) — sonst
-                        // macht de-DE aus 18.0 ein "18,0" (Komma) → ungültige SVG-
-                        // Koordinate → keine Balken (früher "immer grau").
                         var W = 600.0; var H = 200.0; var pad = 18.0;
                         var barW = (W - 2 * pad) / n;
                         for (int i = 0; i < n; i++)
