@@ -25,7 +25,23 @@ enum TmpFile {
         // Verzeichnis vorbereiten — wir ignorieren „exists"-Fehler; das
         // UUID ist neu, kann eigentlich nicht kollidieren.
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        return base.appendingPathComponent(filename.isEmpty ? "file" : filename)
+        // v1.11.82 (Security-Review): Datenschutzklasse für (potenziell sensible) Downloads
+        // — lesbar solange offen (QuickLook/AVPlayer), sonst bei gesperrtem Gerät geschützt.
+        // Best-effort; das tmp-Verzeichnis wird von iOS ohnehin nicht ins Backup übernommen.
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUnlessOpen], ofItemAtPath: base.path)
+        return base.appendingPathComponent(Self.sanitizedFilename(filename))
+    }
+
+    /// v1.11.82 (Security-Review): server-gelieferter Dateiname darf keine Pfad-Separatoren
+    /// oder „..“ einschleusen. Nur der letzte Pfad-Bestandteil, Separatoren entschärft.
+    /// (Der Schreibpfad bleibt so oder so im App-Sandbox-tmp, das ist Defense-in-Depth.)
+    private static func sanitizedFilename(_ name: String) -> String {
+        var n = (name as NSString).lastPathComponent
+        n = n.replacingOccurrences(of: "/", with: "_")
+             .replacingOccurrences(of: "\\", with: "_")
+        n = n.trimmingCharacters(in: CharacterSet(charactersIn: " ."))
+        return n.isEmpty ? "file" : n
     }
 
     /// iPad-safe Share-Sheet. Auf iPhone verhält es sich wie üblich modal,

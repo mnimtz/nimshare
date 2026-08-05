@@ -19,7 +19,12 @@ enum Keychain {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            // v1.11.82 (Security-Review): WhenUnlocked statt AfterFirstUnlock — das
+            // Voll-Session-Token darf nur bei entsperrtem Gerät entschlüsselbar sein,
+            // nicht dauerhaft nach dem ersten Unlock seit Boot. ThisDeviceOnly bleibt
+            // (kein iCloud-Sync, kein Backup-Leak). Die App liest den Token ohnehin nur
+            // im Vordergrund (Login/Bootstrap/Request-Header), kein Background-Bedarf.
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
         return SecItemAdd(q as CFDictionary, nil) == errSecSuccess
     }

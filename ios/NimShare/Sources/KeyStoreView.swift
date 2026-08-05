@@ -102,7 +102,16 @@ struct KeyStoreView: View {
             KeyStoreEntrySheet(existing: e) { Task { await load() } }
         }
         .alert("Lizenzschlüssel", isPresented: Binding(get: { revealedValue != nil }, set: { if !$0 { revealedValue = nil } })) {
-            Button("Kopieren") { UIPasteboard.general.string = revealedValue }
+            Button("Kopieren") {
+                // v1.11.82 (Security-Review): Lizenzschlüssel ist ein Secret — lokal-only
+                // in die Zwischenablage und nach 60 s automatisch löschen.
+                if let v = revealedValue {
+                    UIPasteboard.general.setItems(
+                        [["public.utf8-plain-text": v]],
+                        options: [.localOnly: true,
+                                  .expirationDate: Date().addingTimeInterval(60)])
+                }
+            }
             Button("Schließen", role: .cancel) { revealedValue = nil }
         } message: { Text(revealedValue ?? "") }
         .alert("Fehler", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
