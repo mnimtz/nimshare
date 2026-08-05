@@ -25,7 +25,11 @@ public class AiPostProcessor : IAiPostProcessor
     // Jetzt: max 2 gleichzeitige AI-Runs, alle weiteren warten in Reihe.
     // Semaphore statt Channel gewählt weil kein Fairness-Requirement und
     // fire-and-forget Semantik erhalten bleibt.
-    private static readonly SemaphoreSlim _concurrency = new(2, 2);
+    // v1.11.82: nach dem OOM-Vorfall (2026-08-05) von 2 auf 1 gesenkt. Zusammen
+    // mit dem Größen-Cap in ExtractTextAsync bleibt der Speicher-Peak beim
+    // (Re-)Indexieren bei EINER Datei — kein paralleles Vielfaches mehr, und
+    // weniger SQLite-Writer-Contention (busy_timeout blockiert sonst Threads).
+    private static readonly SemaphoreSlim _concurrency = new(1, 1);
 
     public AiPostProcessor(IServiceScopeFactory scopes, ILogger<AiPostProcessor> log)
     {

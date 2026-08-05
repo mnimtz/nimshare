@@ -762,6 +762,17 @@ public class AiController : ControllerBase
         // Embeddings. Marcus's Bug-Report: Chat/Suche antworten fast nie.
         var embsAll = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
         var embs = embsAll.Where(e => e.Model == queryModel).ToList();
+        // v1.11.82: 0 Treffer trotz vorhandener Embeddings = Modell-Label-
+        // Mismatch (Index mit anderem Modell als die aktuelle Query). War bislang
+        // still ("Keine passenden Dateien") — jetzt sichtbar im Log, damit ein
+        // gezieltes Relabel/Re-Embed entschieden werden kann statt blind (und
+        // riskant) zu reindexieren. Siehe Vorfall 2026-08-05.
+        if (embs.Count == 0 && embsAll.Count > 0)
+        {
+            var storedModels = string.Join(", ", embsAll.Select(e => e.Model).Distinct());
+            Console.Error.WriteLine(
+                $"[Retrieve] Embedding-Modell-Mismatch: query='{queryModel}', gespeichert=[{storedModels}] über {embsAll.Count} Embeddings. Relabel oder gezieltes Re-Embed nötig.");
+        }
         var scored = new List<(Guid Id, double Score)>();
         foreach (var e in embs)
         {
