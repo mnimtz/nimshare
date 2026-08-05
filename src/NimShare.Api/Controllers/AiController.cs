@@ -1011,6 +1011,71 @@ public class AiController : ControllerBase
         return Ok(new { queued = ids.Count });
     }
 
+    /// <summary>v1.11.83: Admin-Diagnose für den KI-Chat/Suche-"0 Treffer"-Fall.
+    /// Zeigt, mit welchem Embedding-Modell-Label die vorhandenen Vektoren
+    /// gespeichert sind vs. welches Label die aktuelle Query erzeugt — ein
+    /// Mismatch ist die Ursache für "Keine passenden Dateien" trotz Index
+    /// (siehe RetrieveHitsAsync). Rein lesend; als Admin im Browser aufrufbar:
+    /// GET /api/v1/ai/embedding-stats</summary>
+    [Authorize(Policy = "ApiUser")]
+    [HttpGet("embedding-stats")]
+    public async Task<IActionResult> EmbeddingStats(
+        [FromServices] ICurrentUserService users, CancellationToken ct)
+    {
+        var me = await users.GetOrProvisionAsync(User, ct);
+        if (me.Role != UserRole.Admin)
+            return Problem(statusCode: 403, title: "Nur für Admins.");
+
+        // Nur die Modell-Labels laden (nicht die Vektor-Bytes) und im Speicher
+        // gruppieren — leicht und ohne EF-GroupBy-Übersetzungsrisiko auf SQLite.
+        var labels = await _db.FileEmbeddings.Select(e => e.Model).ToListAsync(ct);
+        var storedModels = labels
+            .GroupBy(m => m)
+            .Select(g => new { model = g.Key, count = g.Count() })
+            .OrderByDescending(x => x.count)
+            .ToList();
+
+        var totalEmbeddings = labels.Count;
+        var readyFiles = await _db.Files.CountAsync(
+            f => f.Status == StorageFileStatus.Ready, ct);
+        var filesWithoutEmbedding = await _db.Files.CountAsync(
+            f => f.Status == StorageFileStatus.Ready
+                 && !_db.FileEmbeddings.Any(e => e.FileId == f.Id), ct);
+
+        // Aktuelles Query-Modell live ermitteln (ein billiger Ping-Embed).
+        string? queryModel = null;
+        string? providerError = null;
+        try
+        {
+            var provider = await _ai.CreateProviderAsync(ct);
+            var res = await provider.EmbedAsync("ping", ct);
+            if (res is { } r) queryModel = r.Model;
+            else providerError = (provider as OpenAiProvider)?.LastError
+                              ?? (provider as GeminiProvider)?.LastError
+                              ?? "Provider lieferte kein Embedding.";
+        }
+        catch (Exception ex) { providerError = ex.Message; }
+
+        var mismatch = queryModel != null && storedModels.Count > 0
+            && storedModels.All(s => s.model != queryModel);
+
+        return Ok(new
+        {
+            queryModel,
+            providerError,
+            storedModels,
+            totalEmbeddings,
+            readyFiles,
+            filesWithoutEmbedding,
+            mismatch,
+            hint = storedModels.Count == 0
+                ? "Keine Embeddings vorhanden — Index ist leer."
+                : mismatch
+                    ? "MISMATCH: gespeicherte Vektoren tragen ein anderes Modell-Label als die aktuelle Query → Relabel (wenn real dasselbe Modell) oder gezieltes Re-Embed nötig, KEIN Reindex."
+                    : "Kein Label-Mismatch: Query- und Index-Label passen zusammen."
+        });
+    }
+
     // ── #4 Guided upload-request cover email ───────────────────────────────
 
     public record GuidedUrReq(Guid LinkId, string RecipientEmail, string? Context);
