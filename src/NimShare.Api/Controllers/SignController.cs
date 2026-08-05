@@ -643,7 +643,8 @@ public class SignController : Controller
 
         // Stash a token for the delegate. Same shape as the initial invite —
         // raw token in the URL, hash on the participant row.
-        var raw = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        // v1.11.81: use the CSPRNG (consistent with all other tokens) instead of two GUIDs.
+        var raw = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
         var hash = _hasher.Hash(raw);
 
         var delegateP = new SignatureParticipant

@@ -86,7 +86,7 @@
         @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
         {
             <div class="card" style="background:var(--tw-gray-100);margin-bottom:12px">
-                @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
+                @Html.Raw(NimShare.Api.Services.SafeMarkdown.ToHtml(theme.BodyMarkdown))
             </div>
         }
         <p class="muted">@T["sign.hello"] <strong>@Model.Me.Name</strong>, @Model.Request.Initiator?.DisplayName @(isSigner ? T["sign.asks_you_to_sign"].Value : T["sign.asks_you_to_ack"].Value)</p>

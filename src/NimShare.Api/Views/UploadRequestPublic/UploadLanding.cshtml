@@ -44,7 +44,7 @@
         @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
         {
             <div style="margin:var(--sp-4) 0;line-height:1.55">
-                @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
+                @Html.Raw(NimShare.Api.Services.SafeMarkdown.ToHtml(theme.BodyMarkdown))
             </div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))

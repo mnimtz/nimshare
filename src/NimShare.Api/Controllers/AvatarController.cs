@@ -53,6 +53,23 @@ public class AvatarController : Controller
         Response.Headers.CacheControl = user.ShowAvatarOnLandings
             ? "public, max-age=604800"
             : "private, max-age=604800";
-        return File(stream, contentType ?? "image/png");
+        // v1.11.81: Defense-in-depth. Uploads are now content-type-whitelisted, but any
+        // blob stored before that fix (or with an unexpected type) must never be served as
+        // a scriptable type. Clamp to a safe raster whitelist and forbid MIME sniffing so
+        // the browser can't reinterpret the bytes as HTML/SVG and execute script in-origin.
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(stream, SafeServeContentType(contentType));
     }
+
+    private static string SafeServeContentType(string? stored) =>
+        (stored ?? "").Trim().ToLowerInvariant() switch
+        {
+            "image/png" => "image/png",
+            "image/jpeg" or "image/jpg" => "image/jpeg",
+            "image/webp" => "image/webp",
+            "image/gif" => "image/gif",
+            // Anything else (incl. image/svg+xml, text/html) is served as an opaque
+            // download rather than an inline, script-capable document.
+            _ => "application/octet-stream",
+        };
 }

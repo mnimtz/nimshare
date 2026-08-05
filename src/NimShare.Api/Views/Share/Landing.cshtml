@@ -44,7 +44,7 @@
         @if (!string.IsNullOrEmpty(Model.Theme.BodyMarkdown))
         {
             <div style="margin:var(--sp-4) 0;line-height:1.55">
-                @Html.Raw(Markdig.Markdown.ToHtml(Model.Theme.BodyMarkdown))
+                @Html.Raw(NimShare.Api.Services.SafeMarkdown.ToHtml(Model.Theme.BodyMarkdown))
             </div>
         }
         <p class="landing-meta">

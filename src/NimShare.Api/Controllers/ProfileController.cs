@@ -110,6 +110,17 @@ public class ProfileController : Controller
             TempData["Error"] = _l["err.image_too_large"].Value;
             return RedirectToAction(nameof(Index));
         }
+        // v1.11.81: NIE den vom Client gelieferten Content-Type übernehmen. Ein als
+        // image/svg+xml oder text/html hochgeladenes "Bild" wird von AvatarController
+        // inline (und für opted-in Landings anonym) ausgeliefert und im App-Origin als
+        // Script ausgeführt → Stored XSS. Nur echte Raster-Bilder zulassen und mit einem
+        // festen, sicheren Content-Type speichern.
+        var safeContentType = SafeAvatarContentType(file.ContentType);
+        if (safeContentType is null)
+        {
+            TempData["Error"] = _l["err.no_image"].Value;
+            return RedirectToAction(nameof(Index));
+        }
         // Store as a single fixed blob path per user; overwrite on re-upload.
         var path = $"users/{me.Id:N}/avatar.png";
         var ticket = blobs.CreateUploadTicket(path);
@@ -118,7 +129,7 @@ public class ProfileController : Controller
         using (var content = new StreamContent(file.OpenReadStream()))
         {
             content.Headers.Add("x-ms-blob-type", "BlockBlob");
-            content.Headers.Add("x-ms-blob-content-type", file.ContentType ?? "image/png");
+            content.Headers.Add("x-ms-blob-content-type", safeContentType);
             var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
             if (!resp.IsSuccessStatusCode)
             {
@@ -132,6 +143,19 @@ public class ProfileController : Controller
         TempData["Notice"] = _l["notice.avatar_updated"].Value;
         return RedirectToAction(nameof(Index));
     }
+
+    // Whitelist of genuinely safe, browser-inline-renderable raster image types.
+    // Deliberately excludes image/svg+xml (can carry <script>) and everything else.
+    // Returns the canonical safe content-type to store, or null to reject the upload.
+    private static string? SafeAvatarContentType(string? clientContentType) =>
+        (clientContentType ?? "").Trim().ToLowerInvariant() switch
+        {
+            "image/png" => "image/png",
+            "image/jpeg" or "image/jpg" => "image/jpeg",
+            "image/webp" => "image/webp",
+            "image/gif" => "image/gif",
+            _ => null,
+        };
 
     [HttpPost("/settings/profile/avatar/remove")]
     [ValidateAntiForgeryToken]
