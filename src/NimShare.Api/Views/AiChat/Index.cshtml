@@ -1,9 +1,7 @@
-@using NimShare.Api.Services
 @{
     ViewData["Title"] = T["chat.title"];
     Layout = "_AppShell";
     var enabled = (bool)(ViewData["Enabled"] ?? false);
-    var groups = (List<GroupSummary>)(ViewData["Groups"] ?? new List<GroupSummary>());
 }
 <div class="page-header">
     <div>
@@ -31,10 +29,6 @@ else
             <select id="chatScope">
                 <option value="Public" selected>@T["browse.tile.public"]</option>
                 <option value="Personal">@T["browse.tile.personal"]</option>
-                @foreach (var g in groups)
-                {
-                    <option value="Group|@g.Id">@g.Name</option>
-                }
             </select>
             <span class="chat-toolbar-note muted">@T["chat.note"]</span>
         </div>

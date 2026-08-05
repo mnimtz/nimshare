@@ -82,18 +82,29 @@ public class LandingTemplateController : Controller
         if (t is null) return Forbid();
         if (file is null || file.Length == 0) return BadRequest();
         if (file.Length > 5 * 1024 * 1024) { TempData["Error"] = "Bild ist zu groß (max 5 MB)."; return Redirect(backUrl); }
-        var ct2 = (file.ContentType ?? "image/png").ToLowerInvariant();
-        if (!ct2.StartsWith("image/")) { TempData["Error"] = "Nur Bilder erlaubt."; return Redirect(backUrl); }
+        var declared = (file.ContentType ?? "image/png").ToLowerInvariant();
+        // v1.11.81: nur echte Raster-Bilder. image/svg+xml wurde vorher akzeptiert und
+        // von ServeImage anonym inline als image/svg+xml ausgeliefert — ein SVG kann
+        // <script> enthalten, das im App-Origin ausgeführt wird (Stored XSS). SVG (und
+        // jeder andere Nicht-Raster-Typ) wird jetzt abgelehnt.
+        string? ext = null, safeCt = null;
+        switch (declared)
+        {
+            case "image/png": ext = "png"; safeCt = "image/png"; break;
+            case "image/jpeg": case "image/jpg": ext = "jpg"; safeCt = "image/jpeg"; break;
+            case "image/webp": ext = "webp"; safeCt = "image/webp"; break;
+            case "image/gif": ext = "gif"; safeCt = "image/gif"; break;
+        }
+        if (ext is null) { TempData["Error"] = "Nur Bilder (PNG, JPEG, WebP, GIF) erlaubt."; return Redirect(backUrl); }
 
         // Blob path scoped per template so re-uploads overwrite cleanly.
-        var ext = ct2 switch { "image/png" => "png", "image/jpeg" => "jpg", "image/webp" => "webp", "image/svg+xml" => "svg", _ => "img" };
         var path = $"landing/{t.Id:N}/{kind}.{ext}";
         var ticket = _blobs.CreateUploadTicket(path);
         using var http = new HttpClient();
         using (var content = new StreamContent(file.OpenReadStream()))
         {
             content.Headers.Add("x-ms-blob-type", "BlockBlob");
-            content.Headers.Add("x-ms-blob-content-type", ct2);
+            content.Headers.Add("x-ms-blob-content-type", safeCt);
             var resp = await http.PutAsync(ticket.UploadUrl, content, ct);
             if (!resp.IsSuccessStatusCode)
             {
@@ -148,10 +159,13 @@ public class LandingTemplateController : Controller
                 ".png" => "image/png",
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".webp" => "image/webp",
-                ".svg" => "image/svg+xml",
+                ".gif" => "image/gif",
+                // v1.11.81: legacy-gespeicherte .svg NIE mehr inline als image/svg+xml
+                // ausliefern (Stored XSS) — als opaquer Download behandeln.
                 _ => "application/octet-stream",
             };
             Response.Headers["Cache-Control"] = "public, max-age=300";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
             return File(ms, ct2);
         }
         catch { return NotFound(); }

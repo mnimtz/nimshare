@@ -10,6 +10,7 @@
   <data name="nav.dashboard"><value>Dashboard</value></data>
   <data name="nav.upload"><value>Uploaden</value></data>
   <data name="nav.links"><value>Links</value></data>
+  <data name="nav.reporting"><value>Rapportage</value></data>
   <data name="nav.settings"><value>Instellingen</value></data>
   <data name="nav.password"><value>Wachtwoord</value></data>
   <data name="nav.users"><value>Gebruikers</value></data>
@@ -132,6 +133,11 @@
   <data name="links.revoked"><value>Ingetrokken</value></data>
   <data name="links.expired"><value>Verlopen</value></data>
   <data name="links.action.revoke"><value>Intrekken</value></data>
+  <data name="links.filter.all_people"><value>Alle personen</value></data>
+  <data name="links.action.edit_expiry"><value>Vervaldatum wijzigen…</value></data>
+  <data name="links.expiry.title"><value>Vervaldatum wijzigen</value></data>
+  <data name="links.expiry.prompt"><value>Nieuwe vervaldatum (JJJJ-MM-DD). Laat leeg zodat de link nooit verloopt.</value></data>
+  <data name="links.expiry.invalid"><value>Voer een datum in het formaat JJJJ-MM-DD in.</value></data>
   <data name="links.action.delete"><value>Verwijderen</value></data>
   <data name="links.action.copy"><value>URL kopiëren</value></data>
   <data name="links.action.email"><value>Per e-mail versturen</value></data>
@@ -221,6 +227,7 @@
   <data name="landing.password.label"><value>Deze link is beveiligd — voer het wachtwoord in:</value></data>
   <data name="landing.download.button"><value>Downloaden</value></data>
   <data name="landing.powered_by"><value>Mogelijk gemaakt door</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>Ook beschikbaar voor iOS</value></data>
   <data name="landing.brand_note"><value>Gestyled volgens de Tungsten Automation-richtlijnen.</value></data>
 
   <data name="share.password.error"><value>Onjuist wachtwoord. Probeer opnieuw.</value></data>
@@ -1105,6 +1112,7 @@ Open deze link om te tekenen:
   <data name="certs.origin.self"><value>Zelfondertekend</value></data>
   <data name="certs.origin.import"><value>Geïmporteerd</value></data>
   <data name="certs.col.name"><value>Naam</value></data>
+  <data name="certs.col.owner"><value>Eigenaar</value></data>
   <data name="certs.col.subject"><value>Onderwerp</value></data>
   <data name="certs.col.valid"><value>Geldig</value></data>
   <data name="certs.col.origin"><value>Herkomst</value></data>
@@ -1390,6 +1398,20 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Tijdzone</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Notitie</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Concept aangemaakt</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Uitnodiging verzonden</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Herinnering verzonden</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Herinnering handmatig verzonden</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>Aan de beurt (opeenvolgende ondertekening)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Automatisch geannuleerd — deadline verstreken</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Ondertekend met certificaatstempel</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Ondertekend met eigen certificaat</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Bevestigd (geen scrolgegevens beschikbaar)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>E-mailbezorging mislukt: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Gedelegeerd aan {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Overgenomen als gedelegeerde van {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Pagina's {0} van {1} bekeken</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Pagina's {0} bekeken</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Dit logboek wordt live uit de database opgebouwd. Archiveer de JSON-export apart voor een onveranderlijk record.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Privacy</value></data>
   <data name="nav.support" xml:space="preserve"><value>Support</value></data>
@@ -1427,6 +1449,9 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>De door de instantie geconfigureerde SMTP-server of Resend/SendGrid, gebruikt om ondertekeningsuitnodigingen, wachtwoordresets en meldingen te versturen.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>AI-provider (optioneel)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Als AI-functies door de beheerder zijn ingeschakeld, worden documentinhoud — en, waar relevant, je weergavenaam of het e-mailadres van een ontvanger (bij door AI opgestelde uitnodigingen) — naar de geconfigureerde provider (OpenAI, Anthropic, Azure OpenAI) gestuurd, uitsluitend voor dat specifieke verzoek, nooit voor training. Deze providers zijn contractueel verplicht deze gegevens op een niveau te beschermen dat gelijkwaardig is aan het onze.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>AI-verwerking (opt-in)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Sommige AI-functies — semantisch zoeken, chatten met je bestanden, automatische samenvattingen, slimme tags, risicodetectie van inhoud en door AI opgestelde berichten — sturen delen van je bestandsinhoud, of in sommige gevallen het e-mailadres van een ontvanger, naar een externe AI-provider die door je beheerder is geconfigureerd (OpenAI, Anthropic, Google Gemini of Azure OpenAI). Dit gebeurt alleen voor het specifieke verzoek dat je doet en wordt nooit gebruikt om de modellen van de provider te trainen.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Deze functies zijn strikt opt-in: er wordt niets naar een AI-provider gestuurd totdat je expliciet toestemming geeft in de app of het webdashboard. Je kunt je toestemming op elk moment intrekken in je accountinstellingen, waardoor alle AI-functies voor je account onmiddellijk worden uitgeschakeld.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Bewaartermijn</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Bestanden blijven bewaard totdat u ze handmatig verwijdert of uw account verwijdert. Ondertekeningsaudits blijven om bewijsredenen 10 jaar bewaard (wettelijke bewaartermijn). Toegangslogs van openbare links worden na 12 maanden geanonimiseerd.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Uw rechten</value></data>
@@ -1702,6 +1727,24 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="report.access_kind.serial_emailed"><value>Serienummer per e-mail verzonden</value></data>
   <data name="report.access_kind.keystore_revealed"><value>Licentiesleutel getoond</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Licentiesleutel per e-mail verzonden</value></data>
+  <data name="reporting.title" xml:space="preserve"><value>Rapportage</value></data>
+  <data name="reporting.lede" xml:space="preserve"><value>Analyses van je links — filterbaar op periode, eigenaar en groep.</value></data>
+  <data name="reporting.filter.from" xml:space="preserve"><value>Van</value></data>
+  <data name="reporting.filter.to" xml:space="preserve"><value>Tot</value></data>
+  <data name="reporting.filter.owner" xml:space="preserve"><value>Persoon</value></data>
+  <data name="reporting.filter.group" xml:space="preserve"><value>Groep</value></data>
+  <data name="reporting.filter.all" xml:space="preserve"><value>Alle</value></data>
+  <data name="reporting.filter.apply" xml:space="preserve"><value>Toepassen</value></data>
+  <data name="reporting.filter.range_7" xml:space="preserve"><value>7 dagen</value></data>
+  <data name="reporting.filter.range_30" xml:space="preserve"><value>30 dagen</value></data>
+  <data name="reporting.filter.range_90" xml:space="preserve"><value>90 dagen</value></data>
+  <data name="reporting.tile.links" xml:space="preserve"><value>Links aangemaakt</value></data>
+  <data name="reporting.chart.title" xml:space="preserve"><value>Activiteit over tijd</value></data>
+  <data name="reporting.empty.trend" xml:space="preserve"><value>Geen activiteit in de gekozen periode.</value></data>
+  <data name="reporting.card.top_links" xml:space="preserve"><value>Toplinks</value></data>
+  <data name="reporting.empty.top_links" xml:space="preserve"><value>Geen toegangen in de gekozen periode.</value></data>
+  <data name="reporting.col.link" xml:space="preserve"><value>Link</value></data>
+  <data name="reporting.col.owner" xml:space="preserve"><value>Eigenaar</value></data>
   <data name="upload.date_subfolders_label"><value>Sorteren in datum-submappen</value></data>
   <data name="upload.date_subfolders_hint"><value>Elke upload komt ook in een submap met de datum als naam (bijv. 2026-07-28), zodat je later makkelijker terugvindt wat wanneer binnenkwam.</value></data>
   <data name="links.uploads.section"><value>Uploads</value></data>

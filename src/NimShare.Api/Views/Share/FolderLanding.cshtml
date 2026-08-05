@@ -16,6 +16,13 @@
         while (v >= 1024 && i < u.Length - 1) { v /= 1024; i++; }
         return $"{v:0.##} {u[i]}";
     }
+    // v2.0.4: gleiche Icon-Badge wie Share/Landing.cshtml (Single-File),
+    // damit die Ordner-Dateiliste optisch dieselbe Sprache spricht.
+    string GetExt(string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).TrimStart('.').ToUpperInvariant();
+        return string.IsNullOrEmpty(ext) ? "FILE" : (ext.Length > 4 ? ext[..4] : ext);
+    }
     // v1.10.167: Gallery-Modus. Bilder + Videos werden aus der klassischen
     // Liste in ein Grid+Lightbox gelöst; andere Dateitypen (Docs, ZIPs,
     // Audio) landen in einer schlanken „weitere Dateien"-Zeile darunter.
@@ -95,7 +102,7 @@
         @if (!string.IsNullOrWhiteSpace(theme?.BodyMarkdown))
         {
             <div style="margin:var(--sp-4) 0;line-height:1.55">
-                @Html.Raw(Markdig.Markdown.ToHtml(theme.BodyMarkdown))
+                @Html.Raw(NimShare.Api.Services.SafeMarkdown.ToHtml(theme.BodyMarkdown))
             </div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.MessageHtml))
@@ -550,31 +557,29 @@
             {
                 <details style="margin-top:var(--sp-6)">
                     <summary style="cursor:pointer;color:@accent;font-weight:600">@T["landing.gallery.other_files"] (@otherFiles.Count)</summary>
-                    <table class="table table-cards-mobile" style="margin-top:var(--sp-3)">
-                        <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
-                        <tbody>
-                        @foreach (var f in otherFiles)
-                        {
-                            <tr>
-                                <td data-th="@T["file.name"]">@f.Name</td>
-                                <td class="muted" data-th="@T["file.size"]">@Bytes(f.SizeBytes)</td>
-                                <td>
-                                    <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
-                                        @if (Model.HasPassword)
-                                        {
-                                            <input type="hidden" name="password" id="pw-@f.Id" required/>
-                                            <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                        }
-                                        else
-                                        {
-                                            <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                        }
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+                    <div class="folder-file-list">
+                    @foreach (var f in otherFiles)
+                    {
+                        <div class="folder-file-row">
+                            <div class="icon">@GetExt(f.Name)</div>
+                            <div class="meta">
+                                <span class="name">@f.Name</span>
+                                <span class="sub">@Bytes(f.SizeBytes)</span>
+                            </div>
+                            <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id">
+                                @if (Model.HasPassword)
+                                {
+                                    <input type="hidden" name="password" id="pw-@f.Id" required/>
+                                    <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                                }
+                            </form>
+                        </div>
+                    }
+                    </div>
                 </details>
             }
 
@@ -589,31 +594,29 @@
         }
         else
         {
-            <table class="table table-cards-mobile" style="margin-top:var(--sp-6)">
-                <thead><tr><th>@T["file.name"]</th><th>@T["file.size"]</th><th></th></tr></thead>
-                <tbody>
-                @foreach (var f in Model.Files)
-                {
-                    <tr>
-                        <td data-th="@T["file.name"]">@f.Name</td>
-                        <td class="muted" data-th="@T["file.size"]">@Bytes(f.SizeBytes)</td>
-                        <td>
-                            <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id" style="display:inline">
-                                @if (Model.HasPassword)
-                                {
-                                    <input type="hidden" name="password" id="pw-@f.Id" required/>
-                                    <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                }
-                                else
-                                {
-                                    <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                }
-                            </form>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
+            <div class="folder-file-list">
+            @foreach (var f in Model.Files)
+            {
+                <div class="folder-file-row">
+                    <div class="icon">@GetExt(f.Name)</div>
+                    <div class="meta">
+                        <span class="name">@f.Name</span>
+                        <span class="sub">@Bytes(f.SizeBytes)</span>
+                    </div>
+                    <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id">
+                        @if (Model.HasPassword)
+                        {
+                            <input type="hidden" name="password" id="pw-@f.Id" required/>
+                            <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
+                        }
+                    </form>
+                </div>
+            }
+            </div>
         }
         @* v1.10.181: „Alle herunterladen" als ZIP am Ende der Landing.
            Server-Endpoint /s/{slug}/download-all packt alle Ordner-Files in
@@ -646,6 +649,7 @@
                 <text>@T["landing.powered_by"] <strong>NimShare</strong></text>
             }
         </p>
+        @await Html.PartialAsync("_AppStoreBadge")
         @await Html.PartialAsync("_LinkFeedbackWidget", Model.Slug)
     </div>
 </div>

@@ -20,7 +20,7 @@
 <form method="post" action="/settings/ai" class="card" style="max-width:820px">
     @Html.AntiForgeryToken()
     <h2 class="card-title">@T["ai.provider_section"]</h2>
-    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-end">
+    <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-start">
         <div class="field" style="flex:1;min-width:200px">
             <label for="Provider">@T["ai.provider"]</label>
             <select name="Provider" id="Provider">

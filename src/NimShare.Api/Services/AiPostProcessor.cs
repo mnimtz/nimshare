@@ -108,29 +108,37 @@ public class AiPostProcessor : IAiPostProcessor
 
             if (doEmbed)
             {
-                var vec = await provider.EmbedAsync($"{file.Name}\n\n{(text.Length > 2000 ? text[..2000] : text)}");
-                if (vec is not null && vec.Length > 0)
+                var embedResult = await provider.EmbedAsync($"{file.Name}\n\n{(text.Length > 2000 ? text[..2000] : text)}");
+                if (embedResult is { } er && er.Vector.Length > 0)
                 {
+                    var (vec, embedModel) = er;
                     var bytes = new byte[vec.Length * 4];
                     Buffer.BlockCopy(vec, 0, bytes, 0, bytes.Length);
+                    // v2.0.4: das TATSÄCHLICH verwendete Embedding-Modell
+                    // speichern (nicht mehr settings.Model — das ist der
+                    // konfigurierte Chat-Completion-Modellname, z.B. bei
+                    // Gemini eine ganz andere Zeichenkette als die Embedding-
+                    // Kandidaten aus dem Fallback in EmbedAsync). Nur so kann
+                    // RetrieveHitsAsync später prüfen, ob Query- und
+                    // Index-Vektor überhaupt aus demselben Modell stammen.
                     var existing = await db.FileEmbeddings.SingleOrDefaultAsync(e => e.FileId == file.Id);
                     if (existing is null)
                     {
                         db.FileEmbeddings.Add(new FileEmbedding
                         {
                             FileId = file.Id,
-                            Model = settings.Model ?? "default",
+                            Model = embedModel,
                             Vector = bytes,
                         });
                     }
                     else
                     {
-                        existing.Model = settings.Model ?? "default";
+                        existing.Model = embedModel;
                         existing.Vector = bytes;
                         existing.CreatedAt = DateTimeOffset.UtcNow;
                     }
                     await db.SaveChangesAsync();
-                    _log.LogInformation("Embedding created/updated for {FileId} ({Dim} dimensions).", fileId, vec.Length);
+                    _log.LogInformation("Embedding created/updated for {FileId} ({Dim} dimensions, model {Model}).", fileId, vec.Length, embedModel);
                 }
                 else
                 {

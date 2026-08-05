@@ -113,6 +113,10 @@ public class DevApiController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Url) || string.IsNullOrWhiteSpace(req.Secret)) return BadRequest();
         if (!Uri.TryCreate(req.Url, UriKind.Absolute, out var u) || !(u.Scheme == "http" || u.Scheme == "https"))
             return Problem(statusCode: 422, title: "URL muss http(s) sein.");
+        // v1.11.81: SSRF-Schutz — die Ziel-URL darf nicht auf interne/private Adressen
+        // (Cloud-Metadata, Loopback, Intranet) zeigen. Wird beim Versand erneut geprüft.
+        if (!NimShare.Api.Services.SsrfGuard.IsPubliclyRoutableHttpUrl(req.Url))
+            return Problem(statusCode: 422, title: "URL muss auf eine öffentlich erreichbare Adresse zeigen.");
         var w = new Webhook
         {
             OwnerUserId = me.Id,

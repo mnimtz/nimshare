@@ -10,6 +10,7 @@
   <data name="nav.dashboard"><value>Panel</value></data>
   <data name="nav.upload"><value>Subir</value></data>
   <data name="nav.links"><value>Enlaces</value></data>
+  <data name="nav.reporting"><value>Informes</value></data>
   <data name="nav.settings"><value>Ajustes</value></data>
   <data name="nav.password"><value>Contraseña</value></data>
   <data name="nav.users"><value>Usuarios</value></data>
@@ -243,6 +244,11 @@
   <data name="links.revoked"><value>Revocado</value></data>
   <data name="links.expired"><value>Caducado</value></data>
   <data name="links.action.revoke"><value>Revocar</value></data>
+  <data name="links.filter.all_people"><value>Todas las personas</value></data>
+  <data name="links.action.edit_expiry"><value>Cambiar caducidad…</value></data>
+  <data name="links.expiry.title"><value>Cambiar fecha de caducidad</value></data>
+  <data name="links.expiry.prompt"><value>Nueva fecha de caducidad (AAAA-MM-DD). Déjalo vacío para que el enlace nunca caduque.</value></data>
+  <data name="links.expiry.invalid"><value>Introduce una fecha en formato AAAA-MM-DD.</value></data>
   <data name="links.action.delete"><value>Eliminar</value></data>
   <data name="links.confirm.revoke"><value>¿Revocar este enlace? El archivo permanece; la URL deja de funcionar.</value></data>
   <data name="links.confirm.delete"><value>¿Eliminar este enlace de forma permanente? El archivo permanece.</value></data>
@@ -274,6 +280,7 @@
   <data name="landing.password.label"><value>Este enlace está protegido — introduce la contraseña:</value></data>
   <data name="landing.download.button"><value>Descargar</value></data>
   <data name="landing.powered_by"><value>Con la tecnología de</value></data>
+  <data name="landing.ios_app" xml:space="preserve"><value>También disponible en iOS</value></data>
   <data name="landing.brand_note"><value>Estilizado según las guías de Tungsten Automation.</value></data>
 
   <data name="share.password.error"><value>Contraseña incorrecta. Inténtalo de nuevo.</value></data>
@@ -1106,6 +1113,7 @@ Abre este enlace para firmar:
   <data name="certs.origin.self"><value>Autofirmado</value></data>
   <data name="certs.origin.import"><value>Importado</value></data>
   <data name="certs.col.name"><value>Nombre</value></data>
+  <data name="certs.col.owner"><value>Propietario</value></data>
   <data name="certs.col.subject"><value>Sujeto</value></data>
   <data name="certs.col.valid"><value>Validez</value></data>
   <data name="certs.col.origin"><value>Origen</value></data>
@@ -1391,6 +1399,20 @@ Gracias por usar NimShare.</value></data>
   <data name="sig.audit.evt.timezone" xml:space="preserve"><value>Zona horaria</value></data>
   <data name="sig.audit.evt.user_agent" xml:space="preserve"><value>User-Agent</value></data>
   <data name="sig.audit.evt.note" xml:space="preserve"><value>Nota</value></data>
+  <data name="sig.audit.note.created_draft" xml:space="preserve"><value>Borrador creado</value></data>
+  <data name="sig.audit.note.invited" xml:space="preserve"><value>Invitación enviada</value></data>
+  <data name="sig.audit.note.reminder" xml:space="preserve"><value>Recordatorio enviado</value></data>
+  <data name="sig.audit.note.manual_reminder" xml:space="preserve"><value>Recordatorio enviado manualmente</value></data>
+  <data name="sig.audit.note.sequential_turn" xml:space="preserve"><value>Su turno (firma secuencial)</value></data>
+  <data name="sig.audit.note.deadline_expired" xml:space="preserve"><value>Cancelado automáticamente — plazo vencido</value></data>
+  <data name="sig.audit.note.signed_cert_stamp" xml:space="preserve"><value>Firmado con sello de certificado</value></data>
+  <data name="sig.audit.note.signed_own_cert" xml:space="preserve"><value>Firmado con certificado propio</value></data>
+  <data name="sig.audit.note.ack_no_scroll" xml:space="preserve"><value>Confirmado (sin datos de desplazamiento)</value></data>
+  <data name="sig.audit.note.email_failed" xml:space="preserve"><value>Fallo al enviar el correo: {0}</value></data>
+  <data name="sig.audit.note.reassigned_to" xml:space="preserve"><value>Delegado a {0}</value></data>
+  <data name="sig.audit.note.reassigned_from" xml:space="preserve"><value>Asumido como delegado de {0}</value></data>
+  <data name="sig.audit.note.pages_viewed_of" xml:space="preserve"><value>Páginas {0} de {1} vistas</value></data>
+  <data name="sig.audit.note.pages_viewed" xml:space="preserve"><value>Páginas {0} vistas</value></data>
   <data name="sig.audit.footer_disclaimer" xml:space="preserve"><value>Este registro se genera en tiempo real desde la base de datos. Para un registro inmutable, archive el export JSON por separado.</value></data>
   <data name="nav.privacy" xml:space="preserve"><value>Privacidad</value></data>
   <data name="nav.support" xml:space="preserve"><value>Support</value></data>
@@ -1428,6 +1450,9 @@ Gracias por usar NimShare.</value></data>
   <data name="privacy.thirdparty.smtp_desc" xml:space="preserve"><value>El servidor SMTP configurado por la instancia, o Resend/SendGrid, utilizado para enviar invitaciones de firma, restablecimientos de contraseña y notificaciones.</value></data>
   <data name="privacy.thirdparty.ai" xml:space="preserve"><value>Proveedor de IA (opcional)</value></data>
   <data name="privacy.thirdparty.ai_desc" xml:space="preserve"><value>Si el administrador activa las funciones de IA, el contenido de los documentos — y, cuando proceda, tu nombre visible o la dirección de correo de un destinatario (para invitaciones redactadas por IA) — se envían al proveedor configurado (OpenAI, Anthropic, Azure OpenAI), únicamente para esa solicitud concreta, nunca para entrenamiento. Estos proveedores están contractualmente obligados a proteger estos datos con un nivel equivalente al nuestro.</value></data>
+  <data name="privacy.ai.title" xml:space="preserve"><value>Procesamiento con IA (opcional)</value></data>
+  <data name="privacy.ai.body" xml:space="preserve"><value>Algunas funciones de IA — búsqueda semántica, chat con tus archivos, resúmenes automáticos, etiquetas inteligentes, detección de riesgo de contenido y mensajes redactados por IA — envían partes del contenido de tus archivos, o en algunos casos la dirección de correo de un destinatario, a un proveedor de IA externo configurado por tu administrador (OpenAI, Anthropic, Google Gemini o Azure OpenAI). Esto solo ocurre para la solicitud concreta que realizas y nunca se utiliza para entrenar los modelos del proveedor.</value></data>
+  <data name="privacy.ai.consent" xml:space="preserve"><value>Estas funciones son estrictamente opcionales: no se envía nada a un proveedor de IA hasta que des tu consentimiento explícito en la app o en el panel web. Puedes revocar tu consentimiento en cualquier momento desde la configuración de tu cuenta, lo que desactiva inmediatamente todas las funciones de IA de tu cuenta.</value></data>
   <data name="privacy.retention.title" xml:space="preserve"><value>Conservación</value></data>
   <data name="privacy.retention.body" xml:space="preserve"><value>Los archivos permanecen hasta que los elimine manualmente o elimine su cuenta. Las auditorías de firma se conservan durante 10 años por motivos probatorios. Los registros de acceso a enlaces públicos se anonimizan pasados 12 meses.</value></data>
   <data name="privacy.rights.title" xml:space="preserve"><value>Sus derechos</value></data>
@@ -1703,6 +1728,24 @@ Gracias por usar NimShare.</value></data>
   <data name="report.access_kind.serial_emailed"><value>Número de serie enviado por correo</value></data>
   <data name="report.access_kind.keystore_revealed"><value>Clave de licencia mostrada</value></data>
   <data name="report.access_kind.keystore_emailed"><value>Clave de licencia enviada por correo</value></data>
+  <data name="reporting.title" xml:space="preserve"><value>Informes</value></data>
+  <data name="reporting.lede" xml:space="preserve"><value>Análisis de tus enlaces — filtrable por periodo, propietario y grupo.</value></data>
+  <data name="reporting.filter.from" xml:space="preserve"><value>Desde</value></data>
+  <data name="reporting.filter.to" xml:space="preserve"><value>Hasta</value></data>
+  <data name="reporting.filter.owner" xml:space="preserve"><value>Persona</value></data>
+  <data name="reporting.filter.group" xml:space="preserve"><value>Grupo</value></data>
+  <data name="reporting.filter.all" xml:space="preserve"><value>Todos</value></data>
+  <data name="reporting.filter.apply" xml:space="preserve"><value>Aplicar</value></data>
+  <data name="reporting.filter.range_7" xml:space="preserve"><value>7 días</value></data>
+  <data name="reporting.filter.range_30" xml:space="preserve"><value>30 días</value></data>
+  <data name="reporting.filter.range_90" xml:space="preserve"><value>90 días</value></data>
+  <data name="reporting.tile.links" xml:space="preserve"><value>Enlaces creados</value></data>
+  <data name="reporting.chart.title" xml:space="preserve"><value>Actividad en el tiempo</value></data>
+  <data name="reporting.empty.trend" xml:space="preserve"><value>Sin actividad en el periodo seleccionado.</value></data>
+  <data name="reporting.card.top_links" xml:space="preserve"><value>Enlaces principales</value></data>
+  <data name="reporting.empty.top_links" xml:space="preserve"><value>Sin accesos en el periodo seleccionado.</value></data>
+  <data name="reporting.col.link" xml:space="preserve"><value>Enlace</value></data>
+  <data name="reporting.col.owner" xml:space="preserve"><value>Propietario</value></data>
   <data name="upload.date_subfolders_label"><value>Organizar en subcarpetas por fecha</value></data>
   <data name="upload.date_subfolders_hint"><value>Cada archivo subido se guarda además en una subcarpeta con el nombre de la fecha (p. ej. 2026-07-28), para que puedas encontrarlo más fácilmente después.</value></data>
   <data name="links.uploads.section"><value>Subidas</value></data>

@@ -7,7 +7,15 @@
     <title>@ViewData["Title"] · @T["brand.product_name"]</title>
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
     <link href="https://fonts.bunny.net/css?family=red-hat-display:300,400,500,700,900&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="~/css/site.css"/>
+    @* v1.11.79: Cache-Busting per VERSION-Query — ohne das behalten Browser
+       (v.a. mobile) ihre alte site.css teils weit über den Deploy hinaus im
+       Cache, weil UseStaticFiles() standardmäßig keine Cache-Control-Header
+       setzt und Browser dann auf eigene Heuristiken zurückfallen. Symptom:
+       neues HTML-Markup trifft auf alte Regeln → sieht "unformatiert" aus,
+       bis der Cache irgendwann von selbst abläuft (Marcus's Report zu
+       FolderLanding v1.11.78 — Server hatte die neue CSS längst, sein
+       Browser noch nicht). *@
+    <link rel="stylesheet" href="~/css/site.css?v=@BuildInfo.Version"/>
     <link rel="icon" type="image/x-icon" href="~/img/favicon.ico"/>
     <link rel="icon" type="image/png" sizes="32x32" href="~/img/icon-32.png"/>
     <link rel="icon" type="image/png" sizes="192x192" href="~/img/icon-192.png"/>

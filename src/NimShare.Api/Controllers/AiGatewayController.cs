@@ -58,18 +58,20 @@ public class AiGatewayController : Controller
             // (Trailing-Whitespace, versehentlich zweiter Key drangehängt,
             // Zero-Width-Chars aus Copy-Paste, etc.). Hex-Dump der ersten
             // und letzten 4 Bytes deckt das schonungslos auf.
+            // v1.11.81: keine Key-Bytes/Präfixe mehr ausgeben (auch nicht Admin-only) — nur die
+            // diagnostisch nötigen Fakten: Länge, AIza-Präfix ja/nein, und ob am Ende Whitespace/
+            // Steuerzeichen hängen (die häufige Copy-Paste-Ursache). Kein Hex-Dump geheimer Bytes.
             var bytes = System.Text.Encoding.UTF8.GetBytes(key);
-            string hexFirst = BitConverter.ToString(bytes, 0, Math.Min(4, bytes.Length)).Replace("-", "");
-            string hexLast = bytes.Length > 4
-                ? BitConverter.ToString(bytes, bytes.Length - 4, 4).Replace("-", "")
-                : "n/a";
+            bool trailingWhitespace = bytes.Length > 0 && char.IsWhiteSpace((char)bytes[^1]);
             bool suspicious = key.Length > 45; // 39 Std + kleine Toleranz
             bool startsAIza = key.StartsWith("AIza", StringComparison.Ordinal);
-            var msg = $"OK — Key entschlüsselbar (Länge {key.Length}, startet '{key[..Math.Min(4, key.Length)]}…', erste 4 Bytes hex={hexFirst}, letzte 4 Bytes hex={hexLast}, UTF8-Bytes={bytes.Length}).";
+            var msg = $"OK — Key entschlüsselbar (Länge {key.Length}, UTF8-Bytes={bytes.Length}).";
             if (!startsAIza)
                 msg += " ⚠ Kein AIza-Präfix — ist das WIRKLICH ein Gemini-Key? OpenAI-Keys beginnen mit 'sk-'.";
+            if (trailingWhitespace)
+                msg += " ⚠ Am Ende hängt Whitespace/Steuerzeichen (Newline/Space) — vermutlich Copy-Paste-Fehler.";
             if (suspicious)
-                msg += $" ⚠ Länge {key.Length} ist ungewöhnlich (Standard Gemini-Keys sind 39 Zeichen). Möglicherweise hängt Whitespace / Newline / zweiter Key mit dran. Prüfe die letzten 4 Bytes hex — sind da 20/09/0A/0D drin, ist's Whitespace.";
+                msg += $" ⚠ Länge {key.Length} ist ungewöhnlich (Standard Gemini-Keys sind 39 Zeichen). Möglicherweise hängt Whitespace / Newline / ein zweiter Key mit dran.";
             return msg;
         }
         catch (Exception ex)
@@ -112,49 +114,6 @@ public class AiGatewayController : Controller
     }
 
     /// <summary>
-    /// v1.10.70: Reindex-Endpoint. Der Button in /settings/ai ruft ihn per
-    /// fetch()-POST. Legt alle Ready-Files (alle Scopes) wieder in die
-    /// AiPostProcessor-Queue. SemaphoreSlim(2) im PostProcessor bremst so
-    /// dass tausende gequeueter Files den Server nicht erschlagen.
-    /// Response: { queued: N } — der UI-JS ersetzt {0} damit.
-    /// </summary>
-    [HttpPost("/api/v1/ai/reindex")]
-    public async Task<IActionResult> Reindex([FromServices] IAiPostProcessor postProcessor,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
-    {
-        if (!await IsAdmin(ct)) return Forbid();
-        var s = await _ai.LoadAsync(ct);
-        if (s.Provider == AiProvider.Disabled)
-            return Problem(statusCode: 422, title: _l["ai.reindex.err_disabled"].Value);
-        if (!s.EnableSemanticSearch)
-            return Problem(statusCode: 422, title: "Semantische Suche ist deaktiviert.",
-                detail: "Ohne Semantische-Suche-Flag baut der PostProcessor keine Embeddings. Aktiviere sie oben.");
-
-        // v1.10.76: SMOKE-TEST — synchron einen einzelnen Embed-Call gegen
-        // den Provider machen und Ergebnis in die Response schreiben. Wenn
-        // der crasht (falscher API-Key, tote URL, Modell weg), sieht der
-        // Admin sofort was los ist statt "hab schon oft reindex gedrückt".
-        var provider = await _ai.CreateProviderAsync(ct);
-        var testVec = await provider.EmbedAsync("smoke-test");
-        if (testVec is null || testVec.Length == 0)
-        {
-            var err = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
-                ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
-                ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError
-                ?? _ai.LastProviderCreationFailure
-                ?? $"Provider {provider.GetType().Name} lieferte keinen Vector zurück.";
-            return Problem(statusCode: 502,
-                title: "AI-Provider liefert keine Embeddings.",
-                detail: $"Smoke-Test-Embed schlug fehl: {err}\n\nHäufigste Ursachen: API-Key falsch/abgelaufen, gewähltes Modell unterstützt kein Embedding, oder Rate-Limit. Bitte in Settings › AI-Gateway den Key neu eintragen oder Modell wechseln.");
-        }
-
-        var ids = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
-            db.Files.Where(f => f.Status == StorageFileStatus.Ready).Select(f => f.Id), ct);
-        foreach (var id in ids) postProcessor.QueueForFile(id);
-        return Ok(new { queued = ids.Count, smokeTest = "ok", vectorDim = testVec.Length });
-    }
-
-    /// <summary>
     /// v1.10.98: Diagnose-Endpoint. Zeigt sofort was mit dem AI-Setup los ist:
     /// aktueller Provider, Feature-Flags, Ready-Files vs Embeddings, letzter
     /// Fehler. Löst Marcus's „hab 20 mal Reindex geklickt, geht immer noch nicht".
@@ -184,14 +143,15 @@ public class AiGatewayController : Controller
             try
             {
                 var provider = await _ai.CreateProviderAsync(ct);
-                var vec = await provider.EmbedAsync("smoke-test");
+                var embedResult = await provider.EmbedAsync("smoke-test");
                 var lastErr = (provider as NimShare.Api.Services.OpenAiProvider)?.LastError
                     ?? (provider as NimShare.Api.Services.GeminiProvider)?.LastError
                     ?? (provider as NimShare.Api.Services.AnthropicProvider)?.LastError;
                 smokeTestResult = new
                 {
-                    ok = vec is not null && vec.Length > 0,
-                    vectorDim = vec?.Length ?? 0,
+                    ok = embedResult is not null && embedResult.Value.Vector.Length > 0,
+                    vectorDim = embedResult?.Vector.Length ?? 0,
+                    model = embedResult?.Model,
                     lastError = lastErr,
                 };
             }
@@ -204,7 +164,8 @@ public class AiGatewayController : Controller
             model = s.Model,
             endpoint = s.Endpoint,
             hasApiKey = !string.IsNullOrEmpty(apiKey),
-            apiKeyPrefix = string.IsNullOrEmpty(apiKey) ? null : apiKey.Substring(0, Math.Min(6, apiKey.Length)) + "…",
+            // v1.11.81: keine Key-Bytes preisgeben — nur maskiert, ob konfiguriert.
+            apiKeyPrefix = string.IsNullOrEmpty(apiKey) ? null : "••••••",
             flags = new
             {
                 enableSemanticSearch = s.EnableSemanticSearch,

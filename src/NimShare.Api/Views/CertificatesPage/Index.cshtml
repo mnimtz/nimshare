@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = T["certs.title"].Value;
     Layout = "_AppShell";
+    var isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
 }
 <div class="workspace-inner" style="max-width:1000px;margin:0 auto">
     <div class="page-head">
@@ -38,6 +39,10 @@
             <thead>
                 <tr>
                     <th>@T["certs.col.name"]</th>
+                    @if (isAdmin)
+                    {
+                        <th>@T["certs.col.owner"]</th>
+                    }
                     <th>@T["certs.col.subject"]</th>
                     <th>@T["certs.col.valid"]</th>
                     <th>@T["certs.col.origin"]</th>
@@ -45,7 +50,7 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody><tr><td colspan="6" class="muted">@T["certs.loading"]</td></tr></tbody>
+            <tbody><tr><td colspan="@(isAdmin ? 7 : 6)" class="muted">@T["certs.loading"]</td></tr></tbody>
         </table>
     </div>
 </div>
@@ -129,27 +134,44 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function openGen() { ['genName','genCn','genOrg','genCountry'].forEach(i => document.getElementById(i).value = ''); document.getElementById('genYears').value = '3'; document.getElementById('genDefault').checked = true; openModal('modalGen'); }
 function openImport() { ['impName','impPw'].forEach(i => document.getElementById(i).value = ''); document.getElementById('impFile').value = ''; document.getElementById('impDefault').checked = true; openModal('modalImp'); }
 
+const isAdmin = @Json.Serialize(isAdmin);
+
 async function reload() {
     const r = await fetch('/api/v1/certificates', { credentials: 'same-origin' });
     if (!r.ok) return;
     const items = await r.json();
     const tb = document.querySelector('#certList tbody');
+    const colspan = isAdmin ? 7 : 6;
     if (!items.length) {
-        tb.innerHTML = '<tr><td colspan="6" class="muted">' + @Json.Serialize(T["certs.empty"].Value) + '</td></tr>';
+        tb.innerHTML = '<tr><td colspan="' + colspan + '" class="muted">' + @Json.Serialize(T["certs.empty"].Value) + '</td></tr>';
         return;
     }
     tb.innerHTML = items.map(c => {
         const badge = c.isExpired ? ' <span class="ai-risk">⚠ ' + @Json.Serialize(T["certs.expired"].Value) + '</span>'
                     : (isSoon(c.notAfter) ? ' <span class="ai-tag">⏰ ' + @Json.Serialize(T["certs.expires_soon"].Value) + '</span>' : '');
         const origin = c.isSelfIssued ? @Json.Serialize(T["certs.origin.self"].Value) : @Json.Serialize(T["certs.origin.import"].Value);
-        return '<tr>' +
+        // v1.11.80: Admin-Cross-View — set-default/delete/export bleiben
+        // owner-only (Backend lehnt sonst mit 404 ab), darum für fremde
+        // Zertifikate nur anzeigen, keine Aktions-Buttons anbieten. Die
+        // eigenen Zertifikate bekommen zusätzlich einen farbigen Zeilen-
+        // Hintergrund, damit sie in der Gesamtliste sofort auffindbar sind.
+        const ownerCol = isAdmin ? '<td class="muted">' + esc(c.ownerName) + '</td>' : '';
+        const rowStyle = (isAdmin && c.isOwn) ? ' style="background:rgba(0,160,251,.08)"' : '';
+        const defaultCell = c.isOwn
+            ? (c.isDefault ? '★' : '<button class="btn btn-ghost" onclick="setDefault(\'' + c.id + '\')">' + @Json.Serialize(T["certs.set_default"].Value) + '</button>')
+            : (c.isDefault ? '★' : '—');
+        const actionsCell = c.isOwn
+            ? '<button class="btn btn-ghost" onclick="dlPublic(\'' + c.id + '\')" title="' + @Json.Serialize(T["certs.export_public"].Value) + '">⬇ .cer</button> ' +
+              '<button class="btn btn-ghost" onclick="delCert(\'' + c.id + '\')">🗑</button>'
+            : '';
+        return '<tr' + rowStyle + '>' +
             '<td><strong>' + esc(c.name) + '</strong>' + badge + '</td>' +
+            ownerCol +
             '<td class="muted">' + esc(c.subjectCommonName) + '</td>' +
             '<td class="muted">' + fmt(c.notBefore) + ' → ' + fmt(c.notAfter) + '</td>' +
             '<td>' + origin + '</td>' +
-            '<td>' + (c.isDefault ? '★' : '<button class="btn btn-ghost" onclick="setDefault(\'' + c.id + '\')">' + @Json.Serialize(T["certs.set_default"].Value) + '</button>') + '</td>' +
-            '<td style="text-align:right"><button class="btn btn-ghost" onclick="dlPublic(\'' + c.id + '\')" title="' + @Json.Serialize(T["certs.export_public"].Value) + '">⬇ .cer</button> ' +
-                '<button class="btn btn-ghost" onclick="delCert(\'' + c.id + '\')">🗑</button></td>' +
+            '<td>' + defaultCell + '</td>' +
+            '<td style="text-align:right">' + actionsCell + '</td>' +
             '</tr>';
     }).join('');
 }

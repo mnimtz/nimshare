@@ -1,4 +1,5 @@
 using System.Globalization;
+using ImageMagick;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -355,6 +356,15 @@ public class AiController : ControllerBase
         // Session-Gate-Cookie geprüft, den ShareController.Landing setzt.
         if (!link.IsActive(DateTimeOffset.UtcNow))
             return Problem(statusCode: 410, title: "Link no longer available");
+        // v1.11.81: Passwort-Gate. Der Passwortschutz eines Share-Links wird per
+        // Request im Download-Pfad geprüft und setzt KEINEN Session-Gate — ein
+        // Angreifer mit nur dem Slug (ohne Passwort) konnte deshalb hier eine
+        // KI-Zusammenfassung/Vision-Beschreibung des geschützten Inhalts ziehen
+        // und das Passwort komplett umgehen. Konsistent mit ShareController.Preview
+        // (Inline-Vorschau ist für passwortgeschützte Links ebenfalls gesperrt):
+        // für passwortgeschützte Links gibt es keine anonyme KI-Zusammenfassung.
+        if (link.PasswordHash is not null)
+            return Problem(statusCode: 403, title: "Password required");
         // v1.11.13: Apple-5.1.1(i) — dieser Endpoint ist [AllowAnonymous] (der
         // Besucher ist nicht eingeloggt), schickt aber den Dateiinhalt des
         // FILE-OWNERS an den AI-Provider. Ohne dessen Zustimmung darf das
@@ -392,7 +402,33 @@ public class AiController : ControllerBase
             using var ms = new MemoryStream();
             await _blobs.DownloadToAsync(file.BlobPath, ms, ct);
             var bytes = ms.ToArray();
-            summary = await provider.DescribeImageAsync(bytes, contentTypeLower, lang, ct);
+            var visionContentType = contentTypeLower;
+            // v1.11.71: Marcus's Report — HEIC/HEIF (iPhone-Fotos) landete
+            // unkonvertiert bei OpenAI's Vision-Endpoint, der nur png/jpeg/
+            // gif/webp akzeptiert ("unsupported image" 400) — der rohe
+            // Provider-Fehler wurde dabei 1:1 an den anonymen Besucher
+            // durchgereicht. Gleiche Magick.NET-Konvertierung wie
+            // ThumbnailService (HEIC→JPEG), hier synchron statt über die
+            // Thumb-Queue, weil der Vision-Call die Bytes sofort braucht.
+            if (visionContentType is "image/heic" or "image/heif" or "image/tiff" or "image/bmp")
+            {
+                try
+                {
+                    using var img = new MagickImage(bytes);
+                    img.AutoOrient();
+                    img.Format = MagickFormat.Jpeg;
+                    img.Quality = 85;
+                    using var jpegMs = new MemoryStream();
+                    img.Write(jpegMs, MagickFormat.Jpeg);
+                    bytes = jpegMs.ToArray();
+                    visionContentType = "image/jpeg";
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "HEIC/TIFF→JPEG-Konvertierung für Vision fehlgeschlagen. File={FileId}", file.Id);
+                }
+            }
+            summary = await provider.DescribeImageAsync(bytes, visionContentType, lang, ct);
             if (string.IsNullOrWhiteSpace(summary))
             {
                 // v1.10.20: NullAiProvider gets the specific reason from the
@@ -405,8 +441,13 @@ public class AiController : ControllerBase
                     ?? $"AI provider is {provider.GetType().Name} (model: {settings.Model ?? "-"}). Provider gab keinen Text und keine Fehler-Ursache zurück — Server-Log prüfen.";
                 log.LogWarning(
                     "Vision returned no result. Provider={ProviderType} Model={Model} File={FileId} ContentType={ContentType} OpenErr={OpenErr} GeminiErr={GeminiErr} AnthErr={AnthErr} CreateErr={CreateErr}",
-                    provider.GetType().Name, settings.Model, file.Id, contentTypeLower, openErr, geminiErr, anthErr, creationFailure);
-                return Problem(statusCode: 502, title: "Vision returned no result.", detail: detail);
+                    provider.GetType().Name, settings.Model, file.Id, visionContentType, openErr, geminiErr, anthErr, creationFailure);
+                // v1.11.71: der rohe Provider-Fehler (Modellname, interne
+                // Fehlercodes) ging vorher 1:1 an anonyme Landing-Besucher —
+                // Detail bleibt im Server-Log (siehe LogWarning oben), die
+                // API-Antwort an den Client ist jetzt generisch.
+                return Problem(statusCode: 502, title: "Vision returned no result.",
+                    detail: "Die Zusammenfassung konnte nicht erstellt werden.");
             }
         }
         else
@@ -716,8 +757,9 @@ public class AiController : ControllerBase
         SearchReq req, User me, IFileAccessService access, CancellationToken ct)
     {
         var provider = await _ai.CreateProviderAsync(ct);
-        var qv = await provider.EmbedAsync(req.Query, ct);
-        if (qv is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
+        var embedResult = await provider.EmbedAsync(req.Query, ct);
+        if (embedResult is null) return (false, new(), Problem(statusCode: 502, title: "Provider does not support embeddings."));
+        var (qv, queryModel) = embedResult.Value;
 
         // v1.10.104: siehe KeywordSearch — Private-Ordner filtern.
         var hidden = await access.GetHiddenPublicFolderIdsAsync(me, ct);
@@ -731,7 +773,17 @@ public class AiController : ControllerBase
         var fileIds = await readable.Select(f => f.Id).ToListAsync(ct);
         if (fileIds.Count == 0) return (true, new(), null);
 
-        var embs = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
+        // v2.0.4: erst nach dem AKTUELLEN Query-Embedding-Modell filtern,
+        // bevor überhaupt verglichen wird — vorher wurde nur die Vektor-Länge
+        // geprüft, was zwei Probleme machte: (1) unterschiedliche Modelle mit
+        // zufällig gleicher Dimension lieferten Cosine-Werte aus inkompatiblen
+        // Vektorräumen (technisch berechenbar, semantisch Unsinn), (2) bei
+        // unterschiedlicher Dimension (der häufigere Fall bei Gemini's
+        // Fallback-Kaskade, siehe AiProvider.cs) wurden ALLE Zeilen übersprungen
+        // → 0 Treffer, "Keine passenden Dateien gefunden" trotz vorhandener
+        // Embeddings. Marcus's Bug-Report: Chat/Suche antworten fast nie.
+        var embsAll = await _db.FileEmbeddings.Where(e => fileIds.Contains(e.FileId)).ToListAsync(ct);
+        var embs = embsAll.Where(e => e.Model == queryModel).ToList();
         var scored = new List<(Guid Id, double Score)>();
         foreach (var e in embs)
         {

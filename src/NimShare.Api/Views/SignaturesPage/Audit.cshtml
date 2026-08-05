@@ -288,9 +288,10 @@
                         {
                             <dt>@T["sig.audit.evt.user_agent"]</dt><dd>@a.UserAgent</dd>
                         }
-                        @if (!string.IsNullOrEmpty(a.Note))
+                        @{ var noteDisplay = SignatureAuditNoteFormatter.Display(a, T); }
+                        @if (!string.IsNullOrEmpty(noteDisplay))
                         {
-                            <dt>@T["sig.audit.evt.note"]</dt><dd class="note">@a.Note</dd>
+                            <dt>@T["sig.audit.evt.note"]</dt><dd class="note">@noteDisplay</dd>
                         }
                     </dl>
                 </div>

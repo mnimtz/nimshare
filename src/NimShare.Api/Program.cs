@@ -172,8 +172,11 @@ builder.Services.AddAuthorization(options =>
     // ApiUser accepts BOTH schemes so the same /api/v1/* endpoints work for
     //   • mobile / server-to-server clients using a JWT bearer token, AND
     //   • same-origin browser calls from the Razor UI (cookie session).
-    // Cookie-authenticated state-changing calls need antiforgery — see the
-    // [AutoValidateAntiforgeryToken] filter registered on controllers below.
+    // Cookie-authenticated state-changing calls need antiforgery. NOTE (v1.11.81): there is NO
+    // global [AutoValidateAntiforgeryToken] filter — protection relies on an explicit
+    // [ValidateAntiForgeryToken] on every form-post action plus the auth cookie's SameSite=Lax.
+    // Body-less api/v1 POSTs that carry no antiforgery token therefore lean solely on SameSite;
+    // add [ValidateAntiForgeryToken] to any new cookie-authed, state-changing endpoint.
     var schemes = entraConfigured
         ? new[] { "Bearer", JwtTokenService.SchemeName, ApiTokenAuthHandler.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme }
         : new[] { JwtTokenService.SchemeName, ApiTokenAuthHandler.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme };
@@ -370,6 +373,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ILocalAuthService, LocalAuthService>();
 builder.Services.AddScoped<IFileAccessService, FileAccessService>();
 builder.Services.AddScoped<IFolderService, FolderService>();
+builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
 // v1.10.153: NimShare-Instance-Root-CA — signiert alle in-app-erzeugten
 // User-Signing-Certs (Weg A für „intern gültig"-Trust).
@@ -730,10 +734,46 @@ else
 var fwd = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    // Only honour a single hop (the front-door proxy) so a client cannot smuggle a chain of
+    // spoofed X-Forwarded-For entries.
+    ForwardLimit = 1,
 };
 fwd.KnownNetworks.Clear();
 fwd.KnownProxies.Clear();
+// v1.11.81: Ohne bekannte Proxys akzeptiert ASP.NET X-Forwarded-* von JEDEM Aufrufer — damit
+// lässt sich die Client-IP fälschen. Das untergräbt sowohl die IP-basierte Rate-Limit-Partition
+// der "public-share"-Policy (Brute-Force auf Share-Passwörter) als auch die forensischen
+// Signatur-/Link-Audit-IPs. Wer die Front-Door-Adressen kennt, trägt sie als
+// ForwardedHeaders:KnownProxies (einzelne IPs) und/oder ForwardedHeaders:KnownNetworks
+// (CIDR "ip/prefix", kommagetrennt) ein; dann werden die Header nur von dort akzeptiert.
+foreach (var p in (builder.Configuration["ForwardedHeaders:KnownProxies"] ?? "")
+             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    if (System.Net.IPAddress.TryParse(p, out var proxyIp)) fwd.KnownProxies.Add(proxyIp);
+foreach (var n in (builder.Configuration["ForwardedHeaders:KnownNetworks"] ?? "")
+             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+{
+    var parts = n.Split('/', 2);
+    if (parts.Length == 2 && System.Net.IPAddress.TryParse(parts[0], out var netIp) && int.TryParse(parts[1], out var prefix))
+        fwd.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(netIp, prefix));
+}
+if (!app.Environment.IsDevelopment() && fwd.KnownProxies.Count == 0 && fwd.KnownNetworks.Count == 0)
+    app.Logger.LogWarning("[STARTUP] ForwardedHeaders: no KnownProxies/KnownNetworks configured — X-Forwarded-For is trusted from any client and the source IP can be spoofed (affects rate-limit partitioning and forensic audit IPs). Set ForwardedHeaders__KnownProxies / ForwardedHeaders__KnownNetworks to the front-door ranges.");
 app.UseForwardedHeaders(fwd);
+
+// v1.11.81: globale Security-Header (fehlten bisher komplett). nosniff verhindert MIME-
+// Sniffing und härtet damit alle Upload-/Avatar-/Landing-Bild-Pfade zusätzlich gegen Stored
+// XSS ab; X-Frame-Options schützt vor Clickjacking; Referrer-Policy begrenzt Referer-Leaks.
+// Header werden vor dem Response-Start gesetzt, gelten also auch für statische Dateien.
+// (Eine restriktive Content-Security-Policy wäre der nächste Schritt, braucht aber einen
+// Testlauf gegen die Inline-Skripte der Views — daher hier bewusst noch nicht gesetzt.)
+app.Use(async (ctx, next) =>
+{
+    var h = ctx.Response.Headers;
+    h["X-Content-Type-Options"] = "nosniff";
+    h["X-Frame-Options"] = "SAMEORIGIN";
+    h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
 
 if (!app.Environment.IsDevelopment())
 {

@@ -41,32 +41,44 @@ public class CertificatesApiController : ControllerBase
     public record CertDto(Guid Id, string Name, string SubjectCommonName, string Issuer,
         DateTimeOffset NotBefore, DateTimeOffset NotAfter, string Thumbprint,
         bool IsSelfIssued, bool IsDefault, DateTimeOffset? LastUsedAt, int UseCount,
-        DateTimeOffset CreatedAt, bool IsExpired);
+        DateTimeOffset CreatedAt, bool IsExpired,
+        Guid OwnerId, string OwnerName, bool IsOwn);
     public record GenerateReq(string Name, string CommonName, string? Organization,
         string? Country, int ValidityYears, bool SetAsDefault);
     public record ImportReq(string Name, string PfxBase64, string Password, bool SetAsDefault);
 
-    private static CertDto ToDto(SigningCertificate c) => new(
+    private static CertDto ToDto(SigningCertificate c, Guid viewerId, string ownerName) => new(
         c.Id, c.Name, c.SubjectCommonName, c.Issuer, c.NotBefore, c.NotAfter,
         c.Thumbprint, c.IsSelfIssued, c.IsDefault, c.LastUsedAt, c.UseCount,
-        c.CreatedAt, c.NotAfter < DateTimeOffset.UtcNow);
+        c.CreatedAt, c.NotAfter < DateTimeOffset.UtcNow,
+        c.OwnerUserId, ownerName, c.OwnerUserId == viewerId);
 
+    /// <summary>v1.11.80: Admins sehen alle Zertifikate aller Nutzer (nur
+    /// lesend — set-default/delete/export bleiben owner-only, siehe unten),
+    /// normale Nutzer weiterhin nur ihre eigenen. Sortierung setzt die
+    /// eigenen Zertifikate zuerst (matcht das bisherige Verhalten 1:1 für
+    /// Nicht-Admins), danach alphabetisch nach Besitzer.</summary>
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var now = DateTimeOffset.UtcNow;
+        var isAdmin = me.Role == UserRole.Admin;
+        var q = _db.SigningCertificates.AsQueryable();
+        if (!isAdmin) q = q.Where(c => c.OwnerUserId == me.Id);
         // Direct-to-DTO projection — avoids leaking a partially-populated
         // SigningCertificate entity (PfxDataEncrypted = null!) that a future
         // caller could accidentally re-attach and blank out.
-        var items = await _db.SigningCertificates
-            .Where(c => c.OwnerUserId == me.Id)
-            .OrderByDescending(c => c.IsDefault).ThenByDescending(c => c.CreatedAt)
+        var items = await q
+            .OrderByDescending(c => c.OwnerUserId == me.Id)
+            .ThenBy(c => c.Owner!.DisplayName)
+            .ThenByDescending(c => c.IsDefault).ThenByDescending(c => c.CreatedAt)
             .Select(c => new CertDto(
                 c.Id, c.Name, c.SubjectCommonName, c.Issuer,
                 c.NotBefore, c.NotAfter, c.Thumbprint,
                 c.IsSelfIssued, c.IsDefault, c.LastUsedAt, c.UseCount,
-                c.CreatedAt, c.NotAfter < now))
+                c.CreatedAt, c.NotAfter < now,
+                c.OwnerUserId, c.Owner!.DisplayName, c.OwnerUserId == me.Id))
             .ToListAsync(ct);
         return Ok(items);
     }
@@ -109,7 +121,7 @@ public class CertificatesApiController : ControllerBase
                 PfxDataEncrypted = wrapped,
             };
             await SaveAsync(entity, req.SetAsDefault, ct);
-            return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+            return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity, me.Id, me.DisplayName));
         }
         catch (Exception ex)
         {
@@ -202,7 +214,7 @@ public class CertificatesApiController : ControllerBase
         if (exists)
             return Problem(statusCode: 409, title: _l["certs.err.duplicate"].Value);
         await SaveAsync(entity, req.SetAsDefault, ct);
-        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity));
+        return CreatedAtAction(nameof(Get), new { id = entity.Id }, ToDto(entity, me.Id, me.DisplayName));
     }
 
     [HttpGet("{id:guid}")]
@@ -210,7 +222,7 @@ public class CertificatesApiController : ControllerBase
     {
         var me = await _users.GetOrProvisionAsync(User, ct);
         var c = await _db.SigningCertificates.SingleOrDefaultAsync(x => x.Id == id && x.OwnerUserId == me.Id, ct);
-        return c is null ? NotFound() : Ok(ToDto(c));
+        return c is null ? NotFound() : Ok(ToDto(c, me.Id, me.DisplayName));
     }
 
     /// <summary>Returns the caller's default signing certificate (or their
@@ -228,7 +240,7 @@ public class CertificatesApiController : ControllerBase
             .ThenByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(ct);
         if (c is null) return NotFound();
-        return Ok(ToDto(c));
+        return Ok(ToDto(c, me.Id, me.DisplayName));
     }
 
     [HttpPost("{id:guid}/set-default")]
@@ -328,6 +340,14 @@ public class CertificatesApiController : ControllerBase
 [Authorize]
 public class CertificatesPageController : Controller
 {
+    private readonly ICurrentUserService _users;
+    public CertificatesPageController(ICurrentUserService users) { _users = users; }
+
     [HttpGet("/signatures/certificates")]
-    public IActionResult Index() => View("Index");
+    public async Task<IActionResult> Index(CancellationToken ct)
+    {
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        ViewData["IsAdmin"] = me.Role == UserRole.Admin;
+        return View("Index");
+    }
 }

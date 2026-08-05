@@ -130,13 +130,16 @@ struct ServerConfigView: View {
     private var isValid: Bool {
         let trimmed = input.trimmingCharacters(in: .whitespaces)
         guard let u = URL(string: trimmed), let s = u.scheme else { return false }
-        return (s == "http" || s == "https") && u.host != nil
+        // v1.11.82 (Security-Review): nur HTTPS. Cleartext-HTTP würde das Bearer-Token
+        // im Klartext übertragen; ATS blockt es ohnehin zur Laufzeit, hier lehnen wir es
+        // schon in der Eingabe ab (klare Fehlermeldung statt stiller Verbindungsfehler).
+        return s.lowercased() == "https" && u.host != nil
     }
 
     private func save() {
         let trimmed = input.trimmingCharacters(in: .whitespaces)
-        guard let u = URL(string: trimmed) else {
-            error = "Ungültige URL"
+        guard let u = URL(string: trimmed), u.scheme?.lowercased() == "https", u.host != nil else {
+            error = "Bitte eine gültige HTTPS-URL angeben (http:// wird aus Sicherheitsgründen nicht unterstützt)."
             return
         }
         auth.setServer(u)
