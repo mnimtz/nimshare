@@ -1027,6 +1027,22 @@ public class AiGatewayService : IAiGatewayService
     {
         try
         {
+            // v1.11.82: Speicher-Schutz gegen OOM beim (Re-)Indexieren. Die
+            // Extraktion lädt die Datei komplett in einen MemoryStream (+ToArray
+            // +Base64 für OCR = bis zu 3 Kopien im RAM); mehrere große Dateien
+            // parallel killten die Azure-Instanz (Vorfall 2026-08-05). Über der
+            // Grenze überspringen — die Suche fällt dann auf Dateiname/AiSummary
+            // zurück, statt den Prozess zu riskieren.
+            const long MaxExtractBytes = 15L * 1024 * 1024;
+            var probe = await blobs.ProbeAsync(blobPath, ct);
+            if (probe.Exists && probe.SizeBytes > MaxExtractBytes)
+            {
+                _log.LogInformation(
+                    "Text extraction skipped for {Path}: {Size} bytes exceeds {Cap} byte cap.",
+                    blobPath, probe.SizeBytes, MaxExtractBytes);
+                return null;
+            }
+
             using var ms = new MemoryStream();
             await blobs.DownloadToAsync(blobPath, ms, ct);
             ms.Position = 0;
