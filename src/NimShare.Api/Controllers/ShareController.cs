@@ -319,22 +319,29 @@ public class ShareController : Controller
         NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, CancellationToken ct,
         Guid? linkTemplateId = null)
     {
-        // v1.12 — Custom Branding pro Link: eine link-eigene Vorlage (Scope=Link)
-        // hat Vorrang. NUR wenn gesetzt; sonst exakt der bisherige Global/
-        // UserPersonal-Fallback (unverändert). Fehlt die referenzierte Vorlage
-        // (z.B. gelöscht), fällt es ebenfalls sauber auf den Default zurück.
-        NimShare.Core.Entities.LandingTemplate? t = linkTemplateId is Guid lid
-            ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
-                x.Id == lid && x.Scope == NimShare.Core.Entities.LandingTemplateScope.Link, ct)
-            : null;
-        t ??= scope == NimShare.Core.Entities.FileScope.Personal
+        // v1.12.2 — Basis ist IMMER das Scope-Template (Instanz/Personal), exakt
+        // wie bisher. Eine link-eigene Vorlage (Custom Branding, Scope=Link)
+        // ÜBERLAGERT nur die Felder, die sie selbst gesetzt hat — leere Felder
+        // (z.B. kein Kundenlogo gefunden) fallen aufs Instanz/Personal-Branding
+        // zurück (Marcus's eigenes Logo bleibt so sichtbar). Ohne Link-Vorlage:
+        // byte-genau das bisherige Verhalten.
+        var baseT = scope == NimShare.Core.Entities.FileScope.Personal
             ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
             : await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.Global, ct);
+        NimShare.Core.Entities.LandingTemplate? linkT = linkTemplateId is Guid lid
+            ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Id == lid && x.Scope == NimShare.Core.Entities.LandingTemplateScope.Link, ct)
+            : null;
         return new LandingTheme(
-            t?.Title, t?.Subtitle, t?.BodyMarkdown, t?.FooterText,
-            t?.PrimaryColor, t?.LogoUrl, t?.HeroUrl);
+            linkT?.Title ?? baseT?.Title,
+            linkT?.Subtitle ?? baseT?.Subtitle,
+            linkT?.BodyMarkdown ?? baseT?.BodyMarkdown,
+            linkT?.FooterText ?? baseT?.FooterText,
+            linkT?.PrimaryColor ?? baseT?.PrimaryColor,
+            linkT?.LogoUrl ?? baseT?.LogoUrl,
+            linkT?.HeroUrl ?? baseT?.HeroUrl);
     }
 
     /// <summary>Inline preview stream (image or pdf). Only for password-less links —

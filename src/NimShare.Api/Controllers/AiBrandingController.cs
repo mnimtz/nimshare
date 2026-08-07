@@ -63,6 +63,7 @@ public class AiBrandingController : ControllerBase
 
         // ── Homepage-HTML holen (Timeout + Größen-Cap) ────────────────────────
         string html;
+        var finalUri = siteUri; // nach Redirects — Basis für relative Logo-URLs
         try
         {
             var http = httpFactory.CreateClient("brandfetch");
@@ -70,6 +71,9 @@ public class AiBrandingController : ControllerBase
             using var resp = await FetchGuardedAsync(http, siteUri, ct);
             if (resp is null || !resp.IsSuccessStatusCode)
                 return BadRequest(new { error = "Website nicht erreichbar (blockiert, Redirect auf interne Adresse oder Fehlerstatus)." });
+            // v1.12.2: finale URL NACH Redirects — relative Logo-Pfade müssen
+            // dagegen aufgelöst werden (basf.de → www.basf.com), sonst falscher Host.
+            finalUri = resp.RequestMessage?.RequestUri ?? siteUri;
             var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
             if (bytes.Length > 3_000_000) bytes = bytes[..3_000_000];
             html = Encoding.UTF8.GetString(bytes);
@@ -90,7 +94,7 @@ public class AiBrandingController : ControllerBase
         // ── Logo: Kandidat finden → laden → Farbe + als PNG in Blob ───────────
         var templateId = Guid.NewGuid();
         string? logoBlobPath = null, logoUrl = null;
-        var logoCandidate = ResolveLogoUri(html, siteUri);
+        var logoCandidate = ResolveLogoUri(html, finalUri);
         if (logoCandidate is not null && SsrfGuard.IsPubliclyRoutableHttpUrl(logoCandidate.ToString()))
         {
             try
