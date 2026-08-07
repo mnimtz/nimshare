@@ -99,7 +99,11 @@ public class LinksController : ControllerBase
         // u.a. KI-Auto-Fill aus der Empfänger-Domain). Verweist auf eine
         // LandingTemplate-Zeile mit Scope=Link (angelegt vom Branding-Endpoint).
         // Null = kein Custom-Branding → unveränderter Global/UserPersonal-Fallback.
-        Guid? LandingTemplateId = null);
+        Guid? LandingTemplateId = null,
+        // v1.12.7: finaler Firmenname neben dem Logo — vom Teilenden editiert.
+        // null/leer ⇒ Toggle aus bzw. kein Name → nichts neben dem Logo.
+        // Wird nur auf die EIGENE Link-Vorlage angewandt (nach Ownership-Check).
+        string? BrandName = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -300,11 +304,19 @@ public class LinksController : ControllerBase
             // per KI-Auto-Branding erzeugt hat (CreatedByUserId) — verhindert, dass
             // jemand die (per öffentlicher Logo-URL erratbare) Vorlage eines anderen
             // an seinen Link hängt.
-            var ltOk = await _db.LandingTemplates.AnyAsync(
+            var tpl = await _db.LandingTemplates.FirstOrDefaultAsync(
                 t => t.Id == ltId
                      && t.Scope == NimShare.Core.Entities.LandingTemplateScope.Link
                      && t.CreatedByUserId == user.Id, ct);
-            if (ltOk) landingTemplateId = ltId;
+            if (tpl is not null)
+            {
+                landingTemplateId = ltId;
+                // v1.12.7: finalen Firmennamen aus der Web-UI übernehmen (Edit/Toggle).
+                // Leer/null ⇒ Name aus → nichts neben dem Logo. Max 120 Zeichen.
+                var bn = req.BrandName?.Trim();
+                tpl.BrandName = string.IsNullOrEmpty(bn) ? null : (bn.Length > 120 ? bn[..120] : bn);
+                tpl.UpdatedAt = DateTimeOffset.UtcNow;
+            }
         }
 
         var link = new ShareLink

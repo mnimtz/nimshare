@@ -219,6 +219,14 @@
                 <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
                     <input type="checkbox" id="shareBrandApply" checked/> @T["share.branding.apply_label"]
                 </label>
+                @* v1.12.7: Firmenname neben dem Logo — editierbar + abschaltbar. *@
+                <div class="field" style="margin-top:10px">
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px">
+                        <input type="checkbox" id="shareBrandNameShow" checked onchange="document.getElementById('shareBrandName').disabled=!this.checked"/> @T["share.branding.name_show"]
+                    </label>
+                    <input type="text" id="shareBrandName" autocomplete="off" spellcheck="false" style="width:100%"/>
+                    <div class="helper">@T["share.branding.name_hint"]</div>
+                </div>
             </div>
         </details>
         <div id="shareResult" style="display:none">
@@ -718,6 +726,8 @@ function resetBrandingUi() {
     shareBrandTemplateId = null;
     const dom = document.getElementById('shareBrandDomain'); if (dom) dom.value = '';
     const prev = document.getElementById('shareBrandPreview'); if (prev) prev.style.display = 'none';
+    const nameInp = document.getElementById('shareBrandName'); if (nameInp) { nameInp.value = ''; nameInp.disabled = false; }
+    const nameShow = document.getElementById('shareBrandNameShow'); if (nameShow) nameShow.checked = true;
 }
 async function previewBranding() {
     const dom = (document.getElementById('shareBrandDomain').value || '').trim();
@@ -740,6 +750,11 @@ async function previewBranding() {
         document.getElementById('shareBrandSubtitle').textContent = d.subtitle || '';
         document.getElementById('shareBrandSwatch').style.background = d.primaryColor || 'transparent';
         const apply = document.getElementById('shareBrandApply'); if (apply) apply.checked = true;
+        // v1.12.7: Firmenname vorbefüllen (KI-erkannt), Anzeige-Toggle zurück auf an.
+        const nameShow = document.getElementById('shareBrandNameShow');
+        const nameInp = document.getElementById('shareBrandName');
+        if (nameInp) { nameInp.value = d.companyName || ''; nameInp.disabled = false; }
+        if (nameShow) nameShow.checked = true;
         document.getElementById('shareBrandPreview').style.display = 'block';
         // v1.12.1: sinnvollen Slug vorschlagen (Kundenname) — NUR wenn der User
         // weder einen Slug getippt noch eine Subdomain gesetzt hat (Subdomain
@@ -787,6 +802,11 @@ async function createShareLink() {
         // "Anwenden"-Haken gesetzt ist. Sonst null → Standard-Branding.
         landingTemplateId: (shareBrandTemplateId && document.getElementById('shareBrandApply')?.checked)
             ? shareBrandTemplateId : null,
+        // v1.12.7: finaler Firmenname neben dem Logo — nur wenn Branding angewandt
+        // UND "neben Logo anzeigen" an ist. Leer/aus ⇒ '' → Server zeigt nichts.
+        brandName: (shareBrandTemplateId && document.getElementById('shareBrandApply')?.checked
+                    && document.getElementById('shareBrandNameShow')?.checked)
+            ? (document.getElementById('shareBrandName')?.value || '') : '',
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

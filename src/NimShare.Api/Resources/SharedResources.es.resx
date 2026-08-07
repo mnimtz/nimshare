@@ -1824,5 +1824,7 @@ Gracias por usar NimShare.</value></data>
   <data name="share.branding.preview_btn" xml:space="preserve"><value>Vista previa IA</value></data>
   <data name="share.branding.hint" xml:space="preserve"><value>Obtenemos el logotipo, el nombre y el color del cliente y adaptamos la página de descarga.</value></data>
   <data name="share.branding.apply_label" xml:space="preserve"><value>Aplicar esta personalización al enlace</value></data>
+  <data name="share.branding.name_show" xml:space="preserve"><value>Mostrar el nombre de la empresa junto al logotipo</value></data>
+  <data name="share.branding.name_hint" xml:space="preserve"><value>Detectado por IA – editable. Déjalo vacío si el logotipo ya incluye el nombre.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>No se pudo crear una vista previa para este dominio.</value></data>
 </root>

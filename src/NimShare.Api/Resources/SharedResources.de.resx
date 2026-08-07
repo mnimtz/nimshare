@@ -1828,5 +1828,7 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.branding.preview_btn" xml:space="preserve"><value>KI-Vorschau</value></data>
   <data name="share.branding.hint" xml:space="preserve"><value>Wir holen Logo, Name und Farbe des Kunden und gestalten die Freigabeseite passend.</value></data>
   <data name="share.branding.apply_label" xml:space="preserve"><value>Dieses Branding auf den Link anwenden</value></data>
+  <data name="share.branding.name_show" xml:space="preserve"><value>Firmenname neben dem Logo anzeigen</value></data>
+  <data name="share.branding.name_hint" xml:space="preserve"><value>Von der KI erkannt – anpassbar. Leer lassen, wenn das Logo den Namen schon enthält.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Für diese Domain konnte keine Vorschau erstellt werden.</value></data>
 </root>

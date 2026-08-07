@@ -35,6 +35,11 @@
             {
                 <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
             }
+            @* v1.12.7: Firmenname neben dem Kundenlogo (nur Custom-Branding, opt-in). *@
+            @if (!string.IsNullOrWhiteSpace(Model.Theme.BrandName))
+            {
+                <span class="landing-brandname">@Model.Theme.BrandName</span>
+            }
             @if (showSharedBy)
             {
                 <small>@T["landing.shared_by"] @Model.OwnerName</small>

@@ -369,7 +369,10 @@ public class ShareController : Controller
             // Footer-Anbieter-Logo NUR, wenn oben ein KUNDENLOGO steht (Custom-
             // Branding aktiv + Kundenlogo gefunden). Sonst null → generische
             // Landings + brandinglose Links bleiben exakt wie bisher.
-            ProviderLogoUrl: (linkT?.LogoUrl != null) ? baseT?.LogoUrl : null);
+            ProviderLogoUrl: (linkT?.LogoUrl != null) ? baseT?.LogoUrl : null,
+            // Firmenname NUR neben einem echten Kundenlogo (Custom-Branding);
+            // sonst null → keine Textmarke neben dem generischen Fallback-Icon.
+            BrandName: (linkT?.LogoUrl != null) ? linkT?.BrandName : null);
     }
 
     /// <summary>Inline preview stream (image or pdf). Only for password-less links —
@@ -1155,7 +1158,10 @@ public record LandingTheme(
     // eigene Instanz/Personal-Logo des Absenders, das die Landing klein &
     // zentriert im Footer zeigt ("Bereitgestellt von …"), während oben das
     // Kundenlogo steht. Sonst null (kein Footer-Logo-Duplikat).
-    string? ProviderLogoUrl = null);
+    string? ProviderLogoUrl = null,
+    // v1.12.7 — Firmen-/Kundenname neben dem Logo (nur Custom-Branding-Link,
+    // vom Teilenden editierbar/abschaltbar). Null ⇒ nichts neben dem Logo.
+    string? BrandName = null);
 
 public record LandingViewModel(
     string Slug,

@@ -38,6 +38,12 @@ public class LandingTemplate
     /// Global/UserPersonal.</summary>
     public Guid? CreatedByUserId { get; set; }
 
+    /// <summary>v1.12.7 — nur Scope=Link: Firmen-/Kundenname, der neben dem
+    /// Kundenlogo angezeigt wird (KI-vorbefüllt aus der Domain, vom Teilenden
+    /// editierbar/abschaltbar). Null ⇒ nichts neben dem Logo (z. B. weil das
+    /// Logo bereits eine Wortmarke ist). Global/UserPersonal lassen es null.</summary>
+    public string? BrandName { get; set; }
+
     /// <summary>Main headline, e.g. "Downloads von ACME".</summary>
     public string? Title { get; set; }
 

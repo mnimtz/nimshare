@@ -156,6 +156,7 @@ public class AiBrandingController : ControllerBase
             Scope = LandingTemplateScope.Link,
             OwnerUserId = null, // bewusst kein OwnerUserId (UserPersonal-Unique-Index-Kollision vermeiden)
             CreatedByUserId = me.Id, // v1.12 (Review F5): Ersteller für IDOR-Prüfung + Cleanup
+            BrandName = Trunc(companyName, 120), // v1.12.7: Name neben Logo (Web-UI editierbar/abschaltbar)
             Title = Trunc(title, 200),
             Subtitle = Trunc(subtitle, 400),
             PrimaryColor = ReadableAccentOrNull(NormalizeHex(primaryColor)),

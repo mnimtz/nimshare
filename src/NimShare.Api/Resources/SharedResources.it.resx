@@ -1824,5 +1824,7 @@ Grazie per usare NimShare.</value></data>
   <data name="share.branding.preview_btn" xml:space="preserve"><value>Anteprima IA</value></data>
   <data name="share.branding.hint" xml:space="preserve"><value>Recuperiamo logo, nome e colore del cliente e personalizziamo la pagina di condivisione.</value></data>
   <data name="share.branding.apply_label" xml:space="preserve"><value>Applica questo branding al link</value></data>
+  <data name="share.branding.name_show" xml:space="preserve"><value>Mostra il nome dell'azienda accanto al logo</value></data>
+  <data name="share.branding.name_hint" xml:space="preserve"><value>Rilevato dall'IA – modificabile. Lascia vuoto se il logo contiene già il nome.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Impossibile creare un'anteprima per questo dominio.</value></data>
 </root>
