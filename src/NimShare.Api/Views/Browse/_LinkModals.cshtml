@@ -741,6 +741,16 @@ async function previewBranding() {
         document.getElementById('shareBrandSwatch').style.background = d.primaryColor || 'transparent';
         const apply = document.getElementById('shareBrandApply'); if (apply) apply.checked = true;
         document.getElementById('shareBrandPreview').style.display = 'block';
+        // v1.12.1: sinnvollen Slug vorschlagen (Kundenname) — NUR wenn der User
+        // weder einen Slug getippt noch eine Subdomain gesetzt hat (Subdomain
+        // hat Vorrang). Danach den bestehenden Verfügbarkeits-Check anstoßen.
+        const slugEl = document.getElementById('shareSlug');
+        const subOn = document.getElementById('shareSubdomainOn');
+        const subVal = (document.getElementById('shareSubdomainSlug')?.value || '').trim();
+        if (d.suggestedSlug && slugEl && !slugEl.value.trim() && !(subOn && subOn.checked) && !subVal) {
+            slugEl.value = d.suggestedSlug;
+            if (typeof slugLiveCheck === 'function') slugLiveCheck('shareSlug', 'shareSlugStatus');
+        }
     } catch (e) {
         nimAlert('@T["share.branding.error"]', { kind: 'error' });
     } finally {

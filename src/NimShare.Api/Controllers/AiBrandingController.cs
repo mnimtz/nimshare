@@ -162,6 +162,11 @@ public class AiBrandingController : ControllerBase
         _db.LandingTemplates.Add(tpl);
         await _db.SaveChangesAsync(ct);
 
+        // v1.12.1: Slug-Vorschlag aus dem ersten Domain-Label (= i.d.R. der
+        // Markenname). Die Web-UI füllt ihn NUR vor, wenn kein Slug/keine
+        // Subdomain gesetzt ist (Subdomain hat Vorrang).
+        var suggestedSlug = Slugify(host.Split('.')[0]);
+
         return Ok(new
         {
             templateId = tpl.Id,
@@ -170,6 +175,7 @@ public class AiBrandingController : ControllerBase
             subtitle = tpl.Subtitle,
             primaryColor = tpl.PrimaryColor,
             logoUrl = tpl.LogoUrl,
+            suggestedSlug,
         });
     }
 
@@ -284,4 +290,19 @@ public class AiBrandingController : ControllerBase
 
     private static string? Trunc(string? s, int max)
         => string.IsNullOrWhiteSpace(s) ? null : (s.Length <= max ? s : s[..max]);
+
+    /// <summary>URL-tauglicher Slug aus Name/Domain-Label: lowercase, nur
+    /// [a-z0-9-], zusammengefasste Trenner, auf 40 Zeichen begrenzt.</summary>
+    private static string Slugify(string s)
+    {
+        s = (s ?? "").ToLowerInvariant().Trim();
+        var sb = new StringBuilder();
+        foreach (var ch in s)
+        {
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')) sb.Append(ch);
+            else if (sb.Length > 0 && sb[^1] != '-') sb.Append('-');
+        }
+        var slug = sb.ToString().Trim('-');
+        return slug.Length > 40 ? slug[..40].Trim('-') : slug;
+    }
 }
