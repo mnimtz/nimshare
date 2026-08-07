@@ -65,7 +65,7 @@
                  style="position:absolute;top:24px;right:28px;width:@(avatarSize)px;height:@(avatarSize)px;border-radius:50%;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 5px #fff,0 0 0 6px rgba(0,0,0,.06);z-index:2"/>
             @if (brandedWithAvatar)
             {
-                <div class="landing-owner-caption" style="top:@(24 + avatarSize + 6)px">@T["landing.shared_by"] @Model.OwnerName</div>
+                <div class="landing-owner-caption" style="top:@(24 + avatarSize + 16)px">@T["landing.shared_by"] @Model.OwnerName</div>
             }
         }
         @{
@@ -90,7 +90,7 @@
             @await Html.PartialAsync("_LandingSignerBadge",
                 new NimShare.Api.Views.Shared.LandingSignerBadgeVm(Model.Signer, $"/s/{Model.Slug}/signer-cert.cer"))
         }
-        <h1 style="color:@accent">@(Model.IsGallery ? "🖼" : "📁") @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
+        <h1 style="color:@accent@(brandedWithAvatar ? ";margin-top:18px" : "")">@(Model.IsGallery ? "🖼" : "📁") @(string.IsNullOrWhiteSpace(theme?.Title) ? Model.FolderName : theme!.Title!)</h1>
         @if (!string.IsNullOrWhiteSpace(theme?.Subtitle))
         {
             <p class="lede">@theme.Subtitle</p>

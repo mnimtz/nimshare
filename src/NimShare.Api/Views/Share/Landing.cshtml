@@ -21,7 +21,7 @@
                  style="position:absolute;top:24px;right:28px;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.18),0 0 0 4px #fff,0 0 0 5px rgba(0,0,0,.06);z-index:2"/>
             @if (brandedWithAvatar)
             {
-                <div class="landing-owner-caption" style="top:102px">@T["landing.shared_by"] @Model.OwnerName</div>
+                <div class="landing-owner-caption" style="top:112px">@T["landing.shared_by"] @Model.OwnerName</div>
             }
         }
         <div class="landing-brand @(brandedWithAvatar ? "branded" : "")">
@@ -45,7 +45,7 @@
                 new NimShare.Api.Views.Shared.LandingSignerBadgeVm(Model.Signer, $"/s/{Model.Slug}/signer-cert.cer"))
         }
 
-        <h1 style="color:@accent">@(Model.Theme.Title ?? T["landing.title"].Value)</h1>
+        <h1 style="color:@accent@(brandedWithAvatar ? ";margin-top:18px" : "")">@(Model.Theme.Title ?? T["landing.title"].Value)</h1>
         @if (!string.IsNullOrEmpty(Model.Theme.Subtitle))
         {
             <p class="lede">@Model.Theme.Subtitle</p>
