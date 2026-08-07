@@ -301,6 +301,12 @@ input:focus, select:focus, textarea:focus {
 .landing-brand { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-6); }
 .landing-brand .logo-tile { background: var(--tw-primary); color: var(--tw-white); border-radius: 8px; padding: var(--sp-2) var(--sp-3); font-weight: 900; letter-spacing: .05em; font-size: .85rem; }
 .landing-brand small { color: var(--tw-muted-blue); }
+/* v1.12.4: Custom-Branding-Kunden-Links — oben LINKS steht das Kundenlogo (bleibt
+   wie es war); die "Geteilt von …"-Zeile wandert unter den Avatar (rechts), daher
+   im Brand-Block ausgeblendet. Nur bei .branded → generische Landings unverändert. */
+.landing-brand.branded small { display: none; }
+.landing-owner-caption { position: absolute; right: 28px; text-align: right; font-size: .8rem; color: var(--tw-muted-blue); max-width: 160px; line-height: 1.2; z-index: 2; }
+@media (max-width: 640px) { .landing-owner-caption { display: none; } }
 .landing-meta { color: var(--tw-muted-blue); font-size: .85rem; margin-top: var(--sp-2); }
 .file-tile {
     background: var(--tw-gray-100);

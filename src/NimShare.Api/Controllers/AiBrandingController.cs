@@ -158,7 +158,7 @@ public class AiBrandingController : ControllerBase
             CreatedByUserId = me.Id, // v1.12 (Review F5): Ersteller für IDOR-Prüfung + Cleanup
             Title = Trunc(title, 200),
             Subtitle = Trunc(subtitle, 400),
-            PrimaryColor = NormalizeHex(primaryColor),
+            PrimaryColor = ReadableAccentOrNull(NormalizeHex(primaryColor)),
             LogoBlobPath = logoBlobPath,
             LogoUrl = logoUrl,
             UpdatedAt = DateTimeOffset.UtcNow,
@@ -294,6 +294,24 @@ public class AiBrandingController : ControllerBase
 
     private static string? Trunc(string? s, int max)
         => string.IsNullOrWhiteSpace(s) ? null : (s.Length <= max ? s : s[..max]);
+
+    /// <summary>v1.12.4: Der Akzent wird als Button-Hintergrund MIT weißer Schrift
+    /// und für Überschriften genutzt. Eine zu helle Kundenfarbe (hohe Luminanz)
+    /// ergibt blasse, unlesbare Buttons/Titel → in dem Fall verwerfen (null), damit
+    /// das Standard-Navy greift. Logo/Text bleiben unberührt.</summary>
+    private static string? ReadableAccentOrNull(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex) || hex.Length < 7) return hex;
+        try
+        {
+            var r = Convert.ToInt32(hex.Substring(1, 2), 16);
+            var g = Convert.ToInt32(hex.Substring(3, 2), 16);
+            var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+            var lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
+            return lum > 0.62 ? null : hex; // zu hell → Default-Navy statt blass
+        }
+        catch { return hex; }
+    }
 
     /// <summary>URL-tauglicher Slug aus Name/Domain-Label: lowercase, nur
     /// [a-z0-9-], zusammengefasste Trenner, auf 40 Zeichen begrenzt.</summary>

@@ -105,6 +105,26 @@ public class ShareController : Controller
         return t.Length <= max ? t : t[..max].TrimEnd() + "…";
     }
 
+    // v1.12.4: Die Akzentfarbe dient als Button-Hintergrund (weiße Schrift) und
+    // Überschriftenfarbe. Eine zu HELLE Kundenfarbe wäre dort unlesbar → als
+    // "nicht verwendbar" werten, damit stattdessen die Instanz/Default-Farbe greift.
+    // Nur #RRGGBB / #RGB wird geprüft; alles andere gilt konservativ als nicht lesbar.
+    private static bool IsReadableAccent(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return false;
+        var h = hex.Trim().TrimStart('#');
+        if (h.Length == 3) h = string.Concat(h[0], h[0], h[1], h[1], h[2], h[2]);
+        if (h.Length != 6) return false;
+        if (!int.TryParse(h.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var r)
+            || !int.TryParse(h.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var g)
+            || !int.TryParse(h.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var b))
+            return false;
+        // Relative Luminanz (sRGB, ~WCAG). > 0.62 → zu hell für weißen Text.
+        static double Lin(int c) { var s = c / 255.0; return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4); }
+        var lum = 0.2126 * Lin(r) + 0.7152 * Lin(g) + 0.0722 * Lin(b);
+        return lum <= 0.62;
+    }
+
     [HttpGet("{slug}")]
     public async Task<IActionResult> Landing(string slug, [FromServices] NimShare.Core.Data.NimShareDbContext db,
         [FromServices] IFolderService folderSvc,
@@ -334,12 +354,16 @@ public class ShareController : Controller
             ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Id == lid && x.Scope == NimShare.Core.Entities.LandingTemplateScope.Link, ct)
             : null;
+        // v1.12.4 — eine zu HELLE Kunden-Akzentfarbe (Akzent = Button-Hintergrund
+        // mit weißer Schrift + Überschrift) wäre unlesbar → verwerfen, dann greift
+        // Instanz/Default. Betrifft NUR die Link-Farbe; Instanz/Personal unberührt.
+        var linkColor = IsReadableAccent(linkT?.PrimaryColor) ? linkT?.PrimaryColor : null;
         return new LandingTheme(
             linkT?.Title ?? baseT?.Title,
             linkT?.Subtitle ?? baseT?.Subtitle,
             linkT?.BodyMarkdown ?? baseT?.BodyMarkdown,
             linkT?.FooterText ?? baseT?.FooterText,
-            linkT?.PrimaryColor ?? baseT?.PrimaryColor,
+            linkColor ?? baseT?.PrimaryColor,
             linkT?.LogoUrl ?? baseT?.LogoUrl,
             linkT?.HeroUrl ?? baseT?.HeroUrl,
             // Footer-Anbieter-Logo NUR, wenn oben ein KUNDENLOGO steht (Custom-

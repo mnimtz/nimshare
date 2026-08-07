@@ -52,18 +52,28 @@
 }
 <div class="landing-shell">
     <div class="landing-card gallery-@(Model.IsGallery ? "on" : "off")" style="max-width:@(Model.IsGallery ? "1120px" : "720px");position:relative;border-top:4px solid @accent">
+        @{
+            // v1.12.4: Bei Custom-Branding steht oben links das KUNDENLOGO. Damit die
+            // "Geteilt von …"-Zeile nicht neben dem fremden Logo klebt, wandert sie
+            // (nur dann + wenn ein Avatar da ist) unter den Avatar oben rechts.
+            var brandedWithAvatar = theme?.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+        }
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
                  class="landing-owner-avatar"
                  style="position:absolute;top:24px;right:28px;width:@(avatarSize)px;height:@(avatarSize)px;border-radius:50%;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 5px #fff,0 0 0 6px rgba(0,0,0,.06);z-index:2"/>
+            @if (brandedWithAvatar)
+            {
+                <div class="landing-owner-caption" style="top:@(24 + avatarSize + 6)px">@T["landing.shared_by"] @Model.OwnerName</div>
+            }
         }
         @{
             // v1.10.171: im Gallery-Modus dürfen Logo + Owner-Avatar größer,
             // damit sie zur breiten Card (1120px) im Verhältnis passen.
             var logoMax = Model.IsGallery ? 80 : 48;
         }
-        <div class="landing-brand">
+        <div class="landing-brand @(brandedWithAvatar ? "branded" : "")">
             @if (!string.IsNullOrWhiteSpace(theme?.LogoUrl))
             {
                 <img src="@theme.LogoUrl" alt="Logo" style="max-height:@(logoMax)px;max-width:280px;object-fit:contain"/>
@@ -646,7 +656,7 @@
         {
             <div style="margin-top:var(--sp-6);text-align:center">
                 <img src="@theme.ProviderLogoUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
-                     style="max-height:32px;max-width:180px;object-fit:contain;opacity:.9"/>
+                     style="max-height:32px;max-width:180px;object-fit:contain;opacity:.9;display:block;margin:0 auto"/>
             </div>
         }
         <p class="landing-meta" style="margin-top:var(--sp-6);text-align:center">

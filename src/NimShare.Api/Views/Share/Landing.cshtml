@@ -10,12 +10,21 @@
 }
 <div class="landing-shell">
     <div class="landing-card" style="border-top:4px solid @accent;position:relative">
+        @{
+            // v1.12.4: siehe FolderLanding — bei Custom-Branding "Geteilt von …"
+            // unter den Avatar (rechts) statt neben das Kundenlogo (links).
+            var brandedWithAvatar = Model.Theme.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+        }
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
                  style="position:absolute;top:24px;right:28px;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.18),0 0 0 4px #fff,0 0 0 5px rgba(0,0,0,.06);z-index:2"/>
+            @if (brandedWithAvatar)
+            {
+                <div class="landing-owner-caption" style="top:102px">@T["landing.shared_by"] @Model.OwnerName</div>
+            }
         }
-        <div class="landing-brand">
+        <div class="landing-brand @(brandedWithAvatar ? "branded" : "")">
             @if (!string.IsNullOrEmpty(Model.Theme.LogoUrl))
             {
                 <img src="@Model.Theme.LogoUrl" style="max-height:48px;max-width:200px" alt=""/>
@@ -372,7 +381,7 @@
         {
             <div style="margin-top:var(--sp-6);text-align:center">
                 <img src="@Model.Theme.ProviderLogoUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
-                     style="max-height:32px;max-width:180px;object-fit:contain;opacity:.9"/>
+                     style="max-height:32px;max-width:180px;object-fit:contain;opacity:.9;display:block;margin:0 auto"/>
             </div>
         }
         @if (!string.IsNullOrEmpty(Model.Theme.FooterText))
