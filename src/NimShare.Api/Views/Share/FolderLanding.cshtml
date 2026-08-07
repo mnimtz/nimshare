@@ -57,13 +57,17 @@
             // "Geteilt von …"-Zeile nicht neben dem fremden Logo klebt, wandert sie
             // (nur dann + wenn ein Avatar da ist) unter den Avatar oben rechts.
             var brandedWithAvatar = theme?.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+            // v1.12.6: Bei signierten Links trägt das Signatur-Badge ("Signiert von …")
+            // bereits den Absendernamen → die obere "Geteilt von …"-Zeile wäre doppelt
+            // und entfällt (gilt für alle Share-Links, gebrandet wie normal).
+            var showSharedBy = Model.Signer is null;
         }
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
                  class="landing-owner-avatar"
                  style="position:absolute;top:24px;right:28px;width:@(avatarSize)px;height:@(avatarSize)px;border-radius:50%;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 5px #fff,0 0 0 6px rgba(0,0,0,.06);z-index:2"/>
-            @if (brandedWithAvatar)
+            @if (brandedWithAvatar && showSharedBy)
             {
                 <div class="landing-owner-caption" style="top:@(24 + avatarSize + 16)px">@T["landing.shared_by"] @Model.OwnerName</div>
             }
@@ -82,7 +86,10 @@
             {
                 <img src="/img/icon-64.png" width="@(Model.IsGallery ? 56 : 40)" height="@(Model.IsGallery ? 56 : 40)" alt="NimShare" style="border-radius:8px"/>
             }
-            <small>@T["landing.shared_by"] @Model.OwnerName</small>
+            @if (showSharedBy)
+            {
+                <small>@T["landing.shared_by"] @Model.OwnerName</small>
+            }
         </div>
         @* v1.10.146/153: Absender-Zertifikat-Badge — teilt Partial mit den Share-Landings. *@
         @if (Model.Signer is not null)

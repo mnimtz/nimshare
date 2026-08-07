@@ -14,12 +14,14 @@
             // v1.12.4: siehe FolderLanding — bei Custom-Branding "Geteilt von …"
             // unter den Avatar (rechts) statt neben das Kundenlogo (links).
             var brandedWithAvatar = Model.Theme.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+            // v1.12.6: signiert → Name steht schon im Signatur-Badge, obere Zeile entfällt.
+            var showSharedBy = Model.Signer is null;
         }
         @if (!string.IsNullOrEmpty(Model.OwnerAvatarUrl))
         {
             <img src="@Model.OwnerAvatarUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
                  style="position:absolute;top:24px;right:28px;width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.18),0 0 0 4px #fff,0 0 0 5px rgba(0,0,0,.06);z-index:2"/>
-            @if (brandedWithAvatar)
+            @if (brandedWithAvatar && showSharedBy)
             {
                 <div class="landing-owner-caption" style="top:112px">@T["landing.shared_by"] @Model.OwnerName</div>
             }
@@ -33,7 +35,10 @@
             {
                 <img src="/img/icon-64.png" width="40" height="40" alt="NimShare" style="border-radius:8px"/>
             }
-            <small>@T["landing.shared_by"] @Model.OwnerName</small>
+            @if (showSharedBy)
+            {
+                <small>@T["landing.shared_by"] @Model.OwnerName</small>
+            }
         </div>
 
         @* v1.10.146/153: Absender-Zertifikat-Badge — Details, Verify-Anleitung,
