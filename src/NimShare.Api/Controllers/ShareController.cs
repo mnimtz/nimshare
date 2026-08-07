@@ -341,7 +341,11 @@ public class ShareController : Controller
             linkT?.FooterText ?? baseT?.FooterText,
             linkT?.PrimaryColor ?? baseT?.PrimaryColor,
             linkT?.LogoUrl ?? baseT?.LogoUrl,
-            linkT?.HeroUrl ?? baseT?.HeroUrl);
+            linkT?.HeroUrl ?? baseT?.HeroUrl,
+            // Footer-Anbieter-Logo NUR, wenn oben ein KUNDENLOGO steht (Custom-
+            // Branding aktiv + Kundenlogo gefunden). Sonst null → generische
+            // Landings + brandinglose Links bleiben exakt wie bisher.
+            ProviderLogoUrl: (linkT?.LogoUrl != null) ? baseT?.LogoUrl : null);
     }
 
     /// <summary>Inline preview stream (image or pdf). Only for password-less links —
@@ -1122,7 +1126,12 @@ public record FolderLandingGeoPoint(Guid Id, string Name, double Lat, double Lon
 /// pieces let the view fall back to the default look.</summary>
 public record LandingTheme(
     string? Title, string? Subtitle, string? BodyMarkdown, string? FooterText,
-    string? PrimaryColor, string? LogoUrl, string? HeroUrl);
+    string? PrimaryColor, string? LogoUrl, string? HeroUrl,
+    // v1.12.3 — nur gesetzt bei aktivem Custom-Branding MIT Kundenlogo: das
+    // eigene Instanz/Personal-Logo des Absenders, das die Landing klein &
+    // zentriert im Footer zeigt ("Bereitgestellt von …"), während oben das
+    // Kundenlogo steht. Sonst null (kein Footer-Logo-Duplikat).
+    string? ProviderLogoUrl = null);
 
 public record LandingViewModel(
     string Slug,

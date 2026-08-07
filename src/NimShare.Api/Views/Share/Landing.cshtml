@@ -366,6 +366,15 @@
             <button type="submit" class="btn btn-primary" style="background:@accent;color:#fff">@T["landing.download.button"]</button>
         </form>
 
+        @* v1.12.3: eigenes Anbieter-Logo im Footer — nur bei Custom-Branding-
+           Kunden-Links (ProviderLogoUrl gesetzt); sonst unverändert. *@
+        @if (!string.IsNullOrWhiteSpace(Model.Theme.ProviderLogoUrl))
+        {
+            <div style="margin-top:var(--sp-6);text-align:center">
+                <img src="@Model.Theme.ProviderLogoUrl" alt="@Model.OwnerName" title="@Model.OwnerName"
+                     style="max-height:32px;max-width:180px;object-fit:contain;opacity:.9"/>
+            </div>
+        }
         @if (!string.IsNullOrEmpty(Model.Theme.FooterText))
         {
             <p class="landing-meta" style="margin-top:var(--sp-6)">@Model.Theme.FooterText</p>
