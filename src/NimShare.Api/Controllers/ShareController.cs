@@ -135,7 +135,7 @@ public class ShareController : Controller
             // v1.11.33: Folder shares nutzen dieselbe strikt scope-basierte
             // Template-Auflösung wie File-Shares (siehe ResolveThemeAsync).
             var folderTheme = await ResolveThemeAsync(db, folder.Scope,
-                folder.OwnerUserId ?? Guid.Empty, ct);
+                folder.OwnerUserId ?? Guid.Empty, ct, link.LandingTemplateId);
             // v1.10.178: Aufnahmeorte für die Album-Landing-Karte. Nur Fotos
             // mit EXIF-GPS werden aufgenommen; leere Liste = keine Karte.
             var isGalleryView = link.DisplayAsGallery || folder.Kind == FolderKind.Gallery;
@@ -229,7 +229,7 @@ public class ShareController : Controller
             Request.Headers.UserAgent, Request.Headers.Referer,
             lf1.Country, lf1.City, lf1.Device, lf1.Isp, timezone: null, ct);
 
-        var theme = await ResolveThemeAsync(db, link.File.Scope, link.File.OwnerId, ct);
+        var theme = await ResolveThemeAsync(db, link.File.Scope, link.File.OwnerId, ct, link.LandingTemplateId);
         var isProtectedFile = link.PasswordHash is not null;
         string? ogFileImage = null;
         if (!isProtectedFile && thumbs.IsImage(link.File.ContentType))
@@ -316,9 +316,18 @@ public class ShareController : Controller
     /// </summary>
     internal static async Task<LandingTheme> ResolveThemeAsync(
         NimShare.Core.Data.NimShareDbContext db,
-        NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, CancellationToken ct)
+        NimShare.Core.Entities.FileScope scope, Guid fileOwnerId, CancellationToken ct,
+        Guid? linkTemplateId = null)
     {
-        var t = scope == NimShare.Core.Entities.FileScope.Personal
+        // v1.12 — Custom Branding pro Link: eine link-eigene Vorlage (Scope=Link)
+        // hat Vorrang. NUR wenn gesetzt; sonst exakt der bisherige Global/
+        // UserPersonal-Fallback (unverändert). Fehlt die referenzierte Vorlage
+        // (z.B. gelöscht), fällt es ebenfalls sauber auf den Default zurück.
+        NimShare.Core.Entities.LandingTemplate? t = linkTemplateId is Guid lid
+            ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
+                x.Id == lid && x.Scope == NimShare.Core.Entities.LandingTemplateScope.Link, ct)
+            : null;
+        t ??= scope == NimShare.Core.Entities.FileScope.Personal
             ? await db.LandingTemplates.FirstOrDefaultAsync(x =>
                 x.Scope == NimShare.Core.Entities.LandingTemplateScope.UserPersonal && x.OwnerUserId == fileOwnerId, ct)
             : await db.LandingTemplates.FirstOrDefaultAsync(x =>

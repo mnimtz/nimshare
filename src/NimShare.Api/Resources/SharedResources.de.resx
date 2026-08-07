@@ -1823,4 +1823,10 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="keystore.licenses.action.reset"><value>Zurücksetzen</value></data>
   <data name="keystore.licenses.confirm_reset"><value>Zuordnung zu "{0}" aufheben und Lizenz wieder verfügbar machen?</value></data>
   <data name="keystore.licenses.empty"><value>Noch keine Lizenzen im Vorrat.</value></data>
+  <data name="share.branding.summary" xml:space="preserve"><value>Für einen Kunden personalisieren (KI)</value></data>
+  <data name="share.branding.domain_label" xml:space="preserve"><value>Kunden-Website (Domain)</value></data>
+  <data name="share.branding.preview_btn" xml:space="preserve"><value>KI-Vorschau</value></data>
+  <data name="share.branding.hint" xml:space="preserve"><value>Wir holen Logo, Name und Farbe des Kunden und gestalten die Freigabeseite passend.</value></data>
+  <data name="share.branding.apply_label" xml:space="preserve"><value>Dieses Branding auf den Link anwenden</value></data>
+  <data name="share.branding.error" xml:space="preserve"><value>Für diese Domain konnte keine Vorschau erstellt werden.</value></data>
 </root>

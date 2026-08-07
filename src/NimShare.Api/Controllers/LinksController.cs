@@ -94,7 +94,12 @@ public class LinksController : ControllerBase
         // v1.11.50: explizites "läuft nie ab" — Default false, damit ein
         // fehlendes ExpiresAt serverseitig auf +8 Wochen defaultet statt
         // stillschweigend permanent zu werden (siehe Create()).
-        bool IsPermanent = false);
+        bool IsPermanent = false,
+        // v1.12: optionale link-eigene Landing-Vorlage (Custom Branding pro Link,
+        // u.a. KI-Auto-Fill aus der Empfänger-Domain). Verweist auf eine
+        // LandingTemplate-Zeile mit Scope=Link (angelegt vom Branding-Endpoint).
+        // Null = kein Custom-Branding → unveränderter Global/UserPersonal-Fallback.
+        Guid? LandingTemplateId = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -284,6 +289,24 @@ public class LinksController : ControllerBase
         // ein eigenes Datum vor.
         var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt ?? DateTimeOffset.UtcNow.AddDays(56));
 
+        // v1.12 — Custom-Branding-Vorlage nur akzeptieren, wenn sie existiert UND
+        // Scope=Link ist. Verhindert, dass ein Link auf ein Global/UserPersonal-
+        // Template (oder eine geratene GUID) gezeigt wird. Ungültig → still null
+        // → unverändertes Standard-Branding.
+        Guid? landingTemplateId = null;
+        if (req.LandingTemplateId is Guid ltId)
+        {
+            // v1.12 (Review F5): nur eine Link-Vorlage akzeptieren, die DIESER User
+            // per KI-Auto-Branding erzeugt hat (CreatedByUserId) — verhindert, dass
+            // jemand die (per öffentlicher Logo-URL erratbare) Vorlage eines anderen
+            // an seinen Link hängt.
+            var ltOk = await _db.LandingTemplates.AnyAsync(
+                t => t.Id == ltId
+                     && t.Scope == NimShare.Core.Entities.LandingTemplateScope.Link
+                     && t.CreatedByUserId == user.Id, ct);
+            if (ltOk) landingTemplateId = ltId;
+        }
+
         var link = new ShareLink
         {
             FileId = file?.Id,
@@ -318,6 +341,8 @@ public class LinksController : ControllerBase
                 ? _serialProtector.Protect(req.SerialNumber.Trim()) : null,
             KeyStoreMode = req.KeyStoreMode,
             DocumentationEnabled = req.DocumentationEnabled,
+            // v1.12 — link-eigene Landing-Vorlage (oben validiert, null wenn keine/ungültig).
+            LandingTemplateId = landingTemplateId,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);

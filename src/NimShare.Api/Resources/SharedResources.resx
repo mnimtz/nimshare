@@ -1821,4 +1821,10 @@ Thanks for using NimShare.</value></data>
   <data name="keystore.licenses.action.reset"><value>Reset</value></data>
   <data name="keystore.licenses.confirm_reset"><value>Undo the assignment to "{0}" and make this license available again?</value></data>
   <data name="keystore.licenses.empty"><value>No licenses in stock yet.</value></data>
+  <data name="share.branding.summary" xml:space="preserve"><value>Personalise for a customer (AI)</value></data>
+  <data name="share.branding.domain_label" xml:space="preserve"><value>Customer website (domain)</value></data>
+  <data name="share.branding.preview_btn" xml:space="preserve"><value>AI preview</value></data>
+  <data name="share.branding.hint" xml:space="preserve"><value>We fetch the customer's logo, name and colour and brand the share page for them.</value></data>
+  <data name="share.branding.apply_label" xml:space="preserve"><value>Apply this branding to the link</value></data>
+  <data name="share.branding.error" xml:space="preserve"><value>Couldn't build a preview for this domain.</value></data>
 </root>

@@ -1819,4 +1819,10 @@ Merci d'utiliser NimShare.</value></data>
   <data name="keystore.licenses.action.reset"><value>Réinitialiser</value></data>
   <data name="keystore.licenses.confirm_reset"><value>Annuler l'attribution à « {0} » et rendre cette licence à nouveau disponible ?</value></data>
   <data name="keystore.licenses.empty"><value>Aucune licence en stock pour l'instant.</value></data>
+  <data name="share.branding.summary" xml:space="preserve"><value>Personnaliser pour un client (IA)</value></data>
+  <data name="share.branding.domain_label" xml:space="preserve"><value>Site web du client (domaine)</value></data>
+  <data name="share.branding.preview_btn" xml:space="preserve"><value>Aperçu IA</value></data>
+  <data name="share.branding.hint" xml:space="preserve"><value>Nous récupérons le logo, le nom et la couleur du client et personnalisons la page de partage.</value></data>
+  <data name="share.branding.apply_label" xml:space="preserve"><value>Appliquer ce branding au lien</value></data>
+  <data name="share.branding.error" xml:space="preserve"><value>Impossible de générer un aperçu pour ce domaine.</value></data>
 </root>

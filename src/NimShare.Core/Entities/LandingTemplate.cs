@@ -7,6 +7,12 @@ public enum LandingTemplateScope
 
     /// <summary>Applied to download landings for files this user owns (Personal scope).</summary>
     UserPersonal = 1,
+
+    /// <summary>Per-share-link template (Custom Branding pro Link, u.a. KI-Auto-Fill
+    /// aus der Empfänger-Domain). Bewusst NICHT von den Singleton-Unique-Indizes
+    /// erfasst: Scope != 0 und OwnerUserId bleibt null → keine Kollision mit
+    /// Global/UserPersonal. Verknüpft über ShareLink.LandingTemplateId.</summary>
+    Link = 2,
 }
 
 /// <summary>
@@ -24,6 +30,13 @@ public class LandingTemplate
     /// <summary>Set for UserPersonal; null for Global.</summary>
     public Guid? OwnerUserId { get; set; }
     public User? OwnerUser { get; set; }
+
+    /// <summary>v1.12 — nur für Scope=Link gesetzt: der User, der die Vorlage per
+    /// KI-Auto-Branding erzeugt hat. Bewusst NICHT OwnerUserId (das ist vom
+    /// UserPersonal-Unique-Index erfasst → würde kollidieren). Dient dem IDOR-
+    /// Schutz beim Verknüpfen + dem Aufräumen verwaister Link-Vorlagen. Null für
+    /// Global/UserPersonal.</summary>
+    public Guid? CreatedByUserId { get; set; }
 
     /// <summary>Main headline, e.g. "Downloads von ACME".</summary>
     public string? Title { get; set; }

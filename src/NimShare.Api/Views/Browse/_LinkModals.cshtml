@@ -194,6 +194,33 @@
                 </span>
             </label>
         </div>
+        @* v1.12: KI-Auto-Branding pro Link — Kunden-Domain eingeben, KI zieht
+           Logo/Firmenname/Akzentfarbe und personalisiert die Landing. Optional;
+           nichts gesetzt = unverändertes Standard-Branding. *@
+        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+            <summary style="cursor:pointer;font-weight:600">✨ @T["share.branding.summary"]</summary>
+            <div class="field" style="margin-top:8px">
+                <label for="shareBrandDomain">@T["share.branding.domain_label"]</label>
+                <div style="display:flex;gap:8px">
+                    <input type="text" id="shareBrandDomain" placeholder="acme.com" autocomplete="off" spellcheck="false" style="flex:1"/>
+                    <button type="button" id="shareBrandBtn" onclick="previewBranding()">@T["share.branding.preview_btn"]</button>
+                </div>
+                <div class="helper">@T["share.branding.hint"]</div>
+            </div>
+            <div id="shareBrandPreview" style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:rgba(0,40,84,0.04);border:1px solid var(--tw-gray-200)">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <img id="shareBrandLogo" alt="" style="max-height:40px;max-width:120px;display:none"/>
+                    <div style="min-width:0">
+                        <div id="shareBrandTitle" style="font-weight:700"></div>
+                        <div id="shareBrandSubtitle" class="muted" style="font-size:.88rem"></div>
+                    </div>
+                    <span id="shareBrandSwatch" title="Akzentfarbe" style="margin-left:auto;flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--tw-gray-300)"></span>
+                </div>
+                <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+                    <input type="checkbox" id="shareBrandApply" checked/> @T["share.branding.apply_label"]
+                </label>
+            </div>
+        </details>
         <div id="shareResult" style="display:none">
             <div class="modal-result">
                 <input id="shareUrl" readonly/>
@@ -629,6 +656,7 @@ function resetShareModal() {
     document.getElementById('shareDocUrlEnabled').checked = false;
     onShareKeyStoreModeChange();
     document.getElementById('shareResult').style.display = 'none';
+    resetBrandingUi(); // v1.12: KI-Branding-State pro Öffnen zurücksetzen
     const st = document.getElementById('shareSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
     // v1.11.0: Subdomain-Sektion zurücksetzen (Sichtbarkeit selbst regelt
@@ -682,6 +710,44 @@ async function ensureCertsLoaded() {
     } catch {}
 }
 
+// v1.12: KI-Auto-Branding. Hält die zuletzt per Domain erzeugte Link-Template-ID.
+// Wird beim Öffnen des Share-Modals zurückgesetzt (resetBrandingUi), damit kein
+// Branding versehentlich auf eine andere Datei übertragen wird.
+let shareBrandTemplateId = null;
+function resetBrandingUi() {
+    shareBrandTemplateId = null;
+    const dom = document.getElementById('shareBrandDomain'); if (dom) dom.value = '';
+    const prev = document.getElementById('shareBrandPreview'); if (prev) prev.style.display = 'none';
+}
+async function previewBranding() {
+    const dom = (document.getElementById('shareBrandDomain').value || '').trim();
+    if (!dom) return;
+    const btn = document.getElementById('shareBrandBtn');
+    const old = btn.textContent; btn.disabled = true; btn.textContent = '…';
+    try {
+        const r = await fetch('/api/v1/ai/brand-from-domain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ domain: dom }),
+        });
+        if (!r.ok) { nimAlert('@T["share.branding.error"]' + ' (' + r.status + ')', { kind: 'error' }); return; }
+        const d = await r.json();
+        shareBrandTemplateId = d.templateId || null;
+        const logo = document.getElementById('shareBrandLogo');
+        if (d.logoUrl) { logo.src = d.logoUrl; logo.style.display = ''; } else { logo.removeAttribute('src'); logo.style.display = 'none'; }
+        document.getElementById('shareBrandTitle').textContent = d.title || d.companyName || '';
+        document.getElementById('shareBrandSubtitle').textContent = d.subtitle || '';
+        document.getElementById('shareBrandSwatch').style.background = d.primaryColor || 'transparent';
+        const apply = document.getElementById('shareBrandApply'); if (apply) apply.checked = true;
+        document.getElementById('shareBrandPreview').style.display = 'block';
+    } catch (e) {
+        nimAlert('@T["share.branding.error"]', { kind: 'error' });
+    } finally {
+        btn.disabled = false; btn.textContent = old;
+    }
+}
+
 async function createShareLink() {
     await ensureCertsLoaded();
     const body = {
@@ -707,6 +773,10 @@ async function createShareLink() {
         documentationEnabled: !!document.getElementById('shareDocUrlEnabled')?.checked,
         // v1.11.50: explizites "läuft nie ab".
         isPermanent: !!document.getElementById('sharePermanent')?.checked,
+        // v1.12: KI-Auto-Branding — nur wenn eine Vorschau erzeugt UND der
+        // "Anwenden"-Haken gesetzt ist. Sonst null → Standard-Branding.
+        landingTemplateId: (shareBrandTemplateId && document.getElementById('shareBrandApply')?.checked)
+            ? shareBrandTemplateId : null,
     };
     if (currentShareTarget.type === 'file') {
         body.fileId = currentShareTarget.id;

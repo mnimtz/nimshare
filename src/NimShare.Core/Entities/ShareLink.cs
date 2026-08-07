@@ -89,6 +89,15 @@ public class ShareLink
     public SigningCertificate? SigningCertificate { get; set; }
 
     /// <summary>
+    /// v1.12 — Optionale, link-eigene Landing-Vorlage (Custom Branding pro Link,
+    /// z.B. KI-Auto-Fill aus der Empfänger-Domain). Null = kein Custom-Branding →
+    /// exakt der bisherige Global/UserPersonal-Fallback bleibt unverändert.
+    /// Zeigt auf eine LandingTemplate-Zeile mit Scope = Link.
+    /// </summary>
+    public Guid? LandingTemplateId { get; set; }
+    public LandingTemplate? LandingTemplate { get; set; }
+
+    /// <summary>
     /// v1.10.166 — nur relevant für Folder-Links auf Ordnern mit Kind=Gallery.
     /// Wenn true, zeigt die Landing zusätzlich zum Album-Grid einen Upload-
     /// Widget an, mit dem beliebige Besucher Bilder/Videos direkt in den

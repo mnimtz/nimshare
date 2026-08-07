@@ -66,5 +66,29 @@ public class ExpiredLinkCleanupService : BackgroundService
             await db.SaveChangesAsync(ct);
             _log.LogInformation("Deleted {n} expired upload requests", expiredUploadRequests.Count);
         }
+
+        // v1.12 (Review F3): verwaiste KI-Branding-Vorlagen (Scope=Link) aufräumen.
+        // Jede "KI-Vorschau" legt eine LandingTemplate + Logo-Blob an — auch wenn
+        // der Nutzer danach keinen Link erstellt. Ohne Cleanup wüchse das
+        // unbegrenzt. Löschen: Scope=Link, älter als 24 h, von KEINEM ShareLink
+        // referenziert (linked-and-in-use bleiben unangetastet).
+        var brandCutoff = now.AddHours(-24);
+        var orphanBrandTemplates = await db.LandingTemplates
+            .Where(t => t.Scope == NimShare.Core.Entities.LandingTemplateScope.Link
+                        && t.UpdatedAt < brandCutoff
+                        && !db.ShareLinks.Any(s => s.LandingTemplateId == t.Id))
+            .ToListAsync(ct);
+        if (orphanBrandTemplates.Count > 0)
+        {
+            var blobs = scope.ServiceProvider.GetService<IBlobStorageService>();
+            foreach (var t in orphanBrandTemplates)
+            {
+                if (blobs is not null && !string.IsNullOrEmpty(t.LogoBlobPath))
+                    try { await blobs.DeleteAsync(t.LogoBlobPath, CancellationToken.None); } catch { /* orphan bytes, egal */ }
+            }
+            db.LandingTemplates.RemoveRange(orphanBrandTemplates);
+            await db.SaveChangesAsync(ct);
+            _log.LogInformation("Deleted {n} orphaned link-branding templates", orphanBrandTemplates.Count);
+        }
     }
 }

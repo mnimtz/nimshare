@@ -324,6 +324,17 @@ builder.Services.AddRateLimiter(o =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
+    // v1.12 (Review F2): enger Limiter für den teuren KI-Auto-Branding-Endpoint
+    // (Domain-Fetch + AI-Call + Blob + DB-Row pro Aufruf) — pro User (Fallback IP).
+    o.AddPolicy("ai-branding", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.User?.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -412,6 +423,19 @@ builder.Services.AddSession(o =>
     o.Cookie.SameSite = SameSiteMode.Lax;
 });
 builder.Services.AddHttpClient();
+// v1.12 — dedizierter Client fürs KI-Auto-Branding (Kunden-Domain abrufen):
+// AllowAutoRedirect=false, damit eine als "öffentlich" validierte Domain nicht
+// per 3xx auf eine interne IP umleiten kann (SSRF). Der AiBrandingController
+// folgt Redirects manuell und prüft JEDEN Hop erneut mit SsrfGuard.
+builder.Services.AddHttpClient("brandfetch", c =>
+    {
+        c.Timeout = TimeSpan.FromSeconds(10);
+        // v1.12 (Review F1): harte 8-MB-Kappe auf den Response-Body — sonst
+        // könnte eine (user-eingegebene!) Domain einen Multi-GB-Body streamen
+        // und den Prozess vor dem nachträglichen Größen-Check ausOOMen.
+        c.MaxResponseContentBufferSize = 8_000_000;
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddScoped<IEmailGatewayService, EmailGatewayService>();
 builder.Services.AddScoped<IAiGatewayService, AiGatewayService>();
 builder.Services.AddSingleton<IAiPostProcessor, AiPostProcessor>();

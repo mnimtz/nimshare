@@ -553,6 +553,10 @@ public class NimShareDbContext : DbContext
             // clean up files/links first.
             e.HasOne(x => x.File).WithMany(f => f.ShareLinks).HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             e.HasOne(x => x.Owner).WithMany(u => u.ShareLinks).HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            // v1.12 — optionale link-eigene Landing-Vorlage (Custom Branding pro Link).
+            // SetNull: wird die Vorlage gelöscht, fällt der Link nur auf Default-
+            // Branding zurück (kein Link-Verlust). Kein neuer Cascade-Pfad.
+            e.HasOne(x => x.LandingTemplate).WithMany().HasForeignKey(x => x.LandingTemplateId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
         });
 
         b.Entity<ShareLinkAccess>(e =>
