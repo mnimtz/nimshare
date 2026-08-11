@@ -295,8 +295,7 @@ public class LinksController : ControllerBase
 
         // v1.12 — Custom-Branding-Vorlage nur akzeptieren, wenn sie existiert UND
         // Scope=Link ist. Verhindert, dass ein Link auf ein Global/UserPersonal-
-        // Template (oder eine geratene GUID) gezeigt wird. Ungültig → still null
-        // → unverändertes Standard-Branding.
+        // Template (oder eine geratene GUID) gezeigt wird.
         Guid? landingTemplateId = null;
         if (req.LandingTemplateId is Guid ltId)
         {
@@ -308,15 +307,38 @@ public class LinksController : ControllerBase
                 t => t.Id == ltId
                      && t.Scope == NimShare.Core.Entities.LandingTemplateScope.Link
                      && t.CreatedByUserId == user.Id, ct);
-            if (tpl is not null)
+            if (tpl is null)
             {
-                landingTemplateId = ltId;
-                // v1.12.7: finalen Firmennamen aus der Web-UI übernehmen (Edit/Toggle).
-                // Leer/null ⇒ Name aus → nichts neben dem Logo. Max 120 Zeichen.
-                var bn = req.BrandName?.Trim();
-                tpl.BrandName = string.IsNullOrEmpty(bn) ? null : (bn.Length > 120 ? bn[..120] : bn);
-                tpl.UpdatedAt = DateTimeOffset.UtcNow;
+                // v1.12.8 (Audit): NICHT mehr still ohne Branding erstellen — z. B.
+                // Vorlage vom 24-h-Orphan-Sweep abgeräumt (Modal lag lange offen).
+                // Der User hat Branding explizit gewollt → klarer Fehler statt
+                // kommentarlosem Downgrade; UI fordert zum erneuten Vorschau-Lauf auf.
+                return UnprocessableEntity(new { error = "branding_template_gone" });
             }
+            landingTemplateId = ltId;
+            // v1.12.7/v1.12.8: finaler Firmenname neben dem Logo.
+            // Semantik: null = Feld nicht mitgesendet (alte Clients/iOS) → Vorlage
+            // UNVERÄNDERT lassen (kein Wipe des KI-Namens); "" = bewusst aus;
+            // sonst Wert (max 120 Zeichen, kein halbes Surrogate-Paar).
+            // Schutz geteilter Vorlagen: hängt die Vorlage schon an einem anderen
+            // Link, wird sie NICHT mehr mutiert — sonst änderte ein zweiter
+            // "Erstellen"-Klick rückwirkend die Landing von Link 1.
+            if (req.BrandName is not null)
+            {
+                var inUse = await _db.ShareLinks.AnyAsync(l => l.LandingTemplateId == ltId, ct);
+                if (!inUse)
+                {
+                    var bn = req.BrandName.Trim();
+                    if (bn.Length > 120)
+                    {
+                        var cut = 120;
+                        if (char.IsHighSurrogate(bn[cut - 1])) cut--;
+                        bn = bn[..cut];
+                    }
+                    tpl.BrandName = bn.Length == 0 ? null : bn;
+                }
+            }
+            tpl.UpdatedAt = DateTimeOffset.UtcNow; // Sweep-Schutz immer refreshen
         }
 
         var link = new ShareLink

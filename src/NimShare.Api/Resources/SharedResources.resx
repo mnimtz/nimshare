@@ -1828,5 +1828,6 @@ Thanks for using NimShare.</value></data>
   <data name="share.branding.apply_label" xml:space="preserve"><value>Apply this branding to the link</value></data>
   <data name="share.branding.name_show" xml:space="preserve"><value>Show company name next to logo</value></data>
   <data name="share.branding.name_hint" xml:space="preserve"><value>AI-detected — editable. Leave empty if the logo already includes the name.</value></data>
+  <data name="share.branding.gone" xml:space="preserve"><value>The branding preview has expired. Please run the AI preview again.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Couldn't build a preview for this domain.</value></data>
 </root>

@@ -197,7 +197,7 @@
         @* v1.12: KI-Auto-Branding pro Link — Kunden-Domain eingeben, KI zieht
            Logo/Firmenname/Akzentfarbe und personalisiert die Landing. Optional;
            nichts gesetzt = unverändertes Standard-Branding. *@
-        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+        <details id="shareBrandDetails" style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
             <summary style="cursor:pointer;font-weight:600">✨ @T["share.branding.summary"]</summary>
             <div class="field" style="margin-top:8px">
                 <label for="shareBrandDomain">@T["share.branding.domain_label"]</label>
@@ -224,7 +224,7 @@
                     <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px">
                         <input type="checkbox" id="shareBrandNameShow" checked onchange="document.getElementById('shareBrandName').disabled=!this.checked"/> @T["share.branding.name_show"]
                     </label>
-                    <input type="text" id="shareBrandName" autocomplete="off" spellcheck="false" style="width:100%"/>
+                    <input type="text" id="shareBrandName" maxlength="120" autocomplete="off" spellcheck="false" style="width:100%"/>
                     <div class="helper">@T["share.branding.name_hint"]</div>
                 </div>
             </div>
@@ -722,8 +722,13 @@ async function ensureCertsLoaded() {
 // Wird beim Öffnen des Share-Modals zurückgesetzt (resetBrandingUi), damit kein
 // Branding versehentlich auf eine andere Datei übertragen wird.
 let shareBrandTemplateId = null;
+// v1.12.8: merkt sich den zuletzt AUTO-gesetzten Slug — nur der darf bei einer
+// neuen Vorschau überschrieben werden (selbst getippte Slugs bleiben unangetastet).
+let shareBrandLastSlugSuggestion = null;
 function resetBrandingUi() {
     shareBrandTemplateId = null;
+    shareBrandLastSlugSuggestion = null;
+    const det = document.getElementById('shareBrandDetails'); if (det) det.open = false;
     const dom = document.getElementById('shareBrandDomain'); if (dom) dom.value = '';
     const prev = document.getElementById('shareBrandPreview'); if (prev) prev.style.display = 'none';
     const nameInp = document.getElementById('shareBrandName'); if (nameInp) { nameInp.value = ''; nameInp.disabled = false; }
@@ -741,7 +746,15 @@ async function previewBranding() {
             credentials: 'same-origin',
             body: JSON.stringify({ domain: dom }),
         });
-        if (!r.ok) { nimAlert('@T["share.branding.error"]' + ' (' + r.status + ')', { kind: 'error' }); return; }
+        if (!r.ok) {
+            // v1.12.8: fehlgeschlagene ZWEITE Vorschau darf nicht das alte Branding
+            // still weiterverwenden — State komplett verwerfen. Fehlertext per
+            // Json.Serialize (Datei-Konvention), sonst HTML-Entities im Alert.
+            shareBrandTemplateId = null;
+            document.getElementById('shareBrandPreview').style.display = 'none';
+            nimAlert(@Json.Serialize(T["share.branding.error"].Value) + ' (' + r.status + ')', { kind: 'error' });
+            return;
+        }
         const d = await r.json();
         shareBrandTemplateId = d.templateId || null;
         const logo = document.getElementById('shareBrandLogo');
@@ -751,23 +764,32 @@ async function previewBranding() {
         document.getElementById('shareBrandSwatch').style.background = d.primaryColor || 'transparent';
         const apply = document.getElementById('shareBrandApply'); if (apply) apply.checked = true;
         // v1.12.7: Firmenname vorbefüllen (KI-erkannt), Anzeige-Toggle zurück auf an.
+        // v1.12.8: OHNE gefundenes Kundenlogo rendert der Server den Namen bewusst
+        // nicht (er stünde sonst neben dem Instanz-Logo) → Feld deaktivieren.
         const nameShow = document.getElementById('shareBrandNameShow');
         const nameInp = document.getElementById('shareBrandName');
-        if (nameInp) { nameInp.value = d.companyName || ''; nameInp.disabled = false; }
-        if (nameShow) nameShow.checked = true;
+        if (nameInp) { nameInp.value = d.companyName || ''; nameInp.disabled = !d.logoUrl; }
+        if (nameShow) nameShow.checked = !!d.logoUrl;
         document.getElementById('shareBrandPreview').style.display = 'block';
         // v1.12.1: sinnvollen Slug vorschlagen (Kundenname) — NUR wenn der User
         // weder einen Slug getippt noch eine Subdomain gesetzt hat (Subdomain
-        // hat Vorrang). Danach den bestehenden Verfügbarkeits-Check anstoßen.
+        // hat Vorrang). v1.12.8: ein von einer FRÜHEREN Vorschau auto-gesetzter
+        // Slug (Domain getippt-korrigiert) wird mit dem neuen Vorschlag ersetzt.
         const slugEl = document.getElementById('shareSlug');
         const subOn = document.getElementById('shareSubdomainOn');
         const subVal = (document.getElementById('shareSubdomainSlug')?.value || '').trim();
-        if (d.suggestedSlug && slugEl && !slugEl.value.trim() && !(subOn && subOn.checked) && !subVal) {
-            slugEl.value = d.suggestedSlug;
-            if (typeof slugLiveCheck === 'function') slugLiveCheck('shareSlug', 'shareSlugStatus');
+        if (d.suggestedSlug && slugEl && !(subOn && subOn.checked) && !subVal) {
+            const cur = slugEl.value.trim();
+            if (!cur || cur === shareBrandLastSlugSuggestion) {
+                slugEl.value = d.suggestedSlug;
+                shareBrandLastSlugSuggestion = d.suggestedSlug;
+                if (typeof slugLiveCheck === 'function') slugLiveCheck('shareSlug', 'shareSlugStatus');
+            }
         }
     } catch (e) {
-        nimAlert('@T["share.branding.error"]', { kind: 'error' });
+        shareBrandTemplateId = null;
+        const prev = document.getElementById('shareBrandPreview'); if (prev) prev.style.display = 'none';
+        nimAlert(@Json.Serialize(T["share.branding.error"].Value), { kind: 'error' });
     } finally {
         btn.disabled = false; btn.textContent = old;
     }
@@ -819,7 +841,18 @@ async function createShareLink() {
         credentials: 'same-origin',
         body: JSON.stringify(body),
     });
-    if (!r.ok) { nimAlert('Failed: ' + r.status + ' ' + await r.text(), { kind: 'error' }); return; }
+    if (!r.ok) {
+        const txt = await r.text();
+        // v1.12.8: Branding-Vorlage inzwischen aufgeräumt (Modal lag >24 h offen)
+        // → verständliche Meldung + Branding-UI zurücksetzen statt rohem 422.
+        if (r.status === 422 && txt.indexOf('branding_template_gone') !== -1) {
+            resetBrandingUi();
+            nimAlert(@Json.Serialize(T["share.branding.gone"].Value), { kind: 'error' });
+            return;
+        }
+        nimAlert('Failed: ' + r.status + ' ' + txt, { kind: 'error' });
+        return;
+    }
     const link = await r.json();
 
     // If the user filled in the allow-list details, PATCH them onto the fresh
@@ -837,6 +870,10 @@ async function createShareLink() {
     document.getElementById('shareUrl').value = link.url;
     document.getElementById('shareResult').style.display = 'block';
     applyResultUrls('share', link);
+    // v1.12.8: Branding gilt PRO Link — nach Erfolg zurücksetzen. Sonst würde ein
+    // zweiter "Erstellen"-Klick im selben Modal dieselbe Vorlage weiterverwenden
+    // und (bei geändertem Namen) rückwirkend die Landing von Link 1 mit-ändern.
+    if (shareBrandTemplateId) resetBrandingUi();
 }
 function copyShareUrl() {
     const el = document.getElementById('shareUrl');

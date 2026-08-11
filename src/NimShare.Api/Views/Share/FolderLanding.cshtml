@@ -56,7 +56,7 @@
             // v1.12.4: Bei Custom-Branding steht oben links das KUNDENLOGO. Damit die
             // "Geteilt von …"-Zeile nicht neben dem fremden Logo klebt, wandert sie
             // (nur dann + wenn ein Avatar da ist) unter den Avatar oben rechts.
-            var brandedWithAvatar = theme?.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+            var brandedWithAvatar = (theme?.IsCustomBranded ?? false) && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
             // v1.12.6: Bei signierten Links trägt das Signatur-Badge ("Signiert von …")
             // bereits den Absendernamen → die obere "Geteilt von …"-Zeile wäre doppelt
             // und entfällt (gilt für alle Share-Links, gebrandet wie normal).

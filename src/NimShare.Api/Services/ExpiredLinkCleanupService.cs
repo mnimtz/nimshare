@@ -77,18 +77,32 @@ public class ExpiredLinkCleanupService : BackgroundService
             .Where(t => t.Scope == NimShare.Core.Entities.LandingTemplateScope.Link
                         && t.UpdatedAt < brandCutoff
                         && !db.ShareLinks.Any(s => s.LandingTemplateId == t.Id))
+            .Select(t => new { t.Id, t.LogoBlobPath })
             .ToListAsync(ct);
         if (orphanBrandTemplates.Count > 0)
         {
             var blobs = scope.ServiceProvider.GetService<IBlobStorageService>();
+            var deleted = 0;
             foreach (var t in orphanBrandTemplates)
             {
+                // v1.12.8 (Audit): pro Vorlage ein BEDINGTES Delete, das die
+                // Not-Referenced-Prüfung im selben Statement wiederholt — schließt
+                // das Race "Link-Insert zwischen Query und Delete" (dangling FK +
+                // gelöschter Logo-Blob). Und: Row ZUERST, Blob DANACH — schlägt
+                // der Blob-Delete fehl, bleiben nur verwaiste Bytes (harmlos);
+                // umgekehrt gäbe es Zombie-Vorlagen mit totem Logo (404 auf Landing).
+                var rows = await db.LandingTemplates
+                    .Where(x => x.Id == t.Id
+                                && !db.ShareLinks.Any(s => s.LandingTemplateId == x.Id))
+                    .ExecuteDeleteAsync(ct);
+                if (rows == 0) continue; // wurde inzwischen verlinkt → leben lassen
+                deleted++;
                 if (blobs is not null && !string.IsNullOrEmpty(t.LogoBlobPath))
-                    try { await blobs.DeleteAsync(t.LogoBlobPath, CancellationToken.None); } catch { /* orphan bytes, egal */ }
+                    try { await blobs.DeleteAsync(t.LogoBlobPath, CancellationToken.None); }
+                    catch (Exception ex) { _log.LogWarning(ex, "Orphan brand-logo blob delete failed: {Path}", t.LogoBlobPath); }
             }
-            db.LandingTemplates.RemoveRange(orphanBrandTemplates);
-            await db.SaveChangesAsync(ct);
-            _log.LogInformation("Deleted {n} orphaned link-branding templates", orphanBrandTemplates.Count);
+            if (deleted > 0)
+                _log.LogInformation("Deleted {n} orphaned link-branding templates", deleted);
         }
     }
 }

@@ -430,9 +430,11 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient("brandfetch", c =>
     {
         c.Timeout = TimeSpan.FromSeconds(10);
-        // v1.12 (Review F1): harte 8-MB-Kappe auf den Response-Body — sonst
-        // könnte eine (user-eingegebene!) Domain einen Multi-GB-Body streamen
-        // und den Prozess vor dem nachträglichen Größen-Check ausOOMen.
+        // v1.12.8 (Audit): MaxResponseContentBufferSize greift NUR im gepufferten
+        // Modus (ResponseContentRead). FetchGuardedAsync liest mit
+        // ResponseHeadersRead — der ECHTE OOM-Schutz ist dort ReadBoundedAsync
+        // (Stream, harter Byte-Stop). Diese Property bleibt nur als zweite
+        // Verteidigungslinie für etwaige künftige gepufferte Aufrufe stehen.
         c.MaxResponseContentBufferSize = 8_000_000;
     })
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });

@@ -372,7 +372,8 @@ public class ShareController : Controller
             ProviderLogoUrl: (linkT?.LogoUrl != null) ? baseT?.LogoUrl : null,
             // Firmenname NUR neben einem echten Kundenlogo (Custom-Branding);
             // sonst null → keine Textmarke neben dem generischen Fallback-Icon.
-            BrandName: (linkT?.LogoUrl != null) ? linkT?.BrandName : null);
+            BrandName: (linkT?.LogoUrl != null) ? linkT?.BrandName : null,
+            IsCustomBranded: linkT?.LogoUrl != null);
     }
 
     /// <summary>Inline preview stream (image or pdf). Only for password-less links —
@@ -1161,7 +1162,12 @@ public record LandingTheme(
     string? ProviderLogoUrl = null,
     // v1.12.7 — Firmen-/Kundenname neben dem Logo (nur Custom-Branding-Link,
     // vom Teilenden editierbar/abschaltbar). Null ⇒ nichts neben dem Logo.
-    string? BrandName = null);
+    string? BrandName = null,
+    // v1.12.8 (Audit) — true, sobald der Link ein KUNDENLOGO trägt. Die Views
+    // keyten das "branded"-Layout vorher auf ProviderLogoUrl — das ist aber
+    // null, wenn die Instanz KEIN eigenes Logo hat, und dann klebte "Geteilt
+    // von …" wieder neben dem fremden Kundenlogo (v1.12.4-Problem).
+    bool IsCustomBranded = false);
 
 public record LandingViewModel(
     string Slug,

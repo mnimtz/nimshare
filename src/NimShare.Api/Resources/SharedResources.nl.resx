@@ -1825,5 +1825,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.branding.apply_label" xml:space="preserve"><value>Deze branding op de link toepassen</value></data>
   <data name="share.branding.name_show" xml:space="preserve"><value>Bedrijfsnaam naast het logo tonen</value></data>
   <data name="share.branding.name_hint" xml:space="preserve"><value>Door AI herkend – aanpasbaar. Laat leeg als het logo de naam al bevat.</value></data>
+  <data name="share.branding.gone" xml:space="preserve"><value>De branding-voorbeeldweergave is verlopen. Voer de AI-voorbeeldweergave opnieuw uit.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Kon geen voorbeeld maken voor dit domein.</value></data>
 </root>

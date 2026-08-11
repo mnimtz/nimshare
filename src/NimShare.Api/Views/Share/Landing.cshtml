@@ -13,7 +13,7 @@
         @{
             // v1.12.4: siehe FolderLanding — bei Custom-Branding "Geteilt von …"
             // unter den Avatar (rechts) statt neben das Kundenlogo (links).
-            var brandedWithAvatar = Model.Theme.ProviderLogoUrl != null && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
+            var brandedWithAvatar = Model.Theme.IsCustomBranded && !string.IsNullOrEmpty(Model.OwnerAvatarUrl);
             // v1.12.6: signiert → Name steht schon im Signatur-Badge, obere Zeile entfällt.
             var showSharedBy = Model.Signer is null;
         }

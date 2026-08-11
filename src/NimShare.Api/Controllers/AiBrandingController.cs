@@ -74,8 +74,11 @@ public class AiBrandingController : ControllerBase
             // v1.12.2: finale URL NACH Redirects — relative Logo-Pfade müssen
             // dagegen aufgelöst werden (basf.de → www.basf.com), sonst falscher Host.
             finalUri = resp.RequestMessage?.RequestUri ?? siteUri;
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct);
-            if (bytes.Length > 3_000_000) bytes = bytes[..3_000_000];
+            // v1.12.8 (Audit HIGH): NICHT ReadAsByteArrayAsync — bei
+            // ResponseHeadersRead greift MaxResponseContentBufferSize nicht und
+            // ein Multi-GB-Body würde ungebremst in den Heap gepuffert (OOM).
+            // Stattdessen Stream mit hartem Byte-Stop lesen (HTML-Truncation ok).
+            var bytes = await ReadBoundedAsync(resp.Content, 3_000_000, ct);
             html = Encoding.UTF8.GetString(bytes);
         }
         catch (Exception ex)
@@ -89,7 +92,11 @@ public class AiBrandingController : ControllerBase
                           ?? MetaContent(html, "application-name")
                           ?? PageTitle(html)
                           ?? host;
-        string? primaryColor = NormalizeHex(MetaName(html, "theme-color"));
+        // v1.12.8 (Audit): Readability-Filter SOFORT anwenden — sehr viele Sites
+        // setzen theme-color auf #ffffff; das darf den DominantHex-Fallback aus
+        // dem Logo (unten) nicht blockieren, sonst endet das Template farblos,
+        // obwohl das Logo eine kräftige Markenfarbe hergegeben hätte.
+        string? primaryColor = ReadableAccentOrNull(NormalizeHex(MetaName(html, "theme-color")));
 
         // ── Logo: Kandidat finden → laden → Farbe + als PNG in Blob ───────────
         var templateId = Guid.NewGuid();
@@ -102,9 +109,12 @@ public class AiBrandingController : ControllerBase
                 var http = httpFactory.CreateClient("brandfetch");
                 http.DefaultRequestHeaders.UserAgent.ParseAdd("NimShareBrandBot/1.0");
                 using var lresp = await FetchGuardedAsync(http, logoCandidate, ct);
+                // v1.12.8 (Audit HIGH): begrenztes Stream-Lesen statt ReadAsByteArray
+                // (s.o.). Genau 8 MB erreicht = mutmaßlich abgeschnitten → verwerfen,
+                // ein truncated Bild wäre korrupt.
                 var imgBytes = lresp is { IsSuccessStatusCode: true }
-                    ? await lresp.Content.ReadAsByteArrayAsync(ct) : Array.Empty<byte>();
-                if (imgBytes.Length > 0 && imgBytes.Length < 8_000_000)
+                    ? await ReadBoundedAsync(lresp.Content, 8_000_000, ct) : Array.Empty<byte>();
+                if (imgBytes.Length > 0 && imgBytes.Length < 8_000_000 && IsAllowedRasterFormat(imgBytes))
                 {
                     using var img = new MagickImage(imgBytes);
                     img.AutoOrient();
@@ -208,6 +218,56 @@ public class AiBrandingController : ControllerBase
         return null; // zu viele Redirects
     }
 
+    /// <summary>v1.12.8 (Audit HIGH): Body streamen und HART bei maxBytes stoppen.
+    /// HttpClient.MaxResponseContentBufferSize greift nur im gepufferten Modus
+    /// (ResponseContentRead); FetchGuardedAsync nutzt ResponseHeadersRead, dort
+    /// würde ReadAsByteArrayAsync bis ~2 GB in den Heap puffern. Außerdem deckt
+    /// HttpClient.Timeout (10 s) bei ResponseHeadersRead nur die Header ab —
+    /// fürs Body-Lesen gilt darum ein eigenes 15-s-Limit (Slow-Loris-Schutz).</summary>
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, int maxBytes, CancellationToken ct)
+    {
+        using var bodyTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bodyTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+        await using var s = await content.ReadAsStreamAsync(bodyTimeout.Token);
+        var ms = new MemoryStream();
+        var buf = new byte[65536];
+        while (ms.Length < maxBytes)
+        {
+            var want = (int)Math.Min(buf.Length, maxBytes - ms.Length);
+            var n = await s.ReadAsync(buf.AsMemory(0, want), bodyTimeout.Token);
+            if (n == 0) break;
+            ms.Write(buf, 0, n);
+        }
+        return ms.ToArray();
+    }
+
+    /// <summary>v1.12.8 (Audit): Nur Raster-Formate an ImageMagick geben. SVG/MVG/
+    /// MSL & Co. könnten je nach nativem Coder externe Referenzen auflösen
+    /// (ImageTragick-Klasse); Magic-Bytes-Check statt Content-Type-Header, weil
+    /// letzterer angreiferkontrolliert ist. Erlaubt: PNG, JPEG, GIF, WebP, ICO, BMP.</summary>
+    private static bool IsAllowedRasterFormat(byte[] b)
+    {
+        if (b.Length < 12) return false;
+        if (b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) return true;            // PNG
+        if (b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) return true;                            // JPEG
+        if (b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x38) return true;            // GIF8
+        if (b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46
+            && b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50) return true;       // RIFF….WEBP
+        if (b[0] == 0x00 && b[1] == 0x00 && b[2] == 0x01 && b[3] == 0x00) return true;            // ICO
+        if (b[0] == 0x42 && b[1] == 0x4D) return true;                                            // BMP
+        return false;
+    }
+
+    /// <summary>v1.12.8 (Audit): globale ImageMagick-Limits gegen Decompression-
+    /// Bombs — ein wenige KB großes PNG kann zu riesigen Pixelflächen dekodieren.
+    /// Statisch einmalig gesetzt (ResourceLimits ist prozessweit).</summary>
+    static AiBrandingController()
+    {
+        ResourceLimits.Memory = 256UL * 1024 * 1024; // 256 MB
+        ResourceLimits.Width = 16384;
+        ResourceLimits.Height = 16384;
+    }
+
     // ── Helpers (rein statisch, kein Zustand) ─────────────────────────────────
 
     private static string? MetaContent(string html, string property)
@@ -294,7 +354,15 @@ public class AiBrandingController : ControllerBase
     }
 
     private static string? Trunc(string? s, int max)
-        => string.IsNullOrWhiteSpace(s) ? null : (s.Length <= max ? s : s[..max]);
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (s.Length <= max) return s;
+        // v1.12.8 (Audit): kein halbes Surrogate-Paar hinterlassen (Emoji an der
+        // Schnittkante → ungültiger String, � im Render, Ersatzzeichen im JSON).
+        var cut = max;
+        if (char.IsHighSurrogate(s[cut - 1])) cut--;
+        return s[..cut];
+    }
 
     /// <summary>v1.12.4: Der Akzent wird als Button-Hintergrund MIT weißer Schrift
     /// und für Überschriften genutzt. Eine zu helle Kundenfarbe (hohe Luminanz)
@@ -302,16 +370,22 @@ public class AiBrandingController : ControllerBase
     /// das Standard-Navy greift. Logo/Text bleiben unberührt.</summary>
     private static string? ReadableAccentOrNull(string? hex)
     {
-        if (string.IsNullOrWhiteSpace(hex) || hex.Length < 7) return hex;
+        // v1.12.8 (Audit): Kurzform #fff wurde vorher UNGEPRÜFT durchgereicht
+        // (Length<7-Bypass) → Vorschau-Swatch weiß, Landing dann doch navy.
+        // Jetzt: 3-stellig expandieren, alles Nicht-Hex verwerfen.
+        if (string.IsNullOrWhiteSpace(hex)) return null;
+        var h = hex.Trim().TrimStart('#');
+        if (h.Length == 3) h = string.Concat(h[0], h[0], h[1], h[1], h[2], h[2]);
+        if (h.Length != 6) return null;
         try
         {
-            var r = Convert.ToInt32(hex.Substring(1, 2), 16);
-            var g = Convert.ToInt32(hex.Substring(3, 2), 16);
-            var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+            var r = Convert.ToInt32(h[..2], 16);
+            var g = Convert.ToInt32(h.Substring(2, 2), 16);
+            var b = Convert.ToInt32(h.Substring(4, 2), 16);
             var lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
-            return lum > 0.62 ? null : hex; // zu hell → Default-Navy statt blass
+            return lum > 0.62 ? null : "#" + h; // zu hell → Default-Navy statt blass
         }
-        catch { return hex; }
+        catch { return null; }
     }
 
     /// <summary>URL-tauglicher Slug aus Name/Domain-Label: lowercase, nur
