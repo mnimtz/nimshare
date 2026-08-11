@@ -74,10 +74,18 @@ actor ThumbLoader {
         /// a thumb exists; must retry on next scroll-into-view instead of
         /// being cached as a permanent failure forever.
         case transientFailure
+        /// v2.0.7 (Audit): 429 — Server drosselt. Als transient behandelt würde
+        /// jedes Scroll-into-View sofort nachfeuern und das Rate-Limit
+        /// verstärken; stattdessen globaler Cooldown.
+        case rateLimited
     }
+
+    /// v2.0.7 (Audit): bis hierhin keine neuen Thumb-Requests (429-Backoff).
+    private var rateLimitedUntil: Date = .distantPast
 
     func image(for fileId: UUID, request: URLRequest) async -> UIImage? {
         if let hit = cache.object(forKey: fileId as NSUUID) { return hit }
+        if Date() < rateLimitedUntil { return nil } // 429-Cooldown: Cache ja, Netz nein
         if failed.contains(fileId) { return nil }
         if let running = inflight[fileId] {
             if case .image(let img) = await running.value { return img }
@@ -88,6 +96,7 @@ actor ThumbLoader {
                   let http = resp as? HTTPURLResponse else { return .transientFailure }
             if http.statusCode == 200, let img = UIImage(data: data) { return .image(img) }
             if http.statusCode == 404 { return .permanentMiss }
+            if http.statusCode == 429 { return .rateLimited }
             return .transientFailure
         }
         inflight[fileId] = task
@@ -101,6 +110,9 @@ actor ThumbLoader {
             if !Task.isCancelled { failed.insert(fileId) }
             return nil
         case .transientFailure:
+            return nil
+        case .rateLimited:
+            rateLimitedUntil = Date().addingTimeInterval(30)
             return nil
         }
     }

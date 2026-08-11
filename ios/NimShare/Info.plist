@@ -31,14 +31,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSCameraUsageDescription</key>
-	<string>Take a photo to share via NimShare.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>NimShare nutzt Face ID, um deine Sitzung beim Öffnen der App zu entsperren.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Choose a photo or file to share via NimShare.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>RedHatDisplay-Variable.ttf</string>

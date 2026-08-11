@@ -33,6 +33,40 @@ enum TmpFile {
         return base.appendingPathComponent(Self.sanitizedFilename(filename))
     }
 
+    /// v2.0.7 (Audit): `FileManager.moveItem` übernimmt die Schutzklasse der
+    /// QUELLE (URLSession-Download-tmp = completeUntilFirstUserAuthentication),
+    /// NICHT die des Zielverzeichnisses — die Klasse aus destinationURL(for:)
+    /// griff für gemovte Downloads also nie. Nach jedem Move explizit setzen.
+    static func applyProtection(at url: URL) {
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUnlessOpen], ofItemAtPath: url.path)
+    }
+
+    private static var tmpRoot: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("nimshare-tmp", isDirectory: true)
+    }
+
+    /// v2.0.7 (Audit): Downloads räumen sich nie selbst auf — bis iOS tmp purged
+    /// (Tage!) liegen Previews/ZIPs entschlüsselbar herum. Beim App-Start alles
+    /// löschen, was älter als einen Tag ist (Datums-basiert, deckt sich mit der
+    /// in PrivacyInfo.xcprivacy deklarierten Begründung "Cleanup nach Datum").
+    static func cleanupSweep(olderThan age: TimeInterval = 86_400) {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(
+            at: tmpRoot, includingPropertiesForKeys: [.creationDateKey]) else { return }
+        let cutoff = Date().addingTimeInterval(-age)
+        for entry in entries {
+            let created = (try? entry.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            if created < cutoff { try? fm.removeItem(at: entry) }
+        }
+    }
+
+    /// v2.0.7 (Audit): beim Abmelden ALLE Temp-Downloads entfernen — vertrauliche
+    /// Dateien dürfen einen Logout nicht auf der Platte überleben.
+    static func cleanupAll() {
+        try? FileManager.default.removeItem(at: tmpRoot)
+    }
+
     /// v1.11.82 (Security-Review): server-gelieferter Dateiname darf keine Pfad-Separatoren
     /// oder „..“ einschleusen. Nur der letzte Pfad-Bestandteil, Separatoren entschärft.
     /// (Der Schreibpfad bleibt so oder so im App-Sandbox-tmp, das ist Defense-in-Depth.)

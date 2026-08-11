@@ -178,6 +178,7 @@ struct FileDetailView: View {
             let (tmp, _) = try await URLSession.shared.download(from: src)
             let dest = TmpFile.destinationURL(for: file.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
+            TmpFile.applyProtection(at: dest) // v2.0.7: Move behält Quell-Schutzklasse
             await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
         } catch is CancellationError { /* Task-Cancel — kein Fehler */ }
         catch let ex { error = ex.localizedDescription }

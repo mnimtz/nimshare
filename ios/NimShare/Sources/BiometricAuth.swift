@@ -44,6 +44,16 @@ enum BiometricAuth {
         }
     }
 
+    /// v2.0.7 (Audit): Kann das Gerät ÜBERHAUPT authentifizieren (Biometrie ODER
+    /// Passcode)? Maßgeblich fürs Sperren: `available` prüft nur Biometrie — bei
+    /// Face-ID-Lockout (5 Fehlversuche) wäre das Schloss sonst komplett aus,
+    /// obwohl der Unlock-Pfad (authenticate, s.u.) den Passcode-Fallback kann.
+    static var canAuthenticate: Bool {
+        let ctx = LAContext()
+        var err: NSError?
+        return ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: &err)
+    }
+
     /// Führt die Biometrie aus, mit Fallback auf den Geräte-Code — damit ein
     /// Face-ID-Fehlschlag den Nutzer nicht dauerhaft aussperrt. true = ok.
     static func authenticate(reason: String) async -> Bool {

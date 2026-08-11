@@ -1299,13 +1299,18 @@ final class NimShareAPI: ObservableObject {
         let req = request("DELETE", "api/v1/me", body: bodyData, contentType: "application/json")
         let (data, resp): (Data, HTTPURLResponse)
         do {
-            guard let (d, r) = try? await URLSession.shared.data(for: req),
-                  let http = r as? HTTPURLResponse else {
+            // v2.0.7 (Audit): das frühere try? schluckte JEDEN Fehler vor den
+            // Cancellation-Catches — die waren toter Code, ein Abbruch kam als
+            // "No HTTP response" an. Jetzt propagieren Fehler in die Catches.
+            let (d, r) = try await URLSession.shared.data(for: req)
+            guard let http = r as? HTTPURLResponse else {
                 throw ApiError.network("No HTTP response")
             }
             (data, resp) = (d, http)
         } catch is CancellationError { throw CancellationError() }
         catch let u as URLError where u.code == .cancelled { throw CancellationError() }
+        catch let e as ApiError { throw e }
+        catch { throw ApiError.network(error.localizedDescription) }
         if resp.statusCode == 401 {
             if let problem = try? Self.jsonDecoder.decode(ProblemDetailsDto.self, from: data),
                let detail = problem.detail {

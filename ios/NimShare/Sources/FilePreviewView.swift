@@ -126,6 +126,7 @@ struct FilePreviewView: View {
             // Kollision bei gleichnamigen Files aus verschiedenen Ordnern.
             let dest = TmpFile.destinationURL(for: file.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
+            TmpFile.applyProtection(at: dest) // v2.0.7: Move behält Quell-Schutzklasse
             localURL = dest
         } catch let e as ApiError { error = e.localizedDescription }
         catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ }

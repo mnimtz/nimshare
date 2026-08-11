@@ -71,13 +71,18 @@ final class AuthStore: ObservableObject {
     /// zweiten Gerät widerrufener Consent hier lokal spiegelt und das
     /// Consent-Sheet automatisch aufgeht statt einer rohen 403-Fehlermeldung.
     func handleServerErrorForAiConsent(_ error: Error) -> Bool {
-        // v1.11.55: die alte "http 403"-Substring-Prüfung matchte nie —
-        // String(describing:) auf ApiError.http(403, ...) liefert "http(403, ...)"
-        // ohne Leerzeichen. Jeder rohe 403 auf einem AI-Endpoint (nicht nur der
-        // spezifische ai_consent_required-Body) soll das Consent-Sheet öffnen.
-        if case .http(403, _) = error as? ApiError {
-            aiConsented = false
-            return true
+        // v1.11.55: die alte "http 403"-Substring-Prüfung matchte nie (Format von
+        // String(describing:)) — damals wurde deshalb JEDER 403 zum Consent-Sheet.
+        // v2.0.7 (Audit): das trappte bei echten 403ern (Rechte/WAF) in einer
+        // Consent→Retry→Consent-Schleife. Jetzt wird der Body DIREKT aus dem
+        // ApiError gezogen und nur der echte Server-Marker "ai_consent_required"
+        // (AiConsentController.ErrorCode, garantiert im 403-Body) öffnet das Sheet.
+        if case let .http(403, body) = error as? ApiError {
+            if (body ?? "").contains("ai_consent_required") {
+                aiConsented = false
+                return true
+            }
+            return false // echter 403 → normale Fehlermeldung statt Consent-Loop
         }
         let s = String(describing: error).lowercased()
         if s.contains("ai_consent_required") {
@@ -122,10 +127,14 @@ final class AuthStore: ObservableObject {
         set { defaults.set(newValue, forKey: biometricLockKey) }
     }
 
-    /// Sperrt eine bestehende Sitzung, wenn das Schloss aktiviert und
-    /// Biometrie verfügbar ist (App-Start / Rückkehr aus dem Hintergrund).
+    /// Sperrt eine bestehende Sitzung, wenn das Schloss aktiviert ist
+    /// (App-Start / Rückkehr aus dem Hintergrund).
+    /// v2.0.7 (Audit): Gate auf canAuthenticate (Biometrie ODER Passcode) statt
+    /// nur Biometrie — sonst deaktivierte ein Face-ID-Lockout (5 Fehlversuche,
+    /// bewusst provozierbar) das Schloss komplett, obwohl der Unlock-Pfad den
+    /// Passcode-Fallback beherrscht.
     func lockIfEnabled() {
-        guard state == .signedIn, biometricLockEnabled, BiometricAuth.available != .none else { return }
+        guard state == .signedIn, biometricLockEnabled, BiometricAuth.canAuthenticate else { return }
         isLocked = true
     }
 
@@ -240,6 +249,9 @@ final class AuthStore: ObservableObject {
         user = nil
         isLocked = false
         state = .needsLogin
+        // v2.0.7 (Audit): heruntergeladene Previews/ZIPs dürfen den Logout
+        // nicht überleben — komplettes nimshare-tmp wegräumen.
+        TmpFile.cleanupAll()
     }
 
     func changeServer() {

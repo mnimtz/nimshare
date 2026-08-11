@@ -438,6 +438,12 @@ enum ApiError: LocalizedError {
     // Wir erkennen HTML-Bodies + Standard-Status-Codes und geben statt dessen
     // freundliche, lokalisierte Kurzmeldungen zurück.
     private static func humanizeHttp(code: Int, body: String?) -> String {
+        // v2.0.7 (Audit): der Server rate-limitet inzwischen einzelne Endpoints —
+        // 429 bekam bisher den rohen Body ("HTTP 429: {…}") statt einer Meldung.
+        if code == 429 {
+            return NSLocalizedString("Zu viele Anfragen. Bitte einen Moment warten.",
+                                     comment: "shown on HTTP 429 rate limit")
+        }
         let raw = (body ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let isHtml = raw.hasPrefix("<!DOCTYPE") || raw.hasPrefix("<html") || raw.contains("<title>")
         // Speziell: Azure/App-Service-„stopped/unavailable"-Seiten haben

@@ -43,12 +43,22 @@ struct RootView: View {
     @EnvironmentObject var auth: AuthStore
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance.mode") private var appearanceRaw: String = AppearanceMode.system.rawValue
+    // v2.0.7 (Audit): Sichtschutz solange die Szene nicht aktiv ist — deckt den
+    // App-Switcher-Snapshot ab, OHNE das Schloss zu armen (die Face-ID-System-UI
+    // löst selbst .inactive aus, darum bleibt das Re-Lock weiter an .background).
+    @State private var privacyShield = false
 
     var body: some View {
         Group {
             switch auth.state {
             case .booting:
-                ProgressView().task { await auth.bootstrap() }
+                ProgressView().task {
+                    // v2.0.7 (Audit): alte Temp-Downloads beim Start abräumen
+                    // (>24 h) — bisher gab es den in PrivacyInfo deklarierten
+                    // Cleanup gar nicht; Dateien lagen bis zum iOS-Purge herum.
+                    TmpFile.cleanupSweep()
+                    await auth.bootstrap()
+                }
             case .needsServer:
                 ServerConfigView()
             case .needsLogin:
@@ -68,12 +78,34 @@ struct RootView: View {
                 }
             }
         }
+        .overlay {
+            if privacyShield && auth.state == .signedIn && !auth.isLocked {
+                PrivacyShieldView()
+            }
+        }
         .preferredColorScheme((AppearanceMode(rawValue: appearanceRaw) ?? .system).colorScheme)
         // Beim Wechsel in den Hintergrund sperren, damit beim nächsten Öffnen
         // wieder Biometrie verlangt wird. Nur .background (nicht .inactive) —
         // sonst würde die Face-ID-System-UI selbst ein Re-Lock auslösen.
         .onChange(of: scenePhase) { _, phase in
+            withAnimation(.easeInOut(duration: 0.15)) { privacyShield = phase != .active }
             if phase == .background { auth.lockIfEnabled() }
         }
+    }
+}
+
+/// v2.0.7 (Audit): Blur-Overlay für den App-Switcher — Dateinamen/Chat-Inhalte
+/// sind sonst im Snapshot lesbar, selbst wenn das Face-ID-Schloss aktiv ist.
+/// Bewusst ohne Text (keine Lokalisierung nötig), nur Marke auf Material.
+struct PrivacyShieldView: View {
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.regularMaterial)
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Theme.navy.opacity(0.55))
+        }
+        .ignoresSafeArea()
+        .transition(.opacity)
     }
 }

@@ -805,6 +805,7 @@ struct FolderBrowserView: View {
             // v1.10.79: TmpFile + iPad-safe Share-Sheet via zentralem Helper
             let dest = TmpFile.destinationURL(for: f.name)
             try FileManager.default.moveItem(at: tmp, to: dest)
+            TmpFile.applyProtection(at: dest) // v2.0.7: Move behält Quell-Schutzklasse
             await MainActor.run { TmpFile.presentShareSheet(for: [dest]) }
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }
     }
