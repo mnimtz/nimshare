@@ -299,14 +299,18 @@ public class FilesController : ControllerBase
                      && f.OwnerGroupId == rootOwnerGroup)
             .Select(f => new { f.Id, f.Name, f.ParentFolderId })
             .ToListAsync(ct);
-        var byParent = allFolders.GroupBy(f => f.ParentFolderId).ToDictionary(g => g.Key, g => g.ToList());
+        // v1.12.10 (Root-Cause des HTTP-500): NICHT ToDictionary(g => g.Key) —
+        // die Top-Level-Ordner haben ParentFolderId == null, und ein
+        // Dictionary<Guid?,…> wirft bei einem null-Key ArgumentNullException
+        // ("Parameter 'key'"). ToLookup verträgt null-Keys; wir fragen ohnehin
+        // nur nach nicht-null Eltern-Ids (root.Id + Kind-Ids).
+        var byParent = allFolders.ToLookup(f => f.ParentFolderId);
         var pathOf = new Dictionary<Guid, string> { [root.Id] = "" };
         var queue = new Queue<Guid>(); queue.Enqueue(root.Id);
         while (queue.Count > 0)
         {
             var pid = queue.Dequeue();
-            if (!byParent.TryGetValue(pid, out var kids)) continue;
-            foreach (var k in kids)
+            foreach (var k in byParent[pid]) // leere Sequenz, wenn pid keine Kinder hat
             {
                 pathOf[k.Id] = string.IsNullOrEmpty(pathOf[pid]) ? SanitizePathSegment(k.Name)
                                                                  : pathOf[pid] + "/" + SanitizePathSegment(k.Name);
