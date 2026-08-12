@@ -1,45 +1,15 @@
 {
   "sourceLanguage" : "de",
   "strings" : {
-    "CFBundleDisplayName" : {
-      "comment" : "Bundle display name",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "NimShare"
-          }
-        }
-      }
-    },
-    "CFBundleName" : {
-      "comment" : "Bundle name",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "NimShare"
-          }
-        }
-      }
-    },
-    "NSCameraUsageDescription" : {
-      "comment" : "Privacy - Camera Usage Description",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Take a photo to share via NimShare."
-          }
-        }
-      }
-    },
     "NSFaceIDUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare nutzt Face ID, um deine Sitzung beim Öffnen der App zu entsperren."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -73,25 +43,42 @@
       }
     },
     "NSLocationWhenInUseUsageDescription" : {
-      "comment" : "Privacy - Location When In Use Usage Description",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "NimShare nutzt deinen ungefähren Standort nur für eine freundliche Wetter-Begrüssung auf der Startseite. Optional — die App funktioniert ohne."
           }
-        }
-      }
-    },
-    "NSPhotoLibraryUsageDescription" : {
-      "comment" : "Privacy - Photo Library Usage Description",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "de" : {
+        },
+        "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose a photo or file to share via NimShare."
+            "state" : "translated",
+            "value" : "NimShare uses your approximate location only for a friendly weather greeting on the home screen. Optional — the app works without it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare usa tu ubicación aproximada solo para un saludo del tiempo en la pantalla de inicio. Opcional: la app funciona sin ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare utilise votre position approximative uniquement pour un accueil météo sur l’écran d’accueil. Facultatif — l’app fonctionne sans."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare usa la tua posizione approssimativa solo per un saluto meteo nella schermata iniziale. Facoltativo — l’app funziona anche senza."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NimShare gebruikt je globale locatie alleen voor een vriendelijke weergroet op het startscherm. Optioneel — de app werkt ook zonder."
           }
         }
       }
