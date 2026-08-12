@@ -275,6 +275,13 @@ public class FilesController : ControllerBase
         [FromServices] ILogger<FilesController> log,
         CancellationToken ct)
     {
+        // v1.12.9: Bislang lief jede ungefangene Exception hier in den generischen
+        // /error-Handler (HTTP 500 ohne Body) → der Client zeigte nur "HTTP 500",
+        // die Ursache war nur im Azure-Log sichtbar. Jetzt: fangen, MIT Kontext
+        // loggen und dem Admin den echten Grund als Problem-Detail zurückgeben
+        // (normale User bekommen weiter eine generische Meldung — kein Info-Leak).
+        try
+        {
         var user = await _users.GetOrProvisionAsync(User, ct);
         var root = await _db.Folders.FindAsync(new object[] { id }, ct);
         if (root is null) return NotFound();
@@ -334,6 +341,16 @@ public class FilesController : ControllerBase
                           EntryName: string.IsNullOrEmpty(x.prefix) ? x.file.Name : x.prefix + "/" + x.file.Name))
             .ToList();
         return await BuildZipResultAsync(items, name, log, ct);
+        }
+        catch (OperationCanceledException) { throw; } // Client-Abbruch: kein Fehler
+        catch (Exception ex)
+        {
+            log.LogError(ex, "FolderZip 500 für Ordner {FolderId}", id);
+            var isAdmin = User?.IsInRole("Admin") == true;
+            return Problem(statusCode: 500, title: "Ordner-Download fehlgeschlagen",
+                detail: isAdmin ? $"{ex.GetType().Name}: {ex.Message}"
+                                : "Der Ordner konnte nicht als ZIP gepackt werden. Bitte erneut versuchen.");
+        }
     }
 
     private static string SanitizePathSegment(string s)
