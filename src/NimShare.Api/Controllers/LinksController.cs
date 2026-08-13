@@ -172,7 +172,9 @@ public class LinksController : ControllerBase
         var normalised = _slugs.IsValid(slug) ? slug : SlugService.Normalise(slug);
         if (!_slugs.IsValid(normalised))
             return Ok(new SlugCheckResponse(false, "invalid", normalised, new List<string>()));
-        var free = await _slugs.IsAvailableAsync(normalised, ct);
+        // v1.12.11: owner-bewusst — eigene tote Slugs zeigt der Live-Check als frei.
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var free = await _slugs.IsAvailableAsync(normalised, me.Id, ct);
         if (free)
             return Ok(new SlugCheckResponse(true, null, normalised, new List<string>()));
         var suggestions = await _slugs.SuggestAlternativesAsync(normalised, 3, ct);
@@ -206,7 +208,9 @@ public class LinksController : ControllerBase
         var normalised = (slug ?? "").Trim().ToLowerInvariant();
         if (!subSvc.IsValidSlug(normalised, out var reason))
             return Ok(new SubdomainCheckResponse(false, reason, normalised));
-        var free = await subSvc.IsSlugAvailableAsync(normalised, ct);
+        // v1.12.11: owner-bewusst — eigene tote Subdomain-Slugs gelten als frei.
+        var me = await _users.GetOrProvisionAsync(User, ct);
+        var free = await subSvc.IsSlugAvailableAsync(normalised, me.Id, ct);
         return Ok(new SubdomainCheckResponse(free, free ? null : "taken", normalised));
     }
 
@@ -243,7 +247,7 @@ public class LinksController : ControllerBase
         }
 
         string slug;
-        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
+        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
 
@@ -262,7 +266,9 @@ public class LinksController : ControllerBase
             var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
             if (!subSvc.IsValidSlug(candidate, out var reason))
                 return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
-            if (!await subSvc.IsSlugAvailableAsync(candidate, ct))
+            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
+            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
                 return Problem(statusCode: 409, title: "Subdomain slug taken");
             subdomainSlug = candidate;
         }

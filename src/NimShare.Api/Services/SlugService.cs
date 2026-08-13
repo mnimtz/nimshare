@@ -9,8 +9,14 @@ public interface ISlugService
 {
     string GenerateRandom(int lengthChars = 10);
     bool IsValid(string slug);
-    Task<bool> IsAvailableAsync(string slug, CancellationToken ct = default);
-    Task<string> ResolveOrGenerateAsync(string? requested, CancellationToken ct = default);
+    // v1.12.11: forUserId owner-bewusst — ein Slug gilt für DIESEN User als frei,
+    // wenn ihn nur noch dessen EIGENE inaktive (widerrufene/abgelaufene) Links
+    // halten. Fremde Slugs bleiben belegt (kein Hijack). forUserId=null → strikte
+    // Alt-Semantik (jeder Link belegt), genutzt für Zufalls-Slug-Generierung.
+    Task<bool> IsAvailableAsync(string slug, Guid? forUserId = null, CancellationToken ct = default);
+    Task<string> ResolveOrGenerateAsync(string? requested, Guid ownerId, CancellationToken ct = default);
+    // v1.12.11: gibt einen regulären Slug frei, den nur eigene inaktive Links halten.
+    Task ReclaimOwnedInactiveAsync(string slug, Guid ownerId, CancellationToken ct = default);
     // v1.10.41: für den Live-Check im Share-Dialog. Bei belegtem Slug
     // liefert der Endpoint bis zu N freie Alternativen basierend auf dem
     // Wunsch — als konkrete Klick-Angebote statt "denk dir was Neues aus".
@@ -43,11 +49,49 @@ public class SlugService : ISlugService
         });
     }
 
-    public async Task<bool> IsAvailableAsync(string slug, CancellationToken ct = default)
+    public async Task<bool> IsAvailableAsync(string slug, Guid? forUserId = null, CancellationToken ct = default)
     {
-        var taken = await _db.ShareLinks.AnyAsync(x => x.Slug == slug, ct)
-                    || await _db.UploadRequests.AnyAsync(x => x.Slug == slug, ct);
-        return !taken;
+        var now = DateTimeOffset.UtcNow;
+        // "belegt" = es gibt einen Link mit diesem Slug, der DIESEN User blockiert:
+        // fremd-besessen (immer) ODER eigen + noch aktiv. forUserId=null blockt
+        // jeder Link (Alt-Verhalten für Zufallsgenerierung).
+        var takenShare = await _db.ShareLinks.AnyAsync(x => x.Slug == slug
+            && (forUserId == null || x.OwnerId != forUserId.Value
+                || (!x.IsRevoked && (x.ExpiresAt == null || x.ExpiresAt > now)
+                    && (x.MaxDownloads == null || x.DownloadCount < x.MaxDownloads))), ct);
+        if (takenShare) return false;
+        var takenUpload = await _db.UploadRequests.AnyAsync(x => x.Slug == slug
+            && (forUserId == null || x.OwnerId != forUserId.Value
+                || (!x.IsRevoked && (x.ExpiresAt == null || x.ExpiresAt > now)
+                    && (x.MaxUploads == null || x.UploadCount < x.MaxUploads))), ct);
+        return !takenUpload;
+    }
+
+    /// <summary>v1.12.11: Gibt einen regulären Slug frei, den nur EIGENE inaktive
+    /// Links des Users halten — durch Weg-parken (Slug ist Pflichtfeld, kann nicht
+    /// null werden). Die geparkten Links sind ohnehin tot; ihre /s/…-URL zeigt dann
+    /// auf einen nicht mehr auflösbaren Namen. Fremde/aktive Links bleiben unberührt.</summary>
+    public async Task ReclaimOwnedInactiveAsync(string slug, Guid ownerId, CancellationToken ct = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var deadShares = await _db.ShareLinks.Where(x => x.Slug == slug && x.OwnerId == ownerId
+            && (x.IsRevoked || (x.ExpiresAt != null && x.ExpiresAt <= now)
+                || (x.MaxDownloads != null && x.DownloadCount >= x.MaxDownloads))).ToListAsync(ct);
+        foreach (var l in deadShares) l.Slug = ParkedName(l.Slug);
+        var deadUploads = await _db.UploadRequests.Where(x => x.Slug == slug && x.OwnerId == ownerId
+            && (x.IsRevoked || (x.ExpiresAt != null && x.ExpiresAt <= now)
+                || (x.MaxUploads != null && x.UploadCount >= x.MaxUploads))).ToListAsync(ct);
+        foreach (var l in deadUploads) l.Slug = ParkedName(l.Slug);
+        if (deadShares.Count + deadUploads.Count > 0) await _db.SaveChangesAsync(ct);
+    }
+
+    // Eindeutiger Park-Name ≤64 Zeichen (Slug-Spaltenlimit): Original gekürzt +
+    // "~" + 8 Hex. Der GUID-Suffix garantiert die Unique-Index-Verträglichkeit.
+    private static string ParkedName(string original)
+    {
+        var suffix = "~" + Guid.NewGuid().ToString("N")[..8];
+        var baseLen = Math.Min(original.Length, 64 - suffix.Length);
+        return original[..baseLen] + suffix;
     }
 
     /// <summary>
@@ -69,7 +113,7 @@ public class SlugService : ISlugService
         return s;
     }
 
-    public async Task<string> ResolveOrGenerateAsync(string? requested, CancellationToken ct = default)
+    public async Task<string> ResolveOrGenerateAsync(string? requested, Guid ownerId, CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(requested))
         {
@@ -84,7 +128,9 @@ public class SlugService : ISlugService
                     throw new ArgumentException($"Slug '{requested}' is not valid.", nameof(requested));
                 requested = normalised;
             }
-            if (!await IsAvailableAsync(requested, ct))
+            // v1.12.11: erst eigene tote Links mit diesem Slug freigeben, dann prüfen.
+            await ReclaimOwnedInactiveAsync(requested, ownerId, ct);
+            if (!await IsAvailableAsync(requested, ownerId, ct))
                 throw new InvalidOperationException($"Slug '{requested}' is already taken.");
             return requested;
         }
@@ -93,7 +139,7 @@ public class SlugService : ISlugService
         for (int attempt = 0; attempt < 6; attempt++)
         {
             var candidate = GenerateRandom(attempt < 3 ? 10 : 14);
-            if (await IsAvailableAsync(candidate, ct))
+            if (await IsAvailableAsync(candidate, ct: ct))
                 return candidate;
         }
         throw new InvalidOperationException("Could not generate a unique slug after 6 attempts.");
@@ -125,7 +171,7 @@ public class SlugService : ISlugService
         {
             var candidate = $"{stem}-{i}";
             if (!IsValid(candidate)) continue;
-            if (await IsAvailableAsync(candidate, ct)) out_.Add(candidate);
+            if (await IsAvailableAsync(candidate, ct: ct)) out_.Add(candidate);
         }
         // 2) Wenn Zahlen-Iteration nicht reicht (extrem belegter Slug), fülle
         //    mit einem kurzen Random-Suffix auf — 3 Zeichen aus dem
@@ -135,7 +181,7 @@ public class SlugService : ISlugService
             var suffix = GenerateRandom(3);
             var candidate = $"{stem}-{suffix}";
             if (!IsValid(candidate)) continue;
-            if (await IsAvailableAsync(candidate, ct) && !out_.Contains(candidate))
+            if (await IsAvailableAsync(candidate, ct: ct) && !out_.Contains(candidate))
                 out_.Add(candidate);
         }
         return out_;

@@ -31,7 +31,12 @@ public interface ISubdomainShareService
     bool IsValidSlug(string slug, out string? reason);
 
     /// <summary>Frei über ShareLinks UND UploadRequests?</summary>
-    Task<bool> IsSlugAvailableAsync(string slug, CancellationToken ct = default);
+    // v1.12.11: forUserId owner-bewusst — frei für DIESEN User, wenn den Subdomain-
+    // Slug nur noch dessen eigene inaktive Links halten. Fremde bleiben belegt.
+    Task<bool> IsSlugAvailableAsync(string slug, Guid? forUserId = null, CancellationToken ct = default);
+    // v1.12.11: gibt einen Subdomain-Slug frei, den nur eigene inaktive Links halten
+    // (SubdomainSlug ist nullable → einfach auf null setzen, Routing greift nur aktiv).
+    Task ReclaimOwnedInactiveAsync(string slug, Guid forUserId, CancellationToken ct = default);
 
     /// <summary>https://{slug}.{BaseDomain} — null wenn Feature aus.</summary>
     Task<string?> BuildUrlAsync(string? slug, CancellationToken ct = default);
@@ -105,14 +110,41 @@ public class SubdomainShareService : ISubdomainShareService
         return true;
     }
 
-    public async Task<bool> IsSlugAvailableAsync(string slug, CancellationToken ct = default)
+    public async Task<bool> IsSlugAvailableAsync(string slug, Guid? forUserId = null, CancellationToken ct = default)
     {
         slug = slug.Trim().ToLowerInvariant();
+        var now = DateTimeOffset.UtcNow;
         using var scope = _scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
-        var taken = await db.ShareLinks.AnyAsync(l => l.SubdomainSlug == slug, ct)
-                 || await db.UploadRequests.AnyAsync(l => l.SubdomainSlug == slug, ct);
-        return !taken;
+        // "belegt" = ein Link mit diesem Subdomain-Slug, der DIESEN User blockiert:
+        // fremd-besessen ODER eigen + noch aktiv. forUserId=null → jeder Link belegt.
+        var takenShare = await db.ShareLinks.AnyAsync(l => l.SubdomainSlug == slug
+            && (forUserId == null || l.OwnerId != forUserId.Value
+                || (!l.IsRevoked && (l.ExpiresAt == null || l.ExpiresAt > now)
+                    && (l.MaxDownloads == null || l.DownloadCount < l.MaxDownloads))), ct);
+        if (takenShare) return false;
+        var takenUpload = await db.UploadRequests.AnyAsync(l => l.SubdomainSlug == slug
+            && (forUserId == null || l.OwnerId != forUserId.Value
+                || (!l.IsRevoked && (l.ExpiresAt == null || l.ExpiresAt > now)
+                    && (l.MaxUploads == null || l.UploadCount < l.MaxUploads))), ct);
+        return !takenUpload;
+    }
+
+    public async Task ReclaimOwnedInactiveAsync(string slug, Guid forUserId, CancellationToken ct = default)
+    {
+        slug = slug.Trim().ToLowerInvariant();
+        var now = DateTimeOffset.UtcNow;
+        using var scope = _scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+        var deadShares = await db.ShareLinks.Where(l => l.SubdomainSlug == slug && l.OwnerId == forUserId
+            && (l.IsRevoked || (l.ExpiresAt != null && l.ExpiresAt <= now)
+                || (l.MaxDownloads != null && l.DownloadCount >= l.MaxDownloads))).ToListAsync(ct);
+        foreach (var l in deadShares) l.SubdomainSlug = null;
+        var deadUploads = await db.UploadRequests.Where(l => l.SubdomainSlug == slug && l.OwnerId == forUserId
+            && (l.IsRevoked || (l.ExpiresAt != null && l.ExpiresAt <= now)
+                || (l.MaxUploads != null && l.UploadCount >= l.MaxUploads))).ToListAsync(ct);
+        foreach (var l in deadUploads) l.SubdomainSlug = null;
+        if (deadShares.Count + deadUploads.Count > 0) await db.SaveChangesAsync(ct);
     }
 
     public async Task<string?> BuildUrlAsync(string? slug, CancellationToken ct = default)

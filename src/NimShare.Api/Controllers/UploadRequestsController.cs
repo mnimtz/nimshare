@@ -57,7 +57,7 @@ public class UploadRequestsController : ControllerBase
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
         string slug;
-        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, ct); }
+        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
         catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
         catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
 
@@ -76,7 +76,9 @@ public class UploadRequestsController : ControllerBase
             var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
             if (!subSvc.IsValidSlug(candidate, out var reason))
                 return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
-            if (!await subSvc.IsSlugAvailableAsync(candidate, ct))
+            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
+            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
                 return Problem(statusCode: 409, title: "Subdomain slug taken");
             subdomainSlug = candidate;
             subdomainBase = subSettings.BaseDomain;
