@@ -40,6 +40,11 @@ struct ShareLinkCreateSheet: View {
     // würde der Server das Flag ohnehin ignorieren.
     @State private var displayAsGallery: Bool = false
     @State private var allowUploads: Bool = false
+    // v2.0.8 (Server v1.12.12): Unterordner rekursiv einbeziehen + max. Tiefe
+    // (0 = unbegrenzt). Nur bei Folder-Targets sichtbar; Default an — Parität
+    // zum Web-Modal.
+    @State private var includeSubfolders: Bool = true
+    @State private var subfolderDepth: Int = 0
     // v1.11.0: Subdomain-Sharing — Info einmal laden, Sektion nur zeigen
     // wenn Feature an UND dieser User es nutzen darf.
     @State private var subInfo: NimShareAPI.SubdomainInfo?
@@ -116,6 +121,25 @@ struct ShareLinkCreateSheet: View {
             }
             Section {
                 Toggle("Benachrichtigen wenn Link geöffnet wird", isOn: $notifyOnAccess)
+            }
+            // v2.0.8: Unterordner-Freigabe — nur für Folder-Targets.
+            if isFolderTarget {
+                Section("Unterordner") {
+                    Toggle(isOn: $includeSubfolders.animation()) {
+                        Label("Unterordner einbeziehen", systemImage: "folder.badge.plus")
+                    }
+                    if includeSubfolders {
+                        Picker("Max. Tiefe", selection: $subfolderDepth) {
+                            Text("Unbegrenzt").tag(0)
+                            Text("1").tag(1)
+                            Text("2").tag(2)
+                            Text("3").tag(3)
+                            Text("5").tag(5)
+                        }
+                        Text("Dateien aus Unterordnern erscheinen mit Ordnerstruktur auf der Freigabeseite und im ZIP.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             // v1.10.172: Foto/Video-Album-Sektion — nur für Folder-Targets,
             // Sub-Toggle „Upload erlauben" erst wenn Album-Modus an ist.
@@ -227,7 +251,11 @@ struct ShareLinkCreateSheet: View {
                 allowUploads: isFolderTarget && displayAsGallery && allowUploads ? true : nil,
                 subdomainSlug: effectiveSubdomainSlug(useSubdomain: useSubdomain, slug: subSlug),  // v1.11.0
                 serialNumber: serialNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : serialNumber.trimmingCharacters(in: .whitespaces),  // v1.11.18
-                isPermanent: isPermanent  // v1.11.50
+                isPermanent: isPermanent,  // v1.11.50
+                // v2.0.8: Unterordner-Freigabe (nur Folder-Targets; nil hält
+                // ältere Server-Versionen kompatibel).
+                includeSubfolders: isFolderTarget && includeSubfolders ? true : nil,
+                subfolderDepth: isFolderTarget && includeSubfolders && subfolderDepth > 0 ? subfolderDepth : nil
             )
             result = link
         } catch is CancellationError { /* Pull-Refresh/Task-Cancel — kein Fehler */ } catch let ex { error = ex.localizedDescription }

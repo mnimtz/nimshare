@@ -669,6 +669,10 @@ final class NimShareAPI: ObservableObject {
         // v1.11.50: explizites "läuft nie ab" — Default false, damit ein
         // fehlendes expiresAt serverseitig auf +8 Wochen defaultet.
         let isPermanent: Bool
+        // v2.0.8 (Server v1.12.12): Ordner-Links — Unterordner rekursiv
+        // einbeziehen + optionale maximale Tiefe (nil = unbegrenzt).
+        let includeSubfolders: Bool?
+        let subfolderDepth: Int?
 
         // v1.10.169: expliziter init mit Defaults. Swift's synthesized
         // memberwise init verschluckt sich an inline `= nil`-Defaults auf
@@ -680,7 +684,8 @@ final class NimShareAPI: ObservableObject {
              notifyOnAccess: Bool, signingCertificateId: UUID?,
              displayAsGallery: Bool? = nil, allowUploads: Bool? = nil,
              subdomainSlug: String? = nil, serialNumber: String? = nil,
-             isPermanent: Bool = false) {
+             isPermanent: Bool = false,
+             includeSubfolders: Bool? = nil, subfolderDepth: Int? = nil) {
             self.fileId = fileId
             self.folderId = folderId
             self.slug = slug
@@ -695,6 +700,8 @@ final class NimShareAPI: ObservableObject {
             self.subdomainSlug = subdomainSlug
             self.serialNumber = serialNumber
             self.isPermanent = isPermanent
+            self.includeSubfolders = includeSubfolders
+            self.subfolderDepth = subfolderDepth
         }
     }
     /// Create a share link with default options (no password, no expiry, no
@@ -1183,14 +1190,17 @@ final class NimShareAPI: ObservableObject {
                              allowUploads: Bool? = nil,
                              subdomainSlug: String? = nil,
                              serialNumber: String? = nil,
-                             isPermanent: Bool = false) async throws -> ShareLinkDto {
+                             isPermanent: Bool = false,
+                             includeSubfolders: Bool? = nil,
+                             subfolderDepth: Int? = nil) async throws -> ShareLinkDto {
         let body = try Self.jsonEncoder.encode(CreateShareLinkBody(
             fileId: fileId, folderId: folderId, slug: slug, password: password,
             maxDownloads: maxDownloads, expiresAt: expiresAt, message: message,
             notifyOnAccess: notifyOnAccess, signingCertificateId: signingCertificateId,
             displayAsGallery: displayAsGallery, allowUploads: allowUploads,
             subdomainSlug: subdomainSlug, serialNumber: serialNumber,
-            isPermanent: isPermanent))
+            isPermanent: isPermanent,
+            includeSubfolders: includeSubfolders, subfolderDepth: subfolderDepth))
         let req = request("POST", "api/v1/links", body: body, contentType: "application/json")
         let (data, _) = try await perform(req)
         return try decode(ShareLinkDto.self, data)

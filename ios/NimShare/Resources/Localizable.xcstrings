@@ -3673,6 +3673,40 @@
         }
       }
     },
+    "Dateien aus Unterordnern erscheinen mit Ordnerstruktur auf der Freigabeseite und im ZIP.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files from subfolders appear with their folder structure on the share page and in the ZIP."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los archivos de las subcarpetas aparecen con su estructura de carpetas en la página compartida y en el ZIP."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les fichiers des sous-dossiers apparaissent avec leur structure de dossiers sur la page de partage et dans le ZIP."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I file delle sottocartelle appaiono con la loro struttura di cartelle nella pagina di condivisione e nello ZIP."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestanden uit submappen verschijnen met hun mappenstructuur op de deelpagina en in de ZIP."
+          }
+        }
+      }
+    },
     "Dateien nach Bedeutung suchen…": {
       "extractionState": "stale",
       "localizations": {
@@ -9428,6 +9462,40 @@
         }
       }
     },
+    "Max. Tiefe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max. depth"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profundidad máx."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profondeur max."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profondità max."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max. diepte"
+          }
+        }
+      }
+    },
     "Max. Uploads (leer = unbegrenzt)": {
       "extractionState": "stale",
       "localizations": {
@@ -14095,6 +14163,108 @@
         }
       }
     },
+    "Unbegrenzt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlimited"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ilimitada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Illimitée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Illimitata"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onbeperkt"
+          }
+        }
+      }
+    },
+    "Unterordner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subfolders"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subcarpetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous-dossiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sottocartelle"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submappen"
+          }
+        }
+      }
+    },
+    "Unterordner einbeziehen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include subfolders"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluir subcarpetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inclure les sous-dossiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includi le sottocartelle"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submappen opnemen"
+          }
+        }
+      }
+    },
     "Unverändert lassen = leer": {
       "extractionState": "manual",
       "localizations": {
@@ -15198,6 +15368,7 @@
       }
     },
     "Zu viele Anfragen. Bitte einen Moment warten.": {
+      "comment": "shown on HTTP 429 rate limit",
       "localizations": {
         "en": {
           "stringUnit": {

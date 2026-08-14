@@ -15,8 +15,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    MARKETING_VERSION: "2.0.7"
-    CURRENT_PROJECT_VERSION: "70"
+    MARKETING_VERSION: "2.0.8"
+    CURRENT_PROJECT_VERSION: "71"
 targets:
   NimShare:
     type: application
