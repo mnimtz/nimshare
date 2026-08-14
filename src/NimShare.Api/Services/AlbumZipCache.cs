@@ -104,11 +104,17 @@ public class AlbumZipCache : IAlbumZipCache
         var link = await db.ShareLinks
             .Include(l => l.Folder)
             .SingleOrDefaultAsync(l => l.Id == linkId, ct);
-        if (link is null || link.FolderId is null) return;
+        if (link is null || link.FolderId is null || link.Folder is null) return;
 
+        // v1.12.12: bei IncludeSubfolders den ganzen Teilbaum vorbauen — mit
+        // relativen Pfaden im ZIP, identisch zu ShareController.DownloadAll.
+        var folderSvc = scope.ServiceProvider.GetRequiredService<IFolderService>();
+        var subtree = await folderSvc.CollectShareSubtreeAsync(link, link.Folder, ct);
+        var folderIds = subtree.Keys.ToHashSet();
         var files = await db.Files
-            .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready)
-            .Select(f => new { f.Id, f.BlobPath, f.Name })
+            .Where(f => f.FolderId != null && folderIds.Contains(f.FolderId.Value)
+                     && f.Status == StorageFileStatus.Ready)
+            .Select(f => new { f.Id, f.BlobPath, f.Name, f.FolderId })
             .ToListAsync(ct);
         if (files.Count == 0) return;
         // v1.10.191: Snapshot der File-Ids — vor dem Upload prüfen wir, ob
@@ -129,7 +135,9 @@ public class AlbumZipCache : IAlbumZipCache
                 foreach (var f in files)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var name = UniqueEntryName(f.Name, used);
+                    // v1.12.12: relativer Teilbaum-Pfad ("" für Wurzel).
+                    var prefix = subtree.GetValueOrDefault(f.FolderId!.Value, "");
+                    var name = UniqueEntryName(prefix.Length == 0 ? f.Name : prefix + "/" + f.Name, used);
                     // v1.10.191: Medien (JPEG/HEIC/MP4…) sind bereits komprimiert —
                     // Optimal-Deflate darüber verbrennt auf dem 1-vCPU-B1 nur CPU
                     // (~50s+ pro Album!), die währenddessen dem Thumb-Worker und
@@ -154,7 +162,8 @@ public class AlbumZipCache : IAlbumZipCache
             // während des Builds geändert (neuer Gast-Upload, Löschung), das
             // ZIP verwerfen. Der nächste Warmup baut mit frischem Stand.
             var nowIds = await db.Files
-                .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready)
+                .Where(f => f.FolderId != null && folderIds.Contains(f.FolderId.Value)
+                         && f.Status == StorageFileStatus.Ready)
                 .Select(f => f.Id).ToListAsync(ct);
             nowIds.Sort();
             if (!nowIds.SequenceEqual(snapshotIds))

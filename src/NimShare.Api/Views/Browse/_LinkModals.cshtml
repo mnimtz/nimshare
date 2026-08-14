@@ -168,6 +168,24 @@
            anzeigen" — Landing rendert Grid+Lightbox statt Datei-Liste.
            (2) Sub-Toggle „Upload erlauben" — nur sichtbar wenn Option 1 aktiv
            ODER der Zielordner selbst Kind=Gallery ist. Server enforced beides. *@
+        @* v1.12.12: Ordner-Links — Unterordner rekursiv einbeziehen + max. Tiefe. *@
+        <div class="field" id="shareSubfoldersWrap" style="display:none;margin-top:10px">
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="shareIncludeSubfolders" checked
+                       onchange="document.getElementById('shareSubfolderDepthWrap').style.display=this.checked?'flex':'none'"/>
+                <span>🗂 @T["share.subfolders.label"]</span>
+            </label>
+            <div id="shareSubfolderDepthWrap" style="margin-top:6px;display:flex;align-items:center;gap:8px">
+                <label for="shareSubfolderDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
+                <select id="shareSubfolderDepth" style="width:auto">
+                    <option value="" selected>@T["share.subfolders.depth_all"]</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+        </div>
         <div class="field" id="shareGalleryWrap" style="display:none;margin-top:10px;padding:12px 14px;background:rgba(0,40,84,0.05);border-radius:8px">
             <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer">
                 <input type="checkbox" id="shareDisplayAsGallery" style="margin-top:4px" onchange="onShareDisplayGalleryChange()"/>
@@ -578,6 +596,12 @@ function openUploadModal() {
 function openShareFileModal(fileId) {
     currentShareTarget = { type: 'file', id: fileId };
     document.getElementById('shareTargetHint').textContent = @Json.Serialize(T["modal.share.for_file"].Value);
+    // v1.12.12: Ordner-Sektionen ausblenden (blieben sonst vom letzten
+    // Ordner-Share stehen — betraf auch die Album-Optionen).
+    const sfWrap = document.getElementById('shareSubfoldersWrap');
+    if (sfWrap) sfWrap.style.display = 'none';
+    const galWrap = document.getElementById('shareGalleryWrap');
+    if (galWrap) galWrap.style.display = 'none';
     resetShareModal();
     openModal('modalShare');
     // v1.10.165: Zertifikat-Liste beim Öffnen des Modals holen — vorher lief
@@ -597,6 +621,15 @@ function openShareFolderModal(folderId) {
     // „Als Album anzeigen" ist per-Link und braucht kein Kind=Gallery am
     // Ordner. Bei Gallery-Ordnern wird die Option vorausgewählt, weil der
     // Ordner damit ohnehin als Album gemeint ist.
+    // v1.12.12: Unterordner-Option nur bei Ordner-Links — Default an, Tiefe ∞.
+    const sfWrap = document.getElementById('shareSubfoldersWrap');
+    if (sfWrap) sfWrap.style.display = '';
+    const sfCb = document.getElementById('shareIncludeSubfolders');
+    if (sfCb) sfCb.checked = true;
+    const sfDepth = document.getElementById('shareSubfolderDepth');
+    if (sfDepth) sfDepth.value = '';
+    const sfDepthWrap = document.getElementById('shareSubfolderDepthWrap');
+    if (sfDepthWrap) sfDepthWrap.style.display = 'flex';
     const wrap = document.getElementById('shareGalleryWrap');
     const cbDisp = document.getElementById('shareDisplayAsGallery');
     const cbAllow = document.getElementById('shareAllowUploads');
@@ -834,6 +867,10 @@ async function createShareLink() {
         body.fileId = currentShareTarget.id;
     } else {
         body.folderId = currentShareTarget.id;
+        // v1.12.12: Unterordner-Freigabe (nur Ordner-Links).
+        body.includeSubfolders = !!document.getElementById('shareIncludeSubfolders')?.checked;
+        const sfd = document.getElementById('shareSubfolderDepth')?.value || '';
+        body.subfolderDepth = sfd ? parseInt(sfd, 10) : null;
     }
     const r = await fetch('/api/v1/links', {
         method: 'POST',

@@ -1831,5 +1831,8 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.branding.name_show" xml:space="preserve"><value>Firmenname neben dem Logo anzeigen</value></data>
   <data name="share.branding.name_hint" xml:space="preserve"><value>Von der KI erkannt – anpassbar. Leer lassen, wenn das Logo den Namen schon enthält.</value></data>
   <data name="share.branding.gone" xml:space="preserve"><value>Die Branding-Vorschau ist abgelaufen. Bitte die KI-Vorschau erneut ausführen.</value></data>
+  <data name="share.subfolders.label" xml:space="preserve"><value>Unterordner einbeziehen</value></data>
+  <data name="share.subfolders.depth_label" xml:space="preserve"><value>Max. Tiefe</value></data>
+  <data name="share.subfolders.depth_all" xml:space="preserve"><value>Unbegrenzt</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Für diese Domain konnte keine Vorschau erstellt werden.</value></data>
 </root>

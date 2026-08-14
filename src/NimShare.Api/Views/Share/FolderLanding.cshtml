@@ -586,7 +586,8 @@
                             <div class="icon">@GetExt(f.Name)</div>
                             <div class="meta">
                                 <span class="name">@f.Name</span>
-                                <span class="sub">@Bytes(f.SizeBytes)</span>
+                                @* v1.12.12: im Album-Modus den Unterordner dezent mit anzeigen. *@
+                                <span class="sub">@Bytes(f.SizeBytes)@(string.IsNullOrEmpty(f.RelPath) ? "" : $" · 📁 {f.RelPath.Replace("/", " / ")}")</span>
                             </div>
                             <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id">
                                 @if (Model.HasPassword)
@@ -617,8 +618,21 @@
         else
         {
             <div class="folder-file-list">
+            @{
+                // v1.12.12: Dateien kommen nach Unterordner-Pfad sortiert —
+                // bei Pfadwechsel eine kleine Gruppen-Überschrift einschieben.
+                string? lastRelPath = null;
+            }
             @foreach (var f in Model.Files)
             {
+                @if (f.RelPath != lastRelPath)
+                {
+                    lastRelPath = f.RelPath;
+                    @if (!string.IsNullOrEmpty(f.RelPath))
+                    {
+                        <div style="margin:12px 0 4px;font-weight:600;font-size:.85rem;color:var(--tw-muted-blue)">📁 @f.RelPath.Replace("/", " / ")</div>
+                    }
+                }
                 <div class="folder-file-row">
                     <div class="icon">@GetExt(f.Name)</div>
                     <div class="meta">

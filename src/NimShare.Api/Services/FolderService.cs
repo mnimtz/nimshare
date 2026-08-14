@@ -20,6 +20,14 @@ public interface IFolderService
     Task<List<Folder>> ListSubfoldersAsync(Folder parent, CancellationToken ct = default);
     Task<List<StorageFile>> ListFilesAsync(Folder parent, CancellationToken ct = default);
 
+    /// <summary>v1.12.12: Ordner-Teilbaum für eine Ordner-Freigabe einsammeln —
+    /// Map FolderId → relativer Pfad ("" für die Wurzel). Ohne IncludeSubfolders
+    /// nur die Wurzel; Tiefe optional gedeckelt (SubfolderDepth, null = unbegrenzt).
+    /// Enthalten sind nur Ordner mit GLEICHEM Scope/Owner wie die Wurzel (analog
+    /// FilesController.FolderZip, kein Fremd-Material); private Unterordner
+    /// fremder Ersteller (Public-Scope) werden samt Teilbaum übersprungen.</summary>
+    Task<Dictionary<Guid, string>> CollectShareSubtreeAsync(ShareLink link, Folder root, CancellationToken ct = default);
+
     /// <summary>
     /// v1.10.104 — filtert eine bereits geladene Unterordner-Liste um
     /// alle Public-Ordner, die für den User via IsPrivate + fehlendem
@@ -207,6 +215,51 @@ public class FolderService : IFolderService
             .Where(f => f.FolderId == parent.Id && f.Status == StorageFileStatus.Ready)
             .OrderBy(f => f.Name)
             .ToListAsync(ct);
+
+    public async Task<Dictionary<Guid, string>> CollectShareSubtreeAsync(ShareLink link, Folder root, CancellationToken ct = default)
+    {
+        var map = new Dictionary<Guid, string> { [root.Id] = "" };
+        if (!link.IncludeSubfolders) return map;
+        var maxDepth = link.SubfolderDepth; // null = unbegrenzt
+
+        // Ein Query für alle Kandidaten des gleichen Scope/Owner-Raums, dann
+        // BFS im Speicher — identisches Muster wie FilesController.FolderZip.
+        var all = await _db.Folders
+            .Where(f => f.Scope == root.Scope
+                     && f.OwnerUserId == root.OwnerUserId
+                     && f.OwnerGroupId == root.OwnerGroupId)
+            .Select(f => new { f.Id, f.Name, f.ParentFolderId, f.IsPrivate, f.CreatedByUserId })
+            .ToListAsync(ct);
+        var byParent = all.ToLookup(f => f.ParentFolderId); // null-Key-sicher (vgl. v1.12.10)
+        var queue = new Queue<(Guid Id, int Depth)>();
+        queue.Enqueue((root.Id, 0));
+        while (queue.Count > 0)
+        {
+            var (pid, depth) = queue.Dequeue();
+            if (maxDepth is int md && depth >= md) continue;
+            foreach (var k in byParent[pid])
+            {
+                if (map.ContainsKey(k.Id)) continue; // Zyklus-/Duplikat-Schutz
+                // Private Unterordner FREMDER Ersteller (Public-Scope-Feature)
+                // niemals über einen Link exponieren — der Teilende könnte sie
+                // selbst nicht lesen. Eigene private Unterordner sind ok.
+                if (k.IsPrivate && k.CreatedByUserId != link.OwnerId) continue;
+                var seg = SanitizeShareSegment(k.Name);
+                map[k.Id] = map[pid].Length == 0 ? seg : map[pid] + "/" + seg;
+                queue.Enqueue((k.Id, depth + 1));
+            }
+        }
+        return map;
+    }
+
+    // Pfadsegment für Anzeige + ZIP-Eintrag entschärfen (Slashes, Steuer-
+    // zeichen, ".."), analog FilesController.SanitizePathSegment.
+    private static string SanitizeShareSegment(string s)
+    {
+        var cleaned = new string(s.Select(c => char.IsControl(c) || "\\/:*?\"<>|".Contains(c) ? '_' : c).ToArray()).Trim();
+        if (cleaned is "." or "..") cleaned = "_";
+        return string.IsNullOrWhiteSpace(cleaned) ? "unbenannt" : cleaned;
+    }
 
     public async Task<bool> CanReadAsync(Folder folder, User user, CancellationToken ct = default)
     {

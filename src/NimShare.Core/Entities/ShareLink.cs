@@ -122,6 +122,20 @@ public class ShareLink
     public bool ShowGpsMap { get; set; } = true;
 
     /// <summary>
+    /// v1.12.12 — Ordner-Links: Unterordner rekursiv in die Freigabe einbeziehen
+    /// (Landing-Liste, Einzel-Download, Album, ZIP). Default false → bestehende
+    /// Links und File-Links verhalten sich exakt wie bisher.
+    /// </summary>
+    public bool IncludeSubfolders { get; set; }
+
+    /// <summary>
+    /// v1.12.12 — optionale maximale Tiefe für IncludeSubfolders:
+    /// 1 = nur direkte Unterordner, 2 = +deren Kinder, … Null = unbegrenzt.
+    /// Ohne IncludeSubfolders bedeutungslos.
+    /// </summary>
+    public int? SubfolderDepth { get; set; }
+
+    /// <summary>
     /// v1.11.18 — Optionale Seriennummer/Lizenzcode, der zusätzlich zur Datei
     /// mitgegeben wird (z.B. bei Software-Downloads). Verschlüsselt via
     /// IDataProtector (gleiches Pattern wie EmailGatewaySettings) — steht nie

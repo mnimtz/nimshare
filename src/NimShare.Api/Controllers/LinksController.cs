@@ -103,7 +103,13 @@ public class LinksController : ControllerBase
         // v1.12.7: finaler Firmenname neben dem Logo — vom Teilenden editiert.
         // null/leer ⇒ Toggle aus bzw. kein Name → nichts neben dem Logo.
         // Wird nur auf die EIGENE Link-Vorlage angewandt (nach Ownership-Check).
-        string? BrandName = null);
+        string? BrandName = null,
+        // v1.12.12: Ordner-Links — Unterordner rekursiv einbeziehen (Landing,
+        // Einzel-Download, Album, ZIP) + optionale maximale Tiefe (1 = nur
+        // direkte Unterordner; null = unbegrenzt). Für File-Links ignoriert;
+        // Default false = exakt bisheriges Verhalten (alte Clients unverändert).
+        bool IncludeSubfolders = false,
+        int? SubfolderDepth = null);
 
     public record LinkDto(
         Guid Id, string Slug, string Url, string QrCodeUrl,
@@ -383,6 +389,11 @@ public class LinksController : ControllerBase
             DocumentationEnabled = req.DocumentationEnabled,
             // v1.12 — link-eigene Landing-Vorlage (oben validiert, null wenn keine/ungültig).
             LandingTemplateId = landingTemplateId,
+            // v1.12.12: Unterordner-Freigabe — nur für Ordner-Links; Tiefe auf
+            // 1..10 geklemmt (null = unbegrenzt).
+            IncludeSubfolders = folder is not null && req.IncludeSubfolders,
+            SubfolderDepth = (folder is not null && req.IncludeSubfolders && req.SubfolderDepth is int sd)
+                ? Math.Clamp(sd, 1, 10) : null,
         };
         _db.ShareLinks.Add(link);
         await _db.SaveChangesAsync(ct);

@@ -145,7 +145,26 @@ public class ShareController : Controller
                 return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
             var folder = await db.Folders.FindAsync(new object[] { folderId }, ct);
             if (folder is null) return View("NotFound");
-            var files = await folderSvc.ListFilesAsync(folder, ct);
+            // v1.12.12: optional den ganzen Teilbaum einbeziehen (IncludeSubfolders
+            // + Tiefenlimit). Ohne das Flag exakt der bisherige Ein-Ordner-Pfad.
+            var subtree = await folderSvc.CollectShareSubtreeAsync(link, folder, ct);
+            List<StorageFile> files;
+            if (link.IncludeSubfolders)
+            {
+                var subIds = subtree.Keys.ToHashSet();
+                files = await db.Files
+                    .Where(f => f.FolderId != null && subIds.Contains(f.FolderId.Value)
+                             && f.Status == StorageFileStatus.Ready)
+                    .ToListAsync(ct);
+                files = files
+                    .OrderBy(f => subtree.GetValueOrDefault(f.FolderId!.Value, ""), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            else
+            {
+                files = await folderSvc.ListFilesAsync(folder, ct);
+            }
             var lf0 = await LandingForensicsAsync(ct);
             var ip0 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
             await _access.LogAsync(link, ShareLinkAccessKind.Landing,
@@ -203,7 +222,12 @@ public class ShareController : Controller
                         thumbs.Enqueue(f.Id, f.BlobPath, f.ContentType);
                     }
                 }
-                landingFiles.Add(new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType, t400, t1600, thumbFailed));
+                // v1.12.12: relativer Unterordner-Pfad (null = Wurzel) für die
+                // Gruppierung in der Landing-Dateiliste.
+                var relPath = link.IncludeSubfolders && f.FolderId is Guid ffid
+                    ? (subtree.GetValueOrDefault(ffid, "") is { Length: > 0 } rp ? rp : null)
+                    : null;
+                landingFiles.Add(new FolderLandingFile(f.Id, f.Name, f.SizeBytes, f.ContentType, t400, t1600, thumbFailed, relPath));
             }
             _ = zipCache.WarmupAsync(link.Id, CancellationToken.None);
             var isProtectedFolder = link.PasswordHash is not null;
@@ -702,7 +726,8 @@ public class ShareController : Controller
     [HttpPost("{slug}/f/{fileId:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DownloadFolderFile(string slug, Guid fileId, string? password,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return View("NotFound");
@@ -722,9 +747,10 @@ public class ShareController : Controller
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
         }
-        // Verify the file is actually in that folder.
-        var file = await db.Files.SingleOrDefaultAsync(f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
-        if (file is null) return View("NotFound");
+        // Verify the file is actually in that folder (v1.12.12: oder — bei
+        // IncludeSubfolders — in einem zulässigen Unterordner).
+        var file = await db.Files.SingleOrDefaultAsync(f => f.Id == fileId && f.FolderId != null && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null || !await FolderInShareAsync(db, folderSvc, link, file.FolderId!.Value, ct)) return View("NotFound");
 
         if (!await _access.TryConsumeDownloadAsync(link, ct))
             return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
@@ -733,6 +759,29 @@ public class ShareController : Controller
         await _notify.NotifyDownloadAsync(link, ipHash, ct);
         var sas = _blobs.CreateDownloadSas(file.BlobPath, file.Name, file.ContentType);
         return Redirect(sas.ToString());
+    }
+
+    /// <summary>v1.12.12: alle Ordner-Ids, die zur Freigabe gehören (Wurzel +
+    /// bei IncludeSubfolders der Teilbaum im Tiefenlimit).</summary>
+    private static async Task<HashSet<Guid>> AllowedFolderIdsAsync(
+        NimShare.Core.Data.NimShareDbContext db, IFolderService folderSvc, ShareLink link, CancellationToken ct)
+    {
+        if (link.FolderId is not Guid rootId) return new HashSet<Guid>();
+        if (!link.IncludeSubfolders) return new HashSet<Guid> { rootId };
+        var root = await db.Folders.FindAsync(new object[] { rootId }, ct);
+        if (root is null) return new HashSet<Guid> { rootId };
+        return (await folderSvc.CollectShareSubtreeAsync(link, root, ct)).Keys.ToHashSet();
+    }
+
+    /// <summary>v1.12.12: liegt der Ordner der Datei innerhalb der Freigabe?
+    /// Schneller Pfad für den Normalfall (Wurzel / kein IncludeSubfolders).</summary>
+    private static async Task<bool> FolderInShareAsync(
+        NimShare.Core.Data.NimShareDbContext db, IFolderService folderSvc, ShareLink link, Guid fileFolderId, CancellationToken ct)
+    {
+        if (link.FolderId is not Guid rootId) return false;
+        if (fileFolderId == rootId) return true;
+        if (!link.IncludeSubfolders) return false;
+        return (await AllowedFolderIdsAsync(db, folderSvc, link, ct)).Contains(fileFolderId);
     }
 
     private static string RenderMarkdown(string? md)
@@ -769,8 +818,15 @@ public class ShareController : Controller
         }
         var folder = await db.Folders.FindAsync(new object[] { link.FolderId.Value }, ct);
         if (folder is null) return NotFound();
-        var files = await folderSvc.ListFilesAsync(folder, ct);
-        var ready = files.Where(f => f.Status == StorageFileStatus.Ready).ToList();
+        // v1.12.12: bei IncludeSubfolders den ganzen Teilbaum packen — mit
+        // relativen Pfaden im ZIP ("Unterordner/Datei.pdf"), Struktur bleibt.
+        var zipSubtree = await folderSvc.CollectShareSubtreeAsync(link, folder, ct);
+        var zipFolderIds = zipSubtree.Keys.ToHashSet();
+        var ready = await db.Files
+            .Where(f => f.FolderId != null && zipFolderIds.Contains(f.FolderId.Value)
+                     && f.Status == StorageFileStatus.Ready)
+            .OrderBy(f => f.Name)
+            .ToListAsync(ct);
         if (ready.Count == 0) return NotFound();
         // Download-Counter einmal für den Batch — sonst würde ein 44-Foto-Album
         // die MaxDownloads-Grenze mit einem Klick sprengen.
@@ -807,7 +863,10 @@ public class ShareController : Controller
                 foreach (var f in ready)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var name = UniqueZipEntryName(f.Name, used);
+                    // v1.12.12: relativer Pfad aus dem Teilbaum ("" für Wurzel).
+                    var prefix = zipSubtree.GetValueOrDefault(f.FolderId!.Value, "");
+                    var rel = prefix.Length == 0 ? f.Name : prefix + "/" + f.Name;
+                    var name = UniqueZipEntryName(rel, used);
                     // v1.10.191: Store statt Optimal-Deflate für Medien (siehe
                     // AlbumZipCache.PickCompression) — CPU-Entlastung auf B1.
                     var entry = zip.CreateEntry(name, AlbumZipCache.PickCompression(f.Name));
@@ -869,7 +928,8 @@ public class ShareController : Controller
     [DisableRateLimiting]  // v1.10.175: bei einem 44-Foto-Album 44 Requests, sonst instant-429
     [HttpGet("{slug}/media/{fileId:guid}")]
     public async Task<IActionResult> GalleryMedia(string slug, Guid fileId,
-        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+        [FromServices] NimShare.Core.Data.NimShareDbContext db,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
@@ -879,8 +939,8 @@ public class ShareController : Controller
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var file = await db.Files.SingleOrDefaultAsync(
-            f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
-        if (file is null) return NotFound();
+            f => f.Id == fileId && f.FolderId != null && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null || !await FolderInShareAsync(db, folderSvc, link, file.FolderId!.Value, ct)) return NotFound();
         var sas = _blobs.CreateInlineSas(file.BlobPath, file.ContentType ?? "application/octet-stream");
         return Redirect(sas.ToString());
     }
@@ -899,7 +959,8 @@ public class ShareController : Controller
     [HttpGet("{slug}/thumb/{fileId:guid}")]
     public async Task<IActionResult> GalleryThumb(string slug, Guid fileId, [FromQuery] int size,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+        [FromServices] IThumbnailService thumbs,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         if (size <= 0) size = 400;
         if (!thumbs.IsAllowedSize(size)) return NotFound();
@@ -911,8 +972,8 @@ public class ShareController : Controller
         var now = DateTimeOffset.UtcNow;
         if (!link.IsActive(now)) return NotFound();
         var file = await db.Files.SingleOrDefaultAsync(
-            f => f.Id == fileId && f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready, ct);
-        if (file is null) return NotFound();
+            f => f.Id == fileId && f.FolderId != null && f.Status == StorageFileStatus.Ready, ct);
+        if (file is null || !await FolderInShareAsync(db, folderSvc, link, file.FolderId!.Value, ct)) return NotFound();
         // v1.10.191: GetOrCreateAsync enqueued bei Cache-Miss selbst in die
         // Worker-Queue und gibt null zurück → 404, Client pollt /thumb-status.
         var url = await thumbs.GetOrCreateAsync(file.Id, file.BlobPath, file.ContentType ?? "", size, ct);
@@ -936,7 +997,8 @@ public class ShareController : Controller
     [HttpGet("{slug}/thumb-status")]
     public async Task<IActionResult> GalleryThumbStatus(string slug,
         [FromServices] NimShare.Core.Data.NimShareDbContext db,
-        [FromServices] IThumbnailService thumbs, CancellationToken ct)
+        [FromServices] IThumbnailService thumbs,
+        [FromServices] IFolderService folderSvc, CancellationToken ct)
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
@@ -944,8 +1006,11 @@ public class ShareController : Controller
         // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
         if (!RecipientGateOk(link)) return Forbid();
         if (!link.IsActive(DateTimeOffset.UtcNow)) return NotFound();
+        // v1.12.12: bei IncludeSubfolders auch die Bilder der Unterordner pollen.
+        var statusFolderIds = await AllowedFolderIdsAsync(db, folderSvc, link, ct);
         var images = await db.Files
-            .Where(f => f.FolderId == link.FolderId && f.Status == StorageFileStatus.Ready
+            .Where(f => f.FolderId != null && statusFolderIds.Contains(f.FolderId.Value)
+                && f.Status == StorageFileStatus.Ready
                 && f.ContentType != null && f.ContentType.StartsWith("image/"))
             .Select(f => new { f.Id, f.ThumbsReadyAt })
             .ToListAsync(ct);
@@ -1146,7 +1211,10 @@ public record FolderLandingFile(Guid Id, string Name, long SizeBytes, string Con
     string? Thumb400 = null, string? Thumb1600 = null,
     // v1.10.191: true = Decode endgültig gescheitert → View rendert den
     // Kamera-Fallback statt Pending-Spinner + Polling.
-    bool ThumbFailed = false);
+    bool ThumbFailed = false,
+    // v1.12.12: relativer Unterordner-Pfad ("sub/subsub"), null = Wurzel.
+    // Nur gesetzt, wenn der Link IncludeSubfolders hat.
+    string? RelPath = null);
 public record FolderLandingGeoPoint(Guid Id, string Name, double Lat, double Lon);
 
 /// <summary>Snapshot of the applicable LandingTemplate (Global for Public files,
