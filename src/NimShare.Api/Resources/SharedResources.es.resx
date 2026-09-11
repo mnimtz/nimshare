@@ -1830,5 +1830,11 @@ Gracias por usar NimShare.</value></data>
   <data name="share.subfolders.label" xml:space="preserve"><value>Incluir subcarpetas</value></data>
   <data name="share.subfolders.depth_label" xml:space="preserve"><value>Profundidad máx.</value></data>
   <data name="share.subfolders.depth_all" xml:space="preserve"><value>Ilimitada</value></data>
+  <data name="links.action.edit" xml:space="preserve"><value>Editar</value></data>
+  <data name="links.edit.title" xml:space="preserve"><value>Editar enlace</value></data>
+  <data name="links.edit.keep_hint" xml:space="preserve"><value>Dejar vacío = sin cambios</value></data>
+  <data name="links.edit.limit_hint" xml:space="preserve"><value>Vacío = sin límite</value></data>
+  <data name="links.edit.remove_password" xml:space="preserve"><value>Quitar contraseña</value></data>
+  <data name="links.edit.remove_serial" xml:space="preserve"><value>Quitar número de serie</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>No se pudo crear una vista previa para este dominio.</value></data>
 </root>

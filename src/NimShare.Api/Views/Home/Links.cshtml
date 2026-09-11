@@ -198,7 +198,7 @@ else
                                 <button class="btn btn-ghost btn-sm" data-toggle-public="@l.Id" data-current="@(l.IsPublic ? "true" : "false")">
                                     @(l.IsPublic ? "🔒 " + @T["links.public.unshare"].Value : "🌐 " + @T["links.public.share"].Value)
                                 </button>
-                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
+                                <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
                         </div>
                     </details>
@@ -354,7 +354,7 @@ else
                             }
                             @if (isAdmin)
                             {
-                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
+                                <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
                         </div>
                     </details>
@@ -472,7 +472,7 @@ else
                             }
                             @if (isAdmin)
                             {
-                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
+                                <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
                         </div>
                     </details>
@@ -561,7 +561,7 @@ else
                             }
                             @if (isAdmin)
                             {
-                                <button class="btn btn-ghost btn-sm" data-edit-expiry="@l.Id" data-expires="@l.ExpiresAt?.ToString("o")" data-permanent="@(l.IsPermanent ? "true" : "false")">🕒 @T["links.action.edit_expiry"]</button>
+                                <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
                         </div>
                     </details>
@@ -604,33 +604,133 @@ document.querySelectorAll('[data-toggle-public]').forEach(b => {
         if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
     });
 });
-// v1.11.72 — Marcus's Wunsch: Admin kann das Ablaufdatum eines Links
-// nachträglich setzen/ändern (bzw. auf "läuft nie ab" umstellen). Der
-// Server-Endpoint (LinksController.Update) unterstützt ExpiresAt/
-// IsPermanent bereits seit v1.11.50 — hier fehlte nur die UI.
-document.querySelectorAll('[data-edit-expiry]').forEach(b => {
-    b.addEventListener('click', async () => {
-        const cur = b.dataset.expires ? b.dataset.expires.substring(0, 10) : '';
-        const input = await nimPrompt(@Json.Serialize(T["links.expiry.prompt"].Value), {
-            title: @Json.Serialize(T["links.expiry.title"].Value),
-            defaultValue: cur,
-            placeholder: 'JJJJ-MM-TT'
-        });
-        if (input === null) return;
-        const trimmed = input.trim();
-        let body;
-        if (trimmed === '') {
-            body = { isPermanent: true };
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-            body = { expiresAt: trimmed + 'T23:59:59.000Z', isPermanent: false };
-        } else {
-            nimAlert(@Json.Serialize(T["links.expiry.invalid"].Value), { kind: 'error' });
-            return;
-        }
-        const r = await api('PATCH', `/api/v1/links/${b.dataset.editExpiry}`, body);
-        if (r.ok) location.reload(); else nimAlert('Failed: ' + r.status, { kind: 'error' });
-    });
+// v1.12.13 — Marcus's Wunsch: vollwertiges „Bearbeiten" pro Link. Löst den
+// v1.11.72-Ablauf-Prompt ab (Ablauf/Permanent gehen im Modal auf). Prefill
+// per GET /api/v1/links/{id}; gespeichert werden NUR geänderte Felder
+// (PATCH-Semantik: null/fehlend = unverändert). Passwort/Seriennummer sind
+// tri-state: leer = unverändert, „entfernen"-Haken = löschen, Wert = neu.
+let editLinkId = null;
+let editLinkInitial = null;
+document.querySelectorAll('[data-edit-link]').forEach(b => {
+    b.addEventListener('click', () => openEditLink(b.dataset.editLink));
 });
+function elToLocalInput(iso) {
+    const d = new Date(iso);
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+async function openEditLink(id) {
+    const r = await api('GET', `/api/v1/links/${id}`);
+    if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
+    const d = await r.json();
+    editLinkId = id;
+    document.getElementById('editLinkHint').textContent = (d.targetName ? d.targetName + ' — ' : '') + '/s/' + d.slug;
+    document.getElementById('elPw').value = '';
+    document.getElementById('elPw').placeholder = d.hasPassword ? '••••••' : '';
+    document.getElementById('elPwRemove').checked = false;
+    document.getElementById('elPwRemoveRow').style.display = d.hasPassword ? 'flex' : 'none';
+    document.getElementById('elMax').value = d.maxDownloads ?? '';
+    const exp = document.getElementById('elExp');
+    exp.value = d.expiresAt ? elToLocalInput(d.expiresAt) : '';
+    document.getElementById('elPermanent').checked = !!d.isPermanent;
+    exp.disabled = !!d.isPermanent;
+    document.getElementById('elMsg').value = d.message || '';
+    document.getElementById('elNotify').checked = !!d.notifyOnAccess;
+    document.getElementById('elAllowed').value = d.allowedEmails || '';
+    document.getElementById('elOtp').checked = !!d.requireEmailVerify;
+    document.getElementById('elSerial').value = '';
+    document.getElementById('elSerial').placeholder = d.hasSerialNumber ? '••••••' : '';
+    document.getElementById('elSerialRemove').checked = false;
+    document.getElementById('elSerialRemoveRow').style.display = d.hasSerialNumber ? 'flex' : 'none';
+    document.getElementById('elKeyStore').checked = !!d.keyStoreMode;
+    document.getElementById('elDocEnabled').checked = !!d.documentationEnabled;
+    const isFolder = d.targetKind === 'folder';
+    document.getElementById('elFolderWrap').style.display = isFolder ? '' : 'none';
+    if (isFolder) {
+        document.getElementById('elGallery').checked = !!d.displayAsGallery;
+        document.getElementById('elGallerySub').style.display = d.displayAsGallery ? '' : 'none';
+        document.getElementById('elAllowUploads').checked = !!d.allowUploads;
+        document.getElementById('elGpsMap').checked = !!d.showGpsMap;
+        document.getElementById('elSubfolders').checked = !!d.includeSubfolders;
+        document.getElementById('elDepthWrap').style.display = d.includeSubfolders ? 'flex' : 'none';
+        const sel = document.getElementById('elDepth');
+        const depth = d.subfolderDepth ?? 0;
+        if (![...sel.options].some(o => o.value === String(depth))) {
+            const o = document.createElement('option');
+            o.value = String(depth); o.textContent = String(depth);
+            sel.appendChild(o);
+        }
+        sel.value = String(depth);
+    }
+    editLinkInitial = {
+        maxDownloads: d.maxDownloads ?? null,
+        expiresAt: exp.value,
+        isPermanent: !!d.isPermanent,
+        message: d.message || '',
+        notifyOnAccess: !!d.notifyOnAccess,
+        allowedEmails: d.allowedEmails || '',
+        requireEmailVerify: !!d.requireEmailVerify,
+        keyStoreMode: !!d.keyStoreMode,
+        documentationEnabled: !!d.documentationEnabled,
+        targetKind: d.targetKind,
+        displayAsGallery: !!d.displayAsGallery,
+        allowUploads: !!d.allowUploads,
+        showGpsMap: !!d.showGpsMap,
+        includeSubfolders: !!d.includeSubfolders,
+        subfolderDepth: d.subfolderDepth ?? 0,
+    };
+    document.getElementById('modalEditLink').classList.add('open');
+}
+function closeEditLink() { document.getElementById('modalEditLink').classList.remove('open'); }
+async function saveEditLink() {
+    if (!editLinkId || !editLinkInitial) return;
+    const init = editLinkInitial;
+    const body = {};
+    if (document.getElementById('elPwRemove').checked) body.password = '';
+    else { const pw = document.getElementById('elPw').value; if (pw) body.password = pw; }
+    const perm = document.getElementById('elPermanent').checked;
+    const expVal = document.getElementById('elExp').value;
+    if (perm !== init.isPermanent) body.isPermanent = perm;
+    if (!perm && expVal && expVal !== init.expiresAt) body.expiresAt = new Date(expVal).toISOString();
+    const maxRaw = document.getElementById('elMax').value.trim();
+    const newMax = maxRaw === '' ? null : parseInt(maxRaw, 10);
+    if (newMax !== init.maxDownloads) body.maxDownloads = newMax === null ? 0 : newMax; // 0 = Limit entfernen
+    const msg = document.getElementById('elMsg').value;
+    if (msg !== init.message) body.message = msg;
+    const notify = document.getElementById('elNotify').checked;
+    if (notify !== init.notifyOnAccess) body.notifyOnAccess = notify;
+    const allowed = document.getElementById('elAllowed').value;
+    if (allowed !== init.allowedEmails) body.allowedEmails = allowed;
+    const otp = document.getElementById('elOtp').checked;
+    if (otp !== init.requireEmailVerify) body.requireEmailVerify = otp;
+    if (document.getElementById('elSerialRemove').checked) body.serialNumber = '';
+    else { const sn = document.getElementById('elSerial').value.trim(); if (sn) body.serialNumber = sn; }
+    const ks = document.getElementById('elKeyStore').checked;
+    if (ks !== init.keyStoreMode) body.keyStoreMode = ks;
+    const doc = document.getElementById('elDocEnabled').checked;
+    if (doc !== init.documentationEnabled) body.documentationEnabled = doc;
+    if (init.targetKind === 'folder') {
+        const g = document.getElementById('elGallery').checked;
+        if (g !== init.displayAsGallery) body.displayAsGallery = g;
+        const au = document.getElementById('elAllowUploads').checked;
+        if (au !== init.allowUploads) body.allowUploads = au;
+        const gps = document.getElementById('elGpsMap').checked;
+        if (gps !== init.showGpsMap) body.showGpsMap = gps;
+        const sf = document.getElementById('elSubfolders').checked;
+        if (sf !== init.includeSubfolders) body.includeSubfolders = sf;
+        const depth = parseInt(document.getElementById('elDepth').value, 10);
+        if (sf && depth !== init.subfolderDepth) body.subfolderDepth = depth; // 0 = unbegrenzt
+    }
+    if (Object.keys(body).length === 0) { closeEditLink(); return; }
+    const btn = document.getElementById('elSaveBtn');
+    btn.disabled = true;
+    const r = await api('PATCH', `/api/v1/links/${editLinkId}`, body);
+    btn.disabled = false;
+    if (r.ok) { location.reload(); return; }
+    let m = 'Failed: ' + r.status;
+    try { const p = await r.json(); m = p.detail || p.title || m; } catch {}
+    nimAlert(m, { kind: 'error' });
+}
 document.querySelectorAll('[data-delete]').forEach(b => {
     b.addEventListener('click', async () => {
         if (!await nimConfirm(@Json.Serialize(T["links.confirm.delete"].Value), { danger: true })) return;
@@ -787,6 +887,98 @@ async function sendEmail() {
         <div id="emergencyList" style="display:none"></div>
         <div class="actions">
             <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalEmergency').classList.remove('open')">@T["modal.cancel"]</button>
+        </div>
+    </div>
+</div>
+
+<!-- v1.12.13: Link bearbeiten — nachträglich Passwort, Ablauf, Limit, Nachricht,
+     Empfänger-Beschränkung, Seriennummer/Key-Store und (bei Ordner-Links) die
+     Album-/Unterordner-Optionen ändern. Prefill via GET /api/v1/links/{id},
+     Speichern schickt nur geänderte Felder per PATCH. -->
+<div class="modal-backdrop" id="modalEditLink" onclick="if(event.target===this)closeEditLink()">
+    <div class="modal-panel">
+        <h2>✏️ @T["links.edit.title"]</h2>
+        <p class="muted" id="editLinkHint"></p>
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.password"]</label>
+                <input type="text" id="elPw" autocomplete="off" spellcheck="false"/>
+                <div class="helper">@T["links.edit.keep_hint"]</div>
+                <label id="elPwRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
+                    <input type="checkbox" id="elPwRemove"/> <span>@T["links.edit.remove_password"]</span>
+                </label>
+            </div>
+            <div class="field" style="flex:1;min-width:180px">
+                <label>@T["upload.max_downloads"]</label>
+                <input type="number" id="elMax" min="0"/>
+                <div class="helper">@T["links.edit.limit_hint"]</div>
+            </div>
+        </div>
+        <div class="field">
+            <label>@T["upload.expires_at"]</label>
+            <input type="datetime-local" id="elExp"/>
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                <input type="checkbox" id="elPermanent" onchange="document.getElementById('elExp').disabled=this.checked"/>
+                <span>♾️ @T["links.permanent_label"]</span>
+            </label>
+        </div>
+        <div class="field">
+            <label>@T["upload.message"]</label>
+            <textarea id="elMsg" rows="2"></textarea>
+        </div>
+        <label style="font-weight:400"><input type="checkbox" id="elNotify"/> @T["upload.notify_me"]</label>
+        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+            <summary style="cursor:pointer;font-weight:500">🔒 @T["links.restrict.legend"]</summary>
+            <div class="field" style="margin-top:8px">
+                <label>@T["links.restrict.allowed_label"]</label>
+                <input type="text" id="elAllowed" autocomplete="off" spellcheck="false"/>
+            </div>
+            <label style="font-weight:400"><input type="checkbox" id="elOtp"/> @T["links.restrict.otp_label"]</label>
+        </details>
+        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
+            <summary style="cursor:pointer;font-weight:500">🔑 @T["share.serial.legend"]</summary>
+            <div class="field" style="margin-top:8px">
+                <label>@T["share.serial.label"]</label>
+                <input type="text" id="elSerial" autocomplete="off" spellcheck="false"/>
+                <div class="helper">@T["links.edit.keep_hint"]</div>
+                <label id="elSerialRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
+                    <input type="checkbox" id="elSerialRemove"/> <span>@T["links.edit.remove_serial"]</span>
+                </label>
+            </div>
+            <label style="font-weight:400;display:block;margin-top:10px"><input type="checkbox" id="elKeyStore"/> @T["share.keystore.mode_label"]</label>
+            <label style="font-weight:400;display:block;margin-top:6px"><input type="checkbox" id="elDocEnabled"/> @T["share.keystore.doc_url_label"]</label>
+        </details>
+        <div id="elFolderWrap" style="display:none;margin-top:10px;padding:12px 14px;background:rgba(0,40,84,0.05);border-radius:8px">
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="elGallery" onchange="document.getElementById('elGallerySub').style.display=this.checked?'':'none'"/>
+                <span>🖼 @T["share.gallery.display_label"]</span>
+            </label>
+            <div id="elGallerySub" style="margin:6px 0 0 24px;display:none">
+                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="elAllowUploads"/> <span>↑ @T["share.gallery.allow_uploads_label"]</span>
+                </label>
+                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+                    <input type="checkbox" id="elGpsMap"/> <span>📍 @T["share.gallery.gps_map_label"]</span>
+                </label>
+            </div>
+            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
+                <input type="checkbox" id="elSubfolders" onchange="document.getElementById('elDepthWrap').style.display=this.checked?'flex':'none'"/>
+                <span>🗂 @T["share.subfolders.label"]</span>
+            </label>
+            <div id="elDepthWrap" style="margin-top:6px;display:none;align-items:center;gap:8px">
+                <label for="elDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
+                <select id="elDepth" style="width:auto">
+                    <option value="0">@T["share.subfolders.depth_all"]</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" onclick="closeEditLink()">@T["modal.cancel"]</button>
+            <button type="button" class="btn btn-primary" id="elSaveBtn" onclick="saveEditLink()">@T["modal.save"]</button>
         </div>
     </div>
 </div>

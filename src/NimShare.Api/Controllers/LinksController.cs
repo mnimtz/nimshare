@@ -148,7 +148,16 @@ public class LinksController : ControllerBase
         bool KeyStoreMode = false,
         bool DocumentationEnabled = false,
         // v1.11.50: Ablauf-Opt-out, siehe CreateLinkRequest.IsPermanent.
-        bool IsPermanent = false);
+        bool IsPermanent = false,
+        // v1.12.13 (Edit-Link): Prefill-Felder fürs Bearbeiten-Modal.
+        // AllowedEmails nur für den Owner (GET liefert auch fremde Public-
+        // Links read-only aus — die Empfänger-Liste geht Dritte nichts an).
+        string? Message = null,
+        bool NotifyOnAccess = false,
+        string? AllowedEmails = null,
+        bool RequireEmailVerify = false,
+        bool IncludeSubfolders = false,
+        int? SubfolderDepth = null);
 
     public record SignerInfo(
         Guid CertificateId,
@@ -758,7 +767,22 @@ public class LinksController : ControllerBase
         // (nie ablaufen); false → falls ExpiresAt dabei auch null ist, wird
         // wieder auf +8 Wochen ab jetzt gesetzt statt versehentlich permanent
         // zu bleiben.
-        bool? IsPermanent = null);
+        bool? IsPermanent = null,
+        // v1.12.13 (Edit-Link-Feature): Passwort nachträglich ändern.
+        // null = unverändert, "" = Passwort entfernen, sonst neu hashen.
+        string? Password = null,
+        // v1.12.13: Ordner-Link-Optionen nachträglich änderbar (für File-Links
+        // stillschweigend ignoriert, analog Create). null = jeweils unverändert.
+        bool? DisplayAsGallery = null,
+        bool? AllowUploads = null,
+        bool? ShowGpsMap = null,
+        bool? IncludeSubfolders = null,
+        // v1.12.13: 0 = unbegrenzt (Tiefenlimit entfernen), 1..10 = Limit,
+        // null = unverändert.
+        int? SubfolderDepth = null,
+        // v1.12.13: Absender-Zertifikat wechseln. Guid.Empty = entfernen,
+        // fremde/unbekannte Ids werden still ignoriert (Create-Muster).
+        Guid? SigningCertificateId = null);
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLinkRequest req, CancellationToken ct)
@@ -785,8 +809,15 @@ public class LinksController : ControllerBase
             if (req.IsPermanent.Value) link.ExpiresAt = null;
             else if (req.ExpiresAt is null && link.ExpiresAt is null) link.ExpiresAt = DateTimeOffset.UtcNow.AddDays(56);
         }
-        if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads;
+        // v1.12.13: 0 (oder negativ) = Limit ENTFERNEN — vorher ließ sich ein
+        // gesetztes Download-Limit per PATCH nie wieder loswerden (null heißt
+        // in diesem Endpoint durchgängig "unverändert").
+        if (req.MaxDownloads is not null) link.MaxDownloads = req.MaxDownloads.Value <= 0 ? null : req.MaxDownloads;
         if (req.Message is not null) link.Message = req.Message;
+        // v1.12.13: Passwort nachträglich setzen/ändern/entfernen. Ein Wechsel
+        // sperrt Empfänger mit dem alten Passwort aus — hier gewollt.
+        if (req.Password is not null)
+            link.PasswordHash = string.IsNullOrEmpty(req.Password) ? null : _hasher.Hash(req.Password);
         if (req.IsRevoked is not null) link.IsRevoked = req.IsRevoked.Value;
         if (req.NotifyOnAccess is not null) link.NotifyOnAccess = req.NotifyOnAccess.Value;
         // "Public for everyone" is admin-only. Any other user attempting to
@@ -804,7 +835,40 @@ public class LinksController : ControllerBase
         if (req.DocumentationEnabled is not null) link.DocumentationEnabled = req.DocumentationEnabled.Value;
         // v1.11.22: gegenseitiger Ausschluss auch beim Update erzwingen.
         if (link.KeyStoreMode) link.SerialNumberEncrypted = null;
+        // v1.12.13: Absender-Zertifikat wechseln/entfernen — nur EIGENE
+        // Zertifikate akzeptieren, sonst still ignorieren (Create-Muster).
+        if (req.SigningCertificateId is Guid scid)
+        {
+            if (scid == Guid.Empty) link.SigningCertificateId = null;
+            else if (await _db.SigningCertificates.AnyAsync(c => c.Id == scid && c.OwnerUserId == user.Id, ct))
+                link.SigningCertificateId = scid;
+        }
+        // v1.12.13: Ordner-Link-Optionen — für File-Links still ignoriert.
+        var zipRelevantChanged = false;
+        if (link.FolderId is not null)
+        {
+            if (req.DisplayAsGallery is not null) link.DisplayAsGallery = req.DisplayAsGallery.Value;
+            if (req.AllowUploads is not null) link.AllowUploads = req.AllowUploads.Value;
+            if (req.ShowGpsMap is not null) link.ShowGpsMap = req.ShowGpsMap.Value;
+            if (req.IncludeSubfolders is not null && link.IncludeSubfolders != req.IncludeSubfolders.Value)
+            {
+                link.IncludeSubfolders = req.IncludeSubfolders.Value;
+                zipRelevantChanged = true;
+            }
+            if (req.SubfolderDepth is not null)
+            {
+                var newDepth = req.SubfolderDepth.Value <= 0 ? (int?)null : Math.Clamp(req.SubfolderDepth.Value, 1, 10);
+                if (link.SubfolderDepth != newDepth) { link.SubfolderDepth = newDepth; zipRelevantChanged = true; }
+            }
+        }
         await _db.SaveChangesAsync(ct);
+        // v1.12.13: geänderter Teilbaum-Umfang macht das vorgebaute Album-ZIP
+        // stale → invalidieren; der nächste Landing-Aufruf wärmt neu vor.
+        if (zipRelevantChanged)
+        {
+            var zc = HttpContext.RequestServices.GetService<IAlbumZipCache>();
+            if (zc is not null) _ = zc.DeleteAsync(link.Id, CancellationToken.None);
+        }
         return Ok(ToDto(link, user.Id, await SubdomainBaseAsync(ct)));
     }
 
@@ -1170,7 +1234,14 @@ public class LinksController : ControllerBase
             HasSerialNumber: l.SerialNumberEncrypted != null,
             KeyStoreMode: l.KeyStoreMode,
             DocumentationEnabled: l.DocumentationEnabled,
-            IsPermanent: l.IsPermanent);
+            IsPermanent: l.IsPermanent,
+            // v1.12.13: Prefill fürs Edit-Modal.
+            Message: l.Message,
+            NotifyOnAccess: l.NotifyOnAccess,
+            AllowedEmails: l.OwnerId == currentUserId ? l.AllowedEmails : null,
+            RequireEmailVerify: l.RequireEmailVerify,
+            IncludeSubfolders: l.IncludeSubfolders,
+            SubfolderDepth: l.SubfolderDepth);
     }
 
     /// <summary>v1.11.0 — BaseDomain für DTOs (null wenn Feature aus).</summary>
