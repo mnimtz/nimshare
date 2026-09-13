@@ -82,6 +82,10 @@
            Koordinaten setzt das Toggle-JS unten (inkl. Flip nach oben am
            Viewport-Rand), bei Scroll/Resize schließt das Menü. */
         position: fixed; z-index: 1000;
+        /* v1.12.15: unsichtbar bis das Toggle-JS positioniert hat — das
+           details-toggle-Event feuert asynchron, sonst blitzt die Liste
+           einen Frame lang an der falschen Stelle auf. */
+        visibility: hidden;
         background: var(--surface, #fff); border: 1px solid var(--border-subtle, #ddd);
         border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: 6px;
         display: flex; flex-direction: column; gap: 2px; min-width: 170px;
@@ -95,24 +99,37 @@ document.addEventListener('click', (e) => {
         if (!d.contains(e.target)) d.removeAttribute('open');
     });
 });
-// v1.12.14: Menü beim Öffnen am ⋯-Button positionieren (fixed, s. CSS oben).
-// Läuft im toggle-Handler VOR dem Paint — kein Aufblitzen an falscher Stelle.
-document.querySelectorAll('details.action-menu').forEach(d => {
-    d.addEventListener('toggle', () => {
-        if (!d.open) return;
-        // Immer nur EIN offenes Menü — sonst stapeln sich fixed-Listen.
-        document.querySelectorAll('details.action-menu[open]').forEach(o => { if (o !== d) o.removeAttribute('open'); });
-        const list = d.querySelector('.action-menu-list');
-        const btn = d.querySelector('summary').getBoundingClientRect();
-        list.style.left = '0px'; list.style.top = '0px'; // messbar machen
-        const mw = list.offsetWidth, mh = list.offsetHeight;
-        let left = Math.max(8, Math.min(btn.right - mw, window.innerWidth - mw - 8));
-        let top = btn.bottom + 4;
-        if (top + mh > window.innerHeight - 8) top = Math.max(8, btn.top - mh - 4); // Flip nach oben
-        list.style.left = left + 'px';
-        list.style.top = top + 'px';
-    });
-});
+// v1.12.14/15: Menü beim Öffnen am ⋯-Button positionieren (fixed, s. CSS oben).
+// v1.12.15-Fix: Dieser Script-Block läuft VOR den Tabellen — per-Element-
+// Binding fand darum NIE ein <details> (Menü landete koordinatenlos am
+// Seitenende, Marcus' 2. Screenshot). Jetzt Delegation auf document in der
+// CAPTURE-Phase ('toggle' bubbelt nicht, capture fängt es trotzdem) — damit
+// ist der Render-Zeitpunkt der Tabellen egal. Die Liste ist per CSS bis zur
+// Positionierung unsichtbar ('toggle' feuert asynchron, sonst gäbe es einen
+// Frame an der falschen Stelle).
+document.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (!(d instanceof HTMLElement) || !d.matches('details.action-menu')) return;
+    if (!d.open) {
+        // Beim Schließen wieder verstecken — sonst blitzt die Liste beim
+        // NÄCHSTEN Öffnen einen Frame lang an der alten Position auf.
+        const closed = d.querySelector('.action-menu-list');
+        if (closed) closed.style.visibility = '';
+        return;
+    }
+    // Immer nur EIN offenes Menü — sonst stapeln sich fixed-Listen.
+    document.querySelectorAll('details.action-menu[open]').forEach(o => { if (o !== d) o.removeAttribute('open'); });
+    const list = d.querySelector('.action-menu-list');
+    const btn = d.querySelector('summary').getBoundingClientRect();
+    list.style.left = '0px'; list.style.top = '0px'; // messbar machen
+    const mw = list.offsetWidth, mh = list.offsetHeight;
+    let left = Math.max(8, Math.min(btn.right - mw, window.innerWidth - mw - 8));
+    let top = btn.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, btn.top - mh - 4); // Flip nach oben
+    list.style.left = left + 'px';
+    list.style.top = top + 'px';
+    list.style.visibility = 'visible';
+}, true);
 // Fixed-Position würde beim Scrollen am Viewport "kleben" → Menü schließen.
 // capture:true, weil Scroll-Events aus inneren Containern nicht bubbeln.
 ['scroll', 'resize'].forEach(ev => window.addEventListener(ev, () => {
