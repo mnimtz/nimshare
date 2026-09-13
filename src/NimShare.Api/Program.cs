@@ -513,9 +513,12 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<NimShareDbContext>();
     // Migrate with retry — on Azure Files, the SMB mount can be momentarily
     // unavailable at cold start, which used to abort the whole boot with
-    // "unable to open database file". Six attempts on 2 s cadence ≈ 12 s of
-    // grace, which is enough for the mount to appear.
-    for (int attempt = 1; attempt <= 6; attempt++)
+    // "unable to open database file". v1.12.16: 8 Versuche mit wachsenden
+    // Abständen (2+4+…+14 s ≈ 56 s Karenz) — die alten 6×2 s (≈12 s) waren
+    // bei einem Kaltstart MIT frischem Image-Pull nachweislich zu kurz
+    // (2026-09-13: alle 6 Versuche verloren, DB kam Sekunden später hoch).
+    var migrationSucceeded = false;
+    for (int attempt = 1; attempt <= 8; attempt++)
     {
         try
         {
@@ -566,12 +569,13 @@ using (var scope = app.Services.CreateScope())
             {
                 Console.Error.WriteLine($"[STARTUP] ✓ MigrateAsync applied all {pendingBefore.Count} pending migrations cleanly.");
             }
+            migrationSucceeded = true;
             break;
         }
-        catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 6)
+        catch (Microsoft.Data.Sqlite.SqliteException sx) when (attempt < 8)
         {
-            Console.Error.WriteLine($"[STARTUP] Migration attempt {attempt}/6 failed with SQLite error: {sx.Message}. Retrying in 2 s…");
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            Console.Error.WriteLine($"[STARTUP] Migration attempt {attempt}/8 failed with SQLite error: {sx.Message}. Retrying in {attempt * 2} s…");
+            await Task.Delay(TimeSpan.FromSeconds(attempt * 2));
         }
         catch (Exception ex)
         {
@@ -591,6 +595,50 @@ using (var scope = app.Services.CreateScope())
             NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
             break;
         }
+    }
+
+    // v1.12.16: Verliert der Boot das Azure-Files-Mount-Rennen trotz aller
+    // Versuche, lief KEINE Migration — bisher blieb das bis zum nächsten
+    // Restart so (Risiko: ein Release MIT Migration liefe gegen ein altes
+    // Schema) und die Startup-Warnung stand dauerhaft im Banner, obwohl die
+    // DB Sekunden später gesund war. Jetzt: Hintergrund-Reconcile in großen
+    // Abständen — sobald die DB erreichbar ist, laufen die Migrationen nach
+    // und die "Migration failure"-Warnung entfernt sich selbst.
+    // WICHTIG: eigener Scope pro Versuch (der Boot-Scope ist dann disposed).
+    if (!migrationSucceeded)
+    {
+        _ = Task.Run(async () =>
+        {
+            foreach (var delaySec in new[] { 30, 60, 120, 300, 600 })
+            {
+                await Task.Delay(TimeSpan.FromSeconds(delaySec));
+                try
+                {
+                    using var lateScope = app.Services.CreateScope();
+                    var lateDb = lateScope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+                    await RepairSqliteMissingColumnsAsync(lateDb, lateScope.ServiceProvider);
+                    await BaselineSqliteIfNeededAsync(lateDb, lateScope.ServiceProvider);
+                    await EnsureFolderIsPrivateColumnAsync(lateDb);
+                    await PreStampAlreadyAppliedMigrationsAsync(lateDb);
+                    await lateDb.Database.MigrateAsync();
+                    var stillPending = (await lateDb.Database.GetPendingMigrationsAsync()).ToList();
+                    if (stillPending.Count == 0)
+                    {
+                        // Einmalige Mutation pro Prozess; das theoretische Race mit
+                        // einem gleichzeitig rendernden Banner ist Nanosekunden groß.
+                        NimShare.Api.Controllers.StartupState.Errors.RemoveAll(
+                            s => s.StartsWith("Migration failure:", StringComparison.Ordinal));
+                        Console.Error.WriteLine($"[STARTUP] ✓ Später Migrations-Reconcile nach {delaySec}s erfolgreich — Startup-Warnung entfernt.");
+                        return;
+                    }
+                    Console.Error.WriteLine($"[STARTUP] Später Reconcile: MigrateAsync lief, aber noch pending: {string.Join(", ", stillPending)}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[STARTUP] Später Migrations-Reconcile (Warteschritt {delaySec}s) weiter erfolglos: {ex.Message}");
+                }
+            }
+        });
     }
 
     // v1.10.45 — Column-Backfill AUßERHALB des Retry-Loops, damit er auch
