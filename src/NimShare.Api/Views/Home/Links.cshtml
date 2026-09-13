@@ -75,7 +75,13 @@
     .action-menu > summary:hover { background: var(--tw-gray-100, rgba(0,0,0,.05)); }
     .action-menu[open] > summary { background: var(--tw-gray-100, rgba(0,0,0,.05)); }
     .action-menu-list {
-        position: absolute; right: 0; top: 100%; z-index: 20; margin-top: 4px;
+        /* v1.12.14: position:fixed statt absolute — die Tabellen stecken in
+           scrollbaren Containern (overflow), die eine absolute Liste am
+           Tabellenrand ABSCHNITTEN (Marcus' Screenshot: Menü halb sichtbar,
+           nicht bedienbar). Fixed entkommt jedem overflow-Kontext; die
+           Koordinaten setzt das Toggle-JS unten (inkl. Flip nach oben am
+           Viewport-Rand), bei Scroll/Resize schließt das Menü. */
+        position: fixed; z-index: 1000;
         background: var(--surface, #fff); border: 1px solid var(--border-subtle, #ddd);
         border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: 6px;
         display: flex; flex-direction: column; gap: 2px; min-width: 170px;
@@ -89,6 +95,29 @@ document.addEventListener('click', (e) => {
         if (!d.contains(e.target)) d.removeAttribute('open');
     });
 });
+// v1.12.14: Menü beim Öffnen am ⋯-Button positionieren (fixed, s. CSS oben).
+// Läuft im toggle-Handler VOR dem Paint — kein Aufblitzen an falscher Stelle.
+document.querySelectorAll('details.action-menu').forEach(d => {
+    d.addEventListener('toggle', () => {
+        if (!d.open) return;
+        // Immer nur EIN offenes Menü — sonst stapeln sich fixed-Listen.
+        document.querySelectorAll('details.action-menu[open]').forEach(o => { if (o !== d) o.removeAttribute('open'); });
+        const list = d.querySelector('.action-menu-list');
+        const btn = d.querySelector('summary').getBoundingClientRect();
+        list.style.left = '0px'; list.style.top = '0px'; // messbar machen
+        const mw = list.offsetWidth, mh = list.offsetHeight;
+        let left = Math.max(8, Math.min(btn.right - mw, window.innerWidth - mw - 8));
+        let top = btn.bottom + 4;
+        if (top + mh > window.innerHeight - 8) top = Math.max(8, btn.top - mh - 4); // Flip nach oben
+        list.style.left = left + 'px';
+        list.style.top = top + 'px';
+    });
+});
+// Fixed-Position würde beim Scrollen am Viewport "kleben" → Menü schließen.
+// capture:true, weil Scroll-Events aus inneren Containern nicht bubbeln.
+['scroll', 'resize'].forEach(ev => window.addEventListener(ev, () => {
+    document.querySelectorAll('details.action-menu[open]').forEach(d => d.removeAttribute('open'));
+}, { passive: true, capture: true }));
 // Generic per-section search: filters <tr> in the given table by whether
 // any cell's text contains the query (case-insensitive). Client-side only —
 // the page already renders every row server-side, no extra API round-trip.
@@ -198,6 +227,12 @@ else
                                 <button class="btn btn-ghost btn-sm" data-toggle-public="@l.Id" data-current="@(l.IsPublic ? "true" : "false")">
                                     @(l.IsPublic ? "🔒 " + @T["links.public.unshare"].Value : "🌐 " + @T["links.public.share"].Value)
                                 </button>
+                            }
+                            @* v1.12.14: Bearbeiten für den OWNER, nicht nur Admin — das
+                               isAdmin-Gate war ein Erbe des Admin-only-Ablauf-Prompts
+                               (v1.11.72); der PATCH-Endpoint erlaubt Owner ohnehin. *@
+                            @if (isAdmin || l.OwnerId == currentUserId)
+                            {
                                 <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
                         </div>
@@ -352,7 +387,8 @@ else
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
                             }
-                            @if (isAdmin)
+                            @* v1.12.14: Owner-oder-Admin statt admin-only (s. Privat-Tabelle). *@
+                            @if (canManage)
                             {
                                 <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
@@ -470,7 +506,9 @@ else
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
                             }
-                            @if (isAdmin)
+                            @* v1.12.14: Owner-oder-Admin statt admin-only (s. Privat-Tabelle) —
+                               Gruppen-Links können auch von anderen Mitgliedern stammen. *@
+                            @if (isAdmin || l.OwnerId == currentUserId)
                             {
                                 <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
@@ -559,7 +597,8 @@ else
                             {
                                 <button class="btn btn-ghost btn-sm" data-emergency="@l.Id" title="@T["links.emergency.hint"]">🆘 @T["links.action.emergency"]</button>
                             }
-                            @if (isAdmin)
+                            @* v1.12.14: Owner-oder-Admin statt admin-only (s. Privat-Tabelle). *@
+                            @if (canManagePublic)
                             {
                                 <button class="btn btn-ghost btn-sm" data-edit-link="@l.Id">✏️ @T["links.action.edit"]</button>
                             }
