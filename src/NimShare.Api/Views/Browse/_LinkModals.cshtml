@@ -737,16 +737,28 @@ async function ensureCertsLoaded() {
         const r = await fetch('/api/v1/certificates', { credentials: 'same-origin' });
         if (!r.ok) return;
         const list = await r.json();
+        // v1.12.17 (Marcus' Report): Admins bekommen ALLE Zertifikate geliefert —
+        // das alte `if (c.isDefault) opt.selected` griff damit auch bei FREMDEN
+        // Defaults, und der letzte gewann (fremde stehen hinter den eigenen) →
+        // Franks ★ war vorausgewählt statt des eigenen. Der Server würde ein
+        // fremdes Zertifikat beim Erstellen ohnehin still verwerfen — die UI
+        // hätte also Signierung versprochen, die nie passiert.
+        // Neu: Vorauswahl = eigenes Default-Zertifikat, sonst erstes eigenes,
+        // sonst "Kein Zertifikat". Fremde werden mit Besitzernamen beschriftet.
+        const own = list.filter(c => c.isMine);
+        const preferred = own.find(c => c.isDefault) || own[0] || null;
         for (const selId of ['shareCert', 'urCert']) {
             const sel = document.getElementById(selId);
             if (!sel) continue;
             list.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
-                opt.textContent = c.name + (c.isDefault ? ' ★' : '');
-                if (c.isDefault) opt.selected = true;
+                opt.textContent = c.name
+                    + (c.isDefault ? ' ★' : '')
+                    + (c.isMine ? '' : ' — ' + (c.ownerName || '?'));
                 sel.appendChild(opt);
             });
+            if (preferred) sel.value = preferred.id;
         }
     } catch {}
 }
