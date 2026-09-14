@@ -761,6 +761,14 @@ public class ShareController : Controller
         return Redirect(sas.ToString());
     }
 
+    // v1.12.19 (Audit): Teilbaum pro Link 30 s cachen — die Gallery-Landing
+    // feuert N Thumb-Requests + Status-Polling, und jeder machte bei
+    // IncludeSubfolders einen Scan der Folders-Tabelle (1-vCPU-B1!). Der
+    // Cache-Eintrag trägt die Link-Einstellungen: ein PATCH (Subfolders/Tiefe)
+    // erzwingt sofort eine Neuberechnung statt 30 s stale Autorisierung.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+        Guid, (DateTimeOffset Expires, bool IncludeSubfolders, int? Depth, HashSet<Guid> Ids)> _subtreeCache = new();
+
     /// <summary>v1.12.12: alle Ordner-Ids, die zur Freigabe gehören (Wurzel +
     /// bei IncludeSubfolders der Teilbaum im Tiefenlimit).</summary>
     private static async Task<HashSet<Guid>> AllowedFolderIdsAsync(
@@ -768,9 +776,19 @@ public class ShareController : Controller
     {
         if (link.FolderId is not Guid rootId) return new HashSet<Guid>();
         if (!link.IncludeSubfolders) return new HashSet<Guid> { rootId };
+        var now = DateTimeOffset.UtcNow;
+        if (_subtreeCache.TryGetValue(link.Id, out var hit)
+            && hit.Expires > now && hit.IncludeSubfolders == link.IncludeSubfolders && hit.Depth == link.SubfolderDepth)
+            return hit.Ids;
         var root = await db.Folders.FindAsync(new object[] { rootId }, ct);
         if (root is null) return new HashSet<Guid> { rootId };
-        return (await folderSvc.CollectShareSubtreeAsync(link, root, ct)).Keys.ToHashSet();
+        var ids = (await folderSvc.CollectShareSubtreeAsync(link, root, ct)).Keys.ToHashSet();
+        // Wachstum deckeln: abgelaufene Einträge gelegentlich abräumen.
+        if (_subtreeCache.Count > 500)
+            foreach (var kv in _subtreeCache)
+                if (kv.Value.Expires <= now) _subtreeCache.TryRemove(kv.Key, out _);
+        _subtreeCache[link.Id] = (now.AddSeconds(30), link.IncludeSubfolders, link.SubfolderDepth, ids);
+        return ids;
     }
 
     /// <summary>v1.12.12: liegt der Ordner der Datei innerhalb der Freigabe?

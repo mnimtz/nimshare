@@ -1846,5 +1846,6 @@ Danke, dass du NimShare nutzt.</value></data>
   <data name="share.card.extras" xml:space="preserve"><value>Signatur &amp; Extras</value></data>
   <data name="share.footer.hint" xml:space="preserve"><value>Alles optional — „Link erstellen“ genügt.</value></data>
   <data name="share.card.folder" xml:space="preserve"><value>Ordner-Optionen</value></data>
+  <data name="share.restrict.patch_failed" xml:space="preserve"><value>Die Empfänger-Beschränkung konnte nicht gesetzt werden — der Link wurde OHNE Beschränkung erstellt.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Für diese Domain konnte keine Vorschau erstellt werden.</value></data>
 </root>

@@ -1842,5 +1842,6 @@ Grazie per usare NimShare.</value></data>
   <data name="share.card.extras" xml:space="preserve"><value>Firma ed extra</value></data>
   <data name="share.footer.hint" xml:space="preserve"><value>Tutto è facoltativo — basta «Crea link».</value></data>
   <data name="share.card.folder" xml:space="preserve"><value>Opzioni cartella</value></data>
+  <data name="share.restrict.patch_failed" xml:space="preserve"><value>La restrizione dei destinatari non è stata applicata — il link è stato creato SENZA restrizioni.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Impossibile creare un'anteprima per questo dominio.</value></data>
 </root>

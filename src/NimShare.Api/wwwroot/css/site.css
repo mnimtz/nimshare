@@ -1078,10 +1078,19 @@ input:focus, select:focus, textarea:focus {
 .share-foot { display: flex; align-items: center; gap: 10px; margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--tw-gray-200); }
 .share-foot .helper { margin: 0; }
 .share-foot .actions-right { margin-left: auto; display: flex; gap: 10px; flex: none; }
-@media (max-width: 1140px) { .share-panel { max-width: min(92vw, 1080px); } }
+/* v1.12.19 (Audit M1): md-Variante in der Query mitführen — sonst gewann die
+   spätere 92vw-Regel bei gleicher Spezifität und machte die 880px-Panels auf
+   960–1140px-Viewports BREITER als auf großen Monitoren. */
+@media (max-width: 1140px) {
+    .share-panel { max-width: min(92vw, 1080px); }
+    .share-panel-md { max-width: min(92vw, 880px); }
+}
+/* v1.12.19 (Audit M2): unter 900px übernimmt bewusst der globale Mobile-Block
+   (.modal-panel { width: calc(100vw - 20px) }) — die frühere 560px-Regel hier
+   war toter Code, weil er sie ohnehin überschrieb. Nur das Grid fällt auf
+   eine Spalte zurück. */
 @media (max-width: 900px) {
     .share-grid { grid-template-columns: 1fr; }
-    .share-panel, .share-panel-md { max-width: 560px; }
     .share-chip { max-width: 100%; }
 }
 .modal-panel .actions {

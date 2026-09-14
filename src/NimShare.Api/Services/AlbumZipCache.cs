@@ -161,6 +161,22 @@ public class AlbumZipCache : IAlbumZipCache
             // v1.10.191: Staleness-Check vor dem Upload — hat sich der Ordner
             // während des Builds geändert (neuer Gast-Upload, Löschung), das
             // ZIP verwerfen. Der nächste Warmup baut mit frischem Stand.
+            // v1.12.19 (Audit): auch den LINK-Zustand re-validieren — schaltet der
+            // Owner während des Builds per PATCH IncludeSubfolders/Depth um (z.B.
+            // um einen vertraulichen Unterordner AUS der Freigabe zu nehmen),
+            // würde das fertige ZIP sonst dauerhaft den ALTEN Umfang ausliefern
+            // (die PATCH-Invalidierung lief vor unserem Upload ins Leere).
+            var linkNow = await db.ShareLinks.AsNoTracking()
+                .Where(l => l.Id == linkId)
+                .Select(l => new { l.IncludeSubfolders, l.SubfolderDepth, l.FolderId })
+                .SingleOrDefaultAsync(ct);
+            if (linkNow is null || linkNow.FolderId != link.FolderId
+                || linkNow.IncludeSubfolders != link.IncludeSubfolders
+                || linkNow.SubfolderDepth != link.SubfolderDepth)
+            {
+                _log.LogInformation("AlbumZipCache: link scope changed during build for link {LinkId} — discarding", linkId);
+                return;
+            }
             var nowIds = await db.Files
                 .Where(f => f.FolderId != null && folderIds.Contains(f.FolderId.Value)
                          && f.Status == StorageFileStatus.Ready)

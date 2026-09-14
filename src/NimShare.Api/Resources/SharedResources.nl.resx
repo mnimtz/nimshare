@@ -1841,5 +1841,6 @@ Bedankt voor het gebruik van NimShare.</value></data>
   <data name="share.card.extras" xml:space="preserve"><value>Handtekening &amp; extra's</value></data>
   <data name="share.footer.hint" xml:space="preserve"><value>Alles is optioneel — 'Link maken' volstaat.</value></data>
   <data name="share.card.folder" xml:space="preserve"><value>Mapopties</value></data>
+  <data name="share.restrict.patch_failed" xml:space="preserve"><value>De ontvangersbeperking kon niet worden toegepast — de link is ZONDER beperking aangemaakt.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Kon geen voorbeeld maken voor dit domein.</value></data>
 </root>

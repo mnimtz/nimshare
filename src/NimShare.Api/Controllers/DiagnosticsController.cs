@@ -113,5 +113,26 @@ public class DiagnosticsController : Controller
 /// /diagnostics view. Written to by Program.cs.</summary>
 public static class StartupState
 {
-    public static List<string> Errors { get; } = new();
+    // v1.12.19 (Audit): threadsicher — der späte Migrations-Reconcile
+    // (Program.cs, Hintergrund-Task) entfernt Einträge, während /health,
+    // /diagnostics und das Admin-Banner (_AppShell) parallel LESEN. Eine
+    // nackte List<string> wirft dann beim Enumerieren. Leser bekommen
+    // jetzt einen Snapshot, Mutationen laufen unter Lock.
+    private static readonly object Gate = new();
+    private static readonly List<string> _errors = new();
+
+    public static IReadOnlyList<string> Errors
+    {
+        get { lock (Gate) return _errors.ToArray(); }
+    }
+
+    public static void Add(string error)
+    {
+        lock (Gate) _errors.Add(error);
+    }
+
+    public static void RemoveMigrationFailures()
+    {
+        lock (Gate) _errors.RemoveAll(s => s.StartsWith("Migration failure:", StringComparison.Ordinal));
+    }
 }

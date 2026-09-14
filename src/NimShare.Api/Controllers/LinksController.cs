@@ -261,32 +261,13 @@ public class LinksController : ControllerBase
             if (folder is null || !await folderSvc.CanReadAsync(folder, user, ct)) return Forbid();
         }
 
-        string slug;
-        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
-        catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
-        catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
-
-        // v1.11.0: optionaler Subdomain-Slug. Feature muss instanzweit aktiv
-        // sein, der Slug muss DNS-safe + nicht reserviert + über beide Link-
-        // Typen frei sein.
-        // v1.11.27: Marcus's Wunsch — jeder User darf Subdomain-Links anlegen
-        // (das Admin-vergebene Per-User-Recht CanUseSubdomainShares entfällt).
-        string? subdomainSlug = null;
-        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
-        {
-            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
-            var subSettings = await subSvc.GetSettingsAsync(ct);
-            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
-                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
-            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
-            if (!subSvc.IsValidSlug(candidate, out var reason))
-                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
-            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
-            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
-            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
-                return Problem(statusCode: 409, title: "Subdomain slug taken");
-            subdomainSlug = candidate;
-        }
+        // v1.12.19 (Audit): Slug-/Subdomain-Auflösung (inkl. Reclaim eigener
+        // toter Slugs) wurde ANS ENDE der Validierungen verschoben — direkt vor
+        // den Insert. Der Reclaim committet sofort (parkt/nullt den alten Link);
+        // lief danach noch eine Validierung auf einen Fehler (z.B. 422
+        // branding_template_gone), war der Slug bereits freigegeben, ohne dass
+        // ein Ersatzlink entstand — und für Fremde greifbar. Jetzt ist das
+        // Fenster Reclaim→Insert minimal. Siehe Block unten vor `new ShareLink`.
 
         // v1.10.146: Absender-Zertifikat — nur eigene akzeptieren, sonst leise
         // ignorieren (kein Fehler, damit der Link trotzdem erstellt wird).
@@ -312,7 +293,10 @@ public class LinksController : ControllerBase
         // wenn niemand sie später von Hand löscht. Default: 8 Wochen ab
         // Erstellung, außer der Ersteller wählt explizit "Dauerhaft" oder gibt
         // ein eigenes Datum vor.
-        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt ?? DateTimeOffset.UtcNow.AddDays(56));
+        // v1.12.19 (Audit): auf UTC normalisieren — SQLite vergleicht
+        // DateTimeOffset als TEXT; ein Client-Offset ≠ +00:00 würde die
+        // Aktiv/Tot-Prädikate (Slug-Reclaim, IsActive-Queries) verfälschen.
+        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow.AddDays(56));
 
         // v1.12 — Custom-Branding-Vorlage nur akzeptieren, wenn sie existiert UND
         // Scope=Link ist. Verhindert, dass ein Link auf ein Global/UserPersonal-
@@ -362,6 +346,32 @@ public class LinksController : ControllerBase
             tpl.UpdatedAt = DateTimeOffset.UtcNow; // Sweep-Schutz immer refreshen
         }
 
+        // v1.12.19: Slug-Auflösung + Reclaim GANZ am Ende (siehe Kommentar oben).
+        string slug;
+        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
+        catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
+        catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
+
+        // v1.11.0: optionaler Subdomain-Slug. Feature muss instanzweit aktiv
+        // sein, der Slug muss DNS-safe + nicht reserviert + über beide Link-
+        // Typen frei sein. v1.11.27: steht jedem User offen.
+        string? subdomainSlug = null;
+        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
+        {
+            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+            var subSettings = await subSvc.GetSettingsAsync(ct);
+            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
+                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
+            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
+            if (!subSvc.IsValidSlug(candidate, out var reason))
+                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
+            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
+            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
+                return Problem(statusCode: 409, title: "Subdomain slug taken");
+            subdomainSlug = candidate;
+        }
+
         var link = new ShareLink
         {
             FileId = file?.Id,
@@ -401,11 +411,21 @@ public class LinksController : ControllerBase
             // v1.12.12: Unterordner-Freigabe — nur für Ordner-Links; Tiefe auf
             // 1..10 geklemmt (null = unbegrenzt).
             IncludeSubfolders = folder is not null && req.IncludeSubfolders,
-            SubfolderDepth = (folder is not null && req.IncludeSubfolders && req.SubfolderDepth is int sd)
+            // v1.12.19 (Audit): 0/negativ = unbegrenzt (null) — konsistent zur
+            // PATCH-Semantik; vorher clampte Create 0 still auf Tiefe 1.
+            SubfolderDepth = (folder is not null && req.IncludeSubfolders && req.SubfolderDepth is int sd && sd > 0)
                 ? Math.Clamp(sd, 1, 10) : null,
         };
         _db.ShareLinks.Add(link);
-        await _db.SaveChangesAsync(ct);
+        // v1.12.19 (Audit): gewinnt ein konkurrierender Create denselben Slug
+        // zwischen Verfügbarkeits-Check und Insert, schlägt der Unique-Index zu —
+        // sauberer 409 statt roher 500.
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException)
+        {
+            return Problem(statusCode: 409, title: "Slug taken",
+                detail: "Der Slug wurde soeben anderweitig vergeben — bitte erneut versuchen.");
+        }
         // v1.10.146: Signer für Response-DTO nachladen (Include beim frischen
         // Entity greift noch nicht).
         if (certId is Guid cid2)
@@ -797,7 +817,7 @@ public class LinksController : ControllerBase
         // v1.11.19: siehe Create() — gleiche Längenprüfung vor Protect().
         if (req.SerialNumber is { Length: > 1000 })
             return Problem(statusCode: 422, title: "Serial number too long (max 1000 characters).");
-        if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt;
+        if (req.ExpiresAt is not null) link.ExpiresAt = req.ExpiresAt.Value.ToUniversalTime(); // v1.12.19: UTC (SQLite-TEXT-Vergleich)
         // v1.11.50: Permanent-Umschalter. true → ExpiresAt raus. false →
         // wenn dabei kein eigenes ExpiresAt mitkam und der Link bisher
         // permanent war, auf +8 Wochen ab jetzt zurückfallen (sonst bliebe
@@ -1237,7 +1257,10 @@ public class LinksController : ControllerBase
             IsPermanent: l.IsPermanent,
             // v1.12.13: Prefill fürs Edit-Modal.
             Message: l.Message,
-            NotifyOnAccess: l.NotifyOnAccess,
+            // v1.12.19 (Audit): NotifyOnAccess nur für den Owner — GET liefert
+            // auch fremde Public-Links aus, und ob der Owner bei Zugriff
+            // benachrichtigt wird, geht Dritte nichts an (Auskundschaftung).
+            NotifyOnAccess: l.OwnerId == currentUserId && l.NotifyOnAccess,
             AllowedEmails: l.OwnerId == currentUserId ? l.AllowedEmails : null,
             RequireEmailVerify: l.RequireEmailVerify,
             IncludeSubfolders: l.IncludeSubfolders,

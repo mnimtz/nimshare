@@ -1844,5 +1844,6 @@ Thanks for using NimShare.</value></data>
   <data name="share.card.extras" xml:space="preserve"><value>Signature &amp; extras</value></data>
   <data name="share.footer.hint" xml:space="preserve"><value>Everything is optional — just click “Create link”.</value></data>
   <data name="share.card.folder" xml:space="preserve"><value>Folder options</value></data>
+  <data name="share.restrict.patch_failed" xml:space="preserve"><value>The recipient restriction could not be applied — the link was created WITHOUT restriction.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Couldn't build a preview for this domain.</value></data>
 </root>

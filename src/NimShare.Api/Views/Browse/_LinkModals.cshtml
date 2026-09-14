@@ -778,6 +778,9 @@ function resetShareModal() {
     document.getElementById('shareDocUrlEnabled').checked = false;
     onShareKeyStoreModeChange();
     document.getElementById('shareResult').style.display = 'none';
+    // v1.12.19 (Audit L1): Zertifikat auf die eigene Vorauswahl zurücksetzen.
+    const certSel = document.getElementById('shareCert');
+    if (certSel && window.__certPreferredId !== undefined) certSel.value = window.__certPreferredId;
     // v1.12.18: Empfänger-Beschränkung-Karte (Schalter) zurücksetzen.
     const restrictOn = document.getElementById('shareRestrictOn'); if (restrictOn) restrictOn.checked = false;
     const restrictBody = document.getElementById('shareRestrictBody'); if (restrictBody) restrictBody.style.display = 'none';
@@ -796,6 +799,9 @@ function resetShareModal() {
 function openUploadRequestModal(folderId) {
     currentUploadReqFolder = folderId;
     ['urSlug','urPw','urMax','urExp','urMsg'].forEach(id => document.getElementById(id).value = '');
+    // v1.12.19 (Audit L1): Zertifikat auf eigene Vorauswahl zurücksetzen.
+    const urCertSel = document.getElementById('urCert');
+    if (urCertSel && window.__certPreferredId !== undefined) urCertSel.value = window.__certPreferredId;
     document.getElementById('urPermanent').checked = false;
     document.getElementById('urExp').disabled = false;
     document.getElementById('urExp').value = defaultExpiryLocal();
@@ -831,6 +837,10 @@ async function ensureCertsLoaded() {
         // sonst "Kein Zertifikat". Fremde werden mit Besitzernamen beschriftet.
         const own = list.filter(c => c.isMine);
         const preferred = own.find(c => c.isDefault) || own[0] || null;
+        // v1.12.19 (Audit L1): Vorauswahl merken, damit resetShareModal/
+        // openUploadRequestModal sie bei JEDEM Öffnen wiederherstellen können
+        // (vorher blieb die letzte manuelle Wahl über Modal-Öffnungen kleben).
+        window.__certPreferredId = preferred ? preferred.id : '';
         for (const selId of ['shareCert', 'urCert']) {
             const sel = document.getElementById(selId);
             if (!sel) continue;
@@ -928,6 +938,14 @@ async function previewBranding() {
 
 async function createShareLink() {
     await ensureCertsLoaded();
+    // v1.12.19 (Audit H1/H2): Die Options-Schalter sind seit v1.12.18 ein
+    // EIN/AUS-Versprechen — Schalter aus heißt: die Karte wird NICHT angewandt,
+    // egal was in den (versteckten) Feldern steht. Vorher waren es nur
+    // zugeklappte <details>, deren Inhalt still mitging.
+    const restrictOn = !!document.getElementById('shareRestrictOn')?.checked;
+    const brandOn = !!document.getElementById('shareBrandOn')?.checked;
+    const brandActive = brandOn && shareBrandTemplateId
+        && !!document.getElementById('shareBrandApply')?.checked;
     const body = {
         slug: document.getElementById('shareSlug').value || null,
         password: document.getElementById('sharePw').value || null,
@@ -951,14 +969,12 @@ async function createShareLink() {
         documentationEnabled: !!document.getElementById('shareDocUrlEnabled')?.checked,
         // v1.11.50: explizites "läuft nie ab".
         isPermanent: !!document.getElementById('sharePermanent')?.checked,
-        // v1.12: KI-Auto-Branding — nur wenn eine Vorschau erzeugt UND der
-        // "Anwenden"-Haken gesetzt ist. Sonst null → Standard-Branding.
-        landingTemplateId: (shareBrandTemplateId && document.getElementById('shareBrandApply')?.checked)
-            ? shareBrandTemplateId : null,
+        // v1.12/1.12.19: KI-Auto-Branding — nur wenn der Karten-Schalter AN ist
+        // UND eine Vorschau erzeugt UND der "Anwenden"-Haken gesetzt ist.
+        landingTemplateId: brandActive ? shareBrandTemplateId : null,
         // v1.12.7: finaler Firmenname neben dem Logo — nur wenn Branding angewandt
         // UND "neben Logo anzeigen" an ist. Leer/aus ⇒ '' → Server zeigt nichts.
-        brandName: (shareBrandTemplateId && document.getElementById('shareBrandApply')?.checked
-                    && document.getElementById('shareBrandNameShow')?.checked)
+        brandName: (brandActive && document.getElementById('shareBrandNameShow')?.checked)
             ? (document.getElementById('shareBrandName')?.value || '') : '',
     };
     if (currentShareTarget.type === 'file') {
@@ -970,12 +986,24 @@ async function createShareLink() {
         const sfd = document.getElementById('shareSubfolderDepth')?.value || '';
         body.subfolderDepth = sfd ? parseInt(sfd, 10) : null;
     }
-    const r = await fetch('/api/v1/links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-    });
+    // v1.12.19 (Audit L3): Button gegen Doppelklick sperren — zwei schnelle
+    // Klicks erzeugten vorher zwei Links.
+    const createBtn = document.querySelector('#modalShare .btn-primary');
+    if (createBtn) createBtn.disabled = true;
+    let r;
+    try {
+        r = await fetch('/api/v1/links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        });
+    } catch (e) {
+        if (createBtn) createBtn.disabled = false;
+        nimAlert('Failed: ' + e, { kind: 'error' });
+        return;
+    }
+    if (createBtn) createBtn.disabled = false;
     if (!r.ok) {
         const txt = await r.text();
         // v1.12.8: Branding-Vorlage inzwischen aufgeräumt (Modal lag >24 h offen)
@@ -992,15 +1020,20 @@ async function createShareLink() {
 
     // If the user filled in the allow-list details, PATCH them onto the fresh
     // link. Doing it as a follow-up keeps the Create payload / DTO stable.
-    const allowed = document.getElementById('shareAllowedEmails').value.trim();
-    const otp = document.getElementById('shareOtp').checked;
+    // v1.12.19 (Audit H1): NUR wenn der Empfänger-Schalter AN ist — Schalter aus
+    // = keine Beschränkung, egal was noch in den versteckten Feldern steht.
+    // (Audit L4): Fehler des Follow-up-PATCH nicht mehr verschlucken — sonst
+    // zeigt die UI Erfolg und der Link ist unbeschränkt unterwegs.
+    const allowed = restrictOn ? document.getElementById('shareAllowedEmails').value.trim() : '';
+    const otp = restrictOn && document.getElementById('shareOtp').checked;
     if (allowed || otp) {
-        await fetch('/api/v1/links/' + link.id, {
+        const pr = await fetch('/api/v1/links/' + link.id, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
             body: JSON.stringify({ allowedEmails: allowed || null, requireEmailVerify: otp }),
         });
+        if (!pr.ok) nimAlert(@Json.Serialize(T["share.restrict.patch_failed"].Value) + ' (' + pr.status + ')', { kind: 'error' });
     }
     document.getElementById('shareUrl').value = link.url;
     document.getElementById('shareResult').style.display = 'block';
@@ -1037,12 +1070,23 @@ async function createUploadRequest() {
         // v1.11.50: explizites "läuft nie ab".
         isPermanent: !!document.getElementById('urPermanent')?.checked,
     };
-    const r = await fetch('/api/v1/upload-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-    });
+    // v1.12.19 (Audit L3): Doppelklick-Schutz + Netzwerkfehler sichtbar.
+    const urBtn = document.querySelector('#modalUploadReq .btn-primary');
+    if (urBtn) urBtn.disabled = true;
+    let r;
+    try {
+        r = await fetch('/api/v1/upload-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        });
+    } catch (e) {
+        if (urBtn) urBtn.disabled = false;
+        nimAlert('Failed: ' + e, { kind: 'error' });
+        return;
+    }
+    if (urBtn) urBtn.disabled = false;
     if (!r.ok) { nimAlert('Failed: ' + r.status, { kind: 'error' }); return; }
     const link = await r.json();
     document.getElementById('urUrl').value = link.url;

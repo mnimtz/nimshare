@@ -135,6 +135,12 @@ document.addEventListener('toggle', (e) => {
 ['scroll', 'resize'].forEach(ev => window.addEventListener(ev, () => {
     document.querySelectorAll('details.action-menu[open]').forEach(d => d.removeAttribute('open'));
 }, { passive: true, capture: true }));
+// v1.12.19 (Audit M3): Klick auf eine Aktion IM Menü schließt es — sonst
+// schwebte das fixed-Menü (z-index 1000) über dem geöffneten Modal (z-index 50),
+// weil der Outside-Click-Handler bei Klicks INNERHALB des details nicht greift.
+document.querySelectorAll('.action-menu-list .btn').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('details.action-menu')?.removeAttribute('open'));
+});
 // Generic per-section search: filters <tr> in the given table by whether
 // any cell's text contains the query (case-insensitive). Client-side only —
 // the page already renders every row server-side, no extra API round-trip.
@@ -760,10 +766,19 @@ async function saveEditLink() {
     if (msg !== init.message) body.message = msg;
     const notify = document.getElementById('elNotify').checked;
     if (notify !== init.notifyOnAccess) body.notifyOnAccess = notify;
-    const allowed = document.getElementById('elAllowed').value;
-    if (allowed !== init.allowedEmails) body.allowedEmails = allowed;
-    const otp = document.getElementById('elOtp').checked;
-    if (otp !== init.requireEmailVerify) body.requireEmailVerify = otp;
+    // v1.12.19 (Audit H3): Der Empfänger-Schalter ist ein EIN/AUS-Versprechen:
+    // Schalter AUS ⇒ Beschränkung wird ENTFERNT (falls vorhanden) und nichts
+    // aus den versteckten Feldern gesendet. Schalter AN ⇒ normales Diff.
+    const restrictOn = !!document.getElementById('elRestrictOn')?.checked;
+    if (!restrictOn) {
+        if (init.allowedEmails) body.allowedEmails = '';
+        if (init.requireEmailVerify) body.requireEmailVerify = false;
+    } else {
+        const allowed = document.getElementById('elAllowed').value;
+        if (allowed !== init.allowedEmails) body.allowedEmails = allowed;
+        const otp = document.getElementById('elOtp').checked;
+        if (otp !== init.requireEmailVerify) body.requireEmailVerify = otp;
+    }
     if (document.getElementById('elSerialRemove').checked) body.serialNumber = '';
     else { const sn = document.getElementById('elSerial').value.trim(); if (sn) body.serialNumber = sn; }
     const ks = document.getElementById('elKeyStore').checked;
@@ -813,8 +828,8 @@ document.querySelectorAll('[data-copy-abs]').forEach(b => {
         const url = b.dataset.copyAbs;
         try { await navigator.clipboard.writeText(url); b.textContent = '✓'; setTimeout(()=>b.textContent=@Json.Serialize(T["links.action.copy"].Value), 1200); }
         catch {
-            if (window.nsPrompt) window.nsPrompt('Copy this URL', '', url);
-            else prompt('Copy this URL:', url);
+            // v1.12.19: nimPrompt statt totem nsPrompt + nativem prompt()-Fallback.
+            nimPrompt(@Json.Serialize(T["links.action.copy"].Value), { defaultValue: url });
         }
     });
 });
@@ -825,8 +840,8 @@ document.querySelectorAll('[data-copy]').forEach(b => {
         catch {
             // Modern replacement — presents the URL in a proper modal input
             // (selectable, copyable) instead of a native prompt bar.
-            if (window.nsPrompt) window.nsPrompt('Copy this URL', '', url);
-            else prompt('Copy this URL:', url);
+            // v1.12.19: nimPrompt statt totem nsPrompt + nativem prompt()-Fallback.
+            nimPrompt(@Json.Serialize(T["links.action.copy"].Value), { defaultValue: url });
         }
     });
 });
@@ -877,7 +892,7 @@ async function openEmergencyModal(linkId) {
                     btn.textContent = '✓';
                     setTimeout(() => btn.textContent = @Json.Serialize(T["links.action.copy"].Value), 1200);
                 } catch {
-                    if (window.nsPrompt) window.nsPrompt('Copy this URL', '', f.url); else prompt('Copy this URL:', f.url);
+                    nimPrompt(@Json.Serialize(T["links.action.copy"].Value), { defaultValue: f.url }); // v1.12.19: nie native prompt()
                 }
             });
             row.appendChild(btn);
@@ -983,7 +998,7 @@ async function sendEmail() {
                         </div>
                         <div class="field" style="flex:1;min-width:150px">
                             <label>@T["upload.max_downloads"]</label>
-                            <input type="number" id="elMax" min="0"/>
+                            <input type="number" id="elMax" min="1"/>
                             <div class="helper">@T["links.edit.limit_hint"]</div>
                         </div>
                     </div>

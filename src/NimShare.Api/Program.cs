@@ -562,7 +562,7 @@ using (var scope = app.Services.CreateScope())
             if (pendingAfter.Count > 0)
             {
                 Console.Error.WriteLine($"[STARTUP] ⚠ After Migrate STILL pending: {string.Join(", ", pendingAfter)} — Rescue-Pfade (EnsureXxxTable) müssen greifen!");
-                NimShare.Api.Controllers.StartupState.Errors.Add(
+                NimShare.Api.Controllers.StartupState.Add(
                     "Pending migrations after MigrateAsync: " + string.Join(", ", pendingAfter));
             }
             else if (pendingBefore.Count > 0)
@@ -592,7 +592,7 @@ using (var scope = app.Services.CreateScope())
             Console.Error.WriteLine("[STARTUP] Database migration failed: " + ex);
             var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger("Startup");
             logger?.LogCritical(ex, "Database migration failed — app will run against the current DB schema and may 500 on any query that touches unmigrated tables.");
-            NimShare.Api.Controllers.StartupState.Errors.Add("Migration failure: " + ex.Message);
+            NimShare.Api.Controllers.StartupState.Add("Migration failure: " + ex.Message);
             break;
         }
     }
@@ -616,6 +616,14 @@ using (var scope = app.Services.CreateScope())
                 {
                     using var lateScope = app.Services.CreateScope();
                     var lateDb = lateScope.ServiceProvider.GetRequiredService<NimShareDbContext>();
+                    // v1.12.19 (Audit): auch die Rescue-Routinen nachholen, die
+                    // beim verlorenen Mount-Rennen ebenfalls fehlgeschlagen sind
+                    // (liefen im Boot NACH dem Retry-Loop, gegen dieselbe tote DB).
+                    await EnsureForensicColumnsAsync(lateDb);
+                    await EnsureLinkEntriesTableAsync(lateDb);
+                    await EnsureInstanceCasTableAsync(lateDb);
+                    await EnsureGalleryColumnsAsync(lateDb);
+                    await RepairDuplicateFolderRootsAsync(lateDb);
                     await RepairSqliteMissingColumnsAsync(lateDb, lateScope.ServiceProvider);
                     await BaselineSqliteIfNeededAsync(lateDb, lateScope.ServiceProvider);
                     await EnsureFolderIsPrivateColumnAsync(lateDb);
@@ -624,10 +632,7 @@ using (var scope = app.Services.CreateScope())
                     var stillPending = (await lateDb.Database.GetPendingMigrationsAsync()).ToList();
                     if (stillPending.Count == 0)
                     {
-                        // Einmalige Mutation pro Prozess; das theoretische Race mit
-                        // einem gleichzeitig rendernden Banner ist Nanosekunden groß.
-                        NimShare.Api.Controllers.StartupState.Errors.RemoveAll(
-                            s => s.StartsWith("Migration failure:", StringComparison.Ordinal));
+                        NimShare.Api.Controllers.StartupState.RemoveMigrationFailures();
                         Console.Error.WriteLine($"[STARTUP] ✓ Später Migrations-Reconcile nach {delaySec}s erfolgreich — Startup-Warnung entfernt.");
                         return;
                     }

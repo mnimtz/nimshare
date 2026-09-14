@@ -56,33 +56,10 @@ public class UploadRequestsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateRequest req, CancellationToken ct)
     {
         var user = await _users.GetOrProvisionAsync(User, ct);
-        string slug;
-        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
-        catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
-        catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
-
-        // v1.11.0: Subdomain-Slug — identische Regeln wie bei ShareLinks
-        // (Feature instanzweit aktiv, DNS-safe, nicht reserviert, frei).
-        // v1.11.27: Marcus's Wunsch — jeder User darf Subdomain-Links anlegen
-        // (das Admin-vergebene Per-User-Recht CanUseSubdomainShares entfällt).
-        string? subdomainSlug = null;
-        string? subdomainBase = null;
-        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
-        {
-            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
-            var subSettings = await subSvc.GetSettingsAsync(ct);
-            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
-                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
-            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
-            if (!subSvc.IsValidSlug(candidate, out var reason))
-                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
-            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
-            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
-            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
-                return Problem(statusCode: 409, title: "Subdomain slug taken");
-            subdomainSlug = candidate;
-            subdomainBase = subSettings.BaseDomain;
-        }
+        // v1.12.19 (Audit): Slug-/Subdomain-Auflösung (inkl. Reclaim eigener
+        // toter Slugs) ans Ende der Validierungen verschoben — der Reclaim
+        // committet sofort; ein späterer Validierungsfehler hätte den Slug
+        // sonst bereits freigegeben. Block steht unten vor dem Insert.
 
         // v1.10.146: Absender-Zertifikat, nur eigene akzeptieren.
         Guid? certId = null;
@@ -111,7 +88,36 @@ public class UploadRequestsController : ControllerBase
         }
 
         // v1.11.50: siehe LinksController.Create — gleicher 8-Wochen-Default.
-        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt ?? DateTimeOffset.UtcNow.AddDays(56));
+        // v1.12.19: UTC-Normalisierung (SQLite-TEXT-Vergleich, s. LinksController).
+        var expiresAt = req.IsPermanent ? (DateTimeOffset?)null : (req.ExpiresAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow.AddDays(56));
+
+        string slug;
+        try { slug = await _slugs.ResolveOrGenerateAsync(req.Slug, user.Id, ct); }
+        catch (InvalidOperationException ex) { return Problem(statusCode: 409, title: "Slug taken", detail: ex.Message); }
+        catch (ArgumentException ex) { return Problem(statusCode: 422, title: "Invalid slug", detail: ex.Message); }
+
+        // v1.11.0: Subdomain-Slug — identische Regeln wie bei ShareLinks
+        // (Feature instanzweit aktiv, DNS-safe, nicht reserviert, frei).
+        // v1.11.27: Marcus's Wunsch — jeder User darf Subdomain-Links anlegen
+        // (das Admin-vergebene Per-User-Recht CanUseSubdomainShares entfällt).
+        string? subdomainSlug = null;
+        string? subdomainBase = null;
+        if (!string.IsNullOrWhiteSpace(req.SubdomainSlug))
+        {
+            var subSvc = HttpContext.RequestServices.GetRequiredService<ISubdomainShareService>();
+            var subSettings = await subSvc.GetSettingsAsync(ct);
+            if (subSettings is null || !subSettings.Enabled || string.IsNullOrEmpty(subSettings.BaseDomain))
+                return Problem(statusCode: 422, title: "Subdomain sharing is not enabled on this instance.");
+            var candidate = req.SubdomainSlug.Trim().ToLowerInvariant();
+            if (!subSvc.IsValidSlug(candidate, out var reason))
+                return Problem(statusCode: 422, title: "Invalid subdomain slug", detail: reason);
+            // v1.12.11: erst eigene tote Links mit diesem Subdomain-Slug freigeben.
+            await subSvc.ReclaimOwnedInactiveAsync(candidate, user.Id, ct);
+            if (!await subSvc.IsSlugAvailableAsync(candidate, user.Id, ct))
+                return Problem(statusCode: 409, title: "Subdomain slug taken");
+            subdomainSlug = candidate;
+            subdomainBase = subSettings.BaseDomain;
+        }
 
         var link = new UploadRequestLink
         {
@@ -132,7 +138,13 @@ public class UploadRequestsController : ControllerBase
             SubdomainSlug = subdomainSlug,
         };
         _db.UploadRequests.Add(link);
-        await _db.SaveChangesAsync(ct);
+        // v1.12.19 (Audit): Unique-Index-Race → sauberer 409 statt 500.
+        try { await _db.SaveChangesAsync(ct); }
+        catch (DbUpdateException)
+        {
+            return Problem(statusCode: 409, title: "Slug taken",
+                detail: "Der Slug wurde soeben anderweitig vergeben — bitte erneut versuchen.");
+        }
 
         return Ok(new
         {

@@ -1842,5 +1842,6 @@ Merci d'utiliser NimShare.</value></data>
   <data name="share.card.extras" xml:space="preserve"><value>Signature et extras</value></data>
   <data name="share.footer.hint" xml:space="preserve"><value>Tout est optionnel — « Créer le lien » suffit.</value></data>
   <data name="share.card.folder" xml:space="preserve"><value>Options de dossier</value></data>
+  <data name="share.restrict.patch_failed" xml:space="preserve"><value>La restriction des destinataires n'a pas pu être appliquée — le lien a été créé SANS restriction.</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Impossible de générer un aperçu pour ce domaine.</value></data>
 </root>
