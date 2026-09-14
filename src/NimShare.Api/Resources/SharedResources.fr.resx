@@ -1836,5 +1836,11 @@ Merci d'utiliser NimShare.</value></data>
   <data name="links.edit.limit_hint" xml:space="preserve"><value>Vide = aucune limite</value></data>
   <data name="links.edit.remove_password" xml:space="preserve"><value>Supprimer le mot de passe</value></data>
   <data name="links.edit.remove_serial" xml:space="preserve"><value>Supprimer le numéro de série</value></data>
+  <data name="share.card.link" xml:space="preserve"><value>Adresse du lien</value></data>
+  <data name="share.card.security" xml:space="preserve"><value>Accès et sécurité</value></data>
+  <data name="share.card.message" xml:space="preserve"><value>Message aux destinataires</value></data>
+  <data name="share.card.extras" xml:space="preserve"><value>Signature et extras</value></data>
+  <data name="share.footer.hint" xml:space="preserve"><value>Tout est optionnel — « Créer le lien » suffit.</value></data>
+  <data name="share.card.folder" xml:space="preserve"><value>Options de dossier</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Impossible de générer un aperçu pour ce domaine.</value></data>
 </root>

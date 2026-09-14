@@ -65,189 +65,226 @@
 
 <!-- Share Link Modal -->
 <div class="modal-backdrop" id="modalShare" onclick="if(event.target===this)closeModal('modalShare')">
-    <div class="modal-panel">
-        <h2>@T["modal.share.title"]</h2>
-        <p class="muted" id="shareTargetHint"></p>
-        <div class="field">
-            <label>@T["upload.slug"]</label>
-            <input type="text" id="shareSlug" placeholder="project-x" autocomplete="off" spellcheck="false"
-                   oninput="slugLiveCheck('shareSlug', 'shareSlugStatus')"/>
-            <div class="helper">@T["upload.slug_helper"]</div>
-            <div id="shareSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+    @* v1.12.18: Redesign "Variante A" (Marcus' Wahl aus der Design-Canvas) —
+       breites 2-Spalten-Karten-Layout statt 560px-Scrollsäule. Links der
+       Pflicht-Pfad (Adresse, Sicherheit, Nachricht), rechts die Optionen als
+       Karten mit Schaltern. ALLE Element-IDs und Handler sind unverändert —
+       das JS darunter (createShareLink/resetShareModal/previewBranding/…)
+       arbeitet weiter wie bisher; nur Struktur + Optik sind neu. Unter 900px
+       fällt das Grid auf eine Spalte zurück (share-grid Media-Query). *@
+    <div class="modal-panel share-panel">
+        <div class="share-head">
+            <h2>@T["modal.share.title"]</h2>
+            <span class="share-chip" id="shareTargetHint"></span>
         </div>
-        @* v1.11.0: Subdomain-Freigabe — Sektion wird nur eingeblendet, wenn
-           /api/v1/links/subdomain-info enabled && canUse liefert (einmal pro
-           Seite gecacht). Live-Check analog slugLiveCheck, aber gegen
-           subdomain-check und mit voller FQDN-Vorschau. *@
-        <div class="field" id="shareSubdomainWrap" style="display:none">
-            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
-                <input type="checkbox" id="shareSubdomainOn" onchange="onSubdomainToggle('share')"/>
-                <span>🌐 @T["share.subdomain.enable"]</span>
-            </label>
-            <div id="shareSubdomainFieldWrap" style="display:none;margin-top:8px">
-                <label for="shareSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
-                <input type="text" id="shareSubdomainSlug" autocomplete="off" spellcheck="false"
-                       oninput="subdomainLiveCheck('shareSubdomainSlug', 'shareSubdomainStatus')"/>
-                <div id="shareSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
-            </div>
-        </div>
-        @* v1.11.24: bewusst nur 2 Spalten statt 3 (Passwort/Max/Ablauf) —
-           3× flex:1 in einer Reihe wrappte je nach Modal-Breite unterschiedlich,
-           sodass "Ablaufdatum" mal allein auf voller Breite "ausriss". Fest
-           2-spaltig + Ablaufdatum als eigene Zeile ist deterministisch und
-           bricht nie mehr unvorhersehbar um. *@
-        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.password"]</label>
-                <input type="text" id="sharePw"/>
-            </div>
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.max_downloads"]</label>
-                <input type="number" id="shareMax" min="1"/>
-            </div>
-        </div>
-        <div class="field">
-            <label>@T["upload.expires_at"]</label>
-            <input type="datetime-local" id="shareExp"/>
-            <div class="helper">@T["links.expiry_default_hint"]</div>
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
-                <input type="checkbox" id="sharePermanent" onchange="onPermanentToggle('share')"/>
-                <span>♾️ @T["links.permanent_label"]</span>
-            </label>
-        </div>
-        <div class="field">
-            <label>@T["upload.message"]</label>
-            <textarea id="shareMsg" rows="2" placeholder="@T["upload.message_placeholder"]"></textarea>
-        </div>
-        <label style="font-weight:400"><input type="checkbox" id="shareNotify"/> @T["upload.notify_me"]</label>
-
-        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:500">🔒 @T["links.restrict.legend"]</summary>
-            <div class="field" style="margin-top:8px">
-                <label>@T["links.restrict.allowed_label"]</label>
-                <input type="text" id="shareAllowedEmails" placeholder="alice@@acme.com, @@tungstenautomation.com, *.gmail.com"/>
-                <div class="helper">@Html.Raw(@T["links.restrict.allowed_hint"].Value)</div>
-            </div>
-            <label style="font-weight:400"><input type="checkbox" id="shareOtp"/> @T["links.restrict.otp_label"]</label>
-        </details>
-        @* v1.11.18: Optionale Seriennummer/Lizenzcode — z.B. bei Software-
-           Downloads. Wird verschlüsselt gespeichert, auf der Landing nur
-           nach Klick + optional per E-Mail zugesendet.
-           v1.11.22: Alternative — „Lizenzschlüssel"-Modus zieht den Key
-           automatisch aus dem Key-Store anhand der Besucher-Email; beide
-           Modi schließen sich gegenseitig aus (Server enforced das auch). *@
-        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:500">🔑 @T["share.serial.legend"]</summary>
-            <div class="field" style="margin-top:8px" id="shareSerialFieldWrap">
-                <label>@T["share.serial.label"]</label>
-                <input type="text" id="shareSerialNumber" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"/>
-                <div class="helper">@T["share.serial.hint"]</div>
-            </div>
-            <label style="font-weight:400;display:block;margin-top:10px"><input type="checkbox" id="shareKeyStoreMode" onchange="onShareKeyStoreModeChange()"/> @T["share.keystore.mode_label"]</label>
-            <div class="helper" style="margin-top:2px">@T["share.keystore.mode_hint"]</div>
-            @* v1.11.44: Marcus's Wunsch — kein fester hartkodierter Doku-Link
-               mehr. Die Checkbox ist jetzt ein reines Ein/Aus für die
-               flexiblen Key-Store-Dokumente (PDFs/Links, verwaltet unter
-               Lizenzverwaltung → Dokumentation, passend zum jeweiligen
-               Key-Typ). Kein URL-Feld mehr nötig. *@
-            <div class="field" id="shareDocUrlWrap" style="display:none;margin-top:8px">
-                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-                    <input type="checkbox" id="shareDocUrlEnabled"/>
-                    <span>@T["share.keystore.doc_url_label"]</span>
-                </label>
-                <div class="helper">@T["share.keystore.doc_url_hint"]</div>
-            </div>
-        </details>
-        @* v1.10.146: Absender-Zertifikat-Picker (lädt eigene Zertifikate). *@
-        <div class="field" style="margin-top:10px">
-            <label>@T["share.cert.picker_label"]</label>
-            <select id="shareCert"><option value="">@T["share.cert.picker_none"]</option></select>
-            <div class="helper">@T["share.cert.picker_hint"]</div>
-        </div>
-        @* v1.10.167: Zwei Optionen für Ordner-Links: (1) „Als Foto/Video-Album
-           anzeigen" — Landing rendert Grid+Lightbox statt Datei-Liste.
-           (2) Sub-Toggle „Upload erlauben" — nur sichtbar wenn Option 1 aktiv
-           ODER der Zielordner selbst Kind=Gallery ist. Server enforced beides. *@
-        @* v1.12.12: Ordner-Links — Unterordner rekursiv einbeziehen + max. Tiefe. *@
-        <div class="field" id="shareSubfoldersWrap" style="display:none;margin-top:10px">
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-                <input type="checkbox" id="shareIncludeSubfolders" checked
-                       onchange="document.getElementById('shareSubfolderDepthWrap').style.display=this.checked?'flex':'none'"/>
-                <span>🗂 @T["share.subfolders.label"]</span>
-            </label>
-            <div id="shareSubfolderDepthWrap" style="margin-top:6px;display:flex;align-items:center;gap:8px">
-                <label for="shareSubfolderDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
-                <select id="shareSubfolderDepth" style="width:auto">
-                    <option value="" selected>@T["share.subfolders.depth_all"]</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="5">5</option>
-                </select>
-            </div>
-        </div>
-        <div class="field" id="shareGalleryWrap" style="display:none;margin-top:10px;padding:12px 14px;background:rgba(0,40,84,0.05);border-radius:8px">
-            <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer">
-                <input type="checkbox" id="shareDisplayAsGallery" style="margin-top:4px" onchange="onShareDisplayGalleryChange()"/>
-                <span>
-                    <div style="font-weight:600">🖼 @T["share.gallery.display_label"]</div>
-                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.display_hint"]</div>
-                </span>
-            </label>
-            <label id="shareAllowUploadsRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:26px;border-left:2px solid rgba(0,40,84,0.15)">
-                <input type="checkbox" id="shareAllowUploads" style="margin-top:4px"/>
-                <span>
-                    <div style="font-weight:600">↑ @T["share.gallery.allow_uploads_label"]</div>
-                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.allow_uploads_hint"]</div>
-                </span>
-            </label>
-            @* v1.10.196: GPS-Karte pro Link an/aus. Default an — die Landing
-               zeigt die Aufnahmeort-Karte nur, wenn Fotos GPS-EXIF haben UND
-               dieser Toggle aktiv ist. *@
-            <label id="shareGpsMapRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:26px;border-left:2px solid rgba(0,40,84,0.15)">
-                <input type="checkbox" id="shareShowGpsMap" checked style="margin-top:4px"/>
-                <span>
-                    <div style="font-weight:600">📍 @T["share.gallery.gps_map_label"]</div>
-                    <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.gps_map_hint"]</div>
-                </span>
-            </label>
-        </div>
-        @* v1.12: KI-Auto-Branding pro Link — Kunden-Domain eingeben, KI zieht
-           Logo/Firmenname/Akzentfarbe und personalisiert die Landing. Optional;
-           nichts gesetzt = unverändertes Standard-Branding. *@
-        <details id="shareBrandDetails" style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:600">✨ @T["share.branding.summary"]</summary>
-            <div class="field" style="margin-top:8px">
-                <label for="shareBrandDomain">@T["share.branding.domain_label"]</label>
-                <div style="display:flex;gap:8px">
-                    <input type="text" id="shareBrandDomain" placeholder="acme.com" autocomplete="off" spellcheck="false" style="flex:1"/>
-                    <button type="button" id="shareBrandBtn" onclick="previewBranding()">@T["share.branding.preview_btn"]</button>
-                </div>
-                <div class="helper">@T["share.branding.hint"]</div>
-            </div>
-            <div id="shareBrandPreview" style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:rgba(0,40,84,0.04);border:1px solid var(--tw-gray-200)">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <img id="shareBrandLogo" alt="" style="max-height:40px;max-width:120px;display:none"/>
-                    <div style="min-width:0">
-                        <div id="shareBrandTitle" style="font-weight:700"></div>
-                        <div id="shareBrandSubtitle" class="muted" style="font-size:.88rem"></div>
+        <div class="share-grid">
+            <div class="share-col">
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                        <span>@T["share.card.link"]</span>
                     </div>
-                    <span id="shareBrandSwatch" title="Akzentfarbe" style="margin-left:auto;flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--tw-gray-300)"></span>
+                    <div class="field">
+                        <label>@T["upload.slug"]</label>
+                        <input type="text" id="shareSlug" placeholder="project-x" autocomplete="off" spellcheck="false"
+                               oninput="slugLiveCheck('shareSlug', 'shareSlugStatus')"/>
+                        <div class="helper">@T["upload.slug_helper"]</div>
+                        <div id="shareSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+                    </div>
+                    @* v1.11.0: Subdomain-Freigabe — Sektion wird nur eingeblendet, wenn
+                       /api/v1/links/subdomain-info enabled && canUse liefert. *@
+                    <div class="field" id="shareSubdomainWrap" style="display:none">
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                            <input type="checkbox" id="shareSubdomainOn" onchange="onSubdomainToggle('share')"/>
+                            <span>🌐 @T["share.subdomain.enable"]</span>
+                        </label>
+                        <div id="shareSubdomainFieldWrap" style="display:none;margin-top:8px">
+                            <label for="shareSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
+                            <input type="text" id="shareSubdomainSlug" autocomplete="off" spellcheck="false"
+                                   oninput="subdomainLiveCheck('shareSubdomainSlug', 'shareSubdomainStatus')"/>
+                            <div id="shareSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+                        </div>
+                    </div>
                 </div>
-                <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
-                    <input type="checkbox" id="shareBrandApply" checked/> @T["share.branding.apply_label"]
-                </label>
-                @* v1.12.7: Firmenname neben dem Logo — editierbar + abschaltbar. *@
-                <div class="field" style="margin-top:10px">
-                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px">
-                        <input type="checkbox" id="shareBrandNameShow" checked onchange="document.getElementById('shareBrandName').disabled=!this.checked"/> @T["share.branding.name_show"]
-                    </label>
-                    <input type="text" id="shareBrandName" maxlength="120" autocomplete="off" spellcheck="false" style="width:100%"/>
-                    <div class="helper">@T["share.branding.name_hint"]</div>
+
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                        <span>@T["share.card.security"]</span>
+                    </div>
+                    <div class="row" style="gap:var(--sp-3);flex-wrap:wrap">
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["upload.password"]</label>
+                            <input type="text" id="sharePw"/>
+                        </div>
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["upload.max_downloads"]</label>
+                            <input type="number" id="shareMax" min="1"/>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>@T["upload.expires_at"]</label>
+                        <input type="datetime-local" id="shareExp"/>
+                        <div class="helper">@T["links.expiry_default_hint"]</div>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                            <input type="checkbox" id="sharePermanent" onchange="onPermanentToggle('share')"/>
+                            <span>♾️ @T["links.permanent_label"]</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>@T["share.card.message"]</span>
+                    </div>
+                    <div class="field">
+                        <textarea id="shareMsg" rows="2" placeholder="@T["upload.message_placeholder"]"></textarea>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="shareNotify"/> @T["upload.notify_me"]</label>
                 </div>
             </div>
-        </details>
-        <div id="shareResult" style="display:none">
+
+            <div class="share-col">
+                <div class="share-card">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                            <span>@T["links.restrict.legend"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="shareRestrictOn"
+                               onchange="document.getElementById('shareRestrictBody').style.display=this.checked?'':'none'"/>
+                    </label>
+                    <div id="shareRestrictBody" style="display:none">
+                        <div class="field" style="margin-top:10px">
+                            <label>@T["links.restrict.allowed_label"]</label>
+                            <input type="text" id="shareAllowedEmails" placeholder="alice@@acme.com, @@tungstenautomation.com, *.gmail.com"/>
+                            <div class="helper">@Html.Raw(@T["links.restrict.allowed_hint"].Value)</div>
+                        </div>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="shareOtp"/> @T["links.restrict.otp_label"]</label>
+                    </div>
+                </div>
+
+                @* v1.12.12: Ordner-Links — Unterordner rekursiv einbeziehen + max. Tiefe. *@
+                <div class="share-card" id="shareSubfoldersWrap" style="display:none">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/></svg>
+                            <span>@T["share.subfolders.label"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="shareIncludeSubfolders" checked
+                               onchange="document.getElementById('shareSubfolderDepthWrap').style.display=this.checked?'flex':'none'"/>
+                    </label>
+                    <div id="shareSubfolderDepthWrap" style="margin-top:10px;display:flex;align-items:center;gap:8px">
+                        <label for="shareSubfolderDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
+                        <select id="shareSubfolderDepth" style="width:auto">
+                            <option value="" selected>@T["share.subfolders.depth_all"]</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                </div>
+
+                @* v1.10.167: Album-Optionen für Ordner-Links; Sub-Toggles nur bei aktivem Album. *@
+                <div class="share-card" id="shareGalleryWrap" style="display:none">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                            <span>@T["share.gallery.display_label"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="shareDisplayAsGallery" onchange="onShareDisplayGalleryChange()"/>
+                    </label>
+                    <div class="helper" style="margin-top:4px">@T["share.gallery.display_hint"]</div>
+                    <label id="shareAllowUploadsRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:12px;border-left:2px solid rgba(0,40,84,0.15)">
+                        <input type="checkbox" id="shareAllowUploads" style="margin-top:4px"/>
+                        <span>
+                            <div style="font-weight:600">↑ @T["share.gallery.allow_uploads_label"]</div>
+                            <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.allow_uploads_hint"]</div>
+                        </span>
+                    </label>
+                    <label id="shareGpsMapRow" style="display:none;gap:8px;align-items:flex-start;font-weight:400;cursor:pointer;margin-top:10px;padding-left:12px;border-left:2px solid rgba(0,40,84,0.15)">
+                        <input type="checkbox" id="shareShowGpsMap" checked style="margin-top:4px"/>
+                        <span>
+                            <div style="font-weight:600">📍 @T["share.gallery.gps_map_label"]</div>
+                            <div class="muted" style="font-size:.88rem;margin-top:2px">@T["share.gallery.gps_map_hint"]</div>
+                        </span>
+                    </label>
+                </div>
+
+                @* v1.10.146/v1.11.18/22: Zertifikat + Seriennummer/Key-Store kompakt. *@
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>@T["share.card.extras"]</span>
+                    </div>
+                    <div class="field">
+                        <label>@T["share.cert.picker_label"]</label>
+                        <select id="shareCert"><option value="">@T["share.cert.picker_none"]</option></select>
+                        <div class="helper">@T["share.cert.picker_hint"]</div>
+                    </div>
+                    <div class="field" id="shareSerialFieldWrap">
+                        <label>@T["share.serial.label"]</label>
+                        <input type="text" id="shareSerialNumber" autocomplete="off" placeholder="XXXX-XXXX-XXXX-XXXX"/>
+                        <div class="helper">@T["share.serial.hint"]</div>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="shareKeyStoreMode" onchange="onShareKeyStoreModeChange()"/> @T["share.keystore.mode_label"]</label>
+                    <div class="helper" style="margin-top:2px">@T["share.keystore.mode_hint"]</div>
+                    <div class="field" id="shareDocUrlWrap" style="display:none;margin-top:8px">
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+                            <input type="checkbox" id="shareDocUrlEnabled"/>
+                            <span>@T["share.keystore.doc_url_label"]</span>
+                        </label>
+                        <div class="helper">@T["share.keystore.doc_url_hint"]</div>
+                    </div>
+                </div>
+
+                @* v1.12: KI-Auto-Branding pro Link. *@
+                <div class="share-card">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
+                            <span>@T["share.branding.summary"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="shareBrandOn"
+                               onchange="document.getElementById('shareBrandBody').style.display=this.checked?'':'none'"/>
+                    </label>
+                    <div id="shareBrandBody" style="display:none">
+                        <div class="field" style="margin-top:10px">
+                            <label for="shareBrandDomain">@T["share.branding.domain_label"]</label>
+                            <div style="display:flex;gap:8px">
+                                <input type="text" id="shareBrandDomain" placeholder="acme.com" autocomplete="off" spellcheck="false" style="flex:1"/>
+                                <button type="button" id="shareBrandBtn" onclick="previewBranding()">@T["share.branding.preview_btn"]</button>
+                            </div>
+                            <div class="helper">@T["share.branding.hint"]</div>
+                        </div>
+                        <div id="shareBrandPreview" style="display:none;margin-top:10px;padding:12px;border-radius:8px;background:rgba(0,40,84,0.04);border:1px solid var(--tw-gray-200)">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <img id="shareBrandLogo" alt="" style="max-height:40px;max-width:120px;display:none"/>
+                                <div style="min-width:0">
+                                    <div id="shareBrandTitle" style="font-weight:700"></div>
+                                    <div id="shareBrandSubtitle" class="muted" style="font-size:.88rem"></div>
+                                </div>
+                                <span id="shareBrandSwatch" title="Akzentfarbe" style="margin-left:auto;flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--tw-gray-300)"></span>
+                            </div>
+                            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+                                <input type="checkbox" id="shareBrandApply" checked/> @T["share.branding.apply_label"]
+                            </label>
+                            @* v1.12.7: Firmenname neben dem Logo — editierbar + abschaltbar. *@
+                            <div class="field" style="margin-top:10px">
+                                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px">
+                                    <input type="checkbox" id="shareBrandNameShow" checked onchange="document.getElementById('shareBrandName').disabled=!this.checked"/> @T["share.branding.name_show"]
+                                </label>
+                                <input type="text" id="shareBrandName" maxlength="120" autocomplete="off" spellcheck="false" style="width:100%"/>
+                                <div class="helper">@T["share.branding.name_hint"]</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="shareResult" style="display:none;margin-top:var(--sp-4)">
             <div class="modal-result">
                 <input id="shareUrl" readonly/>
                 <button class="btn btn-ghost" onclick="copyShareUrl()">📋</button>
@@ -261,77 +298,118 @@
                 </div>
             </div>
         </div>
-        <div class="actions">
-            <button type="button" class="btn btn-ghost" onclick="closeModal('modalShare')">@T["modal.close"]</button>
-            <button type="button" class="btn btn-primary" onclick="createShareLink()">@T["modal.create_link"]</button>
+        <div class="share-foot">
+            <div class="helper">@T["share.footer.hint"]</div>
+            <div class="actions-right">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalShare')">@T["modal.close"]</button>
+                <button type="button" class="btn btn-primary" onclick="createShareLink()">@T["modal.create_link"]</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Upload Request Modal -->
 <div class="modal-backdrop" id="modalUploadReq" onclick="if(event.target===this)closeModal('modalUploadReq')">
-    <div class="modal-panel">
-        <h2>@T["modal.upload_request.title"]</h2>
-        <p class="muted">@T["modal.upload_request.lede"]</p>
-        <div class="field">
-            <label>@T["upload.slug"]</label>
-            <input type="text" id="urSlug" autocomplete="off" spellcheck="false"
-                   oninput="slugLiveCheck('urSlug', 'urSlugStatus')"/>
-            <div id="urSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+    @* v1.12.18: gleiche Kartensprache wie das Share-Modal (Variante A) — bei
+       weniger Feldern in mittlerer Breite. IDs/Handler unverändert. *@
+    <div class="modal-panel share-panel share-panel-md">
+        <div class="share-head">
+            <h2>@T["modal.upload_request.title"]</h2>
+            <span class="share-chip">@T["modal.upload_request.lede"]</span>
         </div>
-        @* v1.11.0: Subdomain-Sektion — identisch zum Share-Modal. *@
-        <div class="field" id="urSubdomainWrap" style="display:none">
-            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
-                <input type="checkbox" id="urSubdomainOn" onchange="onSubdomainToggle('ur')"/>
-                <span>🌐 @T["share.subdomain.enable"]</span>
-            </label>
-            <div id="urSubdomainFieldWrap" style="display:none;margin-top:8px">
-                <label for="urSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
-                <input type="text" id="urSubdomainSlug" autocomplete="off" spellcheck="false"
-                       oninput="subdomainLiveCheck('urSubdomainSlug', 'urSubdomainStatus')"/>
-                <div id="urSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+        <div class="share-grid">
+            <div class="share-col">
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                        <span>@T["share.card.link"]</span>
+                    </div>
+                    <div class="field">
+                        <label>@T["upload.slug"]</label>
+                        <input type="text" id="urSlug" autocomplete="off" spellcheck="false"
+                               oninput="slugLiveCheck('urSlug', 'urSlugStatus')"/>
+                        <div id="urSlugStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+                    </div>
+                    @* v1.11.0: Subdomain-Sektion — identisch zum Share-Modal. *@
+                    <div class="field" id="urSubdomainWrap" style="display:none">
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                            <input type="checkbox" id="urSubdomainOn" onchange="onSubdomainToggle('ur')"/>
+                            <span>🌐 @T["share.subdomain.enable"]</span>
+                        </label>
+                        <div id="urSubdomainFieldWrap" style="display:none;margin-top:8px">
+                            <label for="urSubdomainSlug" style="font-size:.85rem">@T["share.subdomain.field_label"]</label>
+                            <input type="text" id="urSubdomainSlug" autocomplete="off" spellcheck="false"
+                                   oninput="subdomainLiveCheck('urSubdomainSlug', 'urSubdomainStatus')"/>
+                            <div id="urSubdomainStatus" class="slug-status" style="margin-top:6px;font-size:.85rem;min-height:1.2em"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                        <span>@T["share.card.security"]</span>
+                    </div>
+                    <div class="row" style="gap:var(--sp-3);flex-wrap:wrap">
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["upload.password"]</label>
+                            <input type="text" id="urPw"/>
+                        </div>
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["modal.upload_request.max_uploads"]</label>
+                            <input type="number" id="urMax" min="1"/>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>@T["upload.expires_at"]</label>
+                        <input type="datetime-local" id="urExp"/>
+                        <div class="helper">@T["links.expiry_default_hint"]</div>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                            <input type="checkbox" id="urPermanent" onchange="onPermanentToggle('ur')"/>
+                            <span>♾️ @T["links.permanent_label"]</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="share-col">
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>@T["share.card.message"]</span>
+                    </div>
+                    <div class="field">
+                        <textarea id="urMsg" rows="2"></textarea>
+                    </div>
+                </div>
+
+                @* v1.11.28: yyyy-MM-dd-Unterordner pro Upload-Tag — Default an. *@
+                <div class="share-card">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                            <span>@T["upload.date_subfolders_label"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="urDateSubfolders" checked/>
+                    </label>
+                    <div class="helper" style="margin-top:4px">@T["upload.date_subfolders_hint"]</div>
+                </div>
+
+                @* v1.10.146: Absender-Zertifikat auch für Upload-Anfragen. *@
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>@T["share.card.extras"]</span>
+                    </div>
+                    <div class="field">
+                        <label>@T["share.cert.picker_label"]</label>
+                        <select id="urCert"><option value="">@T["share.cert.picker_none"]</option></select>
+                        <div class="helper">@T["share.cert.picker_hint"]</div>
+                    </div>
+                </div>
             </div>
         </div>
-        @* v1.11.24: siehe Share-Modal — deterministisch 2-spaltig statt 3×
-           flex:1 (das "Ablaufdatum" riss sonst je nach Breite mal allein aus). *@
-        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.password"]</label>
-                <input type="text" id="urPw"/>
-            </div>
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["modal.upload_request.max_uploads"]</label>
-                <input type="number" id="urMax" min="1"/>
-            </div>
-        </div>
-        <div class="field">
-            <label>@T["upload.expires_at"]</label>
-            <input type="datetime-local" id="urExp"/>
-            <div class="helper">@T["links.expiry_default_hint"]</div>
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
-                <input type="checkbox" id="urPermanent" onchange="onPermanentToggle('ur')"/>
-                <span>♾️ @T["links.permanent_label"]</span>
-            </label>
-        </div>
-        <div class="field">
-            <label>@T["upload.message"]</label>
-            <textarea id="urMsg" rows="2"></textarea>
-        </div>
-        @* v1.11.28: Uploads landen zusätzlich in einem yyyy-MM-dd-Unterordner
-           unter dem Zielordner — Default an, damit man später leichter findet
-           was wann reinkam. *@
-        <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="urDateSubfolders" checked/>
-            <span>@T["upload.date_subfolders_label"]</span>
-        </label>
-        <div class="helper" style="margin-top:2px">@T["upload.date_subfolders_hint"]</div>
-        @* v1.10.146: Absender-Zertifikat auch für Upload-Anfragen. *@
-        <div class="field">
-            <label>@T["share.cert.picker_label"]</label>
-            <select id="urCert"><option value="">@T["share.cert.picker_none"]</option></select>
-            <div class="helper">@T["share.cert.picker_hint"]</div>
-        </div>
-        <div id="urResult" style="display:none">
+        <div id="urResult" style="display:none;margin-top:var(--sp-4)">
             <div class="modal-result">
                 <input id="urUrl" readonly/>
                 <button class="btn btn-ghost" onclick="copyUploadReqUrl()">📋</button>
@@ -345,9 +423,12 @@
                 </div>
             </div>
         </div>
-        <div class="actions">
-            <button type="button" class="btn btn-ghost" onclick="closeModal('modalUploadReq')">@T["modal.close"]</button>
-            <button type="button" class="btn btn-primary" onclick="createUploadRequest()">@T["modal.create_link"]</button>
+        <div class="share-foot">
+            <div class="helper">@T["share.footer.hint"]</div>
+            <div class="actions-right">
+                <button type="button" class="btn btn-ghost" onclick="closeModal('modalUploadReq')">@T["modal.close"]</button>
+                <button type="button" class="btn btn-primary" onclick="createUploadRequest()">@T["modal.create_link"]</button>
+            </div>
         </div>
     </div>
 </div>
@@ -697,6 +778,9 @@ function resetShareModal() {
     document.getElementById('shareDocUrlEnabled').checked = false;
     onShareKeyStoreModeChange();
     document.getElementById('shareResult').style.display = 'none';
+    // v1.12.18: Empfänger-Beschränkung-Karte (Schalter) zurücksetzen.
+    const restrictOn = document.getElementById('shareRestrictOn'); if (restrictOn) restrictOn.checked = false;
+    const restrictBody = document.getElementById('shareRestrictBody'); if (restrictBody) restrictBody.style.display = 'none';
     resetBrandingUi(); // v1.12: KI-Branding-State pro Öffnen zurücksetzen
     const st = document.getElementById('shareSlugStatus');
     if (st) { st.textContent = ''; st.className = 'slug-status'; }
@@ -773,7 +857,9 @@ let shareBrandLastSlugSuggestion = null;
 function resetBrandingUi() {
     shareBrandTemplateId = null;
     shareBrandLastSlugSuggestion = null;
-    const det = document.getElementById('shareBrandDetails'); if (det) det.open = false;
+    // v1.12.18: Branding-Karte hat statt <details> jetzt einen Schalter.
+    const brandOn = document.getElementById('shareBrandOn'); if (brandOn) brandOn.checked = false;
+    const brandBody = document.getElementById('shareBrandBody'); if (brandBody) brandBody.style.display = 'none';
     const dom = document.getElementById('shareBrandDomain'); if (dom) dom.value = '';
     const prev = document.getElementById('shareBrandPreview'); if (prev) prev.style.display = 'none';
     const nameInp = document.getElementById('shareBrandName'); if (nameInp) { nameInp.value = ''; nameInp.disabled = false; }

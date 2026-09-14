@@ -1836,5 +1836,11 @@ Gracias por usar NimShare.</value></data>
   <data name="links.edit.limit_hint" xml:space="preserve"><value>Vacío = sin límite</value></data>
   <data name="links.edit.remove_password" xml:space="preserve"><value>Quitar contraseña</value></data>
   <data name="links.edit.remove_serial" xml:space="preserve"><value>Quitar número de serie</value></data>
+  <data name="share.card.link" xml:space="preserve"><value>Dirección del enlace</value></data>
+  <data name="share.card.security" xml:space="preserve"><value>Acceso y seguridad</value></data>
+  <data name="share.card.message" xml:space="preserve"><value>Mensaje para los destinatarios</value></data>
+  <data name="share.card.extras" xml:space="preserve"><value>Firma y extras</value></data>
+  <data name="share.footer.hint" xml:space="preserve"><value>Todo es opcional — basta con «Crear enlace».</value></data>
+  <data name="share.card.folder" xml:space="preserve"><value>Opciones de carpeta</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>No se pudo crear una vista previa para este dominio.</value></data>
 </root>

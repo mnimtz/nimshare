@@ -694,6 +694,11 @@ async function openEditLink(id) {
     document.getElementById('elNotify').checked = !!d.notifyOnAccess;
     document.getElementById('elAllowed').value = d.allowedEmails || '';
     document.getElementById('elOtp').checked = !!d.requireEmailVerify;
+    // v1.12.18: Empfänger-Karte (Schalter statt <details>) — an + aufgeklappt,
+    // wenn der Link bereits eine Beschränkung gesetzt hat.
+    const restrictActive = !!(d.allowedEmails || d.requireEmailVerify);
+    document.getElementById('elRestrictOn').checked = restrictActive;
+    document.getElementById('elRestrictBody').style.display = restrictActive ? '' : 'none';
     document.getElementById('elSerial').value = '';
     document.getElementById('elSerial').placeholder = d.hasSerialNumber ? '••••••' : '';
     document.getElementById('elSerialRemove').checked = false;
@@ -952,89 +957,134 @@ async function sendEmail() {
      Album-/Unterordner-Optionen ändern. Prefill via GET /api/v1/links/{id},
      Speichern schickt nur geänderte Felder per PATCH. -->
 <div class="modal-backdrop" id="modalEditLink" onclick="if(event.target===this)closeEditLink()">
-    <div class="modal-panel">
-        <h2>✏️ @T["links.edit.title"]</h2>
-        <p class="muted" id="editLinkHint"></p>
-        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap">
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.password"]</label>
-                <input type="text" id="elPw" autocomplete="off" spellcheck="false"/>
-                <div class="helper">@T["links.edit.keep_hint"]</div>
-                <label id="elPwRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
-                    <input type="checkbox" id="elPwRemove"/> <span>@T["links.edit.remove_password"]</span>
-                </label>
+    @* v1.12.18: gleiche Kartensprache wie das Share-Modal (Variante A).
+       IDs unverändert; neu nur elRestrictOn/elRestrictBody (Schalter statt
+       <details>, beim Öffnen vorbelegt wenn Allowlist/OTP gesetzt sind). *@
+    <div class="modal-panel share-panel share-panel-md">
+        <div class="share-head">
+            <h2>✏️ @T["links.edit.title"]</h2>
+            <span class="share-chip" id="editLinkHint"></span>
+        </div>
+        <div class="share-grid">
+            <div class="share-col">
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                        <span>@T["share.card.security"]</span>
+                    </div>
+                    <div class="row" style="gap:var(--sp-3);flex-wrap:wrap">
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["upload.password"]</label>
+                            <input type="text" id="elPw" autocomplete="off" spellcheck="false"/>
+                            <div class="helper">@T["links.edit.keep_hint"]</div>
+                            <label id="elPwRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
+                                <input type="checkbox" id="elPwRemove"/> <span>@T["links.edit.remove_password"]</span>
+                            </label>
+                        </div>
+                        <div class="field" style="flex:1;min-width:150px">
+                            <label>@T["upload.max_downloads"]</label>
+                            <input type="number" id="elMax" min="0"/>
+                            <div class="helper">@T["links.edit.limit_hint"]</div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>@T["upload.expires_at"]</label>
+                        <input type="datetime-local" id="elExp"/>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+                            <input type="checkbox" id="elPermanent" onchange="document.getElementById('elExp').disabled=this.checked"/>
+                            <span>♾️ @T["links.permanent_label"]</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>@T["share.card.message"]</span>
+                    </div>
+                    <div class="field">
+                        <textarea id="elMsg" rows="2"></textarea>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="elNotify"/> @T["upload.notify_me"]</label>
+                </div>
+
+                <div class="share-card" id="elFolderWrap" style="display:none">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        <span>@T["share.card.folder"]</span>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
+                        <input type="checkbox" class="opt-switch" id="elGallery" onchange="document.getElementById('elGallerySub').style.display=this.checked?'':'none'"/>
+                        <span>🖼 @T["share.gallery.display_label"]</span>
+                    </label>
+                    <div id="elGallerySub" style="margin:6px 0 0 24px;display:none">
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
+                            <input type="checkbox" id="elAllowUploads"/> <span>↑ @T["share.gallery.allow_uploads_label"]</span>
+                        </label>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+                            <input type="checkbox" id="elGpsMap"/> <span>📍 @T["share.gallery.gps_map_label"]</span>
+                        </label>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
+                        <input type="checkbox" class="opt-switch" id="elSubfolders" onchange="document.getElementById('elDepthWrap').style.display=this.checked?'flex':'none'"/>
+                        <span>🗂 @T["share.subfolders.label"]</span>
+                    </label>
+                    <div id="elDepthWrap" style="margin-top:6px;display:none;align-items:center;gap:8px">
+                        <label for="elDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
+                        <select id="elDepth" style="width:auto">
+                            <option value="0">@T["share.subfolders.depth_all"]</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="field" style="flex:1;min-width:180px">
-                <label>@T["upload.max_downloads"]</label>
-                <input type="number" id="elMax" min="0"/>
-                <div class="helper">@T["links.edit.limit_hint"]</div>
+
+            <div class="share-col">
+                <div class="share-card">
+                    <label class="share-card-head">
+                        <span class="share-card-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                            <span>@T["links.restrict.legend"]</span>
+                        </span>
+                        <input type="checkbox" class="opt-switch" id="elRestrictOn"
+                               onchange="document.getElementById('elRestrictBody').style.display=this.checked?'':'none'"/>
+                    </label>
+                    <div id="elRestrictBody" style="display:none">
+                        <div class="field" style="margin-top:10px">
+                            <label>@T["links.restrict.allowed_label"]</label>
+                            <input type="text" id="elAllowed" autocomplete="off" spellcheck="false"/>
+                        </div>
+                        <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="elOtp"/> @T["links.restrict.otp_label"]</label>
+                    </div>
+                </div>
+
+                <div class="share-card">
+                    <div class="share-card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tw-accent)" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>@T["share.card.extras"]</span>
+                    </div>
+                    <div class="field">
+                        <label>@T["share.serial.label"]</label>
+                        <input type="text" id="elSerial" autocomplete="off" spellcheck="false"/>
+                        <div class="helper">@T["links.edit.keep_hint"]</div>
+                        <label id="elSerialRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
+                            <input type="checkbox" id="elSerialRemove"/> <span>@T["links.edit.remove_serial"]</span>
+                        </label>
+                    </div>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="elKeyStore"/> @T["share.keystore.mode_label"]</label>
+                    <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer"><input type="checkbox" id="elDocEnabled"/> @T["share.keystore.doc_url_label"]</label>
+                </div>
             </div>
         </div>
-        <div class="field">
-            <label>@T["upload.expires_at"]</label>
-            <input type="datetime-local" id="elExp"/>
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
-                <input type="checkbox" id="elPermanent" onchange="document.getElementById('elExp').disabled=this.checked"/>
-                <span>♾️ @T["links.permanent_label"]</span>
-            </label>
-        </div>
-        <div class="field">
-            <label>@T["upload.message"]</label>
-            <textarea id="elMsg" rows="2"></textarea>
-        </div>
-        <label style="font-weight:400"><input type="checkbox" id="elNotify"/> @T["upload.notify_me"]</label>
-        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:500">🔒 @T["links.restrict.legend"]</summary>
-            <div class="field" style="margin-top:8px">
-                <label>@T["links.restrict.allowed_label"]</label>
-                <input type="text" id="elAllowed" autocomplete="off" spellcheck="false"/>
+        <div class="share-foot">
+            <div class="helper">@T["links.edit.keep_hint"]</div>
+            <div class="actions-right">
+                <button type="button" class="btn btn-ghost" onclick="closeEditLink()">@T["modal.cancel"]</button>
+                <button type="button" class="btn btn-primary" id="elSaveBtn" onclick="saveEditLink()">@T["modal.save"]</button>
             </div>
-            <label style="font-weight:400"><input type="checkbox" id="elOtp"/> @T["links.restrict.otp_label"]</label>
-        </details>
-        <details style="margin-top:10px;border:1px solid var(--tw-gray-200);border-radius:6px;padding:8px 10px">
-            <summary style="cursor:pointer;font-weight:500">🔑 @T["share.serial.legend"]</summary>
-            <div class="field" style="margin-top:8px">
-                <label>@T["share.serial.label"]</label>
-                <input type="text" id="elSerial" autocomplete="off" spellcheck="false"/>
-                <div class="helper">@T["links.edit.keep_hint"]</div>
-                <label id="elSerialRemoveRow" style="font-weight:400;display:none;align-items:center;gap:8px;margin-top:4px;cursor:pointer">
-                    <input type="checkbox" id="elSerialRemove"/> <span>@T["links.edit.remove_serial"]</span>
-                </label>
-            </div>
-            <label style="font-weight:400;display:block;margin-top:10px"><input type="checkbox" id="elKeyStore"/> @T["share.keystore.mode_label"]</label>
-            <label style="font-weight:400;display:block;margin-top:6px"><input type="checkbox" id="elDocEnabled"/> @T["share.keystore.doc_url_label"]</label>
-        </details>
-        <div id="elFolderWrap" style="display:none;margin-top:10px;padding:12px 14px;background:rgba(0,40,84,0.05);border-radius:8px">
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-                <input type="checkbox" id="elGallery" onchange="document.getElementById('elGallerySub').style.display=this.checked?'':'none'"/>
-                <span>🖼 @T["share.gallery.display_label"]</span>
-            </label>
-            <div id="elGallerySub" style="margin:6px 0 0 24px;display:none">
-                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer">
-                    <input type="checkbox" id="elAllowUploads"/> <span>↑ @T["share.gallery.allow_uploads_label"]</span>
-                </label>
-                <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
-                    <input type="checkbox" id="elGpsMap"/> <span>📍 @T["share.gallery.gps_map_label"]</span>
-                </label>
-            </div>
-            <label style="font-weight:400;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px">
-                <input type="checkbox" id="elSubfolders" onchange="document.getElementById('elDepthWrap').style.display=this.checked?'flex':'none'"/>
-                <span>🗂 @T["share.subfolders.label"]</span>
-            </label>
-            <div id="elDepthWrap" style="margin-top:6px;display:none;align-items:center;gap:8px">
-                <label for="elDepth" style="font-size:.85rem;margin:0">@T["share.subfolders.depth_label"]</label>
-                <select id="elDepth" style="width:auto">
-                    <option value="0">@T["share.subfolders.depth_all"]</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="5">5</option>
-                </select>
-            </div>
-        </div>
-        <div class="actions">
-            <button type="button" class="btn btn-ghost" onclick="closeEditLink()">@T["modal.cancel"]</button>
-            <button type="button" class="btn btn-primary" id="elSaveBtn" onclick="saveEditLink()">@T["modal.save"]</button>
         </div>
     </div>
 </div>

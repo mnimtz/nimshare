@@ -1838,5 +1838,11 @@ Thanks for using NimShare.</value></data>
   <data name="links.edit.limit_hint" xml:space="preserve"><value>Empty = no limit</value></data>
   <data name="links.edit.remove_password" xml:space="preserve"><value>Remove password</value></data>
   <data name="links.edit.remove_serial" xml:space="preserve"><value>Remove serial number</value></data>
+  <data name="share.card.link" xml:space="preserve"><value>Link address</value></data>
+  <data name="share.card.security" xml:space="preserve"><value>Access &amp; security</value></data>
+  <data name="share.card.message" xml:space="preserve"><value>Message to recipients</value></data>
+  <data name="share.card.extras" xml:space="preserve"><value>Signature &amp; extras</value></data>
+  <data name="share.footer.hint" xml:space="preserve"><value>Everything is optional — just click “Create link”.</value></data>
+  <data name="share.card.folder" xml:space="preserve"><value>Folder options</value></data>
   <data name="share.branding.error" xml:space="preserve"><value>Couldn't build a preview for this domain.</value></data>
 </root>
