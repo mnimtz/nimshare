@@ -72,7 +72,13 @@ struct ShareLinkCreateSheet: View {
                         guard certs.isEmpty else { return }
                         if let list = try? await api.listCertificates() {
                             certs = list
-                            selectedCertId = list.first(where: { $0.isDefault })?.id
+                            // v2.0.9: nur EIGENE Zertifikate vorauswählen — Admins
+                            // bekommen ALLE geliefert, und ein fremdes würde der
+                            // Server beim Erstellen still verwerfen (Link bliebe
+                            // unsigniert, obwohl die UI ein Zertifikat zeigte).
+                            // isMine ?? true: ältere Server liefern nur eigene.
+                            let own = list.filter { $0.isMine ?? true }
+                            selectedCertId = (own.first(where: { $0.isDefault }) ?? own.first)?.id
                         }
                     }
             }
@@ -169,7 +175,8 @@ struct ShareLinkCreateSheet: View {
                     Picker("Zertifikat", selection: $selectedCertId) {
                         Text("Kein Zertifikat").tag(UUID?.none)
                         ForEach(certs, id: \.id) { c in
-                            Text(c.name + (c.isDefault ? " ★" : "")).tag(UUID?.some(c.id))
+                            Text(c.name + (c.isDefault ? " ★" : "")
+                                 + ((c.isMine ?? true) ? "" : " — " + (c.ownerName ?? "?"))).tag(UUID?.some(c.id))
                         }
                     }
                     Text("Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.")
@@ -430,7 +437,13 @@ struct UploadRequestCreateSheet: View {
                         guard certs.isEmpty else { return }
                         if let list = try? await api.listCertificates() {
                             certs = list
-                            selectedCertId = list.first(where: { $0.isDefault })?.id
+                            // v2.0.9: nur EIGENE Zertifikate vorauswählen — Admins
+                            // bekommen ALLE geliefert, und ein fremdes würde der
+                            // Server beim Erstellen still verwerfen (Link bliebe
+                            // unsigniert, obwohl die UI ein Zertifikat zeigte).
+                            // isMine ?? true: ältere Server liefern nur eigene.
+                            let own = list.filter { $0.isMine ?? true }
+                            selectedCertId = (own.first(where: { $0.isDefault }) ?? own.first)?.id
                         }
                     }
             }
@@ -476,7 +489,8 @@ struct UploadRequestCreateSheet: View {
                     Picker("Zertifikat", selection: $selectedCertId) {
                         Text("Kein Zertifikat").tag(UUID?.none)
                         ForEach(certs, id: \.id) { c in
-                            Text(c.name + (c.isDefault ? " ★" : "")).tag(UUID?.some(c.id))
+                            Text(c.name + (c.isDefault ? " ★" : "")
+                                 + ((c.isMine ?? true) ? "" : " — " + (c.ownerName ?? "?"))).tag(UUID?.some(c.id))
                         }
                     }
                     Text("Zertifikat anhängen, damit der Empfänger sieht, von wem der Link ist.")

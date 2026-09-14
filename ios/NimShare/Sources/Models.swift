@@ -243,6 +243,11 @@ struct CertDto: Codable, Identifiable, Hashable {
     let useCount: Int
     let createdAt: Date
     let isExpired: Bool
+    // v2.0.9 (Server v1.11.80): Admins bekommen ALLE Zertifikate geliefert —
+    // isMine/ownerName steuern Vorauswahl + Beschriftung fremder Einträge.
+    // Optional, damit ältere Server-Antworten weiter dekodieren.
+    let ownerName: String?
+    let isMine: Bool?
 }
 
 // MARK: - AI Search & Chat (mirror of server SearchHit)
