@@ -118,27 +118,32 @@ public class HomeController : Controller
 
         // v1.11.0 — Marcus's Wunsch: eigene "Subdomains"-Sektion, quer zu den
         // obigen (nicht-exklusiven) Scope-Kategorien.
-        // v1.11.27: Subdomain-Links sind jetzt für ALLE User sichtbar,
-        // unabhängig von Owner/Scope — vorher zeigte diese Sektion nur die
-        // Teilmenge von "all" (eigene + Public-Scope), fremde Subdomain-Links
-        // auf Personal-/Group-Scope-Zielen blieben unsichtbar. Löschrechte
-        // bleiben unverändert (weiterhin nur Owner oder Admin, siehe
-        // LinksController.Update()/Delete()) — es geht nur um Sichtbarkeit.
+        // v1.12.21 (SECURITY, Marcus' Kollegen-Report): v1.11.27 hatte die
+        // Sektion auf "ALLE User sehen ALLE Subdomain-Links" gestellt —
+        // damit sah jeder Benutzer auch FREMDE Links auf Personal-/Group-
+        // Ziele inklusive funktionierender URL (und die URL IST der Zugriff).
+        // Jetzt gelten dieselben Regeln wie überall sonst auf dieser Seite:
+        // eigene + Links auf Public-Scope-Ziele (die Dateien kann ohnehin
+        // jeder lesen) + Admin sieht alles.
         var subdomainLinks = await _db.ShareLinks
             .Include(l => l.File)
             .Include(l => l.Folder)
             .Include(l => l.Owner)
-            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != ""
+                     && (isAdmin
+                         || l.OwnerId == user.Id
+                         || (l.File != null && l.File.Scope == FileScope.Public)
+                         || (l.Folder != null && l.Folder.Scope == FileScope.Public)
+                         || l.IsPublic))
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
-        // v1.11.31: Marcus's Report — Upload-Anfrage-Links mit Subdomain
-        // tauchten in dieser Sektion nirgends auf, weil hier nur ShareLinks
-        // abgefragt wurden. UploadRequestLink hat aber genauso ein
-        // SubdomainSlug-Feld (Create() akzeptiert es seit v1.11.0). Gleiche
-        // Sichtbarkeit (alle User) wie oben bei den ShareLinks.
+        // v1.11.31: Upload-Anfrage-Links mit Subdomain gehören auch hierher.
+        // v1.12.21: gleiche Korrektur — Sichtbarkeit wie die Uploads-Sektion
+        // (eigene + Admin), nicht mehr instanzweit.
         var uploadSubdomainLinks = await _db.UploadRequests
             .Include(l => l.Owner)
-            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != "")
+            .Where(l => l.SubdomainSlug != null && l.SubdomainSlug != ""
+                     && (isAdmin || l.OwnerId == user.Id))
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
         var sdSettings = await _subdomains.GetSettingsAsync(ct);
