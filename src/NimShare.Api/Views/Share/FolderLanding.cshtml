@@ -30,9 +30,10 @@
     bool IsImage(string? ct) => (ct ?? "").StartsWith("image/");
     var mediaFiles = Model.IsGallery ? Model.Files.Where(f => IsMedia(f.ContentType)).ToList() : new List<NimShare.Api.Controllers.FolderLandingFile>();
     var otherFiles = Model.IsGallery ? Model.Files.Where(f => !IsMedia(f.ContentType)).ToList() : Model.Files;
-    // Passwort-geschützte Links dürfen aktuell keine Preview-Endpoints nutzen
-    // (ShareController.GalleryMedia forbid'et). Dann zeigen wir Kacheln ohne
-    // Thumbnail, mit Filename + Download-Button — Album-Metaphor bleibt erhalten.
+    // v1.12.22: HasPassword ist der BESUCHER-Zustand — nach dem Passwort-Gate
+    // false, dann liefern GalleryMedia/GalleryThumb auch bei geschützten Links
+    // (Session-Freischaltung). Der Fallback (Kacheln ohne Thumbnail) bleibt für
+    // den theoretischen Fall, dass die View doch mal gesperrt gerendert wird.
     var canPreview = !Model.HasPassword;
 }
 @{
@@ -135,10 +136,9 @@
         }
 
         @* v1.11.20: Seriennummer-Karte — Bug-Fix, war fälschlich auf File-
-           Links beschränkt. FolderLanding hat kein persistentes #password-
-           Feld (Downloads nutzen prompt() pro Aktion, siehe unten im File),
-           darum holt serialPassword() das Passwort hier ebenfalls per
-           prompt() statt aus einem Formularfeld. *@
+           Links beschränkt. v1.12.22: Passwort-Links sind an dieser Stelle
+           bereits per Gate freigeschaltet — serialPassword() sendet kein
+           Body-Passwort mehr, der Server akzeptiert die Session. *@
         @if (Model.HasSerialNumber)
         {
             <div class="card" id="serialCard" style="margin-top:var(--sp-4);background:var(--tw-gray-100)">
@@ -164,15 +164,12 @@
                 </div>
             </div>
             <script>
-            let serialPasswordCache = null;
-            function serialPassword() {
-                if (!@Json.Serialize(Model.HasPassword)) return null;
-                if (serialPasswordCache) return serialPasswordCache;
-                serialPasswordCache = prompt(@Json.Serialize(T["landing.password.label"].Value)) || null;
-                return serialPasswordCache;
-            }
+            // v1.12.22: kein prompt() mehr — das Passwort-Gate der Landing hat
+            // die Session bereits freigeschaltet; der Server akzeptiert den
+            // Reveal ohne Body-Passwort (SerialAccessOk prüft gate.pw.{slug}).
+            function serialPassword() { return null; }
             async function serialParseError(r) {
-                if (r.status === 403) { serialPasswordCache = null; return @Json.Serialize(T["landing.serial.error_password"].Value); }
+                if (r.status === 403) return @Json.Serialize(T["landing.serial.error_password"].Value);
                 return @Json.Serialize(T["landing.serial.error"].Value);
             }
             async function serialReveal() {
@@ -230,8 +227,8 @@
         else if (Model.KeyStoreMode)
         {
             @* v1.11.22: Lizenzschlüssel-Modus für Ordner-Links — gleiche Logik
-               wie File-Landing, aber prompt()-basiertes Passwort (siehe
-               Kommentar bei der Seriennummer-Karte oben im File). *@
+               wie File-Landing. v1.12.22: Passwort via Session-Gate, kein
+               Body-Passwort mehr (siehe Seriennummer-Karte oben im File). *@
             <div class="card" id="keystoreCard" style="margin-top:var(--sp-4);background:var(--tw-gray-100)">
                 <strong>🔑 @T["landing.keystore.title"]</strong>
                 <p class="muted" style="margin:6px 0 0;font-size:.88rem">@T["landing.keystore.lede"]</p>
@@ -254,15 +251,11 @@
                 </div>
             </div>
             <script>
-            let keystorePasswordCache = null;
-            function keystorePassword() {
-                if (!@Json.Serialize(Model.HasPassword)) return null;
-                if (keystorePasswordCache) return keystorePasswordCache;
-                keystorePasswordCache = prompt(@Json.Serialize(T["landing.password.label"].Value)) || null;
-                return keystorePasswordCache;
-            }
+            // v1.12.22: kein prompt() mehr — Session-Freischaltung durchs
+            // Passwort-Gate der Landing (siehe serialPassword oben).
+            function keystorePassword() { return null; }
             async function keystoreParseError(r) {
-                if (r.status === 403) { keystorePasswordCache = null; return @Json.Serialize(T["landing.serial.error_password"].Value); }
+                if (r.status === 403) return @Json.Serialize(T["landing.serial.error_password"].Value);
                 if (r.status === 404) return @Json.Serialize(T["landing.keystore.not_found"].Value);
                 if (r.status === 422) return @Json.Serialize(T["landing.keystore.invalid_email"].Value);
                 return @Json.Serialize(T["landing.serial.error"].Value);
@@ -589,16 +582,10 @@
                                 @* v1.12.12: im Album-Modus den Unterordner dezent mit anzeigen. *@
                                 <span class="sub">@Bytes(f.SizeBytes)@(string.IsNullOrEmpty(f.RelPath) ? "" : $" · 📁 {f.RelPath.Replace("/", " / ")}")</span>
                             </div>
+                            @* v1.12.22: Passwort kommt nicht mehr per prompt() —
+                               das Gate vor der Landing hat die Session freigeschaltet. *@
                             <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id">
-                                @if (Model.HasPassword)
-                                {
-                                    <input type="hidden" name="password" id="pw-@f.Id" required/>
-                                    <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                }
-                                else
-                                {
-                                    <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                                }
+                                <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
                             </form>
                         </div>
                     }
@@ -639,16 +626,9 @@
                         <span class="name">@f.Name</span>
                         <span class="sub">@Bytes(f.SizeBytes)</span>
                     </div>
+                    @* v1.12.22: kein prompt() mehr — Gate-Freischaltung vor der Landing. *@
                     <form method="post" asp-controller="Share" asp-action="DownloadFolderFile" asp-route-slug="@Model.Slug" asp-route-fileId="@f.Id">
-                        @if (Model.HasPassword)
-                        {
-                            <input type="hidden" name="password" id="pw-@f.Id" required/>
-                            <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pw-@f.Id').value=pw;this.closest('form').submit()}" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                        }
-                        else
-                        {
-                            <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
-                        }
+                        <button type="submit" class="btn btn-primary btn-sm" style="background:@accent;color:#fff;border-color:@accent">@T["landing.download.button"]</button>
                     </form>
                 </div>
             }
@@ -656,21 +636,13 @@
         }
         @* v1.10.181: „Alle herunterladen" als ZIP am Ende der Landing.
            Server-Endpoint /s/{slug}/download-all packt alle Ordner-Files in
-           ein ZIP + streamt zurück. Password-Handling analog zum Einzel-
-           Download: Prompt bei HasPassword, sonst direkter POST. *@
+           ein ZIP + streamt zurück. v1.12.22: Passwort-Links sind an dieser
+           Stelle bereits per Gate freigeschaltet — direkter POST, kein prompt(). *@
         @if (Model.Files.Any())
         {
             <div style="margin-top:var(--sp-6);padding-top:var(--sp-4);border-top:1px solid var(--tw-gray-200);text-align:center">
                 <form method="post" asp-controller="Share" asp-action="DownloadAll" asp-route-slug="@Model.Slug" style="display:inline">
-                    @if (Model.HasPassword)
-                    {
-                        <input type="hidden" name="password" id="pwAll" required/>
-                        <button type="button" onclick="var pw=prompt('@T["landing.password.label"]');if(pw){document.getElementById('pwAll').value=pw;this.closest('form').submit()}" class="btn btn-primary" style="background:@accent;color:#fff;border-color:@accent">⬇ @T["landing.gallery.download_all"]</button>
-                    }
-                    else
-                    {
-                        <button type="submit" class="btn btn-primary" style="background:@accent;color:#fff;border-color:@accent">⬇ @T["landing.gallery.download_all"]</button>
-                    }
+                    <button type="submit" class="btn btn-primary" style="background:@accent;color:#fff;border-color:@accent">⬇ @T["landing.gallery.download_all"]</button>
                 </form>
                 <div class="muted" style="font-size:.85rem;margin-top:6px">@T["landing.gallery.download_all_hint"]</div>
             </div>
@@ -893,18 +865,11 @@
         ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
         drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
     }
-    // v1.10.168 post-review: Passwort-Prompt bevor der Upload startet, falls
-    // der Link password-gated ist. Server verlangt Passwort in init+complete,
-    // wenn keine Session-Gate existiert.
+    // v1.12.22: kein Passwort-prompt() mehr vor dem Upload — das Gate vor der
+    // Landing hat die Session freigeschaltet, init/complete akzeptieren das
+    // Session-Flag serverseitig (UploadPasswordOk prüft gate.pw.{slug}).
     let cachedUploadPassword = null;
-    async function ensureUploadPassword() {
-        if (!@(Model.HasPassword ? "true" : "false")) return null;
-        if (cachedUploadPassword) return cachedUploadPassword;
-        const pw = prompt(@Html.Raw(Json.Serialize(T["landing.password.label"].Value)));
-        if (!pw) throw new Error('password-required');
-        cachedUploadPassword = pw;
-        return pw;
-    }
+    async function ensureUploadPassword() { return null; }
     async function handleFiles(files) {
         if (!files || files.length === 0) return;
         try { await ensureUploadPassword(); } catch { return; }

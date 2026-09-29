@@ -278,6 +278,11 @@
   <data name="landing.expires_at"><value>Caduca:</value></data>
   <data name="landing.downloads_left"><value>descargas restantes</value></data>
   <data name="landing.password.label"><value>Este enlace está protegido — introduce la contraseña:</value></data>
+  <data name="landing.pwgate.title"><value>Contenido protegido con contraseña</value></data>
+  <data name="landing.pwgate.lede"><value>Este enlace está protegido con contraseña. Introduce la contraseña para ver el contenido compartido.</value></data>
+  <data name="landing.pwgate.label"><value>Contraseña</value></data>
+  <data name="landing.pwgate.submit"><value>Desbloquear</value></data>
+  <data name="landing.pwgate.error"><value>Contraseña incorrecta. Inténtalo de nuevo.</value></data>
   <data name="landing.download.button"><value>Descargar</value></data>
   <data name="landing.powered_by"><value>Con la tecnología de</value></data>
   <data name="landing.ios_app" xml:space="preserve"><value>También disponible en iOS</value></data>

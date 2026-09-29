@@ -225,6 +225,11 @@
   <data name="landing.expires_at"><value>Vervalt:</value></data>
   <data name="landing.downloads_left"><value>downloads over</value></data>
   <data name="landing.password.label"><value>Deze link is beveiligd — voer het wachtwoord in:</value></data>
+  <data name="landing.pwgate.title"><value>Met wachtwoord beveiligde share</value></data>
+  <data name="landing.pwgate.lede"><value>Deze link is beveiligd met een wachtwoord. Voer het wachtwoord in om de gedeelde inhoud te bekijken.</value></data>
+  <data name="landing.pwgate.label"><value>Wachtwoord</value></data>
+  <data name="landing.pwgate.submit"><value>Ontgrendelen</value></data>
+  <data name="landing.pwgate.error"><value>Onjuist wachtwoord. Probeer het opnieuw.</value></data>
   <data name="landing.download.button"><value>Downloaden</value></data>
   <data name="landing.powered_by"><value>Mogelijk gemaakt door</value></data>
   <data name="landing.ios_app" xml:space="preserve"><value>Ook beschikbaar voor iOS</value></data>

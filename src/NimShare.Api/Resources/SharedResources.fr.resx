@@ -278,6 +278,11 @@
   <data name="landing.expires_at"><value>Expire :</value></data>
   <data name="landing.downloads_left"><value>téléchargements restants</value></data>
   <data name="landing.password.label"><value>Ce lien est protégé — entrez le mot de passe :</value></data>
+  <data name="landing.pwgate.title"><value>Partage protégé par mot de passe</value></data>
+  <data name="landing.pwgate.lede"><value>Ce lien est protégé par un mot de passe. Saisissez le mot de passe pour voir le contenu partagé.</value></data>
+  <data name="landing.pwgate.label"><value>Mot de passe</value></data>
+  <data name="landing.pwgate.submit"><value>Déverrouiller</value></data>
+  <data name="landing.pwgate.error"><value>Mot de passe incorrect. Veuillez réessayer.</value></data>
   <data name="landing.download.button"><value>Télécharger</value></data>
   <data name="landing.powered_by"><value>Propulsé par</value></data>
   <data name="landing.ios_app" xml:space="preserve"><value>Également disponible sur iOS</value></data>

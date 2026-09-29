@@ -326,6 +326,11 @@
   <data name="landing.expires_at"><value>Läuft ab:</value></data>
   <data name="landing.downloads_left"><value>Downloads übrig</value></data>
   <data name="landing.password.label"><value>Dieser Link ist geschützt — bitte Passwort eingeben:</value></data>
+  <data name="landing.pwgate.title"><value>Passwortgeschützte Freigabe</value></data>
+  <data name="landing.pwgate.lede"><value>Dieser Link ist passwortgeschützt. Gib das Passwort ein, um die freigegebenen Inhalte zu sehen.</value></data>
+  <data name="landing.pwgate.label"><value>Passwort</value></data>
+  <data name="landing.pwgate.submit"><value>Entsperren</value></data>
+  <data name="landing.pwgate.error"><value>Falsches Passwort. Bitte erneut versuchen.</value></data>
   <data name="landing.download.button"><value>Herunterladen</value></data>
   <data name="landing.powered_by"><value>Bereitgestellt mit</value></data>
   <data name="landing.ios_app" xml:space="preserve"><value>Auch für iOS erhältlich</value></data>

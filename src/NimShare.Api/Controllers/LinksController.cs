@@ -923,6 +923,10 @@ public class LinksController : ControllerBase
             && HttpContext.Session.GetString($"gate.{link.Slug}") != "ok")
             return false;
         if (link.PasswordHash is null) return true;
+        // v1.12.22: Passwort-Gate der Landing (Session-Flag gate.pw.{slug})
+        // schaltet auch Serial-/Keystore-Reveal frei — die Landing sendet
+        // seither kein Body-Passwort mehr mit (kein prompt() mehr).
+        if (HttpContext.Session.GetString($"gate.pw.{link.Slug}") == "ok") return true;
         if (HttpContext.Session.GetString($"gate.{link.Slug}") == "ok") return true;
         return !string.IsNullOrEmpty(password) && _hasher.Verify(password, link.PasswordHash);
     }

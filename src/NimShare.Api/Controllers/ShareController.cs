@@ -77,6 +77,25 @@ public class ShareController : Controller
         => string.IsNullOrWhiteSpace(link.AllowedEmails)
            || HttpContext.Session.GetString($"gate.{link.Slug}") == "ok";
 
+    // v1.12.22 — Passwort-Gate: das Passwort wird EINMAL auf einer eigenen
+    // Gate-Seite VOR der Landing eingegeben (Session-Flag, analog zum
+    // Empfänger-Gate oben). Vorher zeigte die Landing die komplette Datei-
+    // liste und fragte das Passwort erst beim Download-Klick per nativem
+    // prompt() ab — Marcus's Report: Inhalte sichtbar ohne Passwort + die
+    // "uralte Popup-Methode". Jetzt: kein Inhalt (Dateinamen, Thumbs,
+    // Nachricht) vor dem Passwort, und danach nie wieder eine Abfrage.
+    private bool PasswordGateOk(ShareLink link)
+        => link.PasswordHash is null
+           || HttpContext.Session.GetString($"gate.pw.{link.Slug}") == "ok";
+
+    // Download-/Submit-POSTs akzeptieren weiterhin ein mitgesendetes Passwort
+    // (Abwärtskompatibilität: bereits gerenderte alte Landings, API-Clients) —
+    // ODER die Session-Freischaltung durchs Gate.
+    private bool PasswordOk(ShareLink link, string? password)
+        => PasswordGateOk(link)
+           || (link.PasswordHash is not null && !string.IsNullOrEmpty(password)
+               && _hasher.Verify(password, link.PasswordHash));
+
     // v1.11.51 — Link-Unfurl: Open-Graph/Twitter-Meta-Tags für /s/{slug},
     // damit Slack/Teams/WhatsApp beim Posten eine Vorschau-Karte zeigen statt
     // der nackten URL. WICHTIG: Crawler-Bots rufen die Landing kalt ab (keine
@@ -143,6 +162,15 @@ public class ShareController : Controller
             // zeigten die volle Dateiliste ungeschützt, siehe RecipientGateOk-Doku.
             if (!RecipientGateOk(link))
                 return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
+            // v1.12.22: Passwort-Gate VOR jedem Inhalt (siehe PasswordGateOk-Doku).
+            // Crawler ohne Session landen ebenfalls hier → generische OG-Karte,
+            // wie bisher bei geschützten Landings (kein Ordnername im Unfurl).
+            if (!PasswordGateOk(link))
+            {
+                var gateTheme = await GateThemeAsync(db, link, ct);
+                SetOgTags(isProtected: true, "", null, null, gateTheme);
+                return View("PasswordGate", new PasswordGateViewModel(slug, link.Owner.DisplayName, gateTheme, Error: null));
+            }
             var folder = await db.Folders.FindAsync(new object[] { folderId }, ct);
             if (folder is null) return View("NotFound");
             // v1.12.12: optional den ganzen Teilbaum einbeziehen (IncludeSubfolders
@@ -191,7 +219,10 @@ public class ShareController : Controller
             // Requests, null DB-Queries pro Bild. Fehlende Thumbs werden in
             // die Worker-Queue gelegt (dedup, überlebt Reloads); die Kachel
             // rendert einen Pending-Platzhalter und JS pollt /thumb-status.
-            var canPreviewLanding = link.PasswordHash is null;
+            // v1.12.22: das Passwort-Gate ist an dieser Stelle bereits passiert —
+            // freigeschaltete Besucher bekommen jetzt auch bei geschützten Links
+            // Thumbnails/Previews (vorher: nie bei gesetztem Passwort).
+            var canPreviewLanding = PasswordGateOk(link);
             var thumbTtl = ThumbSasTtl(link.ExpiresAt);
             var landingFiles = new List<FolderLandingFile>(files.Count);
             foreach (var f in files)
@@ -237,7 +268,10 @@ public class ShareController : Controller
                 folderTheme);
             return View("FolderLanding", new FolderLandingViewModel(
                 link.Slug, folder.Name, RenderMarkdown(link.Message),
-                link.PasswordHash is not null, link.Owner.DisplayName,
+                // v1.12.22: HasPassword beschreibt den BESUCHER-Zustand (noch
+                // gesperrt?) — nach dem Gate immer false, die View rendert
+                // normale Download-Buttons ohne Passwort-Abfrage.
+                !PasswordGateOk(link), link.Owner.DisplayName,
                 landingFiles,
                 ResolveOwnerAvatar(link.Owner, isPublicShare: link.IsPublic || (folder.Scope == FileScope.Public)), folderTheme,
                 BuildLandingSigner(link.SigningCertificate),
@@ -264,6 +298,14 @@ public class ShareController : Controller
         // verified in this session.
         if (!RecipientGateOk(link))
             return View("Gate", new GateViewModel(slug, link.RequireEmailVerify, otpSent: false, error: null));
+
+        // v1.12.22: Passwort-Gate auch für File-Landings (siehe Folder-Zweig).
+        if (!PasswordGateOk(link))
+        {
+            var pwTheme = await GateThemeAsync(db, link, ct);
+            SetOgTags(isProtected: true, "", null, null, pwTheme);
+            return View("PasswordGate", new PasswordGateViewModel(slug, link.Owner.DisplayName, pwTheme, Error: null));
+        }
 
         // Log the landing hit (fire-and-forget-ish, but awaited so we don't lose it).
         var lf1 = await LandingForensicsAsync(ct);
@@ -292,7 +334,8 @@ public class ShareController : Controller
             link.File.SizeBytes,
             link.File.ContentType,
             RenderMarkdown(link.Message),
-            link.PasswordHash is not null,
+            // v1.12.22: Besucher-Zustand, nach dem Gate immer false (s. Folder-Zweig).
+            !PasswordGateOk(link),
             link.MaxDownloads,
             link.DownloadCount,
             link.ExpiresAt,
@@ -400,8 +443,22 @@ public class ShareController : Controller
             IsCustomBranded: linkT?.LogoUrl != null);
     }
 
-    /// <summary>Inline preview stream (image or pdf). Only for password-less links —
-    /// otherwise the download page still gates the file behind the password prompt.</summary>
+    /// <summary>v1.12.22: Theme fürs Passwort-Gate — gleiche Auflösung wie die
+    /// Landing selbst (Logo/Akzentfarbe bleiben auf der Gate-Seite erhalten),
+    /// aber ohne Datei-/Ordnernamen preiszugeben.</summary>
+    private static async Task<LandingTheme> GateThemeAsync(
+        NimShare.Core.Data.NimShareDbContext db, ShareLink link, CancellationToken ct)
+    {
+        if (link.File is not null)
+            return await ResolveThemeAsync(db, link.File.Scope, link.File.OwnerId, ct, link.LandingTemplateId);
+        if (link.FolderId is Guid fid
+            && await db.Folders.FindAsync(new object[] { fid }, ct) is { } folder)
+            return await ResolveThemeAsync(db, folder.Scope, folder.OwnerUserId ?? Guid.Empty, ct, link.LandingTemplateId);
+        return await ResolveThemeAsync(db, NimShare.Core.Entities.FileScope.Personal, link.OwnerId, ct, link.LandingTemplateId);
+    }
+
+    /// <summary>Inline preview stream (image or pdf). v1.12.22: für Passwort-
+    /// Links nach bestandenem Passwort-Gate erlaubt (Session-Freischaltung).</summary>
     // v1.10.48 — kleiner Beacon-Endpoint. Landing.cshtml postet nach dem
     // Rendern per fetch die Browser-Timezone hierhin; wir schreiben sie
     // auf die letzte Landing-Access-Zeile dieser (slug, ipHash). Keine
@@ -528,7 +585,10 @@ public class ShareController : Controller
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.File is null || link.File.Status != StorageFileStatus.Ready) return NotFound();
-        if (link.PasswordHash is not null) return Forbid();
+        // v1.12.22: statt hartem Forbid bei Passwort-Links jetzt die Session-
+        // Freischaltung des Gates akzeptieren — die Landing rendert Previews
+        // erst NACH bestandenem Gate (HasPassword=false ⇒ previewable-Zweig).
+        if (!PasswordGateOk(link)) return Forbid();
         // v1.11.20: siehe Submit() — dieselbe Lücke, hier für die Inline-
         // Vorschau (Bild/PDF/Video) statt des eigentlichen Downloads.
         if (!RecipientGateOk(link)) return Forbid();
@@ -664,6 +724,38 @@ public class ShareController : Controller
         return RedirectToAction(nameof(Landing), new { slug });
     }
 
+    // v1.12.22 — Passwort-Gate-POST (siehe PasswordGateOk-Doku). Brute-Force
+    // ist doppelt gedeckelt: Controller-weites public-share-Rate-Limit plus
+    // PasswordFail-Forensik wie bei den Download-Endpoints.
+    [HttpPost("{slug}/gate/password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GatePassword(string slug, string? password,
+        [FromServices] NimShare.Core.Data.NimShareDbContext db, CancellationToken ct)
+    {
+        var link = await _access.FindActiveAsync(slug, ct);
+        if (link is null) return View("NotFound");
+        if (!link.IsActive(DateTimeOffset.UtcNow))
+            return View("Expired", new ExpiredViewModel(slug, link.ExpiresAt));
+        // Empfänger-Gate hat Vorrang; ohne Passwort gibt es nichts zu entsperren —
+        // beides landet zurück auf der Landing, die den richtigen Zustand rendert.
+        if (link.PasswordHash is null || !RecipientGateOk(link))
+            return RedirectToAction(nameof(Landing), new { slug });
+        if (!_hasher.Verify(password ?? "", link.PasswordHash))
+        {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            var lf = await LandingForensicsAsync(ct);
+            await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail,
+                _iphash.Hash(ip), ip, Request.Headers.UserAgent, Request.Headers.Referer,
+                lf.Country, lf.City, lf.Device, lf.Isp, timezone: null, ct);
+            var theme = await GateThemeAsync(db, link, ct);
+            SetOgTags(isProtected: true, "", null, null, theme);
+            return View("PasswordGate", new PasswordGateViewModel(
+                slug, link.Owner.DisplayName, theme, _t["landing.pwgate.error"].Value));
+        }
+        HttpContext.Session.SetString($"gate.pw.{link.Slug}", "ok");
+        return RedirectToAction(nameof(Landing), new { slug });
+    }
+
     private static bool IsEmailAllowed(string email, string allowed)
     {
         if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return false;
@@ -700,7 +792,8 @@ public class ShareController : Controller
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         var ipHash = _iphash.Hash(ip);
         var lfDl = await LandingForensicsAsync(ct);
-        if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
+        // v1.12.22: Session-Gate ODER (Alt-Clients) mitgesendetes Passwort.
+        if (!PasswordOk(link, password))
         {
             await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail,
                 ipHash, ip, Request.Headers.UserAgent, Request.Headers.Referer,
@@ -740,7 +833,8 @@ public class ShareController : Controller
         var ipFf = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
         var ipHash = _iphash.Hash(ipFf);
         var lfFf = await LandingForensicsAsync(ct);
-        if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
+        // v1.12.22: Session-Gate ODER (Alt-Clients) mitgesendetes Passwort.
+        if (!PasswordOk(link, password))
         {
             await _access.LogAsync(link, ShareLinkAccessKind.PasswordFail, ipHash, ipFf, Request.Headers.UserAgent, Request.Headers.Referer,
                 lfFf.Country, lfFf.City, lfFf.Device, lfFf.Isp, timezone: null, ct);
@@ -828,8 +922,9 @@ public class ShareController : Controller
         // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
         if (!RecipientGateOk(link))
             return RedirectToAction(nameof(Landing), new { slug });
-        // Password-Gate analog zum Einzel-Download.
-        if (link.PasswordHash is not null && !_hasher.Verify(password ?? "", link.PasswordHash))
+        // Password-Gate analog zum Einzel-Download (v1.12.22: Session-Gate
+        // ODER mitgesendetes Passwort für Alt-Clients).
+        if (!PasswordOk(link, password))
         {
             TempData["PasswordError"] = _t["share.password.error"].Value;
             return RedirectToAction(nameof(Landing), new { slug });
@@ -951,7 +1046,8 @@ public class ShareController : Controller
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
-        if (link.PasswordHash is not null) return Forbid();
+        // v1.12.22: Gate-Freischaltung statt hartem Passwort-Forbid (s. Preview).
+        if (!PasswordGateOk(link)) return Forbid();
         // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
         if (!RecipientGateOk(link)) return Forbid();
         var now = DateTimeOffset.UtcNow;
@@ -984,7 +1080,8 @@ public class ShareController : Controller
         if (!thumbs.IsAllowedSize(size)) return NotFound();
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
-        if (link.PasswordHash is not null) return Forbid();
+        // v1.12.22: Gate-Freischaltung statt hartem Passwort-Forbid (s. Preview).
+        if (!PasswordGateOk(link)) return Forbid();
         // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
         if (!RecipientGateOk(link)) return Forbid();
         var now = DateTimeOffset.UtcNow;
@@ -1020,7 +1117,8 @@ public class ShareController : Controller
     {
         var link = await _access.FindActiveAsync(slug, ct);
         if (link is null || link.FolderId is null) return NotFound();
-        if (link.PasswordHash is not null) return Forbid();
+        // v1.12.22: Gate-Freischaltung statt hartem Passwort-Forbid (s. Preview).
+        if (!PasswordGateOk(link)) return Forbid();
         // v1.11.20: siehe Submit() — gleiche Lücke, gleicher Fix.
         if (!RecipientGateOk(link)) return Forbid();
         if (!link.IsActive(DateTimeOffset.UtcNow)) return NotFound();
@@ -1182,6 +1280,8 @@ public class ShareController : Controller
     private bool UploadPasswordOk(ShareLink link, string? bodyPassword)
     {
         if (link.PasswordHash is null) return true;
+        // v1.12.22: Passwort-Gate der Landing schaltet auch Uploads frei.
+        if (HttpContext.Session.GetString($"gate.pw.{link.Slug}") == "ok") return true;
         if (HttpContext.Session.GetString($"gate.{link.Slug}") == "ok") return true;
         if (!string.IsNullOrEmpty(bodyPassword) && _hasher.Verify(bodyPassword, link.PasswordHash)) return true;
         return false;
@@ -1283,5 +1383,9 @@ public record LandingSignerInfo(
     DateTimeOffset NotBefore, DateTimeOffset NotAfter, bool IsSelfIssued);
 
 public record GateViewModel(string Slug, bool RequireOtp, bool otpSent, string? error);
+
+// v1.12.22: Passwort-Gate-Seite — trägt das Landing-Theme (Logo/Akzentfarbe),
+// aber bewusst KEINE Datei-/Ordner-Metadaten (die bleiben hinterm Passwort).
+public record PasswordGateViewModel(string Slug, string? OwnerName, LandingTheme Theme, string? Error);
 
 public record ExpiredViewModel(string Slug, DateTimeOffset? ExpiresAt);

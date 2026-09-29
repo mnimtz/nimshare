@@ -326,6 +326,11 @@
   <data name="landing.expires_at"><value>Expires:</value></data>
   <data name="landing.downloads_left"><value>downloads left</value></data>
   <data name="landing.password.label"><value>This link is protected — enter the password:</value></data>
+  <data name="landing.pwgate.title"><value>Password-protected share</value></data>
+  <data name="landing.pwgate.lede"><value>This link is password protected. Enter the password to view the shared content.</value></data>
+  <data name="landing.pwgate.label"><value>Password</value></data>
+  <data name="landing.pwgate.submit"><value>Unlock</value></data>
+  <data name="landing.pwgate.error"><value>Wrong password. Please try again.</value></data>
   <data name="landing.download.button"><value>Download</value></data>
   <data name="landing.powered_by"><value>Powered by</value></data>
   <data name="landing.ios_app" xml:space="preserve"><value>Also available on iOS</value></data>
